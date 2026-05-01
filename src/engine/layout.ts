@@ -248,6 +248,7 @@ export function placeSlots(opts: {
   const horizontal = block.w >= block.h;
 
   if (horizontal) {
+    if (size.h > block.h) return [];
     let x = block.x + gap;
     while (x + size.w <= block.x + block.w) {
       const slotY = block.y + Math.floor((block.h - size.h) / 2);
@@ -266,6 +267,7 @@ export function placeSlots(opts: {
     }
   } else {
     // 竖排：从上到下
+    if (size.w > block.w) return [];
     let y = block.y + gap;
     while (y + size.h <= block.y + block.h) {
       const slotX = block.x + Math.floor((block.w - size.w) / 2);

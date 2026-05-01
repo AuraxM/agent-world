@@ -1,4 +1,4 @@
-import type { Block, Elevation, LayoutParams, Road, Zone, ZonedBlock } from "./layout-types";
+import type { Block, Elevation, LayoutParams, Road, Slot, Zone, ZonedBlock } from "./layout-types";
 import { DEFAULT_PARAMS } from "./layout-types";
 
 const CROSS_ROAD_EDGE_MARGIN = 6;
@@ -187,4 +187,91 @@ export function assignZones(blocks: Block[]): ZonedBlock[] {
     if (b.isEdge) return { ...b, zone: "edge" as Zone };
     return { ...b, zone: "residential" as Zone };
   });
+}
+
+/** 根据 zone + density 返回建议的槽位尺寸 */
+export function slotSizeForZone(
+  zone: Zone,
+  density: "sparse" | "medium" | "dense"
+): { w: number; h: number } {
+  const sizeMap: Record<Zone, Record<string, { w: number; h: number }>> = {
+    commercial: { sparse: { w: 6, h: 5 }, medium: { w: 5, h: 4 }, dense: { w: 4, h: 3 } },
+    residential: { sparse: { w: 5, h: 5 }, medium: { w: 4, h: 4 }, dense: { w: 3, h: 3 } },
+    public: { sparse: { w: 8, h: 7 }, medium: { w: 6, h: 5 }, dense: { w: 5, h: 4 } },
+    edge: { sparse: { w: 8, h: 7 }, medium: { w: 6, h: 5 }, dense: { w: 5, h: 4 } },
+  };
+  return sizeMap[zone][density];
+}
+
+const ZONE_SUGGESTED_TAGS: Record<Zone, string[]> = {
+  commercial: ["public", "indoor", "dining"],
+  residential: ["private", "indoor", "residence"],
+  public: ["public", "outdoor", "park"],
+  edge: ["semi", "outdoor", "playground"],
+};
+
+const ZONE_CAPACITY_HINT: Record<Zone, number> = {
+  commercial: 15,
+  residential: 6,
+  public: 50,
+  edge: 25,
+};
+
+export function placeSlots(opts: {
+  block: ZonedBlock;
+  density: "sparse" | "medium" | "dense";
+  rng: () => number;
+  elevation: number;
+  startIndex: number;
+}): Slot[] {
+  const { block, density, rng: _rng, elevation, startIndex } = opts;
+  // rng 暂未使用，保留参数以便未来引入抖动 (jitter)
+  void _rng;
+  const size = slotSizeForZone(block.zone, density);
+
+  const gap = 1;
+  const slots: Slot[] = [];
+  let idx = startIndex;
+
+  // 决定排列方向：宽 > 高 则横排，否则竖排
+  const horizontal = block.w >= block.h;
+
+  if (horizontal) {
+    let x = block.x + gap;
+    while (x + size.w <= block.x + block.w) {
+      const slotY = block.y + Math.floor((block.h - size.h) / 2);
+      slots.push({
+        id: `slot-${String(idx).padStart(2, "0")}`,
+        zone: block.zone,
+        x, y: slotY, w: size.w, h: size.h,
+        roadAccess: block.adjacentRoadIds[0] ?? "",
+        elevation,
+        suggestedTags: ZONE_SUGGESTED_TAGS[block.zone],
+        isEntry: false,
+        capacityHint: ZONE_CAPACITY_HINT[block.zone],
+      });
+      x += size.w + gap;
+      idx++;
+    }
+  } else {
+    // 竖排：从上到下
+    let y = block.y + gap;
+    while (y + size.h <= block.y + block.h) {
+      const slotX = block.x + Math.floor((block.w - size.w) / 2);
+      slots.push({
+        id: `slot-${String(idx).padStart(2, "0")}`,
+        zone: block.zone,
+        x: slotX, y, w: size.w, h: size.h,
+        roadAccess: block.adjacentRoadIds[0] ?? "",
+        elevation,
+        suggestedTags: ZONE_SUGGESTED_TAGS[block.zone],
+        isEntry: false,
+        capacityHint: ZONE_CAPACITY_HINT[block.zone],
+      });
+      y += size.h + gap;
+      idx++;
+    }
+  }
+
+  return slots;
 }

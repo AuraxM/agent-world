@@ -7,9 +7,11 @@ import {
   makeCrossRoad,
   makeMainRoad,
   partitionBlocks,
+  placeSlots,
   resolveParams,
+  slotSizeForZone,
 } from "./layout";
-import type { Block, Road } from "./layout-types";
+import type { Block, Road, Zone, ZonedBlock } from "./layout-types";
 import { DEFAULT_PARAMS } from "./layout-types";
 
 describe("createPRNG", () => {
@@ -252,5 +254,76 @@ describe("assignZones", () => {
     ];
     const zoned = assignZones(blocks);
     expect(zoned[0].zone).toBe("residential");
+  });
+});
+
+describe("slotSizeForZone", () => {
+  it.each([
+    ["commercial", "medium", { w: 5, h: 4 }],
+    ["residential", "medium", { w: 4, h: 4 }],
+    ["public", "medium", { w: 6, h: 5 }],
+    ["edge", "medium", { w: 6, h: 5 }],
+    ["commercial", "dense", { w: 4, h: 3 }],
+    ["residential", "dense", { w: 3, h: 3 }],
+    ["commercial", "sparse", { w: 6, h: 5 }],
+  ] as const)("%s zone %s density → %s", (zone, density, expected) => {
+    const size = slotSizeForZone(zone as Zone, density);
+    expect(size).toEqual(expected);
+  });
+});
+
+describe("placeSlots", () => {
+  it("places slots without overlap within a block", () => {
+    const rng = createPRNG(42);
+    const block: ZonedBlock = {
+      x: 2, y: 14, w: 16, h: 6,
+      adjacentRoadIds: ["r-main"], touchesMain: true,
+      isIntersection: false, isEdge: false,
+      zone: "commercial",
+    };
+    const slots = placeSlots({ block, density: "medium", rng, elevation: 1, startIndex: 0 });
+    expect(slots.length).toBeGreaterThan(0);
+    // 所有 slot 在 block 内
+    for (const s of slots) {
+      expect(s.x).toBeGreaterThanOrEqual(block.x);
+      expect(s.y).toBeGreaterThanOrEqual(block.y);
+      expect(s.x + s.w).toBeLessThanOrEqual(block.x + block.w + 1);
+      expect(s.y + s.h).toBeLessThanOrEqual(block.y + block.h + 1);
+    }
+    // 不重叠
+    for (let i = 0; i < slots.length; i++) {
+      for (let j = i + 1; j < slots.length; j++) {
+        const a = slots[i];
+        const b = slots[j];
+        const noXOverlap = a.x + a.w + 1 <= b.x || b.x + b.w + 1 <= a.x;
+        const noYOverlap = a.y + a.h + 1 <= b.y || b.y + b.h + 1 <= a.y;
+        expect(noXOverlap || noYOverlap).toBe(true);
+      }
+    }
+  });
+
+  it("dense density creates more slots than sparse", () => {
+    const block: ZonedBlock = {
+      x: 2, y: 2, w: 20, h: 10,
+      adjacentRoadIds: [], touchesMain: false,
+      isIntersection: false, isEdge: false,
+      zone: "residential",
+    };
+    const sparse = placeSlots({ block, density: "sparse", rng: createPRNG(1), elevation: 0, startIndex: 0 });
+    const dense = placeSlots({ block, density: "dense", rng: createPRNG(1), elevation: 0, startIndex: 0 });
+    expect(dense.length).toBeGreaterThan(sparse.length);
+  });
+
+  it("each slot has unique id", () => {
+    const block: ZonedBlock = {
+      x: 2, y: 2, w: 16, h: 8,
+      adjacentRoadIds: ["r-main"], touchesMain: true,
+      isIntersection: false, isEdge: false,
+      zone: "commercial",
+    };
+    const slots = placeSlots({ block, density: "medium", rng: createPRNG(42), elevation: 0, startIndex: 5 });
+    const ids = slots.map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(slots[0].id).toBe("slot-05");
   });
 });

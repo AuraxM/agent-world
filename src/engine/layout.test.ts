@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  assignZones,
   createPRNG,
   generateElevations,
   generateRoads,
   makeCrossRoad,
   makeMainRoad,
+  partitionBlocks,
   resolveParams,
 } from "./layout";
+import type { Block, Road } from "./layout-types";
 import { DEFAULT_PARAMS } from "./layout-types";
 
 describe("createPRNG", () => {
@@ -171,5 +174,83 @@ describe("generateRoads", () => {
     const existingX = [12, 25, 38];
     const result = makeCrossRoad("r-test", 48, 36, rng, existingX, 12, "test");
     expect(result).toBeNull();
+  });
+});
+
+describe("partitionBlocks", () => {
+  it("partitions canvas into blocks by roads", () => {
+    const roads: Road[] = [
+      { id: "r-main", dir: "h", offset: 18, w: 6, start: 0, end: 48, name: "主街" },
+      { id: "r-cross1", dir: "v", offset: 16, w: 3, start: 0, end: 36, name: "竖街1" },
+    ];
+    const blocks = partitionBlocks({ canvasW: 48, canvasH: 36, roads });
+    expect(blocks.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("each block is defined by valid coordinates", () => {
+    const roads: Road[] = [
+      { id: "r-main", dir: "h", offset: 18, w: 6, start: 0, end: 48, name: "主街" },
+    ];
+    const blocks = partitionBlocks({ canvasW: 48, canvasH: 36, roads });
+    for (const b of blocks) {
+      expect(b.x).toBeGreaterThanOrEqual(0);
+      expect(b.y).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.w).toBeLessThanOrEqual(48);
+      expect(b.y + b.h).toBeLessThanOrEqual(36);
+      expect(b.w).toBeGreaterThan(0);
+      expect(b.h).toBeGreaterThan(0);
+    }
+  });
+
+  it("no overlapping blocks", () => {
+    const roads: Road[] = [
+      { id: "r-main", dir: "h", offset: 18, w: 6, start: 0, end: 48, name: "主街" },
+      { id: "r-cross1", dir: "v", offset: 16, w: 3, start: 0, end: 36, name: "竖街1" },
+      { id: "r-cross2", dir: "v", offset: 32, w: 3, start: 0, end: 36, name: "竖街2" },
+    ];
+    const blocks = partitionBlocks({ canvasW: 48, canvasH: 36, roads });
+    for (let i = 0; i < blocks.length; i++) {
+      for (let j = i + 1; j < blocks.length; j++) {
+        const a = blocks[i];
+        const b = blocks[j];
+        const overlapX = a.x < b.x + b.w && a.x + a.w > b.x;
+        const overlapY = a.y < b.y + b.h && a.y + a.h > b.y;
+        expect(overlapX && overlapY).toBe(false);
+      }
+    }
+  });
+});
+
+describe("assignZones", () => {
+  it("assigns commercial to blocks touching main road", () => {
+    const blocks: Block[] = [
+      { x: 2, y: 2, w: 14, h: 13, adjacentRoadIds: ["r-main"], touchesMain: true, isIntersection: false, isEdge: false },
+    ];
+    const zoned = assignZones(blocks);
+    expect(zoned[0].zone).toBe("commercial");
+  });
+
+  it("assigns public to intersection blocks", () => {
+    const blocks: Block[] = [
+      { x: 2, y: 2, w: 14, h: 13, adjacentRoadIds: ["r-main", "r-cross1"], touchesMain: true, isIntersection: true, isEdge: false },
+    ];
+    const zoned = assignZones(blocks);
+    expect(zoned[0].zone).toBe("public");
+  });
+
+  it("assigns edge to canvas boundary blocks", () => {
+    const blocks: Block[] = [
+      { x: 0, y: 2, w: 6, h: 13, adjacentRoadIds: [], touchesMain: false, isIntersection: false, isEdge: true },
+    ];
+    const zoned = assignZones(blocks);
+    expect(zoned[0].zone).toBe("edge");
+  });
+
+  it("assigns residential to interior blocks", () => {
+    const blocks: Block[] = [
+      { x: 2, y: 2, w: 14, h: 13, adjacentRoadIds: [], touchesMain: false, isIntersection: false, isEdge: false },
+    ];
+    const zoned = assignZones(blocks);
+    expect(zoned[0].zone).toBe("residential");
   });
 });

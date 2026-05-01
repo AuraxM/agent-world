@@ -102,3 +102,21 @@ export interface FilledSkeleton {
   skeleton: Skeleton;
   filledNodes: FilledNode[];
 }
+
+export interface Block {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  adjacentRoadIds: string[];
+  /** block 邻接的道路中是否有主街 */
+  touchesMain: boolean;
+  /** block 是否在十字路口附近（邻接 ≥2 条道路） */
+  isIntersection: boolean;
+  /** block 是否在画布边缘 */
+  isEdge: boolean;
+}
+
+export interface ZonedBlock extends Block {
+  zone: Zone;
+}

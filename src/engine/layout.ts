@@ -1,4 +1,4 @@
-import type { Elevation, LayoutParams, Road } from "./layout-types";
+import type { Block, Elevation, LayoutParams, Road, Zone, ZonedBlock } from "./layout-types";
 import { DEFAULT_PARAMS } from "./layout-types";
 
 const CROSS_ROAD_EDGE_MARGIN = 6;
@@ -110,4 +110,81 @@ export function generateRoads(opts: {
   }
 
   return roads;
+}
+
+export function partitionBlocks(opts: {
+  canvasW: number;
+  canvasH: number;
+  roads: Road[];
+}): Block[] {
+  const { canvasW, canvasH, roads } = opts;
+
+  const hRoads = roads.filter((r) => r.dir === "h").sort((a, b) => a.offset - b.offset);
+  const vRoads = roads.filter((r) => r.dir === "v").sort((a, b) => a.offset - b.offset);
+
+  // 收集 y 分割线（横路上下沿 + 画布边界）
+  const yCuts: number[] = [0];
+  for (const r of hRoads) {
+    yCuts.push(r.offset - Math.floor(r.w / 2));
+    yCuts.push(r.offset + Math.ceil(r.w / 2));
+  }
+  yCuts.push(canvasH);
+
+  // 收集 x 分割线（竖路左右沿 + 画布边界）
+  const xCuts: number[] = [0];
+  for (const r of vRoads) {
+    xCuts.push(r.offset - Math.floor(r.w / 2));
+    xCuts.push(r.offset + Math.ceil(r.w / 2));
+  }
+  xCuts.push(canvasW);
+
+  const blocks: Block[] = [];
+  const mainRoadIds = new Set(roads.filter((r) => r.dir === "h" && r.w >= 6).map((r) => r.id));
+
+  for (let yi = 0; yi < yCuts.length - 1; yi++) {
+    for (let xi = 0; xi < xCuts.length - 1; xi++) {
+      const x = xCuts[xi];
+      const y = yCuts[yi];
+      const w = xCuts[xi + 1] - x;
+      const h = yCuts[yi + 1] - y;
+      if (w <= 0 || h <= 0) continue;
+
+      // 确定此 block 邻接哪些道路
+      const adjacentRoadIds: string[] = [];
+      for (const r of roads) {
+        if (r.dir === "h") {
+          const roadTop = r.offset - Math.floor(r.w / 2);
+          const roadBottom = r.offset + Math.ceil(r.w / 2);
+          if (Math.abs(y - roadBottom) < 1 || Math.abs(y + h - roadTop) < 1) {
+            adjacentRoadIds.push(r.id);
+          }
+        } else {
+          const roadLeft = r.offset - Math.floor(r.w / 2);
+          const roadRight = r.offset + Math.ceil(r.w / 2);
+          if (Math.abs(x - roadRight) < 1 || Math.abs(x + w - roadLeft) < 1) {
+            adjacentRoadIds.push(r.id);
+          }
+        }
+      }
+
+      blocks.push({
+        x, y, w, h,
+        adjacentRoadIds,
+        touchesMain: adjacentRoadIds.some((id) => mainRoadIds.has(id)),
+        isIntersection: adjacentRoadIds.length >= 2,
+        isEdge: x === 0 || y === 0 || x + w >= canvasW || y + h >= canvasH,
+      });
+    }
+  }
+
+  return blocks;
+}
+
+export function assignZones(blocks: Block[]): ZonedBlock[] {
+  return blocks.map((b) => {
+    if (b.isIntersection) return { ...b, zone: "public" as Zone };
+    if (b.touchesMain) return { ...b, zone: "commercial" as Zone };
+    if (b.isEdge) return { ...b, zone: "edge" as Zone };
+    return { ...b, zone: "residential" as Zone };
+  });
 }

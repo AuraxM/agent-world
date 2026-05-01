@@ -70,11 +70,15 @@ export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts 
     ? Math.max(0, currentTick - sinceTick)
     : currentTick;
 
-  // 最近一次成功 rest / eat
+  // 最近一次成功 rest（含 sleep）/ eat
   let lastRestTick: Tick | undefined;
   let lastEatTick: Tick | undefined;
   for (const t of recentThoughts) {
-    if (lastRestTick === undefined && t.action.type === "rest" && t.success) {
+    if (
+      lastRestTick === undefined &&
+      (t.action.type === "rest" || t.action.type === "sleep") &&
+      t.success
+    ) {
       lastRestTick = t.tick;
     }
     if (lastEatTick === undefined && t.action.type === "eat" && t.success) {

@@ -4,7 +4,7 @@
  * 与 `src/domain/types.ts` 的运行时类型有意区分：
  *   - `MapNodeConfig` 不含 `worldId`（实例化世界时才知道）
  *   - `CharacterTemplate` 是位置无关的角色模板，不含 `worldId / locationId /
- *     vitals / shortMemory / longMemory / currentAction / lastThought`
+ *     vitals / emotion / shortMemory / longMemory / currentAction / lastThought`
  *     —— 这些都是世界运行期才存在的字段。
  */
 import type { MapNode, Character } from "@/domain/types";
@@ -26,6 +26,7 @@ export type CharacterTemplate = Omit<
   | "worldId"
   | "locationId"
   | "vitals"
+  | "emotion"
   | "shortMemory"
   | "longMemory"
   | "currentAction"

@@ -12,15 +12,17 @@ import {
   loadCharacter,
   loadMap,
 } from "@/config/loader";
-import type { Vitals } from "@/domain/types";
+import type { Emotion, Vitals } from "@/domain/types";
 
 export interface CastMember {
   /** 必须能在 configs/characters 解析。 */
   characterId: string;
   /** 可选；缺省时取地图首个 entry 节点。 */
   locationId?: string;
-  /** 可选；覆盖默认 hunger/fatigue。 */
+  /** 可选；覆盖默认 hunger/fatigue/hygiene。 */
   vitals?: Partial<Vitals>;
+  /** 可选；覆盖默认 mood/stress/social_satiety。 */
+  emotion?: Partial<Emotion>;
 }
 
 export interface CreateWorldInput {
@@ -63,7 +65,7 @@ export function createWorldFromConfig(
         `cast member ${m.characterId} locationId not in map ${mapId}: ${loc}`,
       );
     }
-    return { tpl, locationId: loc, vitals: m.vitals };
+    return { tpl, locationId: loc, vitals: m.vitals, emotion: m.emotion };
   });
 
   // 3. 拒绝重复世界
@@ -103,6 +105,7 @@ export function createWorldFromConfig(
           visibleFromParent: n.visibleFromParent,
           shortcutsJson: JSON.stringify(n.shortcuts),
           isEntry: n.isEntry,
+          travelCost: n.travelCost ?? null,
           x: n.x ?? null,
           y: n.y ?? null,
           w: n.w ?? null,
@@ -117,6 +120,12 @@ export function createWorldFromConfig(
       const vitals: Vitals = {
         hunger: m.vitals?.hunger ?? 0,
         fatigue: m.vitals?.fatigue ?? 0,
+        hygiene: m.vitals?.hygiene ?? 0,
+      };
+      const emotion: Emotion = {
+        mood: m.emotion?.mood ?? 0,
+        stress: m.emotion?.stress ?? 0,
+        social_satiety: m.emotion?.social_satiety ?? 0,
       };
       tx.insert(schema.characters)
         .values({
@@ -127,7 +136,7 @@ export function createWorldFromConfig(
           locationId: m.locationId,
           personalityJson: JSON.stringify(m.tpl.personality),
           vitalsJson: JSON.stringify(vitals),
-          statusesJson: JSON.stringify(m.tpl.statuses),
+          emotionJson: JSON.stringify(emotion),
           abilitiesJson: JSON.stringify(m.tpl.abilities),
           shortMemoryJson: "[]",
           longMemoryJson: "[]",

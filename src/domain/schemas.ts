@@ -5,13 +5,20 @@ import {
   EVENT_SCOPES,
   EVENT_SOURCES,
   NODE_TAGS,
-  RELATION_KINDS,
-  STATUS_KINDS,
+  OBJECTIVE_RELATION_KINDS,
 } from "./enums";
+
+const RELATION_CHANGE_TYPES = [
+  "become_partner",
+  "end_partnership",
+  "become_spouse",
+  "end_friendship",
+  "end_other_relative",
+] as const;
 
 /**
  * Action schema —— LLM 通过 tool-use 强制返回的结构。
- * 字段命名故意用 snake_case 与 Anthropic tool schema 习惯一致；
+ * 字段命名故意用 snake_case 与工具调用约定一致；
  * 引擎在 execute 阶段会把它转成 camelCase 的 Action 对象。
  */
 export const ActionSchema = z.object({
@@ -28,10 +35,11 @@ export const ActionSchema = z.object({
     z.literal(4),
     z.literal(5),
   ]),
+  change_type: z.enum(RELATION_CHANGE_TYPES).optional(),
 });
 export type ActionPayload = z.infer<typeof ActionSchema>;
 
-/** Anthropic tool definition：直接喂给 SDK 即可。 */
+/** Tool definition：直接喂给 OpenAI/Anthropic SDK 的 function tool。 */
 export const ACTION_TOOL_NAME = "submit_action";
 export const ActionToolInputSchema = {
   type: "object" as const,
@@ -53,7 +61,7 @@ export const ActionToolInputSchema = {
     reasoning: {
       type: "string",
       description:
-        "内心独白。必须至少引用一项你自己的性格维度数值（例如：我的内向度 -80 让我不愿意搭话）。",
+        "内心独白。必须显式引用一项你的性格特征（用文字描述，不要写数值）。",
     },
     emotion_tag: {
       type: "string",
@@ -64,33 +72,45 @@ export const ActionToolInputSchema = {
       enum: [1, 2, 3, 4, 5],
       description: "1-5 自评要不要长期记住。",
     },
+    change_type: {
+      type: "string",
+      enum: [...RELATION_CHANGE_TYPES],
+      description: "仅在 action_type=update_relation 时使用。",
+    },
   },
   required: ["action_type", "reasoning", "self_importance"],
   additionalProperties: false,
 };
 
-/** Personality 校验。 */
+/** Personality 校验：MBTI 4 维 [-4, 4] 整数。 */
 export const PersonalitySchema = z.object({
-  extraversion: z.number().min(-100).max(100),
-  rationality: z.number().min(-100).max(100),
-  ambition: z.number().min(-100).max(100),
-  altruism: z.number().min(-100).max(100),
-  curiosity: z.number().min(-100).max(100),
-  aggression: z.number().min(-100).max(100),
-  honesty: z.number().min(-100).max(100),
-  stability: z.number().min(-100).max(100),
+  ei: z.number().int().min(-4).max(4),
+  sn: z.number().int().min(-4).max(4),
+  tf: z.number().int().min(-4).max(4),
+  jp: z.number().int().min(-4).max(4),
 });
 
-export const StatusSchema = z.object({
-  kind: z.enum(STATUS_KINDS),
-  level: z.enum(["light", "medium", "severe"]),
-  since: z.number().int().nonnegative(),
+/** Vitals 校验：0..16 整数。 */
+export const VitalsSchema = z.object({
+  hunger: z.number().int().min(0).max(16),
+  fatigue: z.number().int().min(0).max(16),
+  hygiene: z.number().int().min(0).max(16),
 });
 
+/** Emotion 校验：mood/social_satiety [-4..+4]，stress [0..4]。 */
+export const EmotionSchema = z.object({
+  mood: z.number().int().min(-4).max(4),
+  stress: z.number().int().min(0).max(4),
+  social_satiety: z.number().int().min(-4).max(4),
+});
+
+/** 单向关系。 */
 export const RelationSchema = z.object({
-  kind: z.enum(RELATION_KINDS),
-  affinity: z.number().min(-100).max(100),
+  kinds: z.array(z.enum(OBJECTIVE_RELATION_KINDS)).min(1),
+  affection: z.number().int().min(-4).max(4),
   note: z.string().optional(),
+  since: z.number().int().nonnegative(),
+  lastInteractionTick: z.number().int().nonnegative(),
 });
 
 export const MapNodeSchema = z.object({
@@ -105,6 +125,7 @@ export const MapNodeSchema = z.object({
   visibleFromParent: z.boolean(),
   shortcuts: z.array(z.string()),
   isEntry: z.boolean(),
+  travelCost: z.number().int().min(0).optional(),
   x: z.number().int().optional(),
   y: z.number().int().optional(),
   w: z.number().int().positive().optional(),
@@ -128,6 +149,7 @@ export const ExecutedActionSchema = z.object({
     z.literal(4),
     z.literal(5),
   ]),
+  changeType: z.enum(RELATION_CHANGE_TYPES).optional(),
 });
 
 export const AgentThoughtSchema = z.object({

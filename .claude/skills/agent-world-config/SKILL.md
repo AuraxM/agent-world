@@ -15,8 +15,8 @@ The runtime engine reads them through `src/config/loader.ts` (Zod-validated). Ev
 ## Workflow
 
 1. **Clarify with the user first.** Don't draft anything until you know:
-   - For a map: theme, scale (rough node count), tone, what kind of "entry" makes sense (公交车站 / 码头 / 传送阵 / 港口 / 城门 / 机场…).
-   - For a character: name, role, personality archetype, target relations to existing characters.
+   - For a map: theme, scale (rough node count), tone, what kind of "entry" makes sense (公交车站 / 码头 / 传送阵 / 港口 / 城门 / 机场…), and what "bathing" facility fits the setting (公共浴池 / 家中浴室 / 河边温泉 …).
+   - For a character: name, role, MBTI archetype (E/I, N/S, F/T, P/J), target relations to existing characters.
 2. **Read the current state** so you don't collide:
    - `configs/maps/` and `configs/characters/` for existing ids/names.
    - `src/domain/enums.ts` for the canonical closed vocabularies (the only source of truth).
@@ -37,26 +37,28 @@ The runtime engine reads them through `src/config/loader.ts` (Zod-validated). Ev
 
 **Maps**
 - ≥1 node has `isEntry: true`. This is non-negotiable — runtime falls back to "first entry node" when defaulting cast positions and when injecting new characters.
+- ≥1 node has the `bathing` tag. Without it, no NPC can ever `bathe`, hygiene grows unbounded and forces constant ⚠ reminders. (公共浴池 / 家中带 bathing 标签的浴室 都行。)
 - Exactly 1 root (`parentId: null`) is required (more is allowed but odd; usually 1).
 - Every non-root `parentId` must reference another node in the same file.
 - Node ids are unique within the file.
 - `tags`, `privacy`, `nodeTag` values come from `src/domain/enums.ts`.
+- `travelCost` (optional, integer ≥ 0) marks a node as "remote": entering it consumes that many ticks. Default 0 = free move. Shortcuts always cost 0.
 
 **Characters**
-- Personality 8 dims must be integers in `[-100, 100]`. All 8 keys required.
-- `statuses[].kind` must be one of `hungry / fatigue / bored / excited / curious / lonely / angry`.
-- `statuses[].level` must be one of `light / medium / severe`.
-- `relations[*].kind` must be one of `stranger / acquaintance / friend / close_friend / lover / crush / rival / enemy / family`.
-- `relations[*].affinity` must be in `[-100, 100]`.
-- The template is **location-agnostic** — do NOT add a `locationId`, `worldId`, or `vitals` field. Those are runtime concerns.
+- Personality: 4 MBTI dims `ei / sn / tf / jp`, each integer in `[-4, 4]`. ALL keys required.
+- `relations[*].kinds` must be a non-empty subarray of `OBJECTIVE_RELATION_KINDS` (see `src/domain/enums.ts`).
+- `relations[*].affection` must be an integer in `[-4, 4]`.
+- `relations[*].since` and `lastInteractionTick` must be non-negative integers (use 0 for fresh templates).
+- The template is **location-agnostic** — do NOT add `locationId`, `worldId`, `vitals`, `emotion`, `shortMemory`, `longMemory`, `currentAction`, or `lastThought`. Those are runtime concerns.
 
 ## Style conventions
 
-- **Names in Chinese, ids in kebab-case English** (mirrors existing files: `node-restaurant`, `char-zhangmo`).
+- **Names in Chinese, ids in kebab-case English** (mirrors prior files: `node-restaurant`, `char-zhangmo`).
 - Each entry node should have a `description` that mentions the entry mechanism naturally ("镇口的公交车站就停在喷泉旁。").
 - Use `spriteKey` for nodes that have art; use `avatar` for characters (a single emoji is fine).
-- Personality values: keep most dimensions near 0 unless the trait is part of the character's identity. Strong values ($\pm 60$+) should be storyline-load-bearing.
+- MBTI: keep most dims modest (±1..±2). Strong values (|3|–|4|) should be storyline-load-bearing and recognizable in the LLM's reasoning. Aim for 1–2 strong dims per character.
 - Relations: only declare the asymmetric edge from this character. Don't try to keep everyone's relations symmetric — that's a design choice, not a hard rule.
+- Blood relations (`father / mother / son / daughter / older_brother / younger_brother / older_sister / younger_sister / other_relative`) cannot be ended by the engine or LLM. Use them deliberately.
 
 ## When the user asks for something that doesn't fit
 

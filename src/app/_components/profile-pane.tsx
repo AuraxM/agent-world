@@ -1,24 +1,20 @@
 "use client";
 
-import type { Character, MapNode } from "@/domain/types";
-import type { Personality } from "@/domain/types";
+import type { Character, MapNode, Personality } from "@/domain/types";
 import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
 import { indexNodes } from "../_lib/world";
 
 const PERSONALITY_LABELS: Record<keyof Personality, string> = {
-  extraversion: "外向",
-  rationality: "理性",
-  ambition: "野心",
-  altruism: "利他",
-  curiosity: "好奇",
-  aggression: "攻击",
-  honesty: "诚实",
-  stability: "稳定",
+  ei: "E/I",
+  sn: "N/S",
+  tf: "F/T",
+  jp: "P/J",
 };
 
+/** [-4, +4] 格子条形条；和 vitals 同风格。 */
 function PersonalityBar({ label, value }: { label: string; value: number }) {
-  // value in [-100, 100]; 0 居中
-  const pct = (value + 100) / 2; // 0..100
+  // value in [-4, 4]; 0 居中。映射到 [0..100]
+  const pct = ((value + 4) / 8) * 100;
   const isNeg = value < 0;
   const fillStart = isNeg ? pct : 50;
   const fillEnd = isNeg ? 50 : pct;
@@ -74,7 +70,7 @@ export function ProfilePane({
     .sort((a, b) => b.tick - a.tick)
     .slice(0, 5);
   const topRelations = Object.entries(character.relations)
-    .sort((a, b) => Math.abs(b[1].affinity) - Math.abs(a[1].affinity))
+    .sort((a, b) => Math.abs(b[1].affection) - Math.abs(a[1].affection))
     .slice(0, 5);
 
   return (
@@ -157,27 +153,28 @@ export function ProfilePane({
         </div>
       </section>
 
-      {/* 状态 */}
+      {/* 生理状态 */}
       <section>
         <div className="text-[10px] uppercase tracking-widest text-(--color-pixel-muted) mb-1">
-          状态
+          生理
         </div>
         <div className="text-[11px] text-(--color-pixel-fg) flex flex-wrap gap-x-3 gap-y-0.5">
-          <span>饥饿 {character.vitals.hunger}</span>
-          <span>疲惫 {character.vitals.fatigue}</span>
+          <span>饿 {character.vitals.hunger}</span>
+          <span>累 {character.vitals.fatigue}</span>
+          <span>脏 {character.vitals.hygiene}</span>
         </div>
-        {character.statuses.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
-            {character.statuses.map((s, i) => (
-              <span
-                key={`${s.kind}-${i}`}
-                className="text-[10px] px-1 border border-(--color-pixel-border-light) bg-(--color-pixel-bg)"
-              >
-                {s.kind}·{s.level}
-              </span>
-            ))}
-          </div>
-        )}
+      </section>
+
+      {/* 情绪 */}
+      <section>
+        <div className="text-[10px] uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+          情绪
+        </div>
+        <div className="text-[11px] text-(--color-pixel-fg) flex flex-wrap gap-x-3 gap-y-0.5">
+          <span>心情 {character.emotion.mood}</span>
+          <span>压力 {character.emotion.stress}</span>
+          <span>社交 {character.emotion.social_satiety}</span>
+        </div>
       </section>
 
       {/* 关系 */}
@@ -192,18 +189,20 @@ export function ProfilePane({
                 <span className="text-(--color-pixel-fg) min-w-[60px]">
                   {charById.get(id)?.name ?? id}
                 </span>
-                <span className="text-(--color-pixel-muted)">{rel.kind}</span>
+                <span className="text-(--color-pixel-muted) truncate">
+                  {rel.kinds.join("/")}
+                </span>
                 <span
                   className="ml-auto"
                   style={{
                     color:
-                      rel.affinity >= 0
+                      rel.affection >= 0
                         ? "var(--color-pixel-success)"
                         : "var(--color-pixel-danger)",
                   }}
                 >
-                  {rel.affinity > 0 ? "+" : ""}
-                  {rel.affinity}
+                  {rel.affection > 0 ? "+" : ""}
+                  {rel.affection}
                 </span>
               </li>
             ))}

@@ -2,29 +2,27 @@
   "id": "char-zhangmo",
   "name": "张默",
   "avatar": "🤐",
+  "homeNodeId": "node-zhang-home",
   "personality": {
-    "extraversion": -80,
-    "rationality": 30,
-    "ambition": -40,
-    "altruism": 0,
-    "curiosity": -50,
-    "aggression": -40,
-    "honesty": 0,
-    "stability": -20
+    "ei": -3,
+    "sn": 1,
+    "tf": 2,
+    "jp": 1
   },
-  "statuses": [
-    { "kind": "bored", "level": "light", "since": 0 }
-  ],
   "abilities": [],
   "relations": {
     "char-lihuan": {
-      "kind": "friend",
-      "affinity": 60,
-      "note": "童年好友，但他的热情我经常受不了。"
+      "kinds": ["friend", "classmate"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "童年好友兼同班，但他的热情我经常受不了。"
     },
     "char-wanggang": {
-      "kind": "enemy",
-      "affinity": -70,
+      "kinds": ["classmate"],
+      "affection": -3,
+      "since": 0,
+      "lastInteractionTick": 0,
       "note": "他从初中就看我不顺眼。"
     }
   }

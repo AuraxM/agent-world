@@ -41,6 +41,7 @@ const STATEMENTS = [
     visible_from_parent INTEGER NOT NULL DEFAULT 1,
     shortcuts_json TEXT NOT NULL DEFAULT '[]',
     is_entry INTEGER NOT NULL DEFAULT 0,
+    travel_cost INTEGER,
     x INTEGER,
     y INTEGER,
     w INTEGER,
@@ -57,8 +58,8 @@ const STATEMENTS = [
     avatar TEXT,
     location_id TEXT NOT NULL,
     personality_json TEXT NOT NULL,
-    vitals_json TEXT NOT NULL DEFAULT '{"hunger":0,"fatigue":0}',
-    statuses_json TEXT NOT NULL DEFAULT '[]',
+    vitals_json TEXT NOT NULL DEFAULT '{"hunger":0,"fatigue":0,"hygiene":0}',
+    emotion_json TEXT NOT NULL DEFAULT '{"mood":0,"stress":0,"social_satiety":0}',
     abilities_json TEXT NOT NULL DEFAULT '[]',
     short_memory_json TEXT NOT NULL DEFAULT '[]',
     long_memory_json TEXT NOT NULL DEFAULT '[]',
@@ -117,6 +118,14 @@ const NODES_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
     name: "is_entry",
     ddl: "ALTER TABLE nodes ADD COLUMN is_entry INTEGER NOT NULL DEFAULT 0",
   },
+  { name: "travel_cost", ddl: "ALTER TABLE nodes ADD COLUMN travel_cost INTEGER" },
+];
+
+const CHARACTERS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
+  {
+    name: "emotion_json",
+    ddl: `ALTER TABLE characters ADD COLUMN emotion_json TEXT NOT NULL DEFAULT '{"mood":0,"stress":0,"social_satiety":0}'`,
+  },
 ];
 
 const tx = sqlite.transaction(() => {
@@ -124,9 +133,16 @@ const tx = sqlite.transaction(() => {
   const nodeCols = sqlite
     .prepare(`PRAGMA table_info(nodes)`)
     .all() as { name: string }[];
-  const have = new Set(nodeCols.map((c) => c.name));
+  const haveNodeCols = new Set(nodeCols.map((c) => c.name));
   for (const col of NODES_NEW_COLUMNS) {
-    if (!have.has(col.name)) sqlite.exec(col.ddl);
+    if (!haveNodeCols.has(col.name)) sqlite.exec(col.ddl);
+  }
+  const charCols = sqlite
+    .prepare(`PRAGMA table_info(characters)`)
+    .all() as { name: string }[];
+  const haveCharCols = new Set(charCols.map((c) => c.name));
+  for (const col of CHARACTERS_NEW_COLUMNS) {
+    if (!haveCharCols.has(col.name)) sqlite.exec(col.ddl);
   }
 });
 tx();

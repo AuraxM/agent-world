@@ -1,25 +1,28 @@
 /**
- * 模拟引擎主循环。
+ * 模拟引擎主循环（v2 — 角色系统重设计后）。
  *
  * 顺序：
  *   1. 加载世界 (loadWorld)
- *   2. status decay → 衍生 inner 事件
+ *   2. vitals 衰减 + emotion 演化 → 衍生 inner 事件
  *   3. 玩家排队的 pending 事件（Stage 1 暂为空）
  *   4. dispatchPerception → 谁看见了什么
- *   5. 收集"需要决策"的角色（感知队列非空）
- *   6. 并行调用 decide（Stage 1：可注入 mock）
- *   7. executeActions → 改状态 / 写记忆 / 衍生 action 事件
+ *   5. 对每个角色：
+ *      a. 检查 ongoing action（睡觉/远途 move）：未完成且未被中断 → 自动 wait
+ *      b. 否则进入 free-move 决策循环（cost=0 的 move 不结束本 tick，
+ *         一次决策最多 5 步免费移动）
+ *      c. 出循环后得到一个非 move（或受 cost 限制的 move）作为本 tick 行动
+ *   6. executeActions → 改状态 / 写记忆 / 衍生 action 事件
+ *   7. 关系自动管理：同节点互动 → ensure acquaintance；336 tick 未互动 → 衰减
  *   8. 把所有 events 追加到 events_log
  *   9. currentTick++ → saveWorld
  *  10. 每 24 tick 写一次 snapshot
- *
- * decide 函数签名固定，保证后续 LLM 实现可以直接替换。
  */
+import { randomUUID } from "node:crypto";
 import { buildActionContext, getAvailableActions } from "./actions";
 import { executeActions } from "./execute";
 import { deriveAggregatedFacts, type AggregatedFacts } from "./facts";
 import { dispatchPerception } from "./perception";
-import { decayAndDeriveStatuses } from "./status-decay";
+import { decayVitals, evolveEmotions } from "./vitals-emotion";
 import { timeOfDay } from "@/llm/prompt";
 import {
   appendEventsLog,
@@ -35,14 +38,15 @@ import type {
   Action,
   Character,
   MapNode,
+  Relation,
   WorldEvent,
 } from "@/domain/types";
 import type { ActionOption } from "./actions";
 
-/**
- * 推 facts 时往回看的 tick 窗口。48 已远超"今日"24，足以容纳 lastRest/lastEat。
- */
 const FACTS_LOOKBACK_TICKS = 48;
+const MAX_FREE_MOVES = 5;
+/** 14 游戏日 = 14 * 24 = 336 tick */
+const ACQUAINTANCE_DECAY_TICKS = 336;
 
 export interface DecideInput {
   character: Character;
@@ -53,35 +57,24 @@ export interface DecideInput {
   options: ActionOption[];
   worldName: string;
   tick: number;
-  /** 自我观察聚合：上一行动 / 已停留小时 / 距上次 rest / 今日累计计数 等。 */
   facts: AggregatedFacts;
 }
 
 export type DecideFn = (input: DecideInput) => Promise<Action>;
 
 export interface TickOptions {
-  /** 注入决策函数；不传则使用默认 LLM 实现（Stage 1 暂未接入 → fallback wait） */
   decide?: DecideFn;
-  /** 跳过 LLM 决策，强制所有 NPC wait（用于无密钥的本地测试） */
   forceWait?: boolean;
 }
 
 export interface TickResult {
   worldId: string;
-  /** 推进前的 tick */
   fromTick: number;
-  /** 推进后的 tick */
   toTick: number;
-  /** 本 tick 产生的所有事件 */
   events: WorldEvent[];
-  /** 本 tick 决策需求列表（可能小于 NPC 数） */
   decisions: Array<{ characterId: string; action: Action; success: boolean }>;
 }
 
-/**
- * 默认决策函数：lazy import LLM 模块以避免引擎单测必须有 Anthropic SDK。
- * 注入测试时可通过 options.decide 直接绕过。
- */
 const DEFAULT_DECIDE: DecideFn = async (input) => {
   const { llmDecide } = await import("@/llm/decide");
   return llmDecide(input);
@@ -96,6 +89,28 @@ function fallbackWait(c: Character): Action {
   };
 }
 
+function makeInnerEvent(args: {
+  worldId: string;
+  tick: number;
+  charId: string;
+  description: string;
+  intensity?: 1 | 2 | 3 | 4 | 5;
+}): WorldEvent {
+  return {
+    id: `evt-${randomUUID().slice(0, 8)}`,
+    worldId: args.worldId,
+    tick: args.tick,
+    category: "inner",
+    description: args.description,
+    participants: [args.charId],
+    source: "inner",
+    intensity: args.intensity ?? 1,
+    scope: "private",
+    audienceCharacterId: args.charId,
+    duration: 1,
+  };
+}
+
 export async function tick(
   worldId: string,
   options: TickOptions = {},
@@ -103,37 +118,121 @@ export async function tick(
   const loaded = loadWorld(worldId);
   const { world, nodes, characters } = loaded;
   const fromTick = world.currentTick;
+  const allEvents: WorldEvent[] = [];
+  const allDecisions: Array<{
+    characterId: string;
+    action: Action;
+    success: boolean;
+  }> = [];
 
-  // 1. 衰减 + 越线 inner 事件
-  const innerEvents = decayAndDeriveStatuses(characters, worldId, fromTick);
+  // 1. vitals decay
+  allEvents.push(...decayVitals({ characters, worldId, tick: fromTick }));
 
-  // 2. （Stage 1 占位）外部排队事件
+  // 2. emotion evolution
+  const hasCompanions = new Map<string, boolean>();
+  for (const c of characters) {
+    const peers = characters.filter(
+      (p) => p.id !== c.id && p.locationId === c.locationId,
+    );
+    hasCompanions.set(c.id, peers.length > 0);
+  }
+  allEvents.push(
+    ...evolveEmotions({ characters, worldId, tick: fromTick, hasCompanions }),
+  );
+
+  // 3. 占位：外部排队事件
   const scheduledEvents: WorldEvent[] = [];
+  const eventsForPerception = [...allEvents, ...scheduledEvents];
 
-  const allCurrentEvents = [...innerEvents, ...scheduledEvents];
+  // 4. 感知分发
+  const perceptions = dispatchPerception(
+    nodes,
+    characters,
+    eventsForPerception,
+  );
 
-  // 3. 感知分发
-  const perceptions = dispatchPerception(nodes, characters, allCurrentEvents);
-
-  // 4. 收集需要决策者
-  // Stage 1：所有角色每 tick 都决策，即使没有感知到事件——确保性格驱动可见
-  const needers = characters.slice();
-
-  // 5. 决策（并行）
-  const decideFn = options.forceWait
-    ? async (input: DecideInput) => fallbackWait(input.character)
-    : (options.decide ?? DEFAULT_DECIDE);
-
-  // 一次性 batch 读取 character 模板的 homeNodeId 映射，避免对每人重复读盘
+  // 5. 准备决策上下文公共变量
   const homeMap = buildHomeMap();
   const sinceTick = Math.max(0, fromTick - FACTS_LOOKBACK_TICKS);
   const dayInfo = timeOfDay(fromTick);
+  const decideFn = options.forceWait
+    ? async (input: DecideInput) => fallbackWait(input.character)
+    : (options.decide ?? DEFAULT_DECIDE);
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
-  const actions = await Promise.all(
-    needers.map(async (c) => {
+  // 6. 处理每个角色（顺序，不能并行：free move 改 location 影响后续 perception 推断）
+  const actionsForExecution: Action[] = [];
+
+  for (const c of characters) {
+    // 6a. 持续行动检查
+    if (c.currentAction && fromTick < c.currentAction.endsAt) {
+      const perceived = perceptions.get(c.id) ?? [];
+      const interrupt = perceived.find(
+        (e) => e.intensity >= c.currentAction!.interruptThreshold,
+      );
+      if (interrupt) {
+        // 中断：部分恢复 + 内心事件 + 进入正常决策流程
+        const halfDone = Math.floor(
+          (fromTick - c.currentAction.startedAt) / 2,
+        );
+        if (c.currentAction.type === "sleep") {
+          c.vitals.fatigue = Math.max(0, c.vitals.fatigue - halfDone);
+        }
+        allEvents.push(
+          makeInnerEvent({
+            worldId,
+            tick: fromTick,
+            charId: c.id,
+            description: `被「${interrupt.description}」打断。`,
+            intensity: 2,
+          }),
+        );
+        c.currentAction = undefined;
+      } else {
+        // 仍在持续：自动 wait，不调用 LLM
+        if (fromTick % 4 === 0) {
+          allEvents.push(
+            makeInnerEvent({
+              worldId,
+              tick: fromTick,
+              charId: c.id,
+              description: `仍在 ${c.currentAction.description}。`,
+            }),
+          );
+        }
+        const waitAction: Action = {
+          type: "wait",
+          actorId: c.id,
+          reasoning: `持续行动中：${c.currentAction.description}。`,
+          selfImportance: 1,
+        };
+        actionsForExecution.push(waitAction);
+        allDecisions.push({
+          characterId: c.id,
+          action: waitAction,
+          success: true,
+        });
+        continue;
+      }
+    }
+
+    // 6b. ongoing action 到期：先结算最终效果，再让 LLM 自由决策
+    if (c.currentAction && fromTick === c.currentAction.endsAt) {
+      if (c.currentAction.type === "sleep") {
+        c.vitals.fatigue = 0;
+      }
+      c.currentAction = undefined;
+    }
+
+    // 6c. free move 链
+    let freeMovesUsed = 0;
+    let action: Action;
+
+    while (true) {
       const ctx = buildActionContext(c, nodes, characters);
       const recentThoughts = loadRecentThoughts(worldId, c.id, sinceTick);
       const homeNodeId = homeMap.get(c.id) ?? null;
+      c.homeNodeId = homeNodeId;
       const facts = deriveAggregatedFacts({
         character: c,
         nodes,
@@ -141,14 +240,13 @@ export async function tick(
         recentThoughts,
         homeNodeId,
       });
-      // 把 homeNodeId 也回填到内存对象，方便下游模块使用
-      c.homeNodeId = homeNodeId;
       const opts = getAvailableActions(ctx, {
         facts,
         isSleepHour: dayInfo.isSleepHour,
       });
+
       try {
-        return await decideFn({
+        action = await decideFn({
           character: c,
           here: ctx.here,
           companions: ctx.companions,
@@ -160,38 +258,112 @@ export async function tick(
           facts,
         });
       } catch (err) {
-        // LLM 异常 → wait + 写明失败原因
-        const wait = fallbackWait(c);
-        wait.reasoning = `LLM 调用失败：${
+        action = fallbackWait(c);
+        action.reasoning = `LLM 调用失败：${
           err instanceof Error ? err.message : String(err)
         }`;
-        return wait;
       }
-    }),
-  );
 
-  // 6. 执行
-  const result = executeActions({
+      if (action.type !== "move" || !action.targetNodeId) break;
+
+      const targetNode = nodeById.get(action.targetNodeId);
+      const isShortcut = ctx.here.shortcuts.includes(action.targetNodeId);
+      const cost = isShortcut ? 0 : (targetNode?.travelCost ?? 0);
+
+      if (cost > 0) {
+        // 远途 move：占位 ongoing，本 tick 不再决策（execute 不会真正搬位）
+        c.currentAction = {
+          type: "move",
+          startedAt: fromTick,
+          endsAt: fromTick + cost,
+          description: `前往 ${targetNode?.name ?? action.targetNodeId} 途中`,
+          interruptThreshold: 5,
+        };
+        // 远途：将 action 转成 wait 让本 tick 不真的发生瞬移
+        action = {
+          type: "wait",
+          actorId: c.id,
+          reasoning: `开始前往 ${targetNode?.name ?? action.targetNodeId}，途中需 ${cost} 小时。`,
+          selfImportance: action.selfImportance,
+        };
+        break;
+      }
+
+      if (freeMovesUsed >= MAX_FREE_MOVES) {
+        allEvents.push(
+          makeInnerEvent({
+            worldId,
+            tick: fromTick,
+            charId: c.id,
+            description: "想继续走但只能停下想想。",
+          }),
+        );
+        // 转成 wait 结束本轮
+        action = {
+          type: "wait",
+          actorId: c.id,
+          reasoning: "本 tick 已用完免费移动配额。",
+          selfImportance: 1,
+        };
+        break;
+      }
+
+      // 应用免费 move：直接搬位 + 抛事件
+      const fromNode = ctx.here;
+      c.locationId = action.targetNodeId;
+      freeMovesUsed++;
+      allEvents.push({
+        id: `evt-${randomUUID().slice(0, 8)}`,
+        worldId,
+        tick: fromTick,
+        category: "action",
+        description: `${c.name} 从 ${fromNode.name} 来到 ${targetNode?.name ?? action.targetNodeId}。`,
+        participants: [c.id],
+        source: "actor",
+        intensity: 1,
+        scope: "node",
+        nodeId: c.locationId,
+        duration: 1,
+      });
+    }
+
+    actionsForExecution.push(action);
+    allDecisions.push({
+      characterId: c.id,
+      action,
+      success: true,
+    });
+  }
+
+  // 7. 执行（move 已在 free-move 循环里处理；execute 内部的 move 分支保留兼容）
+  // 仅把"非 move（或带 cost 的 move 已被改写为 wait）"喂进去
+  const execResult = executeActions({
     worldId,
     tick: fromTick,
     characters,
     nodes,
-    actions,
+    actions: actionsForExecution,
   });
+  allEvents.push(...execResult.events);
 
-  const allEvents = [...allCurrentEvents, ...result.events];
+  // 同步 success/reason 到 allDecisions（execute 可能 fail）
+  for (let i = 0; i < execResult.resolvedActions.length; i++) {
+    const r = execResult.resolvedActions[i];
+    if (allDecisions[i] && allDecisions[i].action === r.action) {
+      allDecisions[i].success = r.success;
+    }
+  }
 
-  // 7. 写日志
+  // 8. 关系自动管理
+  manageRelations(characters, fromTick, allEvents);
+
+  // 9. 持久化
   appendEventsLog(worldId, allEvents);
-
-  // 8. 推进 tick + 持久化
   world.currentTick = fromTick + 1;
   saveWorld(loaded);
-
-  // 9. 写入每个 NPC 的本轮思考（含完整 reasoning），供 profile 展示
   appendThoughts(
     worldId,
-    result.resolvedActions.map((r) => ({
+    execResult.resolvedActions.map((r) => ({
       characterId: r.action.actorId,
       tick: fromTick,
       action: r.action,
@@ -199,7 +371,6 @@ export async function tick(
     })),
   );
 
-  // 10. 每 24 tick 一个 snapshot（推进后才判断，所以 tick 从 0→1 时不写）
   if (world.currentTick > 0 && world.currentTick % 24 === 0) {
     persistSnapshot(loaded);
   }
@@ -209,18 +380,10 @@ export async function tick(
     fromTick,
     toTick: world.currentTick,
     events: allEvents,
-    decisions: result.resolvedActions.map((r) => ({
-      characterId: r.action.actorId,
-      action: r.action,
-      success: r.success,
-    })),
+    decisions: allDecisions,
   };
 }
 
-/**
- * 从 configs/characters 一次性读出 id → homeNodeId 映射。
- * 失败（IO/解析）退化为空 Map：facts.homeNodeId 退化为 null，prompt 仍可工作。
- */
 function buildHomeMap(): Map<string, string> {
   const m = new Map<string, string>();
   try {
@@ -228,10 +391,85 @@ function buildHomeMap(): Map<string, string> {
       if (tpl.homeNodeId) m.set(tpl.id, tpl.homeNodeId);
     }
   } catch {
-    // 配置目录不可读时静默：tick 仍能跑，只是 prompt 缺 home 信息
+    // configs 目录不可读时静默
   }
   return m;
 }
 
-/** 暴露给测试：直接复用已加载的 LoadedWorld 而不查 DB（暂未对外） */
+// ---- relation auto-management ----
+
+function manageRelations(
+  characters: Character[],
+  tick: number,
+  events: WorldEvent[],
+): void {
+  // 同节点角色两两间是否本 tick 有互动事件
+  const byNode = new Map<string, Character[]>();
+  for (const c of characters) {
+    const arr = byNode.get(c.locationId) ?? [];
+    arr.push(c);
+    byNode.set(c.locationId, arr);
+  }
+
+  for (const [, nodeChars] of byNode) {
+    if (nodeChars.length < 2) continue;
+    for (let i = 0; i < nodeChars.length; i++) {
+      for (let j = i + 1; j < nodeChars.length; j++) {
+        const a = nodeChars[i];
+        const b = nodeChars[j];
+        const interacted = events.some(
+          (e) =>
+            e.tick === tick &&
+            e.participants.includes(a.id) &&
+            e.participants.includes(b.id) &&
+            (e.category === "social" || e.category === "action"),
+        );
+        if (interacted) {
+          ensureAcquaintance(a, b.id, tick);
+          ensureAcquaintance(b, a.id, tick);
+        }
+      }
+    }
+  }
+
+  // acquaintance 衰减：lastInteractionTick 距今 ≥ 336 tick → 移除 acquaintance
+  for (const c of characters) {
+    for (const otherId of Object.keys(c.relations)) {
+      const rel = c.relations[otherId];
+      if (
+        rel.kinds.includes("acquaintance") &&
+        tick - rel.lastInteractionTick >= ACQUAINTANCE_DECAY_TICKS
+      ) {
+        rel.kinds = rel.kinds.filter((k) => k !== "acquaintance");
+        if (rel.kinds.length === 0) {
+          delete c.relations[otherId];
+        }
+      }
+    }
+  }
+}
+
+function ensureAcquaintance(
+  a: Character,
+  bId: string,
+  tick: number,
+): void {
+  const rel = a.relations[bId];
+  if (!rel || rel.kinds.length === 0) {
+    const fresh: Relation = {
+      kinds: ["acquaintance"],
+      affection: 0,
+      since: tick,
+      lastInteractionTick: tick,
+    };
+    a.relations[bId] = fresh;
+  } else {
+    rel.lastInteractionTick = tick;
+    if (!rel.kinds.includes("acquaintance")) {
+      // 已有 friend / partner 等更强关系时不重复加 acquaintance
+      // （仅在没有任何"熟人级别"关系时才加；这里简化为：始终不重复加）
+    }
+  }
+}
+
 export type { LoadedWorld };

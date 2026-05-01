@@ -35,7 +35,7 @@
       "parentId": "node-school",
       "name": "教室3-2",
       "description": "高三 2 班教室，靠窗的一排座位最受欢迎。",
-      "tags": ["semi", "indoor", "education"],
+      "tags": ["semi", "indoor", "education", "quiet"],
       "capacity": 40,
       "privacy": "semi",
       "visibleFromParent": false,
@@ -73,6 +73,19 @@
       "spriteKey": "restaurant"
     },
     {
+      "id": "node-bath",
+      "parentId": "node-town",
+      "name": "公共浴池",
+      "description": "镇上的老澡堂，水汽常年蒸腾。男女分池，门口挂着褪色的招牌。",
+      "tags": ["public", "indoor", "bathing"],
+      "capacity": 30,
+      "privacy": "semi",
+      "visibleFromParent": true,
+      "shortcuts": [],
+      "isEntry": false,
+      "x": 14, "y": 5, "w": 4, "h": 4
+    },
+    {
       "id": "node-park",
       "parentId": "node-town",
       "name": "中央公园",
@@ -85,6 +98,19 @@
       "isEntry": true,
       "x": 6, "y": 14, "w": 9, "h": 6,
       "spriteKey": "park"
+    },
+    {
+      "id": "node-mountain",
+      "parentId": "node-town",
+      "name": "后山小径",
+      "description": "通往后山的山间步道，从镇上来回要走上半晌。",
+      "tags": ["public", "outdoor", "park"],
+      "capacity": null,
+      "privacy": "public",
+      "visibleFromParent": false,
+      "shortcuts": [],
+      "isEntry": false,
+      "travelCost": 2
     },
     {
       "id": "node-zhang-home",

@@ -67,11 +67,6 @@ export function CharacterRail({
                     <span className="text-xs text-(--color-pixel-fg) truncate">
                       {c.name}
                     </span>
-                    {c.statuses.length > 0 && (
-                      <span className="text-[9px] text-(--color-pixel-muted)">
-                        ·{c.statuses.length}
-                      </span>
-                    )}
                   </div>
                   <div className="text-[10px] text-(--color-pixel-muted) truncate">
                     @ {here?.name ?? c.locationId}

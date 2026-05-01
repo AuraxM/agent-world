@@ -175,10 +175,11 @@ describe("evolveEmotions", () => {
   });
 
   it("低 mood 周期性提醒（每 6 tick）", () => {
+    // mood=-4 → 偶数 tick 自然回归到 -3（仍 ≤-3，触发提醒）
     const c = mkChar(
       "a",
       { hunger: 0, fatigue: 0, hygiene: 0 },
-      { mood: -3, stress: 0, social_satiety: 0 },
+      { mood: -4, stress: 0, social_satiety: 0 },
     );
     const evs = evolveEmotions({
       characters: [c],
@@ -186,6 +187,7 @@ describe("evolveEmotions", () => {
       tick: 6,
       hasCompanions: new Map([["a", false]]),
     });
+    expect(c.emotion.mood).toBe(-3);
     expect(evs.some((e) => /低落|出口/.test(e.description))).toBe(true);
   });
 });

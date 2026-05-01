@@ -4,12 +4,8 @@
  * 复用 `src/domain/enums.ts` 的封闭枚举，确保配置层和运行时层共享同一份词汇表。
  */
 import { z } from "zod";
-import { NODE_TAGS, RELATION_KINDS, STATUS_KINDS } from "@/domain/enums";
-import {
-  PersonalitySchema,
-  RelationSchema,
-  StatusSchema,
-} from "@/domain/schemas";
+import { NODE_TAGS, OBJECTIVE_RELATION_KINDS } from "@/domain/enums";
+import { PersonalitySchema, RelationSchema } from "@/domain/schemas";
 import type { MapConfig, CharacterTemplate, MapNodeConfig } from "./types";
 
 /** 节点（文件内格式）：相比运行时缺 `worldId`。 */
@@ -24,6 +20,7 @@ export const MapNodeConfigSchema: z.ZodType<MapNodeConfig> = z.object({
   visibleFromParent: z.boolean(),
   shortcuts: z.array(z.string()),
   isEntry: z.boolean(),
+  travelCost: z.number().int().min(0).optional(),
   x: z.number().int().optional(),
   y: z.number().int().optional(),
   w: z.number().int().positive().optional(),
@@ -94,11 +91,9 @@ export const CharacterTemplateSchema: z.ZodType<CharacterTemplate> = z.object({
   /** 角色"家"节点的 id；prompt 引导回家时用。可选，向后兼容。 */
   homeNodeId: z.string().min(1).nullable().optional(),
   personality: PersonalitySchema,
-  statuses: z.array(StatusSchema),
   abilities: z.array(AbilitySchema),
   relations: z.record(z.string(), RelationSchema),
 });
 
-// 校验封闭枚举确实被覆盖（防止 enums.ts 改动后 schema 漏更新）。
-void STATUS_KINDS;
-void RELATION_KINDS;
+// 校验封闭枚举确实被引用（防止 enums.ts 改动后 schema 漏更新）。
+void OBJECTIVE_RELATION_KINDS;

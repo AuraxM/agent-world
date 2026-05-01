@@ -1,26 +1,174 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0e1018;
+  --foreground: #e9e6cf;
+
+  /* 像素 UI 通用 token */
+  --color-pixel-bg: #1b1d2a;
+  --color-pixel-bg-2: #242739;
+  --color-pixel-fg: #e9e6cf;
+  --color-pixel-muted: #8a8da9;
+  --color-pixel-border-light: #6c7193;
+  --color-pixel-border-dark: #0a0b13;
+  --color-pixel-accent: #ffcb47;
+  --color-pixel-accent-dark: #b88a18;
+  --color-pixel-danger: #d05757;
+  --color-pixel-success: #6ec07a;
+
+  /* 节点调色板：每 spriteKey 一组 (base / shadow / highlight) */
+  --palette-town-base: #2f3a4a;
+  --palette-town-shadow: #1a2230;
+  --palette-town-hi: #4d5d75;
+
+  --palette-school-base: #6b8ec4;
+  --palette-school-shadow: #3a4d75;
+  --palette-school-hi: #a8c4ee;
+
+  --palette-classroom-base: #8a7c5c;
+  --palette-classroom-shadow: #4f4530;
+  --palette-classroom-hi: #c4b27d;
+
+  --palette-playground-base: #7cae6d;
+  --palette-playground-shadow: #3f5e35;
+  --palette-playground-hi: #b6dca6;
+
+  --palette-restaurant-base: #c47a6b;
+  --palette-restaurant-shadow: #6e3a30;
+  --palette-restaurant-hi: #f3a78f;
+
+  --palette-park-base: #5a9a6b;
+  --palette-park-shadow: #2c4f33;
+  --palette-park-hi: #8fcaa1;
+
+  --palette-home-warm-base: #c69a6e;
+  --palette-home-warm-shadow: #6f4e2f;
+  --palette-home-warm-hi: #f0c39b;
+
+  --palette-home-cool-base: #7e92b3;
+  --palette-home-cool-shadow: #3e4a63;
+  --palette-home-cool-hi: #b6c8e4;
+
+  --palette-fallback-base: #4d5066;
+  --palette-fallback-shadow: #2a2c3a;
+  --palette-fallback-hi: #777a96;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-pixel-bg: var(--color-pixel-bg);
+  --color-pixel-bg-2: var(--color-pixel-bg-2);
+  --color-pixel-fg: var(--color-pixel-fg);
+  --color-pixel-muted: var(--color-pixel-muted);
+  --color-pixel-border-light: var(--color-pixel-border-light);
+  --color-pixel-border-dark: var(--color-pixel-border-dark);
+  --color-pixel-accent: var(--color-pixel-accent);
+  --color-pixel-accent-dark: var(--color-pixel-accent-dark);
+  --color-pixel-danger: var(--color-pixel-danger);
+  --color-pixel-success: var(--color-pixel-success);
+  --font-pixel: var(--font-silkscreen);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-silkscreen), "Courier New", ui-monospace, monospace;
+  /* 重要：不要在 body 上打 image-rendering: pixelated，会糊文字 */
+}
+
+/* 仅作用于精灵 / 节点矩形 / 像素图标 */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+
+/* 像素双线边框（外暗内亮，1px gap 视觉拟物） */
+.pixel-frame {
+  position: relative;
+  background: var(--color-pixel-bg);
+  border: 1px solid var(--color-pixel-border-dark);
+  box-shadow:
+    inset 0 0 0 1px var(--color-pixel-border-light),
+    0 0 0 1px var(--color-pixel-border-dark);
+}
+
+.pixel-frame--accent {
+  border-color: var(--color-pixel-accent-dark);
+  box-shadow:
+    inset 0 0 0 1px var(--color-pixel-accent),
+    0 0 0 1px var(--color-pixel-accent-dark);
+}
+
+/* 节点矩形：双层描边 + 顶部高光带 + 底部阴影带 */
+.node-tile {
+  position: absolute;
+  cursor: pointer;
+  background: var(--tile-base);
+  border: 2px solid var(--tile-shadow);
+  box-shadow:
+    inset 0 4px 0 var(--tile-hi),
+    inset 0 -4px 0 var(--tile-shadow),
+    0 0 0 2px var(--color-pixel-border-dark);
+  transition: transform 80ms steps(2), filter 80ms;
+}
+
+.node-tile:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.node-tile--current {
+  outline: 2px solid var(--color-pixel-accent);
+  outline-offset: 2px;
+}
+
+.node-tile--private::after {
+  content: "🔒";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 12px;
+  filter: drop-shadow(0 1px 0 #000);
+}
+
+/* NPC 像素小方块头像 */
+.npc-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--color-pixel-bg-2);
+  border: 2px solid var(--color-pixel-border-dark);
+  box-shadow: inset 0 0 0 1px var(--color-pixel-border-light);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.npc-chip--lg {
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+}
+
+.npc-chip--selected {
+  border-color: var(--color-pixel-accent-dark);
+  box-shadow: inset 0 0 0 1px var(--color-pixel-accent);
+}
+
+/* 滚动条 - 像素风 */
+.pixel-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.pixel-scroll::-webkit-scrollbar-track {
+  background: var(--color-pixel-bg);
+}
+.pixel-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-pixel-border-light);
+  border: 2px solid var(--color-pixel-bg);
+}
+.pixel-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-pixel-accent);
 }

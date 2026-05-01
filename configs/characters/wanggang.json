@@ -1,0 +1,27 @@
+{
+  "id": "char-wanggang",
+  "name": "王刚",
+  "avatar": "😤",
+  "homeNodeId": "node-wanggang-home",
+  "personality": {
+    "extraversion": 20,
+    "rationality": 0,
+    "ambition": 60,
+    "altruism": -50,
+    "curiosity": 0,
+    "aggression": 70,
+    "honesty": -40,
+    "stability": -30
+  },
+  "statuses": [
+    { "kind": "hungry", "level": "light", "since": 0 }
+  ],
+  "abilities": [],
+  "relations": {
+    "char-zhangmo": {
+      "kind": "enemy",
+      "affinity": -75,
+      "note": "看不惯他那张冷脸。"
+    }
+  }
+}

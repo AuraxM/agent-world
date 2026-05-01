@@ -258,3 +258,60 @@ agent-world/
 - 引擎 + LLM 模块的单元测试覆盖
 
 下一步进入 Stage 2，给玩家"导演"工具。
+
+---
+
+## Prompt v0.2 优化（反"通宵扎堆"局部最优）
+
+### 背景
+
+初次跑通后观察到：5 个 NPC 从某 tick 起全员聚到老王饭馆，从 0:00 到第二天 5:00 连续 29 小时互相 speak，fatigue 累到 ≥29 也未触发回家/休息。根因是 prompt 缺三类信号：
+1. **时间无社会语义**（数字 tick 不携带"凌晨该睡觉"概念）
+2. **vitals 上限被截断**（≥10 一律 severe，29 与 11 在 LLM 眼里等价）
+3. **缺连续性元数据**（LLM 看不到自己已停留多久 / 上一行动 / 距上次 rest）
+
+外加 `status-decay.ts` 的隐性 bug："越线只触发一次"导致 severe 状态不再有 inner 提醒。
+
+### 改动一览
+
+| 改动 | 文件 |
+|---|---|
+| WORLD_RULES 新增三段：昼夜节律 / 生理优先级 / 反循环 | `src/llm/prompt.ts` |
+| 新 helper `qualifyVital`（6 档定性 + urgency）、`timeOfDay`（时段标签 + isSleepHour） | `src/llm/prompt.ts` |
+| `buildUserPrompt` 重构 7 段，新增"你的连续行为"段（已停留小时 / 上一行动 / 距上次 rest/eat / 今日累计） | `src/llm/prompt.ts` |
+| `buildUserPrompt` 在 fatigue/hunger 紧迫且当前位置不能 rest/eat 时插 ⚠ 提醒 | `src/llm/prompt.ts` |
+| 新增 `engine/facts.ts`：`deriveAggregatedFacts` 从 `agent_thoughts` 历史推导聚合事实 | `src/engine/facts.ts` |
+| `loadRecentThoughts`：按 (worldId, characterId, sinceTick) 取一名角色最近 thought | `src/engine/store.ts` |
+| `actions.getAvailableActions` 加 `hints` 参数：fatigue/睡眠时段时 home 节点 hint 加 ⭐；hunger=0 时 eat 后缀"（你不饿）"；停留 ≥4 小时时 speak 后缀"（已聊 N 小时）" | `src/engine/actions.ts` |
+| `status-decay`：medium 每 5 tick / severe 每 3 tick 持续补发 inner 事件，文案随累积小时数加强；修"越线只触发一次"bug | `src/engine/status-decay.ts` |
+| Tick 主循环：每 NPC 决策前批量 `loadAllCharacters()` 取 homeNodeId、`loadRecentThoughts` + `deriveAggregatedFacts`，注入 `DecideInput.facts` | `src/engine/tick.ts` |
+| `Character.homeNodeId?` 新增字段（运行时由 facts 模块注入，不写 DB） | `src/domain/types.ts` |
+| `CharacterTemplateSchema.homeNodeId` 可选字段 | `src/config/schemas.ts` |
+| `configs/maps/morning-town.json` 新增 `node-lihuan-home` / `node-wanggang-home` 两个 residence 节点 | `configs/maps/` |
+| `configs/characters/*.json` 5 个文件均补 `homeNodeId` | `configs/characters/` |
+| `scripts/seed.ts` 调整初始 cast：李欢 → `node-lihuan-home`；王刚 → `node-wanggang-home`；小静 → `node-li-home` | `scripts/seed.ts` |
+
+### 关键设计决策
+
+- **不动 DB schema**：`homeNodeId` 走配置层 → 运行时由 `facts` 模块从 `loadCharacter()` 读出注入到内存对象，不写入 `characters` 表。Stage 2 上 DB 时再迁移。
+- **聚合事实从 `agent_thoughts` 反查**（不是 events_log + 描述模糊匹配）：表带 `(world_id, character_id, tick)` 复合主键和索引，查询走索引高效；语义干净（`action.type === "rest" && success` 直接判定）。
+- **作息为软约束**：WORLD_RULES 强烈引导但 LLM 仍每 tick 决策；性格极端的 NPC 仍可"打破作息"，须在 reasoning 中明确说明。保留性格驱动差异化的设计哲学。
+- **`status-decay` 节流而非每 tick 提醒**：medium=每 5 tick，severe=每 3 tick；避免感知队列被大量重复 inner 淹没，又比"越线只触发一次"足够主动。
+
+### 验收口号补充
+
+- **22:00–06:00 应有 ≥80% NPC 在自己 `homeNodeId` 节点**（睡眠时段守作息）
+- **凌晨任意 tick，老王饭馆人数 ≤1**（结构性切断"全员通宵"）
+- **白天（08:00–18:00）NPC 应分散到 ≥3 个节点**（性格驱动差异化）
+- **fatigue 不应整夜累积**：06:00 时各 NPC fatigue ≤8（凌晨睡眠重置后 6 小时累积）
+- 既有验收 1–7 维持不变
+
+### 操作步骤（每次重跑）
+
+```bash
+npm run db:migrate           # 幂等 IF NOT EXISTS
+npm run seed                 # 重新写 morning-town（含 2 个新 home 节点）
+npm test                     # vitest 全绿
+# admin UI 激活 LLM provider 后：dashboard 推 24 步观察
+```
+

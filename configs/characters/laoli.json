@@ -1,0 +1,27 @@
+{
+  "id": "char-laoli",
+  "name": "老李",
+  "avatar": "🧓",
+  "homeNodeId": "node-li-home",
+  "personality": {
+    "extraversion": -10,
+    "rationality": 70,
+    "ambition": 0,
+    "altruism": 50,
+    "curiosity": 0,
+    "aggression": 0,
+    "honesty": 0,
+    "stability": 80
+  },
+  "statuses": [
+    { "kind": "fatigue", "level": "medium", "since": 0 }
+  ],
+  "abilities": [],
+  "relations": {
+    "char-xiaojing": {
+      "kind": "family",
+      "affinity": 75,
+      "note": "外甥女，小静。"
+    }
+  }
+}

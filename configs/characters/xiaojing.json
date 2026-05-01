@@ -1,0 +1,42 @@
+{
+  "id": "char-xiaojing",
+  "name": "小静",
+  "avatar": "🌸",
+  "homeNodeId": "node-li-home",
+  "personality": {
+    "extraversion": 20,
+    "rationality": 0,
+    "ambition": 0,
+    "altruism": 70,
+    "curiosity": 60,
+    "aggression": 0,
+    "honesty": 40,
+    "stability": -60
+  },
+  "statuses": [
+    { "kind": "curious", "level": "light", "since": 0 }
+  ],
+  "abilities": [],
+  "relations": {
+    "char-zhangmo": {
+      "kind": "acquaintance",
+      "affinity": 30,
+      "note": "邻居家的安静男孩。"
+    },
+    "char-lihuan": {
+      "kind": "acquaintance",
+      "affinity": 40,
+      "note": "总是很热情的同学。"
+    },
+    "char-wanggang": {
+      "kind": "acquaintance",
+      "affinity": -10,
+      "note": "感觉有点凶。"
+    },
+    "char-laoli": {
+      "kind": "family",
+      "affinity": 80,
+      "note": "是我舅舅。"
+    }
+  }
+}

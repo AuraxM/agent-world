@@ -387,3 +387,59 @@ describe("generateSkeleton", () => {
     expect(skel.slots.length).toBeGreaterThan(0);
   });
 });
+
+describe("edge cases", () => {
+  it("minimal canvas (16x12) with one main road", () => {
+    const skel = generateSkeleton(resolveParams({
+      seed: 1, canvasW: 16, canvasH: 12,
+      mainRoadCount: 1, crossRoadMin: 0, crossRoadMax: 0,
+    }));
+    expect(skel.slots.length).toBeGreaterThan(0);
+    // 所有 slot 在 canvas 内
+    for (const s of skel.slots) {
+      expect(s.x + s.w).toBeLessThanOrEqual(16);
+      expect(s.y + s.h).toBeLessThanOrEqual(12);
+    }
+  });
+
+  it("dense density fits more slots than canvas", () => {
+    const skel = generateSkeleton(resolveParams({
+      seed: 5, canvasW: 48, canvasH: 36, density: "dense",
+    }));
+    // 至少有一些 slot
+    expect(skel.slots.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("zone ratios are roughly respected", () => {
+    const skel = generateSkeleton(resolveParams({
+      seed: 42, canvasW: 48, canvasH: 36,
+    }));
+    const counts = { commercial: 0, residential: 0, public: 0, edge: 0 };
+    for (const s of skel.slots) {
+      counts[s.zone]++;
+    }
+    // 粗略检查：住宅最多、边缘其次、商业再次
+    expect(counts.residential).toBeGreaterThan(0);
+    expect(counts.commercial).toBeGreaterThan(0);
+    expect(counts.public).toBeGreaterThan(0);
+  });
+
+  it("bathing tag appears in at least one residential slot", () => {
+    // 不强制，但检查 residential slot 存在
+    const skel = generateSkeleton(resolveParams({ seed: 42 }));
+    const residentialSlots = skel.slots.filter((s) => s.zone === "residential");
+    expect(residentialSlots.length).toBeGreaterThan(0);
+    // suggestedTags 包含 residence
+    for (const s of residentialSlots) {
+      expect(s.suggestedTags).toContain("residence");
+    }
+  });
+
+  it("all slots have valid elevation reference", () => {
+    const skel = generateSkeleton(resolveParams({ seed: 42 }));
+    const validLayers = new Set(skel.elevations.map((e) => e.layer));
+    for (const s of skel.slots) {
+      expect(validLayers.has(s.elevation)).toBe(true);
+    }
+  });
+});

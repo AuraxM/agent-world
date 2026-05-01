@@ -1,6 +1,9 @@
 import type { Elevation, LayoutParams, Road } from "./layout-types";
 import { DEFAULT_PARAMS } from "./layout-types";
 
+const CROSS_ROAD_EDGE_MARGIN = 6;
+const MAX_PLACEMENT_ATTEMPTS = 50;
+
 /** mulberry32 播种 PRNG：确定性伪随机，输出 [0, 1) */
 export function createPRNG(seed: number): () => number {
   let state = seed | 0;
@@ -55,21 +58,27 @@ export function makeMainRoad(
 }
 
 export function makeCrossRoad(
-  id: string, canvasH: number, rng: () => number, existingX: number[], minGap: number, name: string
-): Road {
-  let x: number;
-  let attempts = 0;
-  do {
-    x = 6 + Math.floor(rng() * 30);
-    attempts++;
-  } while (
-    attempts < 50 &&
-    existingX.some((ex) => Math.abs(ex - x) < minGap)
-  );
-  return {
-    id, dir: "v", offset: x, w: 3,
-    start: 0, end: canvasH, name,
-  };
+  id: string,
+  canvasW: number,
+  canvasH: number,
+  rng: () => number,
+  existingX: number[],
+  minGap: number,
+  name: string
+): Road | null {
+  const range = canvasW - 2 * CROSS_ROAD_EDGE_MARGIN;
+  if (range <= 0) return null;
+
+  for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; attempt++) {
+    const x = CROSS_ROAD_EDGE_MARGIN + Math.floor(rng() * range);
+    if (existingX.every((ex) => Math.abs(ex - x) >= minGap)) {
+      return {
+        id, dir: "v", offset: x, w: 3,
+        start: 0, end: canvasH, name,
+      };
+    }
+  }
+  return null;
 }
 
 export function generateRoads(opts: {
@@ -92,7 +101,10 @@ export function generateRoads(opts: {
   const crossCount = crossRoadMin + Math.floor(rng() * (crossRoadMax - crossRoadMin + 1));
   const existingX = roads.filter((r) => r.dir === "v").map((r) => r.offset);
   for (let i = 0; i < crossCount; i++) {
-    const cross = makeCrossRoad(`r-cross${i + 1}`, canvasH, rng, existingX, 12, `竖街${i + 1}`);
+    const cross = makeCrossRoad(
+      `r-cross${i + 1}`, canvasW, canvasH, rng, existingX, 12, `竖街${i + 1}`
+    );
+    if (cross === null) continue;
     existingX.push(cross.offset);
     roads.push(cross);
   }

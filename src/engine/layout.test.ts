@@ -139,9 +139,12 @@ describe("generateRoads", () => {
       mainRoadCount: 1, crossRoadMin: 3, crossRoadMax: 3,
       rng,
     });
-    const crosses = roads.filter((r) => r.dir === "v");
-    for (let i = 0; i < crosses.length - 1; i++) {
-      const gap = Math.abs(crosses[i + 1].offset - crosses[i].offset);
+    const sortedOffsets = roads
+      .filter((r) => r.dir === "v")
+      .map((c) => c.offset)
+      .sort((a, b) => a - b);
+    for (let i = 0; i < sortedOffsets.length - 1; i++) {
+      const gap = sortedOffsets[i + 1] - sortedOffsets[i];
       expect(gap).toBeGreaterThanOrEqual(12);
     }
   });
@@ -160,5 +163,13 @@ describe("generateRoads", () => {
       rng: rng2,
     });
     expect(roads1).toEqual(roads2);
+  });
+
+  it("makeCrossRoad returns null when no valid placement exists", () => {
+    const rng = createPRNG(1);
+    // Densely packed existing positions with minGap=12 leave no valid x in [6, 42).
+    const existingX = [12, 25, 38];
+    const result = makeCrossRoad("r-test", 48, 36, rng, existingX, 12, "test");
+    expect(result).toBeNull();
   });
 });

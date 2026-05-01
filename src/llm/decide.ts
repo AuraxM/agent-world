@@ -54,7 +54,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     function: {
       name: ACTION_TOOL_NAME,
       description:
-        "提交你这一 tick 的行动。type 必须是封闭枚举之一；reasoning 必须显式引用至少一项你自己的性格维度数值。",
+        "提交你这一 tick 的行动。type 必须是封闭枚举之一；reasoning 必须显式引用一项你自己的性格特征（用文字描述，不要写数值）。",
       parameters: ActionToolInputSchema,
     },
   };
@@ -115,6 +115,7 @@ function payloadToAction(p: ActionPayload, actorId: string): Action {
     reasoning: p.reasoning,
     emotionTag: p.emotion_tag,
     selfImportance: p.self_importance,
+    changeType: p.change_type,
   };
 }
 

@@ -4,33 +4,23 @@ import type {
   EventScope,
   EventSource,
   NodeTag,
+  ObjectiveRelationKind,
   Privacy,
-  RelationKind,
-  StatusKind,
-  StatusLevel,
 } from "./enums";
 
 /** 1 tick = 1 game hour. tick 0 是世界开始的整点。 */
 export type Tick = number;
 
-/** 性格 8 维，范围 [-100, 100]。 */
+/** MBTI 4 维性格，每维范围 [-4, 4]（整数）。 */
 export interface Personality {
-  extraversion: number;
-  rationality: number;
-  ambition: number;
-  altruism: number;
-  curiosity: number;
-  aggression: number;
-  honesty: number;
-  stability: number;
-}
-
-/** NPC 当前持有的状态实例。 */
-export interface Status {
-  kind: StatusKind;
-  level: StatusLevel;
-  /** 状态开始的 tick；用于衰减/恢复计算 */
-  since: Tick;
+  /** -4 极内向 ←→ +4 极外向 */
+  ei: number;
+  /** -4 极直觉 ←→ +4 极实感 */
+  sn: number;
+  /** -4 极情感 ←→ +4 极思考 */
+  tf: number;
+  /** -4 极感知 ←→ +4 极判断 */
+  jp: number;
 }
 
 /** 能力。Stage 1 暂不深入用，仅作为决策上下文。 */
@@ -54,21 +44,31 @@ export interface Memory {
   refEventId?: string;
 }
 
-/** 单向关系：A 角色对 B 角色的认知。 */
+/**
+ * 单向关系：A 角色对 B 角色的认知。
+ * 仅在 kinds 非空时存在；引擎在 kinds 清空后会自动删除条目。
+ */
 export interface Relation {
-  kind: RelationKind;
-  /** -100..100 好感度 */
-  affinity: number;
+  /** 客观关系标签集合，至少 1 项。 */
+  kinds: ObjectiveRelationKind[];
+  /** 主观好感度，[-4..+4] 整数。 -4 极厌恶 → +4 极喜爱。 */
+  affection: number;
   /** 自然语言备注，例如"小时候欺负过我" */
   note?: string;
+  /** 关系建立的 tick。 */
+  since: Tick;
+  /** 最近一次互动的 tick；用于 acquaintance 衰减判定。 */
+  lastInteractionTick: Tick;
 }
 
-/** 持续行动（v0 占位，不实际驱动行为）。 */
+/** 持续行动（驱动多 tick 的行为，如 sleep / 远途 move）。 */
 export interface OngoingAction {
   type: ActionType;
   startedAt: Tick;
   endsAt: Tick;
   description: string;
+  /** 感知到 intensity ≥ 此值的事件即提前唤醒/中止。 */
+  interruptThreshold: 1 | 2 | 3 | 4 | 5;
 }
 
 /** 地图节点。 */
@@ -82,13 +82,15 @@ export interface MapNode {
   capacity: number | null;
   privacy: Privacy;
   visibleFromParent: boolean;
-  /** 显式特殊通道：指向其他节点 id 的连接（如"密道"） */
+  /** 显式特殊通道：指向其他节点 id 的连接（如"密道"），始终 cost=0。 */
   shortcuts: string[];
   /**
    * 是否为"外部入口"节点（公交车站 / 码头 / 传送阵 …）。
    * 每张地图至少 1 个；中途投放新角色默认落在这里。
    */
   isEntry: boolean;
+  /** 进入此节点所需 tick 数。默认 0（免费）；shortcuts 永远 cost=0。 */
+  travelCost?: number;
   /** 在父节点画布上的格子坐标；缺失时前端走 fallback 自动布局。 */
   x?: number;
   y?: number;
@@ -99,14 +101,26 @@ export interface MapNode {
 }
 
 /**
- * 数值化的生理指标。每 tick 自动累加；进食/休息时重置。
- * 离散 Status[] 用于 LLM prompt 与 UI；vitals 用于引擎计算。
+ * 数值化的生理指标。0..16 范围；进食/休息/洗浴时重置或减少。
+ * 引擎用 vitals 计算行为冲动；prompt 把它转成定性文字给 LLM。
  */
 export interface Vitals {
-  /** 0..∞，>=5 medium, >=10 severe */
   hunger: number;
-  /** 同上 */
   fatigue: number;
+  hygiene: number;
+}
+
+/**
+ * 情绪状态。比 vitals 更主观；既受时间自然回归影响，
+ * 也受社交事件（attack / help / gift / burst …）触发改变。
+ */
+export interface Emotion {
+  /** 心情：-4..+4 */
+  mood: number;
+  /** 压力：0..4（不会变负） */
+  stress: number;
+  /** 社交满足：-4..+4 */
+  social_satiety: number;
 }
 
 /** 角色。 */
@@ -118,7 +132,7 @@ export interface Character {
   locationId: string;
   personality: Personality;
   vitals: Vitals;
-  statuses: Status[];
+  emotion: Emotion;
   abilities: Ability[];
   /** Stage 1: short memory FIFO 50 */
   shortMemory: Memory[];
@@ -168,6 +182,14 @@ export interface WorldEvent {
   suggestedActions?: string[];
 }
 
+/** update_relation 行动可选的语义子类型。 */
+export type RelationChangeType =
+  | "become_partner"
+  | "end_partnership"
+  | "become_spouse"
+  | "end_friendship"
+  | "end_other_relative";
+
 /** 行动（LLM 输出 + 引擎执行体）。 */
 export interface Action {
   type: ActionType;
@@ -179,6 +201,8 @@ export interface Action {
   emotionTag?: string;
   /** 自评重要度 1–5，决定是否进入长期记忆 */
   selfImportance: 1 | 2 | 3 | 4 | 5;
+  /** 仅在 type === "update_relation" 时使用 */
+  changeType?: RelationChangeType;
 }
 
 /** 世界全量快照。每 24 tick 持久化一次。 */

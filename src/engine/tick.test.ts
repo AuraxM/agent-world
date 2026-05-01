@@ -46,6 +46,7 @@ beforeAll(async () => {
       visible_from_parent INTEGER NOT NULL DEFAULT 1,
       shortcuts_json TEXT NOT NULL DEFAULT '[]',
       is_entry INTEGER NOT NULL DEFAULT 0,
+      travel_cost INTEGER,
       x INTEGER, y INTEGER, w INTEGER, h INTEGER, sprite_key TEXT,
       created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
       PRIMARY KEY (world_id, id)
@@ -56,8 +57,8 @@ beforeAll(async () => {
       name TEXT NOT NULL, avatar TEXT,
       location_id TEXT NOT NULL,
       personality_json TEXT NOT NULL,
-      vitals_json TEXT NOT NULL DEFAULT '{"hunger":0,"fatigue":0}',
-      statuses_json TEXT NOT NULL DEFAULT '[]',
+      vitals_json TEXT NOT NULL DEFAULT '{"hunger":0,"fatigue":0,"hygiene":0}',
+      emotion_json TEXT NOT NULL DEFAULT '{"mood":0,"stress":0,"social_satiety":0}',
       abilities_json TEXT NOT NULL DEFAULT '[]',
       short_memory_json TEXT NOT NULL DEFAULT '[]',
       long_memory_json TEXT NOT NULL DEFAULT '[]',
@@ -114,7 +115,16 @@ beforeAll(async () => {
       JSON.stringify(["public", "indoor", "dining"]),
       "public",
     );
-  const baseChar = (id: string, name: string, locId: string, vitals = { hunger: 0, fatigue: 0 }) => {
+  const baseChar = (
+    id: string,
+    name: string,
+    locId: string,
+    vitals: { hunger: number; fatigue: number; hygiene: number } = {
+      hunger: 0,
+      fatigue: 0,
+      hygiene: 0,
+    },
+  ) => {
     sqlite
       .prepare(
         `INSERT INTO characters (id, world_id, name, location_id, personality_json, vitals_json) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -124,21 +134,12 @@ beforeAll(async () => {
         WORLD_ID,
         name,
         locId,
-        JSON.stringify({
-          extraversion: 0,
-          rationality: 0,
-          ambition: 0,
-          altruism: 0,
-          curiosity: 0,
-          aggression: 0,
-          honesty: 0,
-          stability: 0,
-        }),
+        JSON.stringify({ ei: 0, sn: 0, tf: 0, jp: 0 }),
         JSON.stringify(vitals),
       );
   };
   baseChar("char-a", "甲", "node-root");
-  baseChar("char-b", "乙", "node-root", { hunger: 4, fatigue: 0 }); // 下一 tick 跨入 medium
+  baseChar("char-b", "乙", "node-root", { hunger: 4, fatigue: 0, hygiene: 0 }); // 下一 tick 跨入 medium
   sqlite.close();
 
   // 现在导入业务模块（让 client.ts 在新的 DATABASE_URL 下创建 db）

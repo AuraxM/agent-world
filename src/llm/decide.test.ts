@@ -78,18 +78,9 @@ const baseInput = (): DecideInput => ({
     worldId: "w",
     name: "测试角色",
     locationId: "node-x",
-    personality: {
-      extraversion: -50,
-      rationality: 0,
-      ambition: 0,
-      altruism: 0,
-      curiosity: 0,
-      aggression: 0,
-      honesty: 0,
-      stability: 0,
-    },
-    vitals: { hunger: 0, fatigue: 0 },
-    statuses: [],
+    personality: { ei: -2, sn: 0, tf: 0, jp: 0 },
+    vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+    emotion: { mood: 0, stress: 0, social_satiety: 0 },
     abilities: [],
     shortMemory: [],
     longMemory: [],
@@ -135,7 +126,7 @@ describe("llmDecide (OpenAI-compatible function calling)", () => {
     const fake = makeFakeClient(async () =>
       makeFakeCompletion({
         action_type: "observe",
-        reasoning: "我的外向性 -50，倾向先观察再行动。",
+        reasoning: "我偏内向，倾向先观察再行动。",
         self_importance: 2,
       }),
     );
@@ -144,8 +135,26 @@ describe("llmDecide (OpenAI-compatible function calling)", () => {
     const action = await llmDecide(baseInput());
     expect(action.type).toBe("observe");
     expect(action.actorId).toBe("char-test");
-    expect(action.reasoning).toContain("外向性");
+    expect(action.reasoning).toContain("内向");
     expect(action.selfImportance).toBe(2);
+  });
+
+  it("update_relation tool_call 携带 change_type", async () => {
+    const fake = makeFakeClient(async () =>
+      makeFakeCompletion({
+        action_type: "update_relation",
+        target_id: "char-other",
+        reasoning: "我有计划性，决定明确这段关系。",
+        self_importance: 3,
+        change_type: "become_partner",
+      }),
+    );
+    __setLLMClientForTest(fake);
+
+    const action = await llmDecide(baseInput());
+    expect(action.type).toBe("update_relation");
+    expect(action.targetId).toBe("char-other");
+    expect(action.changeType).toBe("become_partner");
   });
 
   it("tool_call 参数不符合 ActionSchema → wait fallback", async () => {

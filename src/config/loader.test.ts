@@ -46,17 +46,7 @@ const validMap = {
 const validChar = {
   id: "char-test",
   name: "测试君",
-  personality: {
-    extraversion: 0,
-    rationality: 0,
-    ambition: 0,
-    altruism: 0,
-    curiosity: 0,
-    aggression: 0,
-    honesty: 0,
-    stability: 0,
-  },
-  statuses: [],
+  personality: { ei: 0, sn: 0, tf: 0, jp: 0 },
   abilities: [],
   relations: {},
 };
@@ -135,10 +125,10 @@ describe("loadAllCharacters", () => {
   it("rejects out-of-range personality", () => {
     const bad = {
       ...validChar,
-      personality: { ...validChar.personality, extraversion: 200 },
+      personality: { ...validChar.personality, ei: 9 },
     };
     writeChar("bad", bad);
-    expect(() => loadAllCharacters()).toThrow(/personality.extraversion/);
+    expect(() => loadAllCharacters()).toThrow(/personality\.ei/);
   });
 
   it("homeNodeId 字段可选 + 可读取", () => {

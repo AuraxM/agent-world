@@ -1,8 +1,9 @@
 /**
- * 种子脚本：从 `configs/` 读取地图与角色，创建一个 morning-town 演示世界。
+ * 种子脚本：从 `configs/` 读取地图与角色，创建一个演示世界。
  *
  * 用法：`npm run seed`。
- * 重复运行安全：先级联删除同名世界，再重新写入。
+ * 注意：旧的 5 个角色 + morning-town 地图配置已随角色系统重设计删除。
+ *       运行前需先用 agent-world-config 技能（或手写）生成新的 JSON 配置。
  */
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db/client";
@@ -11,23 +12,20 @@ import { createWorldFromConfig, type CastMember } from "@/engine/createWorld";
 const WORLD_ID = "world-morning-town";
 const MAP_ID = "morning-town";
 
-const CAST: CastMember[] = [
-  { characterId: "char-zhangmo", locationId: "node-zhang-home" },
-  { characterId: "char-lihuan", locationId: "node-lihuan-home" },
-  {
-    characterId: "char-wanggang",
-    locationId: "node-wanggang-home",
-    vitals: { hunger: 3 },
-  },
-  { characterId: "char-xiaojing", locationId: "node-li-home" },
-  {
-    characterId: "char-laoli",
-    locationId: "node-li-home",
-    vitals: { fatigue: 6 },
-  },
-];
+/**
+ * 待 agent-world-config 技能重新生成 configs 后填入。
+ * 例：[{ characterId: "char-...", locationId: "node-..." }]
+ */
+const CAST: CastMember[] = [];
 
 function main() {
+  if (CAST.length === 0) {
+    console.error(
+      "No cast members defined. Regenerate configs with the agent-world-config skill (or hand-write JSON), then update CAST in scripts/seed.ts.",
+    );
+    process.exit(1);
+  }
+
   // 级联删除（onDelete: cascade 会清掉 nodes/characters/events/snapshots/agent_thoughts）
   db.delete(schema.worlds).where(eq(schema.worlds.id, WORLD_ID)).run();
 

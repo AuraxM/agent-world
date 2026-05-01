@@ -1,4 +1,4 @@
-import type { Block, Elevation, LayoutParams, Road, Slot, Zone, ZonedBlock } from "./layout-types";
+import type { Block, Elevation, LayoutParams, Road, Skeleton, Slot, Zone, ZonedBlock } from "./layout-types";
 import { DEFAULT_PARAMS } from "./layout-types";
 
 const CROSS_ROAD_EDGE_MARGIN = 6;
@@ -141,6 +141,14 @@ export function partitionBlocks(opts: {
   const blocks: Block[] = [];
   const mainRoadIds = new Set(roads.filter((r) => r.dir === "h" && r.w >= 6).map((r) => r.id));
 
+  // 识别哪些 x/y 区间属于道路本身，应该跳过
+  const xRoadSpans = new Set(
+    vRoads.map((r) => `${r.offset - Math.floor(r.w / 2)}:${r.offset + Math.ceil(r.w / 2)}`)
+  );
+  const yRoadSpans = new Set(
+    hRoads.map((r) => `${r.offset - Math.floor(r.w / 2)}:${r.offset + Math.ceil(r.w / 2)}`)
+  );
+
   for (let yi = 0; yi < yCuts.length - 1; yi++) {
     for (let xi = 0; xi < xCuts.length - 1; xi++) {
       const x = xCuts[xi];
@@ -148,6 +156,9 @@ export function partitionBlocks(opts: {
       const w = xCuts[xi + 1] - x;
       const h = yCuts[yi + 1] - y;
       if (w <= 0 || h <= 0) continue;
+      // 跳过道路本体所占的网格条带
+      if (xRoadSpans.has(`${x}:${x + w}`)) continue;
+      if (yRoadSpans.has(`${y}:${y + h}`)) continue;
 
       // 确定此 block 邻接哪些道路
       const adjacentRoadIds: string[] = [];
@@ -274,4 +285,89 @@ export function placeSlots(opts: {
   }
 
   return slots;
+}
+
+/** 完整骨架生成：七步叠加 */
+export function generateSkeleton(params: LayoutParams): Skeleton {
+  const rng = createPRNG(params.seed);
+
+  const elevations = generateElevations({
+    canvasH: params.canvasH,
+    elevationLayers: params.elevationLayers,
+  });
+
+  const roads = generateRoads({
+    canvasW: params.canvasW,
+    canvasH: params.canvasH,
+    mainRoadCount: params.mainRoadCount,
+    crossRoadMin: params.crossRoadMin,
+    crossRoadMax: params.crossRoadMax,
+    rng,
+  });
+
+  const blocks = partitionBlocks({
+    canvasW: params.canvasW,
+    canvasH: params.canvasH,
+    roads,
+  });
+
+  const zoned = assignZones(blocks);
+
+  // 计算每个 block 对应的 elevation
+  function elevationForBlock(b: Block): number {
+    const midY = b.y + Math.floor(b.h / 2);
+    for (const e of elevations) {
+      if (midY >= e.yStart && midY < e.yEnd) return e.layer;
+    }
+    return elevations[elevations.length - 1].layer;
+  }
+
+  let slotIndex = 0;
+  const allSlots: Slot[] = [];
+  for (const block of zoned) {
+    const elev = elevationForBlock(block);
+    const slots = placeSlots({
+      block, density: params.density, rng, elevation: elev, startIndex: slotIndex,
+    });
+    allSlots.push(...slots);
+    slotIndex += slots.length;
+  }
+
+  // 标记入口候选：public zone 中靠近画布中心的 slot
+  const centerX = params.canvasW / 2;
+  const centerY = params.canvasH / 2;
+  let bestEntry: Slot | null = null;
+  let bestDist = Infinity;
+  for (const s of allSlots) {
+    if (s.zone === "public") {
+      const sx = s.x + s.w / 2;
+      const sy = s.y + s.h / 2;
+      const dist = Math.hypot(sx - centerX, sy - centerY);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestEntry = s;
+      }
+    }
+  }
+  if (bestEntry) {
+    bestEntry.isEntry = true;
+  } else {
+    // 后备：把离中心最近的 slot 标记为入口
+    let closest: Slot | null = null;
+    let cd = Infinity;
+    for (const s of allSlots) {
+      const sx = s.x + s.w / 2;
+      const sy = s.y + s.h / 2;
+      const dist = Math.hypot(sx - centerX, sy - centerY);
+      if (dist < cd) { cd = dist; closest = s; }
+    }
+    if (closest) closest.isEntry = true;
+  }
+
+  return {
+    canvas: { w: params.canvasW, h: params.canvasH },
+    roads,
+    elevations,
+    slots: allSlots,
+  };
 }

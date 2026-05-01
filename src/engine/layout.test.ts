@@ -4,6 +4,7 @@ import {
   createPRNG,
   generateElevations,
   generateRoads,
+  generateSkeleton,
   makeCrossRoad,
   makeMainRoad,
   partitionBlocks,
@@ -325,5 +326,64 @@ describe("placeSlots", () => {
     const ids = slots.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(slots[0].id).toBe("slot-05");
+  });
+});
+
+describe("generateSkeleton", () => {
+  const params = resolveParams({ seed: 42 });
+
+  it("produces skeleton with all required sections", () => {
+    const skel = generateSkeleton(params);
+    expect(skel.canvas).toBeDefined();
+    expect(skel.roads.length).toBeGreaterThan(0);
+    expect(skel.elevations.length).toBe(params.elevationLayers);
+    expect(skel.slots.length).toBeGreaterThan(0);
+  });
+
+  it("canvas size matches params", () => {
+    const skel = generateSkeleton(params);
+    expect(skel.canvas.w).toBe(params.canvasW);
+    expect(skel.canvas.h).toBe(params.canvasH);
+  });
+
+  it("at least one slot is entry-ready (public zone at intersection)", () => {
+    const skel = generateSkeleton(params);
+    // entry 标记由 LLM 填筑阶段设为 isEntry: true，
+    // 这里只检查有 public slot 可以做入口
+    const publicSlots = skel.slots.filter((s) => s.zone === "public");
+    expect(publicSlots.length).toBeGreaterThan(0);
+  });
+
+  it("no overlapping slots", () => {
+    const skel = generateSkeleton(params);
+    for (let i = 0; i < skel.slots.length; i++) {
+      for (let j = i + 1; j < skel.slots.length; j++) {
+        const a = skel.slots[i];
+        const b = skel.slots[j];
+        const noXOverlap = a.x + a.w + 1 <= b.x || b.x + b.w + 1 <= a.x;
+        const noYOverlap = a.y + a.h + 1 <= b.y || b.y + b.h + 1 <= a.y;
+        expect(noXOverlap || noYOverlap).toBe(true);
+      }
+    }
+  });
+
+  it("deterministic — same seed gives same skeleton", () => {
+    const a = generateSkeleton(resolveParams({ seed: 123 }));
+    const b = generateSkeleton(resolveParams({ seed: 123 }));
+    expect(a).toEqual(b);
+  });
+
+  it("different seed gives different skeleton", () => {
+    const a = generateSkeleton(resolveParams({ seed: 111 }));
+    const b = generateSkeleton(resolveParams({ seed: 222 }));
+    expect(a).not.toEqual(b);
+  });
+
+  it("works with extreme small canvas", () => {
+    const skel = generateSkeleton(resolveParams({
+      seed: 42, canvasW: 24, canvasH: 18,
+      crossRoadMin: 0, crossRoadMax: 0,
+    }));
+    expect(skel.slots.length).toBeGreaterThan(0);
   });
 });

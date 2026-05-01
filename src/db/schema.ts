@@ -45,6 +45,7 @@ export const nodes = sqliteTable(
     isEntry: integer("is_entry", { mode: "boolean" })
       .notNull()
       .default(false),
+    travelCost: integer("travel_cost"),
     x: integer("x"),
     y: integer("y"),
     w: integer("w"),
@@ -73,8 +74,10 @@ export const characters = sqliteTable(
     personalityJson: text("personality_json").notNull(),
     vitalsJson: text("vitals_json")
       .notNull()
-      .default('{"hunger":0,"fatigue":0}'),
-    statusesJson: text("statuses_json").notNull().default("[]"),
+      .default('{"hunger":0,"fatigue":0,"hygiene":0}'),
+    emotionJson: text("emotion_json")
+      .notNull()
+      .default('{"mood":0,"stress":0,"social_satiety":0}'),
     abilitiesJson: text("abilities_json").notNull().default("[]"),
     shortMemoryJson: text("short_memory_json").notNull().default("[]"),
     longMemoryJson: text("long_memory_json").notNull().default("[]"),

@@ -11,15 +11,17 @@ import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db/client";
 import { loadCharacter } from "@/config/loader";
 import { appendEventsLog } from "./store";
-import type { Vitals, WorldEvent } from "@/domain/types";
+import type { Emotion, Vitals, WorldEvent } from "@/domain/types";
 
 export interface AddCharacterInput {
   worldId: string;
   characterId: string;
   /** 可选；缺省时取该世界首个 entry 节点。 */
   entryNodeId?: string;
-  /** 可选；覆盖 hunger / fatigue 默认值。 */
+  /** 可选；覆盖 hunger / fatigue / hygiene 默认值。 */
   vitals?: Partial<Vitals>;
+  /** 可选；覆盖 mood / stress / social_satiety 默认值。 */
+  emotion?: Partial<Emotion>;
 }
 
 export interface AddCharacterResult {
@@ -103,6 +105,12 @@ export function addCharacterToWorld(
   const vitals: Vitals = {
     hunger: input.vitals?.hunger ?? 0,
     fatigue: input.vitals?.fatigue ?? 0,
+    hygiene: input.vitals?.hygiene ?? 0,
+  };
+  const emotion: Emotion = {
+    mood: input.emotion?.mood ?? 0,
+    stress: input.emotion?.stress ?? 0,
+    social_satiety: input.emotion?.social_satiety ?? 0,
   };
   const event: WorldEvent = {
     id: `evt-arrival-${randomUUID().slice(0, 8)}`,
@@ -128,7 +136,7 @@ export function addCharacterToWorld(
         locationId: entryNodeId!,
         personalityJson: JSON.stringify(tpl.personality),
         vitalsJson: JSON.stringify(vitals),
-        statusesJson: JSON.stringify(tpl.statuses),
+        emotionJson: JSON.stringify(emotion),
         abilitiesJson: JSON.stringify(tpl.abilities),
         shortMemoryJson: "[]",
         longMemoryJson: "[]",

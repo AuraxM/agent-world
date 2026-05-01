@@ -7,11 +7,26 @@
  * Stage 1 ≤ 5 NPC，冲突极少发生；这里实现保留接口正确性。
  */
 import { randomUUID } from "node:crypto";
-import { resetVital } from "./status-decay";
-import type { Action, Character, MapNode, Memory, WorldEvent } from "@/domain/types";
-import type { ActionType, EventCategory } from "@/domain/enums";
+import { applyEmotionEvent, clamp, resetVital } from "./vitals-emotion";
+import type {
+  Action,
+  Character,
+  MapNode,
+  Memory,
+  Relation,
+  RelationChangeType,
+  WorldEvent,
+} from "@/domain/types";
+import type {
+  ActionType,
+  EventCategory,
+  ObjectiveRelationKind,
+} from "@/domain/enums";
+import { BLOOD_RELATION_KINDS } from "@/domain/enums";
 
 const SHORT_MEMORY_LIMIT = 50;
+const SLEEP_DURATION = 8;
+const SLEEP_INTERRUPT_THRESHOLD = 4 as const;
 
 interface ExecuteInput {
   worldId: string;
@@ -69,17 +84,25 @@ function pushMemory(c: Character, mem: Memory) {
   }
 }
 
-function memFromAction(
-  tick: number,
-  action: Action,
-  prefix: string,
-): Memory {
+function memFromAction(tick: number, action: Action, prefix: string): Memory {
   return {
     id: `mem-${randomUUID().slice(0, 8)}`,
     tick,
     importance: action.selfImportance,
     content: `${prefix}：${action.freeText ?? action.reasoning.slice(0, 80)}`,
   };
+}
+
+function updateAffection(
+  actor: Character,
+  targetId: string,
+  delta: number,
+  tick: number,
+): void {
+  const rel = actor.relations[targetId];
+  if (!rel) return;
+  rel.affection = clamp(rel.affection + delta, -4, 4);
+  rel.lastInteractionTick = tick;
 }
 
 export function executeActions(input: ExecuteInput): ExecuteResult {
@@ -183,7 +206,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
         break;
       }
       case "rest": {
-        resetVital(actor, "fatigue");
+        actor.vitals.fatigue = Math.max(0, actor.vitals.fatigue - 2);
         const here = nodeById.get(actor.locationId);
         events.push(
           makeEvent({
@@ -198,8 +221,168 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
         );
         break;
       }
-      case "speak": {
+      case "sleep": {
         const here = nodeById.get(actor.locationId);
+        if (
+          !(here?.tags.includes("residence") || here?.privacy === "private")
+        ) {
+          success = false;
+          reason = "当前位置不能睡觉";
+          break;
+        }
+        actor.currentAction = {
+          type: "sleep",
+          startedAt: tick,
+          endsAt: tick + SLEEP_DURATION,
+          description: `在 ${here.name} 睡觉`,
+          interruptThreshold: SLEEP_INTERRUPT_THRESHOLD,
+        };
+        events.push(
+          makeEvent({
+            worldId,
+            tick,
+            category: "action",
+            description: `${actor.name} 在 ${here.name} 躺下准备睡觉。`,
+            participants: [actor.id],
+            scope: "node",
+            nodeId: here.id,
+          }),
+        );
+        break;
+      }
+      case "bathe": {
+        const here = nodeById.get(actor.locationId);
+        if (!here?.tags.includes("bathing")) {
+          success = false;
+          reason = "当前位置不能洗浴";
+          break;
+        }
+        resetVital(actor, "hygiene");
+        events.push(
+          makeEvent({
+            worldId,
+            tick,
+            category: "action",
+            description: `${actor.name} 在 ${here.name} 洗了个澡。`,
+            participants: [actor.id],
+            scope: "node",
+            nodeId: here.id,
+          }),
+        );
+        break;
+      }
+      case "exercise": {
+        const here = nodeById.get(actor.locationId);
+        if (
+          !(here?.tags.includes("outdoor") || here?.tags.includes("playground"))
+        ) {
+          success = false;
+          reason = "当前位置不能运动";
+          break;
+        }
+        actor.emotion.mood = clamp(actor.emotion.mood + 1, -4, 4);
+        actor.emotion.stress = clamp(actor.emotion.stress - 1, 0, 4);
+        actor.vitals.fatigue = Math.min(16, actor.vitals.fatigue + 2);
+        events.push(
+          makeEvent({
+            worldId,
+            tick,
+            category: "action",
+            description: `${actor.name} 在 ${here.name} 运动了一会儿。`,
+            participants: [actor.id],
+            scope: "node",
+            nodeId: here.id,
+            intensity: 1,
+          }),
+        );
+        break;
+      }
+      case "meditate": {
+        const here = nodeById.get(actor.locationId);
+        if (!(here?.privacy === "private" || here?.tags.includes("quiet"))) {
+          success = false;
+          reason = "当前位置不适合冥想";
+          break;
+        }
+        actor.emotion.stress = clamp(actor.emotion.stress - 2, 0, 4);
+        events.push(
+          makeEvent({
+            worldId,
+            tick,
+            category: "action",
+            description: `${actor.name} 在 ${here.name} 闭目冥想。`,
+            participants: [actor.id],
+            scope: "node",
+            nodeId: here.id,
+            intensity: 1,
+          }),
+        );
+        break;
+      }
+      case "write": {
+        const here = nodeById.get(actor.locationId);
+        if (!here?.tags.includes("indoor")) {
+          success = false;
+          reason = "当前位置不适合书写";
+          break;
+        }
+        events.push(
+          makeEvent({
+            worldId,
+            tick,
+            category: "action",
+            description: `${actor.name} 在 ${here.name} 写了点东西${
+              action.freeText ? `：${action.freeText}` : ""
+            }。`,
+            participants: [actor.id],
+            scope: "node",
+            nodeId: here.id,
+            intensity: 1,
+          }),
+        );
+        break;
+      }
+      case "groom": {
+        const here = nodeById.get(actor.locationId);
+        if (
+          !(here?.tags.includes("residence") || here?.privacy === "private")
+        ) {
+          success = false;
+          reason = "当前位置不适合整理仪容";
+          break;
+        }
+        actor.vitals.hygiene = Math.max(0, actor.vitals.hygiene - 1);
+        events.push(
+          makeEvent({
+            worldId,
+            tick,
+            category: "action",
+            description: `${actor.name} 在 ${here.name} 整理仪容。`,
+            participants: [actor.id],
+            scope: "node",
+            nodeId: here.id,
+            intensity: 1,
+          }),
+        );
+        break;
+      }
+      case "pace": {
+        const here = nodeById.get(actor.locationId);
+        events.push(
+          makeEvent({
+            worldId,
+            tick,
+            category: "action",
+            description: `${actor.name} 在 ${here?.name ?? "某处"} 来回踱步。`,
+            participants: [actor.id],
+            scope: "node",
+            nodeId: actor.locationId,
+            intensity: 1,
+          }),
+        );
+        break;
+      }
+      case "speak": {
         const target = action.targetId ? charById.get(action.targetId) : null;
         const audience = target ? `对 ${target.name} ` : "";
         events.push(
@@ -207,15 +390,13 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
             worldId,
             tick,
             category: "social",
-            description:
-              `${actor.name} ${audience}说："${action.freeText ?? "（沉默良久）"}"`,
+            description: `${actor.name} ${audience}说："${action.freeText ?? "（沉默良久）"}"`,
             participants: target ? [actor.id, target.id] : [actor.id],
             scope: "node",
             nodeId: actor.locationId,
             intensity: 2,
           }),
         );
-        // 双方都记一笔
         if (target) {
           pushMemory(target, {
             id: `mem-${randomUUID().slice(0, 8)}`,
@@ -223,6 +404,24 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
             importance: 2,
             content: `${actor.name} 对我说："${action.freeText ?? "..."}"`,
           });
+          // social_satiety boost for both speaker and listener
+          actor.emotion.social_satiety = clamp(
+            actor.emotion.social_satiety + 1,
+            -4,
+            4,
+          );
+          target.emotion.social_satiety = clamp(
+            target.emotion.social_satiety + 1,
+            -4,
+            4,
+          );
+          // mark interaction
+          if (actor.relations[target.id]) {
+            actor.relations[target.id].lastInteractionTick = tick;
+          }
+          if (target.relations[actor.id]) {
+            target.relations[actor.id].lastInteractionTick = tick;
+          }
         }
         break;
       }
@@ -256,14 +455,27 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
             intensity: action.type === "attack" ? 4 : 2,
           }),
         );
-        // 关系微调（粗糙规则）
-        const rel = actor.relations[target.id];
-        if (rel) {
-          if (action.type === "attack") rel.affinity = Math.max(-100, rel.affinity - 20);
-          else if (action.type === "help" || action.type === "gift")
-            rel.affinity = Math.min(100, rel.affinity + 10);
+
+        if (action.type === "attack") {
+          updateAffection(actor, target.id, -2, tick);
+          updateAffection(target, actor.id, -2, tick);
+          applyEmotionEvent(actor.emotion, "attacked_other");
+          applyEmotionEvent(target.emotion, "attacked_self");
+        } else if (action.type === "help" || action.type === "gift") {
+          updateAffection(actor, target.id, 1, tick);
+          updateAffection(target, actor.id, 1, tick);
+          applyEmotionEvent(actor.emotion, "helped_gifted");
+          applyEmotionEvent(target.emotion, "received_help_gift");
+        } else {
+          // interact_person: just update lastInteractionTick if relations exist
+          if (actor.relations[target.id]) {
+            actor.relations[target.id].lastInteractionTick = tick;
+          }
+          if (target.relations[actor.id]) {
+            target.relations[actor.id].lastInteractionTick = tick;
+          }
         }
-        // 记忆双方
+
         pushMemory(target, {
           id: `mem-${randomUUID().slice(0, 8)}`,
           tick,
@@ -275,7 +487,6 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
         break;
       }
       case "flee": {
-        // flee 视为离开当前节点回到父节点（如果有）
         const here = nodeById.get(actor.locationId);
         const fallback = here?.parentId ? nodeById.get(here.parentId) : null;
         if (fallback) actor.locationId = fallback.id;
@@ -289,6 +500,39 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
             scope: "node",
             nodeId: actor.locationId,
             intensity: 2,
+          }),
+        );
+        break;
+      }
+      case "update_relation": {
+        const target = action.targetId ? charById.get(action.targetId) : null;
+        if (!target || !action.changeType) {
+          success = false;
+          reason = "update_relation 需要 target_id 和 change_type";
+          break;
+        }
+        const result = applyRelationChange(
+          actor,
+          target,
+          action.changeType,
+          tick,
+        );
+        success = result.success;
+        reason = result.reason;
+        events.push(
+          makeEvent({
+            worldId,
+            tick,
+            category: "social",
+            description: `${actor.name} ${
+              result.success ? "变更了与" : "试图变更与"
+            } ${target.name} 的关系：${action.changeType}${
+              result.reason ? `（${result.reason}）` : ""
+            }`,
+            participants: [actor.id, target.id],
+            scope: "node",
+            nodeId: actor.locationId,
+            intensity: result.success ? 3 : 1,
           }),
         );
         break;
@@ -332,8 +576,10 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
       }
     }
 
-    // 写入行动者自己的短期记忆
-    pushMemory(actor, memFromAction(tick, action, success ? "我刚刚" : "我尝试但失败"));
+    pushMemory(
+      actor,
+      memFromAction(tick, action, success ? "我刚刚" : "我尝试但失败"),
+    );
     resolvedActions.push({ action, success, reason });
   }
 
@@ -342,11 +588,135 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
 
 function humanVerb(type: ActionType): string {
   switch (type) {
-    case "work": return "在工作/学习";
-    case "read": return "在阅读";
-    case "observe": return "在观察";
-    case "use_ability": return "施展能力";
-    case "interact_object": return "摆弄物件";
-    default: return type;
+    case "work":
+      return "在工作/学习";
+    case "read":
+      return "在阅读";
+    case "observe":
+      return "在观察";
+    case "use_ability":
+      return "施展能力";
+    case "interact_object":
+      return "摆弄物件";
+    default:
+      return type;
   }
+}
+
+// ---- relation change helpers ----
+
+function applyRelationChange(
+  actor: Character,
+  target: Character,
+  changeType: RelationChangeType,
+  tick: number,
+): { success: boolean; reason?: string } {
+  const aRel = actor.relations[target.id];
+  const bRel = target.relations[actor.id];
+  if (!aRel || aRel.kinds.length === 0) {
+    return { success: false, reason: "双方没有关系基础" };
+  }
+
+  const hasBlood =
+    aRel.kinds.some((k) => BLOOD_RELATION_KINDS.has(k)) ||
+    (bRel?.kinds.some((k) => BLOOD_RELATION_KINDS.has(k)) ?? false);
+
+  switch (changeType) {
+    case "become_partner": {
+      if (hasBlood) {
+        return { success: false, reason: "血缘关系不能转为伴侣" };
+      }
+      addKind(actor, target.id, "partner", tick);
+      addKind(target, actor.id, "partner", tick);
+      updateAffection(actor, target.id, 1, tick);
+      updateAffection(target, actor.id, 1, tick);
+      return { success: true };
+    }
+    case "end_partnership": {
+      if (!aRel.kinds.includes("partner")) {
+        return { success: false, reason: "当前不是伴侣关系" };
+      }
+      replaceKind(actor, target.id, "partner", "ex_partner");
+      replaceKind(target, actor.id, "partner", "ex_partner");
+      return { success: true };
+    }
+    case "become_spouse": {
+      if (
+        !aRel.kinds.includes("partner") ||
+        !(bRel?.kinds.includes("partner") ?? false)
+      ) {
+        return {
+          success: false,
+          reason: "双方必须是伴侣才能升级为配偶",
+        };
+      }
+      replaceKind(actor, target.id, "partner", "spouse");
+      replaceKind(target, actor.id, "partner", "spouse");
+      return { success: true };
+    }
+    case "end_friendship": {
+      if (!aRel.kinds.includes("friend")) {
+        return { success: false, reason: "当前不是朋友关系" };
+      }
+      removeKind(actor, target.id, "friend");
+      removeKind(target, actor.id, "friend");
+      updateAffection(actor, target.id, -1, tick);
+      updateAffection(target, actor.id, -1, tick);
+      return { success: true };
+    }
+    case "end_other_relative": {
+      if (!aRel.kinds.includes("other_relative")) {
+        return { success: false, reason: "当前没有 other_relative 关系" };
+      }
+      removeKind(actor, target.id, "other_relative");
+      removeKind(target, actor.id, "other_relative");
+      return { success: true };
+    }
+    default:
+      return { success: false, reason: "未知的 change_type" };
+  }
+}
+
+function addKind(
+  char: Character,
+  targetId: string,
+  kind: ObjectiveRelationKind,
+  tick: number,
+): void {
+  const rel = char.relations[targetId];
+  if (!rel) {
+    const fresh: Relation = {
+      kinds: [kind],
+      affection: 0,
+      since: tick,
+      lastInteractionTick: tick,
+    };
+    char.relations[targetId] = fresh;
+  } else if (!rel.kinds.includes(kind)) {
+    rel.kinds.push(kind);
+  }
+}
+
+function removeKind(
+  char: Character,
+  targetId: string,
+  kind: ObjectiveRelationKind,
+): void {
+  const rel = char.relations[targetId];
+  if (!rel) return;
+  rel.kinds = rel.kinds.filter((k) => k !== kind);
+  if (rel.kinds.length === 0) {
+    delete char.relations[targetId];
+  }
+}
+
+function replaceKind(
+  char: Character,
+  targetId: string,
+  oldKind: ObjectiveRelationKind,
+  newKind: ObjectiveRelationKind,
+): void {
+  const rel = char.relations[targetId];
+  if (!rel) return;
+  rel.kinds = rel.kinds.map((k) => (k === oldKind ? newKind : k));
 }

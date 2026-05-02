@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import type { Character, MapNode, Personality } from "@/domain/types";
 import { affectionTone, formatActionWindow, vitalThreshold } from "../_lib/profile-format";
 import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
@@ -84,6 +84,43 @@ function UniBar({
   );
 }
 
+/** Section 标题：label + 可选 X/Y 计数 + 可选展开/收起按钮。 */
+function SectionLabel({
+  children,
+  shown,
+  total,
+  expanded,
+  onToggle,
+}: {
+  children: ReactNode;
+  shown?: number;
+  total?: number;
+  expanded?: boolean;
+  onToggle?: () => void;
+}) {
+  const showCount = total !== undefined;
+  const showToggle = onToggle !== undefined && total !== undefined && shown !== undefined && total > shown;
+  return (
+    <div className="flex items-center gap-2 text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+      <span>{children}</span>
+      {showCount && (
+        <span className="px-1 bg-(--color-pixel-bg-2) border border-(--color-pixel-border-dark) text-game-2xs normal-case tracking-normal">
+          {shown !== undefined ? `${shown}/${total}` : total}
+        </span>
+      )}
+      {showToggle && (
+        <button
+          type="button"
+          onClick={onToggle}
+          className="ml-auto text-(--color-pixel-accent) hover:underline normal-case tracking-normal"
+        >
+          {expanded ? "收起 ▴" : "展开 ▾"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function ProfilePane({
   character,
   nodes,
@@ -97,10 +134,12 @@ export function ProfilePane({
 }) {
   const characterId = character?.id;
   const [thoughtExpanded, setThoughtExpanded] = useState(false);
+  const [relationsExpanded, setRelationsExpanded] = useState(false);
   const [lastCharacterId, setLastCharacterId] = useState(characterId);
   if (lastCharacterId !== characterId) {
     setLastCharacterId(characterId);
     setThoughtExpanded(false);
+    setRelationsExpanded(false);
   }
 
   if (!character) {
@@ -122,9 +161,11 @@ export function ProfilePane({
   const recentMemories = [...character.shortMemory]
     .sort((a, b) => b.tick - a.tick)
     .slice(0, 5);
-  const topRelations = Object.entries(character.relations)
-    .sort((a, b) => Math.abs(b[1].affection) - Math.abs(a[1].affection))
-    .slice(0, 5);
+  const sortedRelations = Object.entries(character.relations).sort(
+    (a, b) => Math.abs(b[1].affection) - Math.abs(a[1].affection),
+  );
+  const totalRelations = sortedRelations.length;
+  const visibleRelations = relationsExpanded ? sortedRelations : sortedRelations.slice(0, 5);
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto pixel-scroll p-3 space-y-3">
@@ -273,37 +314,58 @@ export function ProfilePane({
       </section>
 
       {/* 关系 */}
-      {topRelations.length > 0 && (
-        <section>
-          <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
-            关系
-          </div>
+      <section>
+        <SectionLabel
+          shown={Math.min(visibleRelations.length, totalRelations)}
+          total={totalRelations}
+          expanded={relationsExpanded}
+          onToggle={() => setRelationsExpanded((v) => !v)}
+        >
+          关系
+        </SectionLabel>
+        {totalRelations === 0 ? (
+          <p className="text-game-sm text-(--color-pixel-muted)">尚无任何关系</p>
+        ) : (
           <ul className="space-y-1">
-            {topRelations.map(([id, rel]) => (
-              <li key={id} className="text-game-sm flex gap-2 items-baseline">
-                <span className="text-(--color-pixel-fg) min-w-[60px]">
-                  {charById.get(id)?.name ?? id}
-                </span>
-                <span className="text-(--color-pixel-muted) truncate">
-                  {rel.kinds.join("/")}
-                </span>
-                <span
-                  className="ml-auto"
-                  style={{
-                    color:
-                      rel.affection >= 0
-                        ? "var(--color-pixel-success)"
-                        : "var(--color-pixel-danger)",
-                  }}
-                >
-                  {rel.affection > 0 ? "+" : ""}
-                  {rel.affection}
-                </span>
-              </li>
-            ))}
+            {visibleRelations.map(([id, rel]) => {
+              const tone = affectionTone(rel.affection);
+              return (
+                <li key={id} className="text-game-sm grid grid-cols-[18px_1fr_auto] gap-2 items-baseline">
+                  <span className="text-base">
+                    {NPC_EMOJI[id] ?? NPC_FALLBACK_EMOJI}
+                  </span>
+                  <div className="min-w-0">
+                    <div>
+                      <span className="text-(--color-pixel-fg)">
+                        {charById.get(id)?.name ?? id}
+                      </span>
+                      <span className="text-(--color-pixel-muted) text-game-xs"> · {rel.kinds.join("/")}</span>
+                    </div>
+                    {rel.note && (
+                      <div className="text-game-xs text-(--color-pixel-muted) italic truncate">
+                        &ldquo;{rel.note}&rdquo;
+                      </div>
+                    )}
+                  </div>
+                  <span
+                    style={{
+                      color:
+                        tone === "pos"
+                          ? "var(--color-pixel-success)"
+                          : tone === "neg"
+                            ? "var(--color-pixel-danger)"
+                            : "var(--color-pixel-muted)",
+                    }}
+                  >
+                    {rel.affection > 0 ? "+" : ""}
+                    {rel.affection}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* 短期记忆 */}
       {recentMemories.length > 0 && (

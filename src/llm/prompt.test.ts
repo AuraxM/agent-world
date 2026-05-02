@@ -437,3 +437,65 @@ describe("language", () => {
     expect(sys).toContain("简体中文");
   });
 });
+
+describe("arrivalIntro", () => {
+  it("zh：arrivalIntro=true 在 user prompt 末段加来由要求", () => {
+    const out = buildUserPrompt({
+      character: baseCharacter,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options: [{ type: "wait", hint: "等" }],
+      tick: 5,
+      facts: emptyFacts,
+      arrivalIntro: true,
+    });
+    expect(out).toContain("刚抵达此地");
+    expect(out).toMatch(/编造.*来到这里.*理由/);
+  });
+
+  it("arrivalIntro=false / 缺省时不出现来由要求", () => {
+    const out = buildUserPrompt({
+      character: baseCharacter,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options: [{ type: "wait", hint: "等" }],
+      tick: 5,
+      facts: emptyFacts,
+    });
+    expect(out).not.toContain("刚抵达此地");
+  });
+
+  it("en：arrivalIntro=true 用 English 来由提示", () => {
+    const out = buildUserPrompt({
+      character: baseCharacter,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options: [{ type: "wait", hint: "等" }],
+      tick: 5,
+      facts: emptyFacts,
+      language: "en",
+      arrivalIntro: true,
+    });
+    expect(out).toMatch(/just arrived/i);
+    expect(out).toMatch(/why you came/i);
+  });
+
+  it("ja：arrivalIntro=true 用日本語来由提示", () => {
+    const out = buildUserPrompt({
+      character: baseCharacter,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options: [{ type: "wait", hint: "等" }],
+      tick: 5,
+      facts: emptyFacts,
+      language: "ja",
+      arrivalIntro: true,
+    });
+    expect(out).toContain("到着したばかり");
+    expect(out).toContain("理由");
+  });
+});

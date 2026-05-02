@@ -463,6 +463,16 @@ function crossLanguageNote(lang: Language): string | null {
   return "注意：あなたの過去の短期・長期記憶は別の言語で書かれている可能性があります。それでも回答は必ず日本語で続けてください。";
 }
 
+function arrivalIntroBlock(lang: Language): string {
+  if (lang === "zh") {
+    return `你是刚抵达此地的访客或新住客。请在 reasoning 中编造一段简短的「我为何来到这里」的理由（1–2 句），与你的性格相符。`;
+  }
+  if (lang === "en") {
+    return "You have just arrived in this place as a visitor or new resident. In reasoning, fabricate a brief reason (1–2 sentences) for why you came here, consistent with your personality.";
+  }
+  return "あなたはこの場所に到着したばかりの訪問者または新しい住人です。reasoning の中で、自分の性格と矛盾しない「ここに来た理由」を 1〜2 文で簡潔に作り上げてください。";
+}
+
 function submitActionInstruction(lang: Language): string {
   if (lang === "zh") {
     return "请**调用 submit_action 工具**返回你的决定（不要输出自然语言文本）。务必在 reasoning 中显式引用一项你的性格特征的文字描述。";
@@ -741,6 +751,10 @@ export function buildUserPrompt(args: {
   const note = crossLanguageNote(language);
   if (note) {
     lines.push(note, "");
+  }
+
+  if (args.arrivalIntro) {
+    lines.push(arrivalIntroBlock(language), "");
   }
 
   // 末尾的提交指令 + 输出语言要求

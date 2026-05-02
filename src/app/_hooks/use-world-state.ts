@@ -39,6 +39,8 @@ export interface UseWorldState {
   autoMode: { running: boolean; total: number; done: number } | null;
   startAuto: (n?: number) => Promise<void>;
   stopAuto: () => void;
+  templates: Array<{ id: string; name: string; avatar: string | null }>;
+  placeCharacter: (characterId: string) => Promise<boolean>;
 }
 
 export function useWorldState(): UseWorldState {
@@ -63,6 +65,7 @@ export function useWorldState(): UseWorldState {
   const loadingRef = useRef(false);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
   const autoRunningRef = useRef(false);
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string; avatar: string | null }>>([]);
 
   const refresh = useCallback(async () => {
     try {
@@ -89,6 +92,23 @@ export function useWorldState(): UseWorldState {
       void refresh();
     });
   }, [refresh]);
+
+  useEffect(() => {
+    fetch("/api/configs/characters")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.characters)) {
+          setTemplates(
+            d.characters.map((c: { id: string; name: string; avatar?: string | null }) => ({
+              id: c.id,
+              name: c.name,
+              avatar: c.avatar ?? null,
+            })),
+          );
+        }
+      })
+      .catch(() => { /* 静默 */ });
+  }, []);
 
   const advance = useCallback(async (): Promise<boolean> => {
     // 取消上一次还在进行中的请求
@@ -230,6 +250,64 @@ export function useWorldState(): UseWorldState {
     shouldStopRef.current = true;
   }, []);
 
+  const placeCharacter = useCallback(
+    async (characterId: string): Promise<boolean> => {
+      if (loading || autoMode?.running) return false;
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/worlds/${worldId}/characters/place`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ characterId }),
+        });
+        if (!res.ok) {
+          let msg = `place ${res.status}`;
+          try {
+            const body = await res.json();
+            if (body.error) msg = body.error;
+          } catch { /* ignore */ }
+          throw new Error(msg);
+        }
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("no response body");
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let placed = false;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
+          for (const part of parts) {
+            const lines = part.split("\n");
+            let eventType = "";
+            let dataStr = "";
+            for (const line of lines) {
+              if (line.startsWith("event: ")) eventType = line.slice(7);
+              else if (line.startsWith("data: ")) dataStr = line.slice(6);
+            }
+            if (!dataStr) continue;
+            const data = JSON.parse(dataStr);
+            if (eventType === "placed" || eventType === "decision") {
+              placed = true;
+            } else if (eventType === "error") {
+              throw new Error(data.error ?? "unknown");
+            }
+          }
+        }
+        await refresh();
+        return placed;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loading, autoMode, worldId, refresh],
+  );
+
   return {
     snapshot,
     events,
@@ -242,5 +320,7 @@ export function useWorldState(): UseWorldState {
     autoMode,
     startAuto,
     stopAuto,
+    templates,
+    placeCharacter,
   };
 }

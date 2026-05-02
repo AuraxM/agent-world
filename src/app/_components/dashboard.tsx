@@ -109,19 +109,21 @@ export function Dashboard() {
             />
           </div>
 
-          {/* Right: minimap + character profile (placeholder — Tasks 12-13) */}
+          {/* Right: minimap (220px) + character profile (flex-1) */}
           <div style={{ gridArea: "right" }} className="min-h-0 min-w-0 overflow-hidden flex flex-col bg-(--frame-2) border-l-2 border-(--border)">
-            <MinimapTabs>
-              <MapStage
-                nodes={snapshot.nodes}
-                characters={snapshot.characters}
-                currentNodeId={view.currentNodeId}
-                selectedCharacterId={view.selectedCharacterId}
-                onEnterNode={view.setCurrentNode}
-                onSelectCharacter={(c) => view.selectCharacter(c.id)}
-              />
-              <RelationGraph />
-            </MinimapTabs>
+            <div className="flex-[0_0_220px] min-h-0 overflow-hidden">
+              <MinimapTabs>
+                <MapStage
+                  nodes={snapshot.nodes}
+                  characters={snapshot.characters}
+                  currentNodeId={view.currentNodeId}
+                  selectedCharacterId={view.selectedCharacterId}
+                  onEnterNode={view.setCurrentNode}
+                  onSelectCharacter={(c) => view.selectCharacter(c.id)}
+                />
+                <RelationGraph />
+              </MinimapTabs>
+            </div>
             <div className="flex-1 min-h-0 overflow-hidden">
               <ProfilePane
                 character={selectedCharacter}

@@ -43,6 +43,13 @@ import type {
   WorldEvent,
 } from "@/domain/types";
 import type { ActionOption } from "./actions";
+import { runDialogPhase, type RunDialogPhaseInput } from "./dialog";
+import {
+  llmAcceptDecide,
+  llmDialogTurn,
+  llmDialogSummarize,
+  llmSalvageDecide,
+} from "@/llm/decide";
 
 const FACTS_LOOKBACK_TICKS = 48;
 const MAX_FREE_MOVES = 5;
@@ -415,6 +422,90 @@ export async function tick(
       }
     }
   }
+
+  // ── Phase 4.5: Dialog protocol ──
+  const dialogResult = await runDialogPhase({
+    rawActions: actionsForExecution,
+    characters,
+    nodes,
+    perceptions,
+    tick: fromTick,
+    worldName: world.name,
+    acceptDecide: (input) => llmAcceptDecide(input),
+    turnDecide: (input) => llmDialogTurn(input),
+    summaryDecide: (input) => llmDialogSummarize(input),
+    salvageDecide: async (input) => {
+      const ctx = buildActionContext(
+        input.character,
+        nodes,
+        characters,
+      );
+      const recentThoughts = loadRecentThoughts(worldId, input.character.id, sinceTick);
+      const homeNodeId = homeMap.get(input.character.id) ?? null;
+      const sleepWindow = sleepWindowMap.get(input.character.id) ?? DEFAULT_SLEEP_WINDOW;
+      const isSleepHour = inSleepWindow(baseTime.hour, sleepWindow);
+      const facts = deriveAggregatedFacts({
+        character: input.character,
+        nodes,
+        currentTick: fromTick,
+        recentThoughts,
+        homeNodeId,
+      });
+      const opts = getAvailableActions(ctx, { facts, isSleepHour });
+
+      try {
+        return await llmSalvageDecide({
+          character: {
+            ...input.character,
+            sleepWindow,
+            homeNodeId,
+          },
+          nodes,
+          here: ctx.here,
+          companions: ctx.companions,
+          reachable: ctx.reachable,
+          perceived: perceptions.get(input.character.id) ?? [],
+          options: opts,
+          worldName: world.name,
+          tick: fromTick,
+          facts,
+          rejectReason: input.rejectReason,
+        });
+      } catch {
+        return {
+          type: "wait" as const,
+          actorId: input.character.id,
+          reasoning: `补救决策违规，回退等待：${input.rejectReason}`,
+          selfImportance: 1,
+        };
+      }
+    },
+  });
+
+  // Apply dialog results
+  for (const mw of dialogResult.memoryWrites) {
+    const c = characters.find((ch) => ch.id === mw.characterId);
+    if (c) {
+      c.shortMemory.push(mw.memory);
+      if (c.shortMemory.length > 50) {
+        c.shortMemory.splice(0, c.shortMemory.length - 50);
+      }
+    }
+  }
+  allEvents.push(...dialogResult.dialogEvents);
+  // Replace actionsForExecution with dialog-adjusted actions
+  actionsForExecution.length = 0;
+  actionsForExecution.push(...dialogResult.finalActions);
+
+  // Re-sync allDecisions to match finalActions (for onCharacterDecision callbacks)
+  for (const fa of dialogResult.finalActions) {
+    const existing = allDecisions.find((d) => d.characterId === fa.actorId);
+    if (existing) {
+      existing.action = fa;
+    }
+  }
+
+  // ── End Phase 4.5 ──
 
   // 7. 执行（move 已在 free-move 循环里处理；execute 内部的 move 分支保留兼容）
   const execResult = executeActions({

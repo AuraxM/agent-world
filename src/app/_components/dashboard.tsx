@@ -9,6 +9,7 @@ import { TopBar } from "./top-bar";
 import { TickBar } from "./tick-bar";
 import { MapStage, MinimapTabs } from "./map-stage";
 import { RelationGraph } from "./relation-graph";
+import { TreeSidebar } from "./tree-sidebar";
 
 export function Dashboard() {
   const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto, templates, placeCharacter } = useWorldState();
@@ -75,12 +76,21 @@ export function Dashboard() {
             minWidth: 1200,
           }}
         >
-          {/* Left: Tree sidebar (placeholder — Task 9) */}
-          <div style={{ gridArea: "tree" }} className="min-h-0 min-w-0 overflow-hidden bg-(--frame-2) border-r-2 border-(--border)">
-            <div className="flex items-center justify-center h-full text-body-sm text-(--text-on-frame-muted)">
-              {/* TODO: TreeSidebar (Task 9) — 200px */}
-              地图树 (Task 9)
-            </div>
+          {/* Left: Tree sidebar */}
+          <div style={{ gridArea: "tree" }} className="min-h-0 min-w-0 overflow-hidden">
+            <TreeSidebar
+              nodes={snapshot.nodes}
+              characters={snapshot.characters}
+              currentNodeId={view.currentNodeId}
+              events={events}
+              selectedCharacterId={view.selectedCharacterId}
+              followingId={followingId}
+              onJumpToNode={view.setCurrentNode}
+              onSelectCharacter={(c) => view.selectCharacter(c.id)}
+              templates={templates}
+              onPlace={placeCharacter}
+              disabled={loading || (autoMode?.running ?? false)}
+            />
           </div>
 
           {/* Center: Event stream (placeholder — Task 11) */}

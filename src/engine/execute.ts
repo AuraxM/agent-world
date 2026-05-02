@@ -418,46 +418,21 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
         break;
       }
       case "speak": {
-        const target = action.targetId ? charById.get(action.targetId) : null;
-        const audience = target ? `对 ${target.name} ` : "";
+        // speak 不应到达 execute（dialog 阶段已替换为占位 wait）
+        success = false;
+        reason = "speak action 未被 dialog 阶段处理——防御性回退";
         events.push(
           makeEvent({
             worldId,
             tick,
-            category: "social",
-            description: `${actor.name} ${audience}说："${action.freeText ?? "（沉默良久）"}"`,
-            participants: target ? [actor.id, target.id] : [actor.id],
+            category: "action",
+            description: `${actor.name} 欲言又止。`,
+            participants: [actor.id],
             scope: "node",
             nodeId: actor.locationId,
-            intensity: 2,
+            intensity: 1,
           }),
         );
-        if (target) {
-          pushMemory(target, {
-            id: `mem-${randomUUID().slice(0, 8)}`,
-            tick,
-            importance: 2,
-            content: `${actor.name} 对我说："${action.freeText ?? "..."}"`,
-          });
-          // social_satiety boost for both speaker and listener
-          actor.emotion.social_satiety = clamp(
-            actor.emotion.social_satiety + 1,
-            -4,
-            4,
-          );
-          target.emotion.social_satiety = clamp(
-            target.emotion.social_satiety + 1,
-            -4,
-            4,
-          );
-          // mark interaction
-          if (actor.relations[target.id]) {
-            actor.relations[target.id].lastInteractionTick = tick;
-          }
-          if (target.relations[actor.id]) {
-            target.relations[actor.id].lastInteractionTick = tick;
-          }
-        }
         break;
       }
       case "attack":

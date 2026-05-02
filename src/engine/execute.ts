@@ -22,12 +22,12 @@ import type {
   EventCategory,
   ObjectiveRelationKind,
 } from "@/domain/enums";
-import { BLOOD_RELATION_KINDS } from "@/domain/enums";
+import { BLOOD_RELATION_KINDS, TICKS_PER_HOUR } from "@/domain/enums";
 
 const SHORT_MEMORY_LIMIT = 50;
-const SLEEP_DURATION = 8;
+const SLEEP_DURATION = 8 * TICKS_PER_HOUR; // 40 ticks
 const SLEEP_INTERRUPT_THRESHOLD = 4 as const;
-const NAP_DURATION = 4;
+const NAP_DURATION = 4 * TICKS_PER_HOUR; // 20 ticks
 const NAP_INTERRUPT_THRESHOLD = 3 as const;
 
 interface ExecuteInput {
@@ -590,6 +590,20 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
       actor,
       memFromAction(tick, action, success ? "我刚刚" : "我尝试但失败"),
     );
+
+    // Write arrival memory if this action was triggered by a move arrival
+    if (action.isArrivalAction && action.arrivalNodeName) {
+      const arrivalContent = success
+        ? `${actor.name} 到达了 ${action.arrivalNodeName}，开始 ${action.type}`
+        : `${actor.name} 到达了 ${action.arrivalNodeName}，但 ${reason ?? "执行失败"}`;
+      pushMemory(actor, {
+        id: `mem-${randomUUID().slice(0, 8)}`,
+        tick,
+        importance: 3,
+        content: arrivalContent,
+      });
+    }
+
     resolvedActions.push({ action, success, reason });
   }
 

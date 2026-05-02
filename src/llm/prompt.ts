@@ -463,6 +463,16 @@ function crossLanguageNote(lang: Language): string | null {
   return "注意：あなたの過去の短期・長期記憶は別の言語で書かれている可能性があります。それでも回答は必ず日本語で続けてください。";
 }
 
+function submitActionInstruction(lang: Language): string {
+  if (lang === "zh") {
+    return "请**调用 submit_action 工具**返回你的决定（不要输出自然语言文本）。务必在 reasoning 中显式引用一项你的性格特征的文字描述。";
+  }
+  if (lang === "en") {
+    return "Please **call the submit_action tool** to return your decision (do not output any free-form natural-language text). You must explicitly cite one textual personality trait of yours in reasoning.";
+  }
+  return "submit_action ツールを必ず呼び出して回答してください（自由形式の自然言語テキストは出力しないでください）。reasoning では自分の性格特徴の文字記述を 1 つ明示的に引用してください。";
+}
+
 /**
  * 把全图节点渲染成树形 + shortcut 列表，供 LLM 做多步路径规划。
  * 节点条目附带 [id]，方便 LLM 在 target_node_id 中直接复用。
@@ -734,19 +744,7 @@ export function buildUserPrompt(args: {
   }
 
   // 末尾的提交指令 + 输出语言要求
-  if (language === "zh") {
-    lines.push(
-      "请**调用 submit_action 工具**返回你的决定（不要输出自然语言文本）。务必在 reasoning 中显式引用一项你的性格特征的文字描述。",
-    );
-  } else if (language === "en") {
-    lines.push(
-      "Please **call the submit_action tool** to return your decision (do not output any free-form natural-language text). You must explicitly cite one textual personality trait of yours in reasoning.",
-    );
-  } else {
-    lines.push(
-      "submit_action ツールを必ず呼び出して回答してください（自由形式の自然言語テキストは出力しないでください）。reasoning では自分の性格特徴の文字記述を 1 つ明示的に引用してください。",
-    );
-  }
+  lines.push(submitActionInstruction(language));
   lines.push("", languageInstruction(language));
 
   return lines.join("\n");

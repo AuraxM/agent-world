@@ -16,7 +16,7 @@ import {
 } from "@/domain/schemas";
 import type { Action } from "@/domain/types";
 import type { DecideFn, DecideInput } from "@/engine/tick";
-import { getThinkingEnabled } from "@/engine/settings";
+import { getLanguage, getThinkingEnabled } from "@/engine/settings";
 import { getLLMClient, getModelName, hasApiKey } from "./client";
 import { buildSystemPrompt, buildUserPrompt } from "./prompt";
 
@@ -36,10 +36,12 @@ export const llmDecide: DecideFn = async (input) => {
 
 async function callLLM(input: DecideInput): Promise<Action> {
   const client = getLLMClient();
+  const language = getLanguage();
   const system = buildSystemPrompt({
     character: input.character,
     worldName: input.worldName,
     nodes: input.nodes,
+    language,
   });
   const user = buildUserPrompt({
     character: input.character,
@@ -49,6 +51,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     options: input.options,
     tick: input.tick,
     facts: input.facts,
+    language,
   });
 
   const tool: ChatCompletionTool = {
@@ -56,7 +59,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     function: {
       name: ACTION_TOOL_NAME,
       description:
-        "提交你这一 tick 的行动。type 必须是封闭枚举之一；reasoning 必须显式引用一项你自己的性格特征（用文字描述，不要写数值）。所有文本输出必须使用简体中文。",
+        "提交你这一 tick 的行动。type 必须是封闭枚举之一；reasoning 必须显式引用一项你自己的性格特征（用文字描述，不要写数值）。",
       parameters: ActionToolInputSchema,
     },
   };

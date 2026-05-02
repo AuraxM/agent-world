@@ -1,93 +1,105 @@
 "use client";
 
+import type { MapNode } from "@/domain/types";
 import { formatGameTime } from "../_lib/format";
+import { pathFromRoot } from "../_lib/world";
+import { ThemeSwitcher } from "./theme-switcher";
 
 export function TopBar({
   tick,
   worldName,
-  loading,
-  onAdvance,
-  lastTickMs,
-  tickProgress,
-  error,
-  autoMode,
-  onStartAuto,
-  onStopAuto,
+  currentNodeId,
+  nodes,
+  followingName,
+  onJumpToNode,
+  onClearFollow,
 }: {
   tick: number;
   worldName: string;
-  loading: boolean;
-  onAdvance: () => void;
-  lastTickMs: number | null;
-  tickProgress?: { done: number; total: number } | null;
-  error: string | null;
-  autoMode: { running: boolean; total: number; done: number } | null;
-  onStartAuto: () => void;
-  onStopAuto: () => void;
+  currentNodeId: string | null;
+  nodes: MapNode[];
+  followingName: string | null;
+  onJumpToNode: (nodeId: string) => void;
+  onClearFollow: () => void;
 }) {
-  const auto = autoMode?.running ?? false;
+  const breadcrumb =
+    currentNodeId
+      ? pathFromRoot(nodes, currentNodeId)
+      : [];
+
   return (
-    <header className="flex items-center gap-4 px-4 py-2 bg-(--color-pixel-bg-2) border-b-2 border-(--color-pixel-border-dark)">
-      <div className="flex items-baseline gap-3">
-        <span className="text-(--color-pixel-accent) text-game-lg tracking-widest">
-          ◆ {worldName}
+    <header className="flex items-center gap-3 px-3 border-b-2 border-(--border) bg-gradient-to-b from-(--chrome-hi) to-(--chrome) shadow-[inset_0_-1px_0_var(--border-amber))]">
+      <span className="text-pixel-lg tracking-[var(--letter-pixel)] text-(--accent-strong)">
+        ◆ {worldName}
+      </span>
+
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1 text-body-sm text-(--text-on-frame-muted)">
+        {breadcrumb.map((n, i) => (
+          <span key={n.id} className="flex items-center gap-1 whitespace-nowrap">
+            {i > 0 && <span>›</span>}
+            {i === breadcrumb.length - 1 ? (
+              <b className="text-(--text-on-frame)">{n.name}</b>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onJumpToNode(n.id)}
+                className="hover:text-(--text-on-frame) cursor-pointer"
+              >
+                {n.name}
+              </button>
+            )}
+          </span>
+        ))}
+      </nav>
+
+      {/* Follow indicator */}
+      {followingName && (
+        <span className="flex items-center gap-1 px-2 py-0.5 text-body-xs bg-(--border-amber)/15 border border-(--border-amber) text-(--text-on-frame)">
+          👁 跟随：{followingName}
+          <button
+            type="button"
+            onClick={onClearFollow}
+            className="ml-1.5 text-(--danger) cursor-pointer"
+            title="取消跟随"
+          >
+            ✕
+          </button>
         </span>
-        <span className="text-(--color-pixel-fg) text-game-base">
-          t={tick} · {formatGameTime(tick)}
-        </span>
-      </div>
+      )}
+
       <div className="flex-1" />
-      {lastTickMs !== null && (
-        <span className="text-game-xs text-(--color-pixel-muted)">
-          上次推进 {Math.round(lastTickMs)}ms
-        </span>
-      )}
-      {error && (
-        <span className="text-game-base text-(--color-pixel-danger) max-w-xs truncate">
-          ⚠ {error}
-        </span>
-      )}
-      {auto && autoMode && (
-        <span className="text-game-xs text-(--color-pixel-accent)">
-          自动 {autoMode.done}/{autoMode.total}
-          {tickProgress && tickProgress.total > 0
-            ? ` · 当前 ${tickProgress.done}/${tickProgress.total}`
-            : ""}
-        </span>
-      )}
-      {!auto && tickProgress && tickProgress.total > 0 && (
-        <span className="text-game-xs text-(--color-pixel-accent)">
-          {tickProgress.done}/{tickProgress.total}
-        </span>
-      )}
-      {auto ? (
-        <button
-          type="button"
-          onClick={onStopAuto}
-          className="px-3 py-1 text-game-base bg-(--color-pixel-danger) text-(--color-pixel-border-dark) border-2 border-(--color-pixel-border-dark) shadow-[inset_0_-2px_0_var(--color-pixel-border-dark)] hover:brightness-110 active:translate-y-px"
-        >
-          停止 ⏹
-        </button>
-      ) : (
-        <>
-          <button
-            type="button"
-            onClick={onAdvance}
-            disabled={loading}
-            className="px-3 py-1 text-game-base bg-(--color-pixel-accent) text-(--color-pixel-border-dark) border-2 border-(--color-pixel-accent-dark) shadow-[inset_0_-2px_0_var(--color-pixel-accent-dark)] disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 active:translate-y-px"
-          >
-            {loading ? "推进中…" : "推进 1 小时 ▶"}
-          </button>
-          <button
-            type="button"
-            onClick={onStartAuto}
-            disabled={loading}
-            className="px-3 py-1 text-game-base bg-(--color-pixel-bg) text-(--color-pixel-fg) border-2 border-(--color-pixel-border-light) hover:border-(--color-pixel-accent) hover:text-(--color-pixel-accent) disabled:opacity-50 disabled:cursor-not-allowed active:translate-y-px"
-          >
-            自动 24h ⏵⏵
-          </button>
-        </>
-      )}
+
+      {/* Icon buttons — all placeholder except theme */}
+      <button
+        type="button"
+        disabled
+        title="搜索 (Coming Soon)"
+        className="w-7 h-7 bg-transparent border border-(--border-amber) text-(--text-on-frame-muted) text-sm cursor-not-allowed opacity-50"
+      >
+        🔍
+      </button>
+      <button
+        type="button"
+        disabled
+        title="快照 (Coming Soon)"
+        className="w-7 h-7 bg-transparent border border-(--border-amber) text-(--text-on-frame-muted) text-sm cursor-not-allowed opacity-50"
+      >
+        💾
+      </button>
+      <button
+        type="button"
+        disabled
+        title="设置 (Coming Soon)"
+        className="w-7 h-7 bg-transparent border border-(--border-amber) text-(--text-on-frame-muted) text-sm cursor-not-allowed opacity-50"
+      >
+        ⚙
+      </button>
+      <ThemeSwitcher />
+
+      <span className="text-pixel-xs text-(--accent-strong) tracking-[var(--letter-pixel-tight)]">
+        T={tick} · {formatGameTime(tick)}
+      </span>
     </header>
   );
 }

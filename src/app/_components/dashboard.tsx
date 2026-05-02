@@ -7,7 +7,7 @@ import { useFollow } from "../_hooks/use-follow";
 import { findRootNode } from "../_lib/world";
 import { TopBar } from "./top-bar";
 import { TickBar } from "./tick-bar";
-import { MapStage, MinimapTabs } from "./map-stage";
+import { MapStage } from "./map-stage";
 import { RelationGraph } from "./relation-graph";
 import { TreeSidebar } from "./tree-sidebar";
 import { ProfilePane } from "./profile-pane";
@@ -19,6 +19,7 @@ export function Dashboard() {
   const view = useViewState();
   const { followingId, follow, clear: clearFollow, isFollowing } = useFollow();
   const [injectOpen, setInjectOpen] = useState(false);
+  const [centerTab, setCenterTab] = useState<"stream" | "map" | "relations">("stream");
 
   useEffect(() => {
     if (!snapshot) return;
@@ -96,23 +97,44 @@ export function Dashboard() {
             />
           </div>
 
-          {/* Center: Event stream */}
-          <div style={{ gridArea: "stream" }} className="min-h-0 min-w-0 overflow-hidden">
-            <EventStream
-              events={events}
-              characters={snapshot.characters}
-              nodes={snapshot.nodes}
-              followingId={followingId}
-              onJumpToNode={view.setCurrentNode}
-              onSelectCharacter={(c) => view.selectCharacter(c.id)}
-              onFollow={follow}
-            />
-          </div>
+          {/* Center: stage tabs (事件流 / 小地图 / 关系图) */}
+          <div style={{ gridArea: "stream" }} className="min-h-0 min-w-0 overflow-hidden flex flex-col">
+            {/* Tab bar */}
+            <div className="flex px-2 bg-(--frame-2) border-b-2 border-(--border) shadow-[inset_0_-1px_0_var(--border-amber))]">
+              {([
+                ["stream", "事件流"],
+                ["map", "小地图"],
+                ["relations", "关系图"],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setCenterTab(key)}
+                  className={`text-pixel-xs px-3 py-2 tracking-[var(--letter-pixel-tight)] uppercase cursor-pointer border-b-2 -mb-px transition-colors ${
+                    centerTab === key
+                      ? "text-(--accent-strong) border-(--accent-strong) bg-(--frame)"
+                      : "text-(--text-on-frame-muted) border-transparent hover:text-(--text-on-frame)"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
-          {/* Right: minimap (220px) + character profile (flex-1) */}
-          <div style={{ gridArea: "right" }} className="min-h-0 min-w-0 overflow-hidden flex flex-col bg-(--frame-2) border-l-2 border-(--border)">
-            <div className="flex-[0_0_220px] min-h-0 overflow-hidden">
-              <MinimapTabs>
+            {/* Tab content */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {centerTab === "stream" && (
+                <EventStream
+                  events={events}
+                  characters={snapshot.characters}
+                  nodes={snapshot.nodes}
+                  followingId={followingId}
+                  onJumpToNode={view.setCurrentNode}
+                  onSelectCharacter={(c) => view.selectCharacter(c.id)}
+                  onFollow={follow}
+                />
+              )}
+              {centerTab === "map" && (
                 <MapStage
                   nodes={snapshot.nodes}
                   characters={snapshot.characters}
@@ -121,20 +143,22 @@ export function Dashboard() {
                   onEnterNode={view.setCurrentNode}
                   onSelectCharacter={(c) => view.selectCharacter(c.id)}
                 />
-                <RelationGraph />
-              </MinimapTabs>
+              )}
+              {centerTab === "relations" && <RelationGraph />}
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <ProfilePane
-                character={selectedCharacter}
-                nodes={snapshot.nodes}
-                onJumpToNode={view.setCurrentNode}
-                characters={snapshot.characters}
-                events={events}
-                onFollow={follow}
-                isFollowing={selectedCharacter ? isFollowing(selectedCharacter.id) : false}
-              />
-            </div>
+          </div>
+
+          {/* Right: character profile */}
+          <div style={{ gridArea: "right" }} className="min-h-0 min-w-0 overflow-hidden bg-(--frame-2) border-l-2 border-(--border)">
+            <ProfilePane
+              character={selectedCharacter}
+              nodes={snapshot.nodes}
+              onJumpToNode={view.setCurrentNode}
+              characters={snapshot.characters}
+              events={events}
+              onFollow={follow}
+              isFollowing={selectedCharacter ? isFollowing(selectedCharacter.id) : false}
+            />
           </div>
 
           {/* Bottom: Tick bar */}

@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import type { Character, MapNode } from "@/domain/types";
 import { NPC_EMOJI, NPC_FALLBACK_EMOJI, paletteVarsFor } from "../_lib/sprite";
 import { childrenOf, groupCharactersByLocation, pathFromRoot } from "../_lib/world";
@@ -77,10 +77,6 @@ function NpcSprite({
     </div>
   );
 }
-
-"use client";
-
-import { useState } from "react";
 
 export function MinimapTabs({
   children,

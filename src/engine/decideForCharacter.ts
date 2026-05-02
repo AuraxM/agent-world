@@ -224,6 +224,15 @@ export async function decideForCharacter(
             emotionTag: p.emotion_tag,
             selfImportance: p.self_importance,
             changeType: p.change_type,
+            reason: p.reason,
+            arrivalAction: p.arrival_action
+              ? {
+                  type: p.arrival_action.action_type,
+                  freeText: p.arrival_action.free_text,
+                  targetId: p.arrival_action.target_id,
+                  targetNodeId: p.arrival_action.target_node_id,
+                }
+              : undefined,
           };
         } catch (err) {
           const msg =

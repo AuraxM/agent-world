@@ -10,6 +10,7 @@ import { TickBar } from "./tick-bar";
 import { MapStage, MinimapTabs } from "./map-stage";
 import { RelationGraph } from "./relation-graph";
 import { TreeSidebar } from "./tree-sidebar";
+import { ProfilePane } from "./profile-pane";
 
 export function Dashboard() {
   const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto, templates, placeCharacter } = useWorldState();
@@ -114,8 +115,16 @@ export function Dashboard() {
               />
               <RelationGraph />
             </MinimapTabs>
-            <div className="flex-1 flex items-center justify-center text-body-sm text-(--text-on-frame-muted)">
-              角色档案 (Task 13)
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <ProfilePane
+                character={selectedCharacter}
+                nodes={snapshot.nodes}
+                onJumpToNode={view.setCurrentNode}
+                characters={snapshot.characters}
+                events={events}
+                onFollow={follow}
+                isFollowing={selectedCharacter ? isFollowing(selectedCharacter.id) : false}
+              />
             </div>
           </div>
 

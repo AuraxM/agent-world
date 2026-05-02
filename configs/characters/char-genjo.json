@@ -3,6 +3,7 @@
   "name": "玄丈",
   "avatar": "🧙",
   "homeNodeId": "node-wizard-tower",
+  "sleepWindow": { "start": 2, "duration": 8 },
   "personality": {
     "ei": -3,
     "sn": -3,

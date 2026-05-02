@@ -3,6 +3,7 @@
   "name": "田中花",
   "avatar": "🧑‍🍳",
   "homeNodeId": "node-farmhouse",
+  "sleepWindow": { "start": 20, "duration": 8 },
   "personality": {
     "ei": -2,
     "sn": 3,

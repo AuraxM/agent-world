@@ -3,6 +3,7 @@
   "name": "田中阳太",
   "avatar": "🧑‍🔬",
   "homeNodeId": "node-farmhouse",
+  "sleepWindow": { "start": 23, "duration": 8 },
   "personality": {
     "ei": -2,
     "sn": -3,

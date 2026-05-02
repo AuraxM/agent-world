@@ -3,6 +3,7 @@
   "name": "斉藤医師",
   "avatar": "👨‍⚕️",
   "homeNodeId": "node-doctor-house",
+  "sleepWindow": { "start": 22, "duration": 8 },
   "personality": {
     "ei": 1,
     "sn": -2,

@@ -83,6 +83,11 @@ const AbilitySchema = z.object({
   exp: z.number().int().nonnegative(),
 });
 
+const SleepWindowSchema = z.object({
+  start: z.number().int().min(0).max(23),
+  duration: z.number().int().min(4).max(12),
+});
+
 /** 角色模板（文件内格式）：去掉所有运行期字段。 */
 export const CharacterTemplateSchema: z.ZodType<CharacterTemplate> = z.object({
   id: z.string().min(1),
@@ -90,6 +95,8 @@ export const CharacterTemplateSchema: z.ZodType<CharacterTemplate> = z.object({
   avatar: z.string().optional(),
   /** 角色"家"节点的 id；prompt 引导回家时用。可选，向后兼容。 */
   homeNodeId: z.string().min(1).nullable().optional(),
+  /** 个体作息时间窗口；缺省 22:00 起 8 小时。 */
+  sleepWindow: SleepWindowSchema.optional(),
   personality: PersonalitySchema,
   abilities: z.array(AbilitySchema),
   relations: z.record(z.string(), RelationSchema),

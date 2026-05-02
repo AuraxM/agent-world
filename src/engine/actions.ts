@@ -96,7 +96,9 @@ export function getAvailableActions(
   const homeNodeId = facts?.homeNodeId ?? null;
   const opts: ActionOption[] = [];
 
-  const restNeeded = fatigue >= 10;
+  // 12 起才算"必须休息"——10 那档（high "困倦"）只是文字提示，不上 ⭐。
+  // 这样下午 fatigue=10 不会被强引导回家睡觉，把决定权交回 LLM。
+  const restNeeded = fatigue >= 12;
   const sleepStuckOutside =
     isSleepHour &&
     !(here.tags.includes("residence") || here.privacy === "private");
@@ -105,23 +107,24 @@ export function getAvailableActions(
     !here.tags.includes("residence") &&
     !here.tags.includes("education");
 
-  // 永远可用
+  // 永远可用——hint 不重复 here.name（user prompt 上方已有"你现在的位置"）。
   opts.push({
     type: "wait",
     hint:
       restNeeded || sleepStuckOutside
-        ? "什么都不做，原地等待。（你应该休息，wait 并不解决疲劳）"
-        : "什么都不做，原地等待。",
+        ? "原地等待（wait 并不解决疲劳）。"
+        : "原地等待。",
   });
-  opts.push({ type: "observe", hint: `观察 ${here.name} 的环境与人。` });
-  opts.push({ type: "pace", hint: `在 ${here.name} 踱步，整理思绪。` });
+  opts.push({ type: "observe", hint: "观察当前环境与人。" });
+  opts.push({ type: "pace", hint: "踱步，整理思绪。" });
 
-  // move：到每个相邻节点
+  // move：到每个相邻节点。节点的 tags/privacy 已在 system map graph 中提供，
+  // 这里只渲染节点名 + cost + 情境提示。
   for (const n of reachable) {
     const isShortcut = here.shortcuts.includes(n.id);
     const cost = isShortcut ? 0 : (n.travelCost ?? 0);
     const costSuffix = cost > 0 ? ` ⏱ 需 ${cost} 小时` : "";
-    let hint = `前往 ${n.name}（${n.privacy}, ${n.tags.join("/")}）${costSuffix}`;
+    let hint = `前往 ${n.name}${costSuffix}`;
     const isHome = homeNodeId !== null && n.id === homeNodeId;
     if (isHome && (restNeeded || sleepStuckOutside)) {
       hint = `⭐ ${hint}——这是你的家，可以休息`;
@@ -138,8 +141,12 @@ export function getAvailableActions(
   if (here.tags.includes("dining")) {
     const eatHint =
       hunger <= 0
-        ? `在 ${here.name} 进食。（你并不饿，吃饭只是为了打发时间）`
-        : `在 ${here.name} 进食。`;
+        ? "进食（你并不饿，仅打发时间）。"
+        : hunger >= 10
+          ? `⭐ 进食（你已经 ${hunger} 小时未进食）。`
+          : hunger >= 5
+            ? "⭐ 进食。"
+            : "进食。";
     opts.push({ type: "eat", hint: eatHint });
   } else if (hunger >= 5) {
     opts.push({
@@ -150,86 +157,88 @@ export function getAvailableActions(
 
   // 休息：私人住宅
   if (here.tags.includes("residence") || here.privacy === "private") {
+    // rest 是温和动作（-2 fatigue），推得宽：累或到点都 ⭐。
     const restHint =
-      restNeeded || isSleepHour
-        ? `⭐ 在 ${here.name} 休息（你确实需要）。`
-        : `在 ${here.name} 休息。`;
+      restNeeded || isSleepHour ? "⭐ 休息（你确实需要）。" : "休息。";
     opts.push({ type: "rest", hint: restHint });
 
-    // 睡觉（连续 8 小时）
-    const sleepHint =
-      isSleepHour || restNeeded
-        ? `⭐ 在 ${here.name} 睡觉（连续 8 小时，期间不被 intensity < 4 的事件打断）。`
-        : `在 ${here.name} 睡觉（现在还早，除非你真的很累）。`;
-    opts.push({ type: "sleep", hint: sleepHint });
+    // sleep（8h）只在作息窗口内提供；窗口外用 nap（4h）替代。
+    if (isSleepHour) {
+      opts.push({
+        type: "sleep",
+        hint: "⭐ 睡觉（连续 8 小时，期间不被 intensity < 4 的事件打断）。",
+      });
+    } else {
+      opts.push({
+        type: "nap",
+        hint: restNeeded
+          ? "⭐ 小睡 4 小时（白天补觉用，效果较弱；不是正经睡眠）。"
+          : "小睡 4 小时。",
+      });
+    }
 
     // 整理仪容
-    const groomHint =
-      hygiene >= HYGIENE_SEVERE
-        ? `⭐ 在 ${here.name} 整理仪容。`
-        : `在 ${here.name} 整理仪容。`;
-    opts.push({ type: "groom", hint: groomHint });
+    opts.push({
+      type: "groom",
+      hint: hygiene >= HYGIENE_SEVERE ? "⭐ 整理仪容。" : "整理仪容。",
+    });
   }
 
   // 洗浴
   if (here.tags.includes("bathing")) {
-    const batheHint =
-      hygiene >= HYGIENE_MEDIUM
-        ? `⭐ 在 ${here.name} 洗浴（你已经 ${hygiene} 小时没洗澡了）。`
-        : `在 ${here.name} 洗浴。`;
-    opts.push({ type: "bathe", hint: batheHint });
+    opts.push({
+      type: "bathe",
+      hint:
+        hygiene >= HYGIENE_MEDIUM
+          ? `⭐ 洗浴（你已经 ${hygiene} 小时没洗澡了）。`
+          : "洗浴。",
+    });
   }
 
   // 运动
   if (here.tags.includes("outdoor") || here.tags.includes("playground")) {
     opts.push({
       type: "exercise",
-      hint: `在 ${here.name} 运动一下（+mood, -stress, +fatigue）。`,
+      hint: "运动一下（+mood, -stress, +fatigue）。",
     });
   }
 
   // 冥想
   if (here.privacy === "private" || here.tags.includes("quiet")) {
-    const meditateHint =
-      stress >= 3
-        ? `⭐ 在 ${here.name} 冥想放松（缓解压力）。`
-        : `在 ${here.name} 冥想。`;
-    opts.push({ type: "meditate", hint: meditateHint });
+    opts.push({
+      type: "meditate",
+      hint: stress >= 3 ? "⭐ 冥想放松（缓解压力）。" : "冥想。",
+    });
   }
 
   // 写作 / 阅读：室内
   if (here.tags.includes("indoor")) {
-    opts.push({
-      type: "write",
-      hint: `在 ${here.name} 写点东西（mood 依自评变化）。`,
-    });
-    opts.push({ type: "read", hint: `在 ${here.name} 安静阅读。` });
+    opts.push({ type: "write", hint: "写点东西（mood 依自评变化）。" });
+    opts.push({ type: "read", hint: "安静阅读。" });
   }
 
   // 工作 / 学习：教育场所
   if (here.tags.includes("education")) {
-    opts.push({ type: "work", hint: `在 ${here.name} 学习/工作。` });
+    opts.push({ type: "work", hint: "学习/工作。" });
   }
 
-  // 与同节点其他角色互动
+  // 与同节点其他角色互动——关系 / 好感已在 user prompt 的"同节点其他人物"段
+  // 完整列出，hint 不重复 relTag。
   const speakSuffix =
     stayHours >= 4 && companions.length > 0
       ? `（你已在此和他们待 ${stayHours} 小时，话题可能开始重复）`
       : "";
   for (const peer of companions) {
     const rel = self.relations[peer.id];
-    const relTag = rel
-      ? `${rel.kinds.join("/")}, 好感 ${rel.affection}`
-      : "陌生";
     opts.push({
       type: "speak",
       targetId: peer.id,
-      hint: `和 ${peer.name}（${relTag}）说话。${speakSuffix}`,
+      hint: `和 ${peer.name} 说话。${speakSuffix}`,
     });
     opts.push({
       type: "interact_person",
       targetId: peer.id,
-      hint: `与 ${peer.name}（${relTag}）做出非言语互动。`,
+      hint: `与 ${peer.name} 做出非言语互动。`,
     });
     if (rel && rel.affection > 1) {
       opts.push({

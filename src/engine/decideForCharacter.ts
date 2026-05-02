@@ -27,7 +27,13 @@ import {
 import { getLanguage, getThinkingEnabled } from "./settings";
 import { db, schema } from "@/db/client";
 import { loadAllCharacters } from "@/config/loader";
-import { buildSystemPrompt, buildUserPrompt, timeOfDay } from "@/llm/prompt";
+import {
+  buildSystemPrompt,
+  buildUserPrompt,
+  DEFAULT_SLEEP_WINDOW,
+  inSleepWindow,
+  timeOfDay,
+} from "@/llm/prompt";
 import type { Action, Character, WorldEvent } from "@/domain/types";
 import type { DecideInput } from "./tick";
 
@@ -58,6 +64,15 @@ function buildHomeMap(): Map<string, string> {
     /* configs 不可读时静默 */
   }
   return m;
+}
+
+function getSleepWindow(characterId: string) {
+  try {
+    const tpl = loadAllCharacters().find((t) => t.id === characterId);
+    return tpl?.sleepWindow ?? DEFAULT_SLEEP_WINDOW;
+  } catch {
+    return DEFAULT_SLEEP_WINDOW;
+  }
 }
 
 /**
@@ -100,6 +115,8 @@ export async function decideForCharacter(
   const homeMap = buildHomeMap();
   const homeNodeId = homeMap.get(c.id) ?? null;
   c.homeNodeId = homeNodeId;
+  const sleepWindow = getSleepWindow(c.id);
+  c.sleepWindow = sleepWindow;
 
   // 1. perception：当 tick 已写的事件
   const tickEvents = loadEventsAtTick(worldId, fromTick);
@@ -117,10 +134,10 @@ export async function decideForCharacter(
     homeNodeId,
   });
   const ctx = buildActionContext(c, nodes, characters);
-  const dayInfo = timeOfDay(fromTick);
+  const baseTime = timeOfDay(fromTick);
   const opts = getAvailableActions(ctx, {
     facts,
-    isSleepHour: dayInfo.isSleepHour,
+    isSleepHour: inSleepWindow(baseTime.hour, sleepWindow),
   });
 
   // 3. 决策（强制 arrivalIntro）

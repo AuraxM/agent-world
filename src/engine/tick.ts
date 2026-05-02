@@ -23,7 +23,7 @@ import { executeActions } from "./execute";
 import { deriveAggregatedFacts, type AggregatedFacts } from "./facts";
 import { dispatchPerception } from "./perception";
 import { decayVitals, evolveEmotions } from "./vitals-emotion";
-import { timeOfDay } from "@/llm/prompt";
+import { DEFAULT_SLEEP_WINDOW, inSleepWindow, timeOfDay } from "@/llm/prompt";
 import {
   appendEventsLog,
   appendThoughts,
@@ -39,6 +39,7 @@ import type {
   Character,
   MapNode,
   Relation,
+  SleepWindow,
   WorldEvent,
 } from "@/domain/types";
 import type { ActionOption } from "./actions";
@@ -161,8 +162,9 @@ export async function tick(
 
   // 5. 准备决策上下文公共变量
   const homeMap = buildHomeMap();
+  const sleepWindowMap = buildSleepWindowMap();
   const sinceTick = Math.max(0, fromTick - FACTS_LOOKBACK_TICKS);
-  const dayInfo = timeOfDay(fromTick);
+  const baseTime = timeOfDay(fromTick); // hour/day/period 全局；isSleepHour 在循环内逐角色算
   const decideFn = options.forceWait
     ? async (input: DecideInput) => fallbackWait(input.character)
     : (options.decide ?? DEFAULT_DECIDE);
@@ -192,12 +194,17 @@ export async function tick(
           (e) => e.intensity >= c.currentAction!.interruptThreshold,
         );
         if (interrupt) {
-          const halfDone = Math.floor(
-            (fromTick - c.currentAction.startedAt) / 2,
-          );
+          // 中断后按已完成时长抵扣 fatigue。
+          // sleep 1:1（之前是 /2，导致睡 4h 才回 2 点 → 仍 critical → 醒来又被 ⭐ 引去再睡 → 死循环）。
+          // nap 按完成比例 ×6/4=1.5/h，与"完整 4h = -6"对齐。
+          const hoursDone = fromTick - c.currentAction.startedAt;
           if (c.currentAction.type === "sleep") {
-            c.vitals.fatigue = Math.max(0, c.vitals.fatigue - halfDone);
+            c.vitals.fatigue = Math.max(0, c.vitals.fatigue - hoursDone);
+          } else if (c.currentAction.type === "nap") {
+            const reduction = Math.floor((hoursDone * 6) / 4);
+            c.vitals.fatigue = Math.max(0, c.vitals.fatigue - reduction);
           }
+          if (c.vitals.fatigue < 16) c.vitals.fatigueCapTicks = 0;
           freeMoveEvents.push(
             makeInnerEvent({
               worldId,
@@ -239,10 +246,16 @@ export async function tick(
         }
       }
 
-      // 6b. ongoing action 到期：结算效果
-      if (c.currentAction && fromTick === c.currentAction.endsAt) {
+      // 6b. ongoing action 到期：结算效果。
+      // 用 >= 而非 ===：异常恢复 / 快进越界时也能正确结算，避免 sleep 完成
+      // 但 fatigue 没归零的死循环。
+      if (c.currentAction && fromTick >= c.currentAction.endsAt) {
         if (c.currentAction.type === "sleep") {
           c.vitals.fatigue = 0;
+          c.vitals.fatigueCapTicks = 0;
+        } else if (c.currentAction.type === "nap") {
+          c.vitals.fatigue = Math.max(0, c.vitals.fatigue - 6);
+          if (c.vitals.fatigue < 16) c.vitals.fatigueCapTicks = 0;
         }
         c.currentAction = undefined;
       }
@@ -259,6 +272,9 @@ export async function tick(
         const recentThoughts = loadRecentThoughts(worldId, c.id, sinceTick);
         const homeNodeId = homeMap.get(c.id) ?? null;
         c.homeNodeId = homeNodeId;
+        const sleepWindow = sleepWindowMap.get(c.id) ?? DEFAULT_SLEEP_WINDOW;
+        c.sleepWindow = sleepWindow;
+        const isSleepHour = inSleepWindow(baseTime.hour, sleepWindow);
         const facts = deriveAggregatedFacts({
           character: c,
           nodes,
@@ -268,7 +284,7 @@ export async function tick(
         });
         const opts = getAvailableActions(ctx, {
           facts,
-          isSleepHour: dayInfo.isSleepHour,
+          isSleepHour,
         });
 
         try {
@@ -453,6 +469,18 @@ function buildHomeMap(): Map<string, string> {
   try {
     for (const tpl of loadAllCharacters()) {
       if (tpl.homeNodeId) m.set(tpl.id, tpl.homeNodeId);
+    }
+  } catch {
+    // configs 目录不可读时静默
+  }
+  return m;
+}
+
+function buildSleepWindowMap(): Map<string, SleepWindow> {
+  const m = new Map<string, SleepWindow>();
+  try {
+    for (const tpl of loadAllCharacters()) {
+      if (tpl.sleepWindow) m.set(tpl.id, tpl.sleepWindow);
     }
   } catch {
     // configs 目录不可读时静默

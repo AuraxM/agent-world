@@ -3,6 +3,7 @@
   "name": "铃木美咲",
   "avatar": "🧑‍🌾",
   "homeNodeId": "node-ranch-house",
+  "sleepWindow": { "start": 21, "duration": 8 },
   "personality": {
     "ei": 3,
     "sn": -2,

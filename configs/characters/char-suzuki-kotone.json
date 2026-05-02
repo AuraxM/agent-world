@@ -3,6 +3,7 @@
   "name": "铃木琴音",
   "avatar": "🎨",
   "homeNodeId": "node-ranch-house",
+  "sleepWindow": { "start": 23, "duration": 8 },
   "personality": {
     "ei": -3,
     "sn": -2,

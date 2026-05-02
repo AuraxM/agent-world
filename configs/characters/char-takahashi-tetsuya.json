@@ -2,7 +2,8 @@
   "id": "char-takahashi-tetsuya",
   "name": "高桥铁也",
   "avatar": "⚒️",
-  "homeNodeId": "node-blacksmith",
+  "homeNodeId": "node-blacksmith-quarters",
+  "sleepWindow": { "start": 21, "duration": 8 },
   "personality": {
     "ei": -2,
     "sn": 3,

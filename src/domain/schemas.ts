@@ -90,11 +90,13 @@ export const PersonalitySchema = z.object({
   jp: z.number().int().min(-4).max(4),
 });
 
-/** Vitals 校验：0..16 整数。 */
+/** Vitals 校验：0..16 整数；cap 计数器可选，旧存档无此字段视为 0。 */
 export const VitalsSchema = z.object({
   hunger: z.number().int().min(0).max(16),
   fatigue: z.number().int().min(0).max(16),
   hygiene: z.number().int().min(0).max(16),
+  hungerCapTicks: z.number().int().nonnegative().optional(),
+  fatigueCapTicks: z.number().int().nonnegative().optional(),
 });
 
 /** Emotion 校验：mood/social_satiety [-4..+4]，stress [0..4]。 */

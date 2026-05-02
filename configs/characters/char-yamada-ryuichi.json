@@ -3,6 +3,7 @@
   "name": "山田竜一",
   "avatar": "🎣",
   "homeNodeId": "node-fisher-hut",
+  "sleepWindow": { "start": 19, "duration": 8 },
   "personality": {
     "ei": -2,
     "sn": 2,

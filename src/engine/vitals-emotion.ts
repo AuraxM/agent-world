@@ -1,20 +1,19 @@
 /**
  * 生理 + 情绪引擎：每 tick 衰减 + 越线 inner 事件 + 事件驱动情绪。
  *
- * 数值规则（per spec §三）：
+ * 数值规则：
  * - hunger: +1/tick (0..16)
- * - fatigue: +1/tick (0..16)
+ * - fatigue: 非线性 — 0..8 偶数 tick +1（慢段）/ 8..13 每 tick +1（标段）/ 13..16 每 tick +2（快段）。
+ *   ~23h 到顶，与 24h 昼夜节律对齐；前 8h 不催，后 3h 强催。
  * - hygiene: +1 per even tick (0..16)
  * - mood: even tick → 朝 0 走 1（自然回归）
  * - stress: 每 24 tick 末 -1 (封底 0)
  * - social_satiety: even tick → 同节点有伴 +1 (封顶 +4)，独处 -1 (封底 -4)
  *
  * 越线提醒（节流）：
- * - hunger / fatigue: ≥5 medium (每 5 tick 复述), ≥10 severe (每 3 tick 复述)
+ * - hunger / fatigue: ≥5 medium (每 8 tick 复述), ≥10 severe (每 5 tick 复述)
  * - hygiene: ≥8 medium (每 8 tick), ≥13 severe (每 4 tick)
- * - mood ≤ -3: 每 6 tick
- * - stress ≥ 3: 每 6 tick
- * - social_satiety ≤ -3: 每 6 tick
+ * - mood ≤ -3 / stress ≥ 3 / social_satiety ≤ -3: 每 8 tick
  */
 import { randomUUID } from "node:crypto";
 import type { Character, Emotion, WorldEvent } from "@/domain/types";
@@ -23,6 +22,11 @@ import type { Character, Emotion, WorldEvent } from "@/domain/types";
 
 const VITAL_MAX = 16;
 
+// 顶值惩罚态：vital==16 持续 N tick 触发 mood 下降 + 失神 inner event。
+// 每条 inner event 携带 intensity=3，让 LLM 实感"忽视生理是有真实代价的"。
+const CAP_PENALTY_LIGHT_TICKS = 4;
+const CAP_PENALTY_HEAVY_TICKS = 8;
+
 const HUNGER_MEDIUM = 5;
 const HUNGER_SEVERE = 10;
 const FATIGUE_MEDIUM = 5;
@@ -30,13 +34,13 @@ const FATIGUE_SEVERE = 10;
 const HYGIENE_MEDIUM = 8;
 const HYGIENE_SEVERE = 13;
 
-const REMINDER_HUNGER_FATIGUE_MEDIUM = 5;
-const REMINDER_HUNGER_FATIGUE_SEVERE = 3;
+const REMINDER_HUNGER_FATIGUE_MEDIUM = 8;
+const REMINDER_HUNGER_FATIGUE_SEVERE = 5;
 const REMINDER_HYGIENE_MEDIUM = 8;
 const REMINDER_HYGIENE_SEVERE = 4;
-const REMINDER_MOOD = 6;
-const REMINDER_STRESS = 6;
-const REMINDER_SOCIAL_SATIETY_LOW = 6;
+const REMINDER_MOOD = 8;
+const REMINDER_STRESS = 8;
+const REMINDER_SOCIAL_SATIETY_LOW = 8;
 
 const STRESS_DECAY_INTERVAL = 24;
 
@@ -144,6 +148,14 @@ function checkVitalCrossing(args: VitalCrossingCheck): void {
   }
 }
 
+// 0..8 慢段（偶数 tick +1，等价 +0.5/h）；8..13 标段（+1/h）；13..16 快段（+2/h）。
+// 总耗时 ~21h 到顶，留出夜间补觉空间。
+function fatigueIncrement(currentFatigue: number, isEven: boolean): number {
+  if (currentFatigue < 8) return isEven ? 1 : 0;
+  if (currentFatigue < 13) return 1;
+  return 2;
+}
+
 // ---- vitals decay ----
 
 export interface VitalsDecayInput {
@@ -158,22 +170,31 @@ export function decayVitals(input: VitalsDecayInput): WorldEvent[] {
   const isEven = tick % 2 === 0;
 
   for (const c of characters) {
-    // 睡眠期间 vitals 冻结：既不衰减也不触发饥饿/疲劳/卫生提醒，
+    // 睡眠 / 小睡期间 vitals 冻结：既不衰减也不触发饥饿/疲劳/卫生提醒，
     // 醒来当 tick（fromTick === endsAt）恢复正常衰减。
     if (
-      c.currentAction?.type === "sleep" &&
+      (c.currentAction?.type === "sleep" || c.currentAction?.type === "nap") &&
       tick < c.currentAction.endsAt
     ) {
       continue;
     }
 
+    // 远途 move 期间走半速：路上没那么累那么饿，否则一趟山顶来回就强制要补觉。
+    const onTravel =
+      c.currentAction?.type === "move" && tick < c.currentAction.endsAt;
+
     const prevHunger = c.vitals.hunger;
     const prevFatigue = c.vitals.fatigue;
     const prevHygiene = c.vitals.hygiene;
 
-    c.vitals.hunger = Math.min(VITAL_MAX, c.vitals.hunger + 1);
-    c.vitals.fatigue = Math.min(VITAL_MAX, c.vitals.fatigue + 1);
-    if (isEven) {
+    if (!onTravel || isEven) {
+      c.vitals.hunger = Math.min(VITAL_MAX, c.vitals.hunger + 1);
+      c.vitals.fatigue = Math.min(
+        VITAL_MAX,
+        c.vitals.fatigue + fatigueIncrement(c.vitals.fatigue, isEven),
+      );
+    }
+    if (isEven && !onTravel) {
       c.vitals.hygiene = Math.min(VITAL_MAX, c.vitals.hygiene + 1);
     }
 
@@ -203,9 +224,72 @@ export function decayVitals(input: VitalsDecayInput): WorldEvent[] {
       severeFreq: REMINDER_HYGIENE_SEVERE,
       describe: hygieneDescription,
     });
+
+    // 顶值惩罚态：hunger / fatigue 持续顶到 16 → 累计 cap ticks，
+    // 跨 4 tick 触发 mood -1 + 失神 inner；跨 8 tick 触发 mood -2 + 重提示。
+    applyCapPenalty({
+      inner, worldId, tick, character: c, kind: "hunger",
+      describe: hungerCapDescription,
+    });
+    applyCapPenalty({
+      inner, worldId, tick, character: c, kind: "fatigue",
+      describe: fatigueCapDescription,
+    });
   }
 
   return inner;
+}
+
+interface CapPenaltyArgs {
+  inner: WorldEvent[];
+  worldId: string;
+  tick: number;
+  character: Character;
+  kind: "hunger" | "fatigue";
+  describe: (severity: "light" | "heavy") => string;
+}
+
+function applyCapPenalty(args: CapPenaltyArgs): void {
+  const { inner, worldId, tick, character, kind, describe } = args;
+  const counterKey = kind === "hunger" ? "hungerCapTicks" : "fatigueCapTicks";
+  const value = character.vitals[kind];
+  if (value < VITAL_MAX) {
+    character.vitals[counterKey] = 0;
+    return;
+  }
+  const prev = character.vitals[counterKey] ?? 0;
+  const next = prev + 1;
+  character.vitals[counterKey] = next;
+  // 跨入轻惩罚阈值（一次性扣 mood，触发 inner）
+  if (prev < CAP_PENALTY_LIGHT_TICKS && next >= CAP_PENALTY_LIGHT_TICKS) {
+    character.emotion.mood = clamp(character.emotion.mood - 1, -4, 4);
+    inner.push(makeInnerEvent({
+      worldId, tick, charId: character.id,
+      description: describe("light"),
+      intensity: 3,
+    }));
+  }
+  // 跨入重惩罚阈值
+  if (prev < CAP_PENALTY_HEAVY_TICKS && next >= CAP_PENALTY_HEAVY_TICKS) {
+    character.emotion.mood = clamp(character.emotion.mood - 1, -4, 4); // 累计 -2 总计
+    inner.push(makeInnerEvent({
+      worldId, tick, charId: character.id,
+      description: describe("heavy"),
+      intensity: 3,
+    }));
+  }
+}
+
+function hungerCapDescription(severity: "light" | "heavy"): string {
+  return severity === "heavy"
+    ? "饥饿到极点已许久，眼前发黑、双手颤抖，必须立刻进食。"
+    : "饥饿到了顶点，肚子像被掏空，开始失神。";
+}
+
+function fatigueCapDescription(severity: "light" | "heavy"): string {
+  return severity === "heavy"
+    ? "疲惫已到极限许久，意识恍惚、思绪粘滞，必须立刻休息。"
+    : "疲惫到了顶点，眼前发花，注意力不再集中。";
 }
 
 function hungerDescription(value: number, level: "medium" | "severe"): string {
@@ -342,6 +426,8 @@ export function resetVital(
   kind: "hunger" | "fatigue" | "hygiene",
 ): void {
   character.vitals[kind] = 0;
+  if (kind === "hunger") character.vitals.hungerCapTicks = 0;
+  if (kind === "fatigue") character.vitals.fatigueCapTicks = 0;
 }
 
 export function reduceVital(
@@ -350,4 +436,11 @@ export function reduceVital(
   amount: number,
 ): void {
   character.vitals[kind] = Math.max(0, character.vitals[kind] - amount);
+  // 只要离开顶值，cap 计数器即归零（applyCapPenalty 也会做这事，但显式更清楚）。
+  if (kind === "hunger" && character.vitals.hunger < VITAL_MAX) {
+    character.vitals.hungerCapTicks = 0;
+  }
+  if (kind === "fatigue" && character.vitals.fatigue < VITAL_MAX) {
+    character.vitals.fatigueCapTicks = 0;
+  }
 }

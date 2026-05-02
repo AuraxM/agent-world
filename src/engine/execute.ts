@@ -27,6 +27,8 @@ import { BLOOD_RELATION_KINDS } from "@/domain/enums";
 const SHORT_MEMORY_LIMIT = 50;
 const SLEEP_DURATION = 8;
 const SLEEP_INTERRUPT_THRESHOLD = 4 as const;
+const NAP_DURATION = 4;
+const NAP_INTERRUPT_THRESHOLD = 3 as const;
 
 interface ExecuteInput {
   worldId: string;
@@ -246,6 +248,39 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
             participants: [actor.id],
             scope: "node",
             nodeId: here.id,
+          }),
+        );
+        break;
+      }
+      case "nap": {
+        // 4 小时小睡：白天补觉。挂 currentAction 4h，期间 vitals 冻结。
+        // 完成时一次性 -6 fatigue（执行 finalize 在 tick.ts:6b）；中断按已睡时长按比例扣。
+        // interruptThreshold=3 < sleep 的 4，所以更易被打断——小睡本就轻浅。
+        const here = nodeById.get(actor.locationId);
+        if (
+          !(here?.tags.includes("residence") || here?.privacy === "private")
+        ) {
+          success = false;
+          reason = "当前位置不能小睡";
+          break;
+        }
+        actor.currentAction = {
+          type: "nap",
+          startedAt: tick,
+          endsAt: tick + NAP_DURATION,
+          description: `在 ${here.name} 小睡`,
+          interruptThreshold: NAP_INTERRUPT_THRESHOLD,
+        };
+        events.push(
+          makeEvent({
+            worldId,
+            tick,
+            category: "action",
+            description: `${actor.name} 在 ${here.name} 蜷起来打个盹。`,
+            participants: [actor.id],
+            scope: "node",
+            nodeId: here.id,
+            intensity: 1,
           }),
         );
         break;

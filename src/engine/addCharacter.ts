@@ -65,7 +65,9 @@ export function addCharacterToWorld(
     );
   }
 
-  // 4. 解析落点
+  // 4. 解析落点：显式 > 角色家 > 世界 entry。
+  // 默认落点改为角色的 homeNodeId（若该节点存在于世界），避免新角色一上来就被
+  // 卡在车站、必须先长途回家——会把作息从第一天就打乱。
   let entryNodeId = input.entryNodeId;
   if (entryNodeId) {
     const node = db
@@ -83,7 +85,22 @@ export function addCharacterToWorld(
         `entry node not in world: ${worldId}/${entryNodeId}`,
       );
     }
-  } else {
+  } else if (tpl.homeNodeId) {
+    const home = db
+      .select({ id: schema.nodes.id })
+      .from(schema.nodes)
+      .where(
+        and(
+          eq(schema.nodes.worldId, worldId),
+          eq(schema.nodes.id, tpl.homeNodeId),
+        ),
+      )
+      .get();
+    if (home) {
+      entryNodeId = home.id;
+    }
+  }
+  if (!entryNodeId) {
     const entry = db
       .select({ id: schema.nodes.id })
       .from(schema.nodes)

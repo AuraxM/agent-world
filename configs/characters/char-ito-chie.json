@@ -2,7 +2,8 @@
   "id": "char-ito-chie",
   "name": "伊藤千恵",
   "avatar": "🛒",
-  "homeNodeId": "node-general-store",
+  "homeNodeId": "node-general-store-quarters",
+  "sleepWindow": { "start": 22, "duration": 8 },
   "personality": {
     "ei": 3,
     "sn": -2,

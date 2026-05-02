@@ -2,7 +2,8 @@
   "id": "char-kimura-fumiko",
   "name": "木村文子",
   "avatar": "📖",
-  "homeNodeId": "node-library",
+  "homeNodeId": "node-library-quarters",
+  "sleepWindow": { "start": 0, "duration": 8 },
   "personality": {
     "ei": -3,
     "sn": -3,

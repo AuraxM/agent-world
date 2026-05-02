@@ -23,6 +23,18 @@ export interface Personality {
   jp: number;
 }
 
+/**
+ * 个体作息时间窗口（chronotype）。每个 NPC 有自己的睡眠时段，
+ * 渔夫可能 20:00–04:00 睡，酒馆掌柜可能 02:00–10:00 睡。
+ * 默认 22/8 即 22:00–06:00。
+ */
+export interface SleepWindow {
+  /** 起床前一刻的睡眠开始小时 [0..23]。 */
+  start: number;
+  /** 持续小时 [4..12]。 */
+  duration: number;
+}
+
 /** 能力。Stage 1 暂不深入用，仅作为决策上下文。 */
 export interface Ability {
   kind: string;
@@ -103,11 +115,18 @@ export interface MapNode {
 /**
  * 数值化的生理指标。0..16 范围；进食/休息/洗浴时重置或减少。
  * 引擎用 vitals 计算行为冲动；prompt 把它转成定性文字给 LLM。
+ *
+ * cap 计数器（hungerCapTicks / fatigueCapTicks）记录该 vital 顶到 16 后
+ * 持续了多少 tick，用于触发"长期忽视基本生理"的惩罚态——4 tick 起轻惩罚
+ * （mood -1 + 失神 inner），8 tick 起重惩罚（mood -2）。
+ * vital 一旦低于 16，对应 cap 计数器归零。可选字段，向后兼容。
  */
 export interface Vitals {
   hunger: number;
   fatigue: number;
   hygiene: number;
+  hungerCapTicks?: number;
+  fatigueCapTicks?: number;
 }
 
 /**
@@ -148,6 +167,11 @@ export interface Character {
    * 不写入 DB（Stage 1 schema 不变）；Stage 2 迁移到 character 表字段。
    */
   homeNodeId?: string | null;
+  /**
+   * 角色的作息时间窗口。来源是 character 配置文件，运行时由 tick 注入。
+   * 缺省视为 22:00–06:00。同样不写入 DB。
+   */
+  sleepWindow?: SleepWindow;
 }
 
 /** 角色在某 tick 完成的一次决策快照（含完整 reasoning）。 */

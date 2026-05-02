@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
-import { Silkscreen } from "next/font/google";
+import { Silkscreen, Noto_Sans_SC } from "next/font/google";
 import "./globals.css";
 
 const silkscreen = Silkscreen({
   variable: "--font-silkscreen",
   subsets: ["latin"],
   weight: ["400", "700"],
+  display: "swap",
+});
+
+const notoSansSC = Noto_Sans_SC({
+  variable: "--font-body",
+  weight: ["400", "500", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -21,9 +28,22 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${silkscreen.variable} h-full antialiased`}
+      className={`${silkscreen.variable} ${notoSansSC.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="h-full flex flex-col overflow-hidden bg-(--color-pixel-bg) text-(--color-pixel-fg)">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var t = localStorage.getItem("agent-world.theme") || "light";
+                document.documentElement.setAttribute("data-theme", t);
+              } catch (_) {}
+            `,
+          }}
+        />
+      </head>
+      <body className="h-full flex flex-col overflow-hidden">
         {children}
       </body>
     </html>

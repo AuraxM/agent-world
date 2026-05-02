@@ -29,10 +29,10 @@ import type { Language } from "@/engine/settings";
 
 const RECENT_MEMORY_LIMIT = 8;
 const MAX_PEERS_IN_PROMPT = 5;
-/** 14 游戏日 = 14 * 24 = 336 tick；与 tick.ts 保持同步。 */
-const ACQUAINTANCE_DECAY_TICKS = 336;
-/** acquaintance 距衰减还剩 ≤ 此 tick 数时，prompt 给出"濒临淡出"提示。 */
-const ACQUAINTANCE_WARN_TICKS = 48;
+/** 14 游戏日 = 14 * 24 = 336 小时；与 tick.ts 保持同步。 */
+const ACQUAINTANCE_DECAY_TICKS = 336 * TICKS_PER_HOUR;
+/** acquaintance 距衰减还剩 ≤ 此 小时 数时，prompt 给出"濒临淡出"提示。 */
+const ACQUAINTANCE_WARN_TICKS = 48 * TICKS_PER_HOUR;
 
 // ---------------------------------------------------------------------------
 // MBTI 9 档文字标签（无数值暴露）
@@ -167,7 +167,7 @@ function describeRelations(
         const decayIn =
           ACQUAINTANCE_DECAY_TICKS - (tick - r.lastInteractionTick);
         if (decayIn <= ACQUAINTANCE_WARN_TICKS && decayIn > 0) {
-          warn = `（再 ${decayIn} 小时未互动就会淡出）`;
+          warn = `（再 ${Math.floor(decayIn / TICKS_PER_HOUR)} 小时未互动就会淡出）`;
         }
       }
       return `- ${p.name}（${kinds}, ${aff}）${noteSuffix}${warn}`;

@@ -15,7 +15,7 @@ import { BLOOD_RELATION_KINDS } from "@/domain/enums";
 
 export interface ActionOption {
   type: ActionType;
-  /** 简短提示，例如 "前往 阳光中学（公共, 户外）⏱ 需 2 小时" */
+  /** 简短提示，例如 "前往 阳光中学（公共, 户外）" */
   hint: string;
   /** 可选目标 id，便于 LLM 直接复用 */
   targetId?: string;
@@ -33,7 +33,7 @@ export interface ActionContext {
   here: MapNode;
   /** 同节点其他角色 */
   companions: Character[];
-  /** 可前往的相邻节点（父 + 兄弟 + 子 + shortcuts） */
+  /** 所有地图节点（不含当前位置） */
   reachable: MapNode[];
 }
 
@@ -55,29 +55,15 @@ export function buildActionContext(
       `character ${character.id} located at unknown node ${loc}`,
     );
   }
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-
-  const reachable: MapNode[] = [];
-  if (here.parentId) {
-    const p = byId.get(here.parentId);
-    if (p) reachable.push(p);
-    for (const n of nodes) {
-      if (n.parentId === here.parentId && n.id !== here.id) reachable.push(n);
-    }
-  }
-  for (const n of nodes) {
-    if (n.parentId === here.id) reachable.push(n);
-  }
-  for (const sid of here.shortcuts) {
-    const s = byId.get(sid);
-    if (s) reachable.push(s);
-  }
 
   const companions = characters.filter(
     (c) =>
       c.id !== character.id &&
       (locationOverrides?.get(c.id) ?? c.locationId) === loc,
   );
+
+  const reachable = nodes.filter((n) => n.id !== loc);
+
   return { self: character, here, companions, reachable };
 }
 
@@ -102,11 +88,6 @@ export function getAvailableActions(
   const sleepStuckOutside =
     isSleepHour &&
     !(here.tags.includes("residence") || here.privacy === "private");
-  const tooLongHere =
-    stayHours >= 8 &&
-    !here.tags.includes("residence") &&
-    !here.tags.includes("education");
-
   // 永远可用——hint 不重复 here.name（user prompt 上方已有"你现在的位置"）。
   opts.push({
     type: "wait",
@@ -118,24 +99,35 @@ export function getAvailableActions(
   opts.push({ type: "observe", hint: "观察当前环境与人。" });
   opts.push({ type: "pace", hint: "踱步，整理思绪。" });
 
-  // move：到每个相邻节点。节点的 tags/privacy 已在 system map graph 中提供，
-  // 这里只渲染节点名 + cost + 情境提示。
+  // move：推荐目的地（高亮 home、dining、bathing）
+  const highlighted = new Set<string>();
+  if (homeNodeId) highlighted.add(homeNodeId);
   for (const n of reachable) {
-    const isShortcut = here.shortcuts.includes(n.id);
-    const cost = isShortcut ? 0 : (n.travelCost ?? 0);
-    const costSuffix = cost > 0 ? ` ⏱ 需 ${cost} 小时` : "";
-    let hint = `前往 ${n.name}${costSuffix}`;
+    if (n.tags.includes("dining") || n.tags.includes("bathing")) {
+      highlighted.add(n.id);
+    }
+  }
+
+  for (const nId of highlighted) {
+    const n = reachable.find((r) => r.id === nId);
+    if (!n) continue;
     const isHome = homeNodeId !== null && n.id === homeNodeId;
+    let hint = `前往 ${n.name}`;
     if (isHome && (restNeeded || sleepStuckOutside)) {
-      hint = `⭐ ${hint}——这是你的家，可以休息`;
-    } else if (
-      tooLongHere &&
-      (n.tags.includes("residence") || n.tags.includes("park"))
-    ) {
-      hint = `${hint}（你已在此地待 ${stayHours} 小时，换个环境是合理的）`;
+      hint = `⭐ ${hint}——你的家，可以休息`;
+    } else if (n.tags.includes("dining") && hunger >= 5) {
+      hint = `⭐ ${hint}——可以用餐`;
+    } else if (n.tags.includes("bathing") && hygiene >= HYGIENE_MEDIUM) {
+      hint = `⭐ ${hint}——可以洗浴`;
     }
     opts.push({ type: "move", targetNodeId: n.id, hint });
   }
+
+  // Generic move hint
+  opts.push({
+    type: "move",
+    hint: "前往地图上任意地点（指定 target_node_id + reason + arrival_action）。",
+  });
 
   // 进食：当前节点是 dining
   if (here.tags.includes("dining")) {

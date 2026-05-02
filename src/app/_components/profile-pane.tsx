@@ -394,6 +394,25 @@ export function ProfilePane({
           </ul>
         )}
       </section>
+
+      {/* 能力 */}
+      <section>
+        <SectionLabel total={character.abilities.length}>能力</SectionLabel>
+        {character.abilities.length === 0 ? (
+          <p className="text-game-sm text-(--color-pixel-muted)">尚未习得任何能力</p>
+        ) : (
+          <div className="flex flex-wrap gap-1">
+            {character.abilities.map((a, i) => (
+              <span
+                key={`${a.kind}-${i}`}
+                className="text-game-xs px-1 bg-(--color-pixel-bg-2) border border-(--color-pixel-border-dark) text-(--color-pixel-fg)"
+              >
+                {a.kind} · <span className="text-(--color-pixel-accent)">t{a.tier}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

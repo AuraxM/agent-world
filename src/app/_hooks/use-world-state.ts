@@ -148,6 +148,7 @@ export function useWorldState(): UseWorldState {
       let buffer = "";
       let tickDone = false;
 
+      // SSE parser duplicated by placeCharacter — keep both in sync.
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -252,7 +253,7 @@ export function useWorldState(): UseWorldState {
 
   const placeCharacter = useCallback(
     async (characterId: string): Promise<boolean> => {
-      if (loading || autoMode?.running) return false;
+      if (loadingRef.current || autoRunningRef.current) return false;
       setLoading(true);
       try {
         const res = await fetch(`/api/worlds/${worldId}/characters/place`, {
@@ -289,7 +290,7 @@ export function useWorldState(): UseWorldState {
             }
             if (!dataStr) continue;
             const data = JSON.parse(dataStr);
-            if (eventType === "placed" || eventType === "decision") {
+            if (eventType === "placed") {
               placed = true;
             } else if (eventType === "error") {
               throw new Error(data.error ?? "unknown");
@@ -305,7 +306,7 @@ export function useWorldState(): UseWorldState {
         setLoading(false);
       }
     },
-    [loading, autoMode, worldId, refresh],
+    [worldId, refresh],
   );
 
   return {

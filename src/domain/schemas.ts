@@ -184,3 +184,111 @@ export const WorldEventSchema = z.object({
   duration: z.number().int().nonnegative(),
   suggestedActions: z.array(z.string()).optional(),
 });
+
+// ---------------------------------------------------------------------------
+// Dialog protocol schemas
+// ---------------------------------------------------------------------------
+
+// Accept decision: restricts output to accept_speak | reject_speak
+export const AcceptDecisionSchema = z.object({
+  action_type: z.enum(["accept_speak", "reject_speak"]),
+  target_id: z.string().min(1),
+  reasoning: z.string().min(1).max(400),
+  self_importance: z.union([
+    z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5),
+  ]),
+});
+export type AcceptDecisionPayload = z.infer<typeof AcceptDecisionSchema>;
+
+export const ACCEPT_TOOL_NAME = "submit_accept_decision";
+export const AcceptToolSchema = {
+  type: "object" as const,
+  properties: {
+    action_type: { type: "string", enum: ["accept_speak", "reject_speak"] },
+    target_id: { type: "string", description: "邀请者的 character id。" },
+    reasoning: { type: "string", description: "接受或拒绝的理由（内心独白）。" },
+    self_importance: { type: "integer", enum: [1, 2, 3, 4, 5], description: "1-5 自评重要度。" },
+  },
+  required: ["action_type", "target_id", "reasoning", "self_importance"],
+  additionalProperties: false,
+};
+
+// Dialog turn: kind=say|leave
+export const DialogTurnSchema = z.object({
+  kind: z.enum(["say", "leave"]),
+  line: z.string().min(1).max(800).optional(),
+  reasoning: z.string().min(1).max(300).optional(),
+});
+export type DialogTurnPayload = z.infer<typeof DialogTurnSchema>;
+
+export const DIALOG_TURN_TOOL_NAME = "submit_dialog_turn";
+export const DialogTurnToolSchema = {
+  type: "object" as const,
+  properties: {
+    kind: { type: "string", enum: ["say", "leave"], description: "say=说一句话；leave=结束对话离开。" },
+    line: { type: "string", description: "说的话（kind=say 时必填）。" },
+    reasoning: { type: "string", description: "简短内心独白（可选）。" },
+  },
+  required: ["kind"],
+  additionalProperties: false,
+};
+
+// Dialog summary
+export const DialogSummarySchema = z.object({
+  summary: z.string().min(1).max(500),
+});
+export type DialogSummaryPayload = z.infer<typeof DialogSummarySchema>;
+
+export const DIALOG_SUMMARY_TOOL_NAME = "submit_dialog_summary";
+export const DialogSummaryToolSchema = {
+  type: "object" as const,
+  properties: {
+    summary: { type: "string", description: "1-2 句话总结这次对话的内容与氛围。" },
+  },
+  required: ["summary"],
+  additionalProperties: false,
+};
+
+// Salvage decision: same as ActionSchema but action_type excludes speak/accept_speak/reject_speak/leave_dialog
+const _salvageActionTypesFiltered = ACTION_TYPES.filter(
+  (t) => t !== "speak" && t !== "accept_speak" && t !== "reject_speak" && t !== "leave_dialog",
+);
+if (_salvageActionTypesFiltered.length === 0) {
+  throw new Error("SALVAGE_ACTION_TYPES is empty — check exclusion list");
+}
+const SALVAGE_ACTION_TYPES = _salvageActionTypesFiltered as [string, ...string[]];
+
+export const SalvageActionSchema = z.object({
+  action_type: z.enum(SALVAGE_ACTION_TYPES),
+  target_id: z.string().optional(),
+  target_node_id: z.string().optional(),
+  free_text: z.string().max(500).optional(),
+  reasoning: z.string().min(1).max(800),
+  emotion_tag: z.string().max(40).optional(),
+  self_importance: z.union([
+    z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5),
+  ]),
+  change_type: z.enum(RELATION_CHANGE_TYPES).optional(),
+});
+export type SalvageActionPayload = z.infer<typeof SalvageActionSchema>;
+
+export const SALVAGE_TOOL_NAME = "submit_action";
+export const SalvageToolSchema = {
+  type: "object" as const,
+  properties: {
+    action_type: { type: "string", enum: [...SALVAGE_ACTION_TYPES] },
+    target_id: { type: "string", description: "目标角色 id，可选。" },
+    target_node_id: { type: "string", description: "目标节点 id（仅 move 等位移行动需要）。" },
+    free_text: { type: "string", description: "自由文本。" },
+    reasoning: { type: "string", description: "内心独白。必须显式引用性格特征文字描述。" },
+    emotion_tag: { type: "string", description: "短情绪标签。" },
+    self_importance: { type: "integer", enum: [1, 2, 3, 4, 5], description: "1-5 自评重要度。" },
+    change_type: {
+      type: "string",
+      enum: [...RELATION_CHANGE_TYPES],
+      description: "仅在 action_type=update_relation 时使用。",
+    },
+  },
+  required: ["action_type", "reasoning", "self_importance"],
+  additionalProperties: false,
+};

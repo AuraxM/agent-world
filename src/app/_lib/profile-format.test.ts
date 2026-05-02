@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { vitalThreshold } from "./profile-format";
+import { affectionTone, vitalThreshold } from "./profile-format";
 
 describe("vitalThreshold", () => {
   it("returns ok when value below warn", () => {
@@ -24,5 +24,21 @@ describe("vitalThreshold", () => {
 
   it("returns ok at zero", () => {
     expect(vitalThreshold(0, 10, 6)).toBe("ok");
+  });
+});
+
+describe("affectionTone", () => {
+  it("returns pos for positive values", () => {
+    expect(affectionTone(3)).toBe("pos");
+    expect(affectionTone(1)).toBe("pos");
+  });
+
+  it("returns neg for negative values", () => {
+    expect(affectionTone(-1)).toBe("neg");
+    expect(affectionTone(-4)).toBe("neg");
+  });
+
+  it("returns zero for zero", () => {
+    expect(affectionTone(0)).toBe("zero");
   });
 });

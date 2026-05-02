@@ -8,3 +8,10 @@ export function vitalThreshold(
   if (value >= warn) return "warn";
   return "ok";
 }
+
+/** Sign-based color tier for relation affection ([-4..+4]). */
+export function affectionTone(value: number): "pos" | "neg" | "zero" {
+  if (value > 0) return "pos";
+  if (value < 0) return "neg";
+  return "zero";
+}

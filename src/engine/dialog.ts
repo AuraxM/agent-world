@@ -144,6 +144,7 @@ export function pairSpeakRequests(
       (b) =>
         b.actorId === a.targetId &&
         b.targetId === a.actorId &&
+        a.actorId !== b.actorId &&
         !consumed.has(b.actorId),
     );
     if (peer) {

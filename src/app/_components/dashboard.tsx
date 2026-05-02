@@ -7,6 +7,8 @@ import { useFollow } from "../_hooks/use-follow";
 import { findRootNode } from "../_lib/world";
 import { TopBar } from "./top-bar";
 import { TickBar } from "./tick-bar";
+import { MapStage, MinimapTabs } from "./map-stage";
+import { RelationGraph } from "./relation-graph";
 
 export function Dashboard() {
   const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto, templates, placeCharacter } = useWorldState();
@@ -91,9 +93,17 @@ export function Dashboard() {
 
           {/* Right: minimap + character profile (placeholder — Tasks 12-13) */}
           <div style={{ gridArea: "right" }} className="min-h-0 min-w-0 overflow-hidden flex flex-col bg-(--frame-2) border-l-2 border-(--border)">
-            <div className="flex-[0_0_220px] flex items-center justify-center border-b-2 border-(--border) text-body-sm text-(--text-on-frame-muted)">
-              小地图 (Task 12)
-            </div>
+            <MinimapTabs>
+              <MapStage
+                nodes={snapshot.nodes}
+                characters={snapshot.characters}
+                currentNodeId={view.currentNodeId}
+                selectedCharacterId={view.selectedCharacterId}
+                onEnterNode={view.setCurrentNode}
+                onSelectCharacter={(c) => view.selectCharacter(c.id)}
+              />
+              <RelationGraph />
+            </MinimapTabs>
             <div className="flex-1 flex items-center justify-center text-body-sm text-(--text-on-frame-muted)">
               角色档案 (Task 13)
             </div>

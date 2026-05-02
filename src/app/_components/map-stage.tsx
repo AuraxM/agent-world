@@ -78,6 +78,49 @@ function NpcSprite({
   );
 }
 
+"use client";
+
+import { useState } from "react";
+
+export function MinimapTabs({
+  children,
+}: {
+  children: [React.ReactNode, React.ReactNode];
+}) {
+  const [tab, setTab] = useState<"map" | "relations">("map");
+  return (
+    <div className="h-full flex flex-col bg-(--frame-2) border-l-2 border-(--border) shadow-[inset_1px_0_0_var(--border-amber))]">
+      <div className="flex px-2 bg-(--chrome) border-b border-(--border)">
+        <button
+          type="button"
+          onClick={() => setTab("map")}
+          className={`text-pixel-xs px-2.5 py-2 tracking-[var(--letter-pixel-tight)] uppercase cursor-pointer border-b-2 -mb-px transition-colors ${
+            tab === "map"
+              ? "text-(--accent-strong) border-(--accent-strong) bg-(--frame)"
+              : "text-(--text-on-frame-muted) border-transparent hover:text-(--text-on-frame)"
+          }`}
+        >
+          小地图
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("relations")}
+          className={`text-pixel-xs px-2.5 py-2 tracking-[var(--letter-pixel-tight)] uppercase cursor-pointer border-b-2 -mb-px transition-colors ${
+            tab === "relations"
+              ? "text-(--accent-strong) border-(--accent-strong) bg-(--frame)"
+              : "text-(--text-on-frame-muted) border-transparent hover:text-(--text-on-frame)"
+          }`}
+        >
+          关系图
+        </button>
+      </div>
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {tab === "map" ? children[0] : children[1]}
+      </div>
+    </div>
+  );
+}
+
 export function MapStage({
   nodes,
   characters,

@@ -233,7 +233,7 @@ export function getAvailableActions(
     opts.push({
       type: "speak",
       targetId: peer.id,
-      hint: `邀请 ${peer.name} 说话（需对方接受；必须给出开场白作为 freeText）。${requestSuffix}`,
+      hint: `和 ${peer.name} 聊几句（在 freeText 里写你想说的）。${requestSuffix}`,
     });
     opts.push({
       type: "interact_person",

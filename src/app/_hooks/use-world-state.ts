@@ -60,6 +60,9 @@ export function useWorldState(): UseWorldState {
     done: number;
   } | null>(null);
   const shouldStopRef = useRef(false);
+  const loadingRef = useRef(false);
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
+  const autoRunningRef = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -203,7 +206,8 @@ export function useWorldState(): UseWorldState {
 
   const startAuto = useCallback(
     async (n: number = 24) => {
-      if (loading || autoMode?.running) return;
+      if (loadingRef.current || autoRunningRef.current) return;
+      autoRunningRef.current = true;
       shouldStopRef.current = false;
       setAutoMode({ running: true, total: n, done: 0 });
       try {
@@ -214,11 +218,12 @@ export function useWorldState(): UseWorldState {
           setAutoMode((prev) => (prev ? { ...prev, done: prev.done + 1 } : prev));
         }
       } finally {
+        autoRunningRef.current = false;
         shouldStopRef.current = false;
         setAutoMode(null);
       }
     },
-    [advance, loading, autoMode],
+    [advance],
   );
 
   const stopAuto = useCallback(() => {

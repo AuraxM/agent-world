@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Character, MapNode, Personality } from "@/domain/types";
 import { formatActionWindow } from "../_lib/profile-format";
 import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
@@ -51,6 +52,14 @@ export function ProfilePane({
   onJumpToNode: (nodeId: string) => void;
   characters: Character[];
 }) {
+  const characterId = character?.id;
+  const [thoughtExpanded, setThoughtExpanded] = useState(false);
+  const [lastCharacterId, setLastCharacterId] = useState(characterId);
+  if (lastCharacterId !== characterId) {
+    setLastCharacterId(characterId);
+    setThoughtExpanded(false);
+  }
+
   if (!character) {
     return (
       <div className="flex-1 min-h-0 flex items-center justify-center p-4">
@@ -118,7 +127,7 @@ export function ProfilePane({
       </div>
 
       {/* 上一轮思考 */}
-      <section className="border-2 border-(--color-pixel-accent-dark) bg-(--color-pixel-bg-2) p-2 space-y-1">
+      <section className="border-2 border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2) p-2 space-y-1">
         <div className="flex items-center gap-2 text-game-xs uppercase tracking-widest text-(--color-pixel-accent)">
           <span>上一轮思考</span>
           {lastThought && (
@@ -152,8 +161,21 @@ export function ProfilePane({
                 {lastThought.action.emotionTag}
               </div>
             )}
-            <div className="max-h-40 overflow-y-auto pixel-scroll text-game-sm leading-relaxed text-(--color-pixel-fg) whitespace-pre-wrap">
+            <div
+              className={`text-game-sm leading-relaxed text-(--color-pixel-fg) whitespace-pre-wrap ${
+                thoughtExpanded ? "" : "line-clamp-4"
+              }`}
+            >
               {lastThought.action.reasoning}
+            </div>
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => setThoughtExpanded((v) => !v)}
+                className="text-game-xs text-(--color-pixel-accent) hover:underline"
+              >
+                {thoughtExpanded ? "收起 ▴" : "展开全文 ▾"}
+              </button>
             </div>
             {lastThought.action.freeText && (
               <div className="text-game-sm text-(--color-pixel-muted) italic border-t border-(--color-pixel-border-dark) pt-1">

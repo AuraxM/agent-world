@@ -77,7 +77,7 @@ describe("qualifyVital", () => {
   });
 
   it("phrase 含具体小时数与定性词", () => {
-    expect(qualifyVital(15, "fatigue").phrase).toMatch(/极度疲惫.*15/);
+    expect(qualifyVital(15, "fatigue").phrase).toMatch(/非常疲惫.*15/);
     expect(qualifyVital(8, "hunger").phrase).toMatch(/明显饥饿.*8/);
     expect(qualifyVital(15, "hygiene").phrase).toMatch(/极其肮脏.*15/);
   });
@@ -211,7 +211,9 @@ describe("buildSystemPrompt", () => {
     expect(sys).toContain("当前世界地图");
     expect(sys).toContain("镇中心 [node-town]");
     expect(sys).toContain("- 酒馆雪灯 [node-tavern]"); // 子节点
-    expect(sys).toContain("★ 你的家"); // homeNodeId 注释
+    // home 标注从 map graph 挪到角色块（缓存友好：map 段对所有 NPC 字节一致）
+    expect(sys).toContain("你的家：杂货铺北之惠 [node-grocery]");
+    expect(sys).not.toContain("★ 你的家");
     expect(sys).toContain("特殊通道");
     // tavern → grocery 是单向 shortcut（grocery 没有反向）
     expect(sys).toContain("酒馆雪灯 [node-tavern] → 杂货铺北之惠 [node-grocery]");
@@ -243,7 +245,7 @@ describe("buildUserPrompt", () => {
     });
     expect(out).toContain("第 0 日 05:00");
     expect(out).toContain("凌晨");
-    expect(out).toContain("绝大多数人此时应在睡觉");
+    expect(out).toContain("已是你的作息时段");
     expect(out).toContain("22:00–06:00 在 我的家 休息");
   });
 
@@ -348,7 +350,7 @@ describe("buildUserPrompt", () => {
       tick: 5,
       facts: emptyFacts,
     });
-    expect(out).toContain("极度疲惫");
+    expect(out).toContain("非常疲惫");
     expect(out).not.toContain("疲惫值：15");
   });
 
@@ -384,7 +386,7 @@ describe("language", () => {
     expect(sys).not.toMatch(/may be written in a different language/i);
   });
 
-  it("en 时 system + user prompt 都含 English 指令 + 跨语言提示", () => {
+  it("en 时 system 含 English 指令；user 不再重复指令但保留跨语言提示", () => {
     const sys = buildSystemPrompt({
       character: baseCharacter,
       worldName: "测试世界",
@@ -402,11 +404,13 @@ describe("language", () => {
       language: "en",
     });
     expect(sys).toMatch(/MUST be written in English/);
-    expect(user).toMatch(/MUST be written in English/);
+    // user prompt 不再重复 languageInstruction（已在 system 提供）
+    expect(user).not.toMatch(/MUST be written in English/);
+    // 跨语言记忆提示仍保留在 user prompt
     expect(user).toMatch(/may be written in a different language/);
   });
 
-  it("ja 时 system + user prompt 都含日本語指令 + 跨语言提示", () => {
+  it("ja 时 system 含日本語指令；user 不再重复指令但保留跨语言提示", () => {
     const sys = buildSystemPrompt({
       character: baseCharacter,
       worldName: "测试世界",
@@ -424,7 +428,7 @@ describe("language", () => {
       language: "ja",
     });
     expect(sys).toContain("日本語で書いてください");
-    expect(user).toContain("日本語で書いてください");
+    expect(user).not.toContain("日本語で書いてください");
     expect(user).toContain("別の言語");
   });
 

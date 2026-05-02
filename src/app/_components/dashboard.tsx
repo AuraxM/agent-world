@@ -12,7 +12,7 @@ import { ProfilePane } from "./profile-pane";
 import { TopBar } from "./top-bar";
 
 export function Dashboard() {
-  const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto } = useWorldState();
+  const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto, templates, placeCharacter } = useWorldState();
   const view = useViewState();
 
   // 第一次 snapshot 到位时初始化 currentNode 为根节点
@@ -55,6 +55,9 @@ export function Dashboard() {
                 nodes={snapshot.nodes}
                 selectedId={view.selectedCharacterId}
                 onSelect={(c) => view.selectCharacter(c.id, c.locationId)}
+                templates={templates}
+                onPlace={placeCharacter}
+                disabled={loading || autoMode?.running || false}
               />
             </div>
             <PixelFrame

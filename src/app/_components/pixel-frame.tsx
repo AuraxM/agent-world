@@ -11,7 +11,7 @@ export function PixelFrame({
   children: ReactNode;
   tone?: "default" | "accent";
   className?: string;
-  title?: string;
+  title?: string | ReactNode;
 }) {
   const toneClass = tone === "accent" ? "pixel-frame--accent" : "";
   return (

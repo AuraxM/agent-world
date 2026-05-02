@@ -11,7 +11,7 @@
  *
  * 不查库、不写库；纯函数便于单测。
  */
-import type { ActionType } from "@/domain/enums";
+import { TICKS_PER_HOUR, type ActionType } from "@/domain/enums";
 import type {
   AgentThought,
   Character,
@@ -22,7 +22,7 @@ import type {
 export interface AggregatedFacts {
   homeNodeId: string | null;
   homeNodeName: string | null;
-  /** 自上次成功 move 起，已在当前节点停留的小时数；从未移动则等于 currentTick。 */
+  /** 自上次成功 move 起，已在当前节点停留的小时数；从未移动则等于 currentTick / TICKS_PER_HOUR。 */
   hoursAtCurrentLocation: number;
   lastAction?: {
     type: ActionType;
@@ -34,7 +34,7 @@ export interface AggregatedFacts {
   lastRestTick?: Tick;
   /** 最近一次成功 eat 的 tick；从未则 undefined。 */
   lastEatTick?: Tick;
-  /** 最近 24 tick 内（不含本 tick）按 action type 计数。 */
+  /** 最近一个游戏日（24h = TODAY_WINDOW ticks）内（不含本 tick）按 action type 计数。 */
   todayActionCounts: Partial<Record<ActionType, number>>;
 }
 
@@ -47,7 +47,7 @@ export interface DeriveFactsInput {
   homeNodeId: string | null;
 }
 
-const TODAY_WINDOW = 24;
+const TODAY_WINDOW = 24 * TICKS_PER_HOUR; // 120 ticks = 1 game day
 
 export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts {
   const { character, nodes, currentTick, recentThoughts, homeNodeId } = input;
@@ -67,8 +67,8 @@ export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts 
     }
   }
   const hoursAtCurrentLocation = foundMove
-    ? Math.max(0, currentTick - sinceTick)
-    : currentTick;
+    ? Math.max(0, Math.floor((currentTick - sinceTick) / TICKS_PER_HOUR))
+    : Math.floor(currentTick / TICKS_PER_HOUR);
 
   // 最近一次成功 rest（含 sleep）/ eat
   let lastRestTick: Tick | undefined;
@@ -87,7 +87,7 @@ export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts 
     if (lastRestTick !== undefined && lastEatTick !== undefined) break;
   }
 
-  // 今日累计：tick >= currentTick - 24
+  // 今日累计：tick >= currentTick - TODAY_WINDOW
   const todayActionCounts: Partial<Record<ActionType, number>> = {};
   const cutoff = currentTick - TODAY_WINDOW;
   for (const t of recentThoughts) {

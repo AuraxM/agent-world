@@ -11,6 +11,7 @@ import { MapStage, MinimapTabs } from "./map-stage";
 import { RelationGraph } from "./relation-graph";
 import { TreeSidebar } from "./tree-sidebar";
 import { ProfilePane } from "./profile-pane";
+import { EventStream } from "./event-stream";
 
 export function Dashboard() {
   const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto, templates, placeCharacter } = useWorldState();
@@ -94,12 +95,17 @@ export function Dashboard() {
             />
           </div>
 
-          {/* Center: Event stream (placeholder — Task 11) */}
-          <div style={{ gridArea: "stream" }} className="min-h-0 min-w-0 overflow-hidden bg-(--frame)">
-            <div className="flex items-center justify-center h-full text-body-sm text-(--text-on-frame-muted)">
-              {/* TODO: EventStream (Task 11) */}
-              事件流主体 (Task 11)
-            </div>
+          {/* Center: Event stream */}
+          <div style={{ gridArea: "stream" }} className="min-h-0 min-w-0 overflow-hidden">
+            <EventStream
+              events={events}
+              characters={snapshot.characters}
+              nodes={snapshot.nodes}
+              followingId={followingId}
+              onJumpToNode={view.setCurrentNode}
+              onSelectCharacter={(c) => view.selectCharacter(c.id)}
+              onFollow={follow}
+            />
           </div>
 
           {/* Right: minimap + character profile (placeholder — Tasks 12-13) */}

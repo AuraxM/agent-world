@@ -135,11 +135,13 @@ export function ProfilePane({
   const characterId = character?.id;
   const [thoughtExpanded, setThoughtExpanded] = useState(false);
   const [relationsExpanded, setRelationsExpanded] = useState(false);
+  const [memoriesExpanded, setMemoriesExpanded] = useState(false);
   const [lastCharacterId, setLastCharacterId] = useState(characterId);
   if (lastCharacterId !== characterId) {
     setLastCharacterId(characterId);
     setThoughtExpanded(false);
     setRelationsExpanded(false);
+    setMemoriesExpanded(false);
   }
 
   if (!character) {
@@ -158,9 +160,9 @@ export function ProfilePane({
   const here = nodeById.get(character.locationId);
   const charById = new Map(characters.map((c) => [c.id, c]));
   const lastThought = character.lastThought;
-  const recentMemories = [...character.shortMemory]
-    .sort((a, b) => b.tick - a.tick)
-    .slice(0, 5);
+  const sortedMemories = [...character.shortMemory].sort((a, b) => b.tick - a.tick);
+  const totalMemories = sortedMemories.length;
+  const visibleMemories = memoriesExpanded ? sortedMemories : sortedMemories.slice(0, 5);
   const sortedRelations = Object.entries(character.relations).sort(
     (a, b) => Math.abs(b[1].affection) - Math.abs(a[1].affection),
   );
@@ -367,22 +369,31 @@ export function ProfilePane({
         )}
       </section>
 
-      {/* 短期记忆 */}
-      {recentMemories.length > 0 && (
-        <section>
-          <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
-            最近记忆
-          </div>
+      {/* 最近记忆 */}
+      <section>
+        <SectionLabel
+          shown={Math.min(visibleMemories.length, totalMemories)}
+          total={totalMemories}
+          expanded={memoriesExpanded}
+          onToggle={() => setMemoriesExpanded((v) => !v)}
+        >
+          最近记忆
+        </SectionLabel>
+        {totalMemories === 0 ? (
+          <p className="text-game-sm text-(--color-pixel-muted)">暂无记忆</p>
+        ) : (
           <ul className="space-y-1">
-            {recentMemories.map((m) => (
+            {visibleMemories.map((m) => (
               <li key={m.id} className="text-game-sm text-(--color-pixel-fg) leading-snug">
-                <span className="text-(--color-pixel-muted)">t={m.tick}·★{m.importance}</span>{" "}
+                <span className="text-(--color-pixel-muted)">
+                  t={m.tick}·<span className="text-(--color-pixel-accent)">{"★".repeat(m.importance)}</span>
+                </span>{" "}
                 {m.content}
               </li>
             ))}
           </ul>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 }

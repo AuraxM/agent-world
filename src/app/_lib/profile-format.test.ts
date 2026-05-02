@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { affectionTone, vitalThreshold } from "./profile-format";
+import { affectionTone, formatActionWindow, vitalThreshold } from "./profile-format";
+import type { OngoingAction } from "@/domain/types";
 
 describe("vitalThreshold", () => {
   it("returns ok when value below warn", () => {
@@ -40,5 +41,36 @@ describe("affectionTone", () => {
 
   it("returns zero for zero", () => {
     expect(affectionTone(0)).toBe("zero");
+  });
+});
+
+function mkAction(partial: Partial<OngoingAction> = {}): OngoingAction {
+  return {
+    type: "sleep",
+    startedAt: 12,
+    endsAt: 19,
+    description: "在 张默家 睡觉",
+    interruptThreshold: 3,
+    ...partial,
+  };
+}
+
+describe("formatActionWindow", () => {
+  it("formats normal sleep window", () => {
+    expect(formatActionWindow(mkAction())).toBe("在 张默家 睡觉 (t12→t19)");
+  });
+
+  it("formats instant action where endsAt equals startedAt", () => {
+    expect(
+      formatActionWindow(mkAction({ startedAt: 5, endsAt: 5, description: "等待" })),
+    ).toBe("等待 (t5→t5)");
+  });
+
+  it("preserves arbitrary description text", () => {
+    expect(
+      formatActionWindow(
+        mkAction({ description: "走去 学校 (3 步)", startedAt: 0, endsAt: 3 }),
+      ),
+    ).toBe("走去 学校 (3 步) (t0→t3)");
   });
 });

@@ -428,6 +428,10 @@ const ACTION_NAMES: Record<ActionType, string> = {
   help: "帮助",
   gift: "馈赠",
   update_relation: "调整关系",
+  // 对话协议内部（仅 schema 约束，不暴露给 LLM）
+  accept_speak: "接受对话",
+  reject_speak: "拒绝对话",
+  leave_dialog: "离开对话",
 };
 
 function formatActionCounts(

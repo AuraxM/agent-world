@@ -204,6 +204,10 @@ export interface WorldEvent {
   duration: number;
   /** 给 LLM 的可选行动提示（不做强制） */
   suggestedActions?: string[];
+  /** 对话事件专用：完整对话记录（其它 event 不填） */
+  dialogTranscript?: DialogTurn[];
+  /** 对话结束方式 */
+  dialogEndedBy?: "natural" | "leave" | "hard_limit" | "turn_failure";
 }
 
 /** update_relation 行动可选的语义子类型。 */
@@ -237,6 +241,14 @@ export interface WorldSnapshot {
   characters: Character[];
   /** 最近 N 条事件，方便前端 dashboard 展示 */
   recentEvents: WorldEvent[];
+}
+
+/** 对话内单轮快照（仅供 WorldEvent.dialogTranscript 使用） */
+export interface DialogTurn {
+  speakerId: string;
+  kind: "say" | "leave";
+  line?: string;
+  reasoning?: string;
 }
 
 /** 世界元信息。 */

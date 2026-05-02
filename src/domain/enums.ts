@@ -13,6 +13,10 @@ export const ACTION_TYPES = [
   "speak", "interact_object", "interact_person",
   "attack", "flee", "help", "gift",
   "update_relation",
+  // 对话协议内部（不在 getAvailableActions 中暴露，仅 dialog 专用 schema 约束产生）
+  "accept_speak",
+  "reject_speak",
+  "leave_dialog",
 ] as const;
 export type ActionType = (typeof ACTION_TYPES)[number];
 

@@ -143,11 +143,18 @@ function AdminContent() {
   const [tab, setTab] = useState<Tab>("providers");
   const [thinkingEnabled, setThinkingEnabled] = useState(true);
   const [thinkingLoading, setThinkingLoading] = useState(false);
+  const [language, setLanguage] = useState<"zh" | "en" | "ja">("zh");
+  const [languageLoading, setLanguageLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/settings")
       .then((r) => r.json())
-      .then((d) => setThinkingEnabled(d.thinkingEnabled))
+      .then((d) => {
+        setThinkingEnabled(d.thinkingEnabled);
+        if (d.language === "zh" || d.language === "en" || d.language === "ja") {
+          setLanguage(d.language);
+        }
+      })
       .catch(() => { /* keep default */ });
   }, []);
 
@@ -169,6 +176,24 @@ function AdminContent() {
     }
   }
 
+  async function handleLanguageChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const next = e.target.value as "zh" | "en" | "ja";
+    setLanguageLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ language: next }),
+      });
+      const data = await res.json();
+      if (res.ok) setLanguage(data.language);
+    } catch {
+      /* revert on error */
+    } finally {
+      setLanguageLoading(false);
+    }
+  }
+
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       {/* top bar */}
@@ -177,6 +202,21 @@ function AdminContent() {
           ADMIN · 管理后台
         </h1>
         <label className="flex items-center gap-2 ml-auto cursor-pointer select-none">
+          <span className="text-game-xs text-(--color-pixel-muted) whitespace-nowrap">
+            语言
+          </span>
+          <select
+            value={language}
+            onChange={handleLanguageChange}
+            disabled={languageLoading}
+            className="px-2 py-0.5 text-game-xs bg-(--color-pixel-bg-2) border border-(--color-pixel-border-light) text-(--color-pixel-fg) outline-none focus:border-(--color-pixel-accent) disabled:opacity-50"
+          >
+            <option value="zh">简体中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
           <span className="text-game-xs text-(--color-pixel-muted) whitespace-nowrap">
             {thinkingEnabled ? "LLM Thinking ON" : "LLM Thinking OFF"}
           </span>

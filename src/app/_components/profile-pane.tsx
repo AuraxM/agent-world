@@ -13,34 +13,6 @@ const PERSONALITY_LABELS: Record<keyof Personality, string> = {
   jp: "P/J",
 };
 
-/** [-4, +4] 格子条形条；和 vitals 同风格。 */
-function PersonalityBar({ label, value }: { label: string; value: number }) {
-  // value in [-4, 4]; 0 居中。映射到 [0..100]
-  const pct = ((value + 4) / 8) * 100;
-  const isNeg = value < 0;
-  const fillStart = isNeg ? pct : 50;
-  const fillEnd = isNeg ? 50 : pct;
-  return (
-    <div className="flex items-center gap-2 text-game-xs">
-      <span className="w-8 text-(--color-pixel-muted)">{label}</span>
-      <div className="flex-1 h-2 bg-(--color-pixel-bg) border border-(--color-pixel-border-dark) relative">
-        <div className="absolute inset-y-0 left-1/2 w-px bg-(--color-pixel-border-light)" />
-        <div
-          className="absolute inset-y-0"
-          style={{
-            left: `${fillStart}%`,
-            width: `${fillEnd - fillStart}%`,
-            background: isNeg
-              ? "var(--color-pixel-danger)"
-              : "var(--color-pixel-success)",
-          }}
-        />
-      </div>
-      <span className="w-8 text-right text-(--color-pixel-fg)">{value}</span>
-    </div>
-  );
-}
-
 /** [-min..+max] 双向条；居中分隔线，负值左红、正值右绿。 */
 function BiBar({
   label,
@@ -294,7 +266,7 @@ export function ProfilePane({
         <div className="space-y-0.5">
           {(Object.entries(character.personality) as Array<[keyof Personality, number]>).map(
             ([k, v]) => (
-              <PersonalityBar key={k} label={PERSONALITY_LABELS[k]} value={v} />
+              <BiBar key={k} label={PERSONALITY_LABELS[k]} value={v} />
             ),
           )}
         </div>

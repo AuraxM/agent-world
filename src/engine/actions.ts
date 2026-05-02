@@ -224,7 +224,7 @@ export function getAvailableActions(
 
   // 与同节点其他角色互动——关系 / 好感已在 user prompt 的"同节点其他人物"段
   // 完整列出，hint 不重复 relTag。
-  const speakSuffix =
+  const requestSuffix =
     stayHours >= 4 && companions.length > 0
       ? `（你已在此和他们待 ${stayHours} 小时，话题可能开始重复）`
       : "";
@@ -233,7 +233,7 @@ export function getAvailableActions(
     opts.push({
       type: "speak",
       targetId: peer.id,
-      hint: `和 ${peer.name} 说话。${speakSuffix}`,
+      hint: `邀请 ${peer.name} 说话（需对方接受；必须给出开场白作为 freeText）。${requestSuffix}`,
     });
     opts.push({
       type: "interact_person",

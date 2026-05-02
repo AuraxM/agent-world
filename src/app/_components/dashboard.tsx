@@ -12,6 +12,7 @@ import { RelationGraph } from "./relation-graph";
 import { TreeSidebar } from "./tree-sidebar";
 import { ProfilePane } from "./profile-pane";
 import { EventStream } from "./event-stream";
+import { InjectDrawer } from "./inject-drawer";
 
 export function Dashboard() {
   const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto, templates, placeCharacter } = useWorldState();
@@ -151,16 +152,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Inject drawer placeholder (Task 14) */}
-      {injectOpen && (
-        <>
-          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setInjectOpen(false)} />
-          <div className="fixed top-0 right-0 bottom-0 w-[420px] z-50 bg-(--panel) border-l-2 border-(--border) flex items-center justify-center text-body-sm text-(--text-muted)">
-            投放事件 (Task 14)
-            <button onClick={() => setInjectOpen(false)} className="absolute top-3 right-3 cursor-pointer">✕</button>
-          </div>
-        </>
-      )}
+      <InjectDrawer isOpen={injectOpen} onClose={() => setInjectOpen(false)} />
     </div>
   );
 }

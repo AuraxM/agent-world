@@ -371,3 +371,69 @@ describe("buildUserPrompt", () => {
     expect(out).toContain("很孤单");
   });
 });
+
+describe("language", () => {
+  it("zh 时 system prompt 含简体中文输出指令；不含跨语言记忆提示", () => {
+    const sys = buildSystemPrompt({
+      character: baseCharacter,
+      worldName: "测试世界",
+      nodes: [restaurant],
+      language: "zh",
+    });
+    expect(sys).toContain("简体中文");
+    expect(sys).not.toMatch(/may be written in a different language/i);
+  });
+
+  it("en 时 system + user prompt 都含 English 指令 + 跨语言提示", () => {
+    const sys = buildSystemPrompt({
+      character: baseCharacter,
+      worldName: "测试世界",
+      nodes: [restaurant],
+      language: "en",
+    });
+    const user = buildUserPrompt({
+      character: baseCharacter,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options: [{ type: "wait", hint: "等" }],
+      tick: 5,
+      facts: emptyFacts,
+      language: "en",
+    });
+    expect(sys).toMatch(/MUST be written in English/);
+    expect(user).toMatch(/MUST be written in English/);
+    expect(user).toMatch(/may be written in a different language/);
+  });
+
+  it("ja 时 system + user prompt 都含日本語指令 + 跨语言提示", () => {
+    const sys = buildSystemPrompt({
+      character: baseCharacter,
+      worldName: "测试世界",
+      nodes: [restaurant],
+      language: "ja",
+    });
+    const user = buildUserPrompt({
+      character: baseCharacter,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options: [{ type: "wait", hint: "等" }],
+      tick: 5,
+      facts: emptyFacts,
+      language: "ja",
+    });
+    expect(sys).toContain("日本語で書いてください");
+    expect(user).toContain("日本語で書いてください");
+    expect(user).toContain("別の言語");
+  });
+
+  it("language 缺省时按 zh 处理（向后兼容）", () => {
+    const sys = buildSystemPrompt({
+      character: baseCharacter,
+      worldName: "测试世界",
+      nodes: [restaurant],
+    });
+    expect(sys).toContain("简体中文");
+  });
+});

@@ -257,7 +257,9 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn>
 
 export interface DialogSummaryInput {
   openerName: string;
+  openerId: string;
   responderName: string;
+  responderId: string;
   transcript: DialogTurn[];
 }
 
@@ -273,7 +275,9 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<str
 
   const prompt = buildDialogSummaryPrompt({
     openerName: input.openerName,
+    openerId: input.openerId,
     responderName: input.responderName,
+    responderId: input.responderId,
     transcript: input.transcript,
     language,
   });

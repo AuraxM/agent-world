@@ -338,7 +338,7 @@ describe("buildUserPrompt", () => {
     expect(out).toContain("你好啊");
     expect(out).toContain("距上次 rest/sleep：12 小时");
     expect(out).toContain("距上次 eat：7 小时");
-    expect(out).toContain("说话 ×9");
+    expect(out).toContain("邀请说话 ×9");
   });
 
   it("vitals 段使用 qualifyVital 而非裸数字", () => {
@@ -608,12 +608,14 @@ describe("buildDialogSummaryPrompt", () => {
 
   it("renders full transcript and requests summary", () => {
     const result = buildDialogSummaryPrompt({
-      openerName: "a",
-      responderName: "b",
+      openerName: "甲",
+      openerId: "a",
+      responderName: "乙",
+      responderId: "b",
       transcript,
     });
-    expect(result).toContain("a：你好");
-    expect(result).toContain("b：你好！很高兴见到你");
+    expect(result).toContain("甲：你好");
+    expect(result).toContain("乙：你好！很高兴见到你");
     expect(result).toContain("submit_dialog_summary");
   });
 });

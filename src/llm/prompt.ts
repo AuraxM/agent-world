@@ -772,16 +772,18 @@ export function buildDialogTurnPrompt(args: {
  */
 export function buildDialogSummaryPrompt(args: {
   openerName: string;
+  openerId: string;
   responderName: string;
+  responderId: string;
   transcript: DialogTurn[];
   language?: Language;
 }): string {
-  const { openerName, responderName, transcript } = args;
+  const { openerName, openerId, responderName, responderId, transcript } = args;
   const language = args.language ?? "zh";
 
   const history = transcript
     .map((t) => {
-      const name = t.speakerId === openerName ? openerName : responderName;
+      const name = t.speakerId === openerId ? openerName : responderName;
       if (t.kind === "leave") return `${name}：…先离开了。`;
       return `${name}：${t.line ?? ""}`;
     })

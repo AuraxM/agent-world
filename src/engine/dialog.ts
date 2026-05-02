@@ -84,7 +84,9 @@ export type TurnDecideFn = (input: {
 
 export type SummaryDecideFn = (input: {
   openerName: string;
+  openerId: string;
   responderName: string;
+  responderId: string;
   transcript: DialogTurn[];
 }) => Promise<string>;
 
@@ -97,8 +99,6 @@ export type SalvageDecideFn = (input: {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const SHORT_MEMORY_LIMIT = 50;
 
 function makeMemory(characterId: string, tick: number, importance: number, content: string): MemoryWrite {
   return {
@@ -256,7 +256,9 @@ async function runOneDialog(
       summary = await retryOnce(() =>
         summaryDecide({
           openerName: opener.name,
+          openerId: openerId,
           responderName: responder.name,
+          responderId: responderId,
           transcript,
         }),
       );

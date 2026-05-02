@@ -420,7 +420,7 @@ const ACTION_NAMES: Record<ActionType, string> = {
   write: "书写",
   groom: "整理仪容",
   pace: "踱步",
-  speak: "说话",
+  speak: "邀请说话",
   interact_object: "与物互动",
   interact_person: "与人互动",
   attack: "攻击",

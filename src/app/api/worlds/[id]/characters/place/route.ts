@@ -43,9 +43,11 @@ export async function POST(
 
   // 在 SSE 启动前先做同步可恢复错误检查（add 阶段）
   let entryNodeId: string;
+  let name: string;
   try {
     const r = addCharacterToWorld({ worldId, characterId });
     entryNodeId = r.entryNodeId;
+    name = r.name;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (
@@ -64,6 +66,10 @@ export async function POST(
     return Response.json({ error: message }, { status: 500 });
   }
 
+  // 单次读取以拿到 currentTick（decideForCharacter 不会推进 tick）
+  const { world } = loadWorld(worldId);
+  const tickBefore = world.currentTick;
+
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
@@ -77,17 +83,14 @@ export async function POST(
         send("placed", { characterId, entryNodeId });
 
         const result = await decideForCharacter(worldId, characterId);
-        // 取角色名
-        const loaded = loadWorld(worldId);
-        const c = loaded.characters.find((x) => x.id === characterId);
         send("decision", {
           characterId,
-          characterName: c?.name ?? characterId,
+          characterName: name,
           action: result.action,
         });
         send("done", {
           characterId,
-          tick: loaded.world.currentTick,
+          tick: tickBefore,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

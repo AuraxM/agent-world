@@ -29,6 +29,7 @@ export interface AddCharacterResult {
   characterId: string;
   entryNodeId: string;
   eventId: string;
+  name: string;
 }
 
 export function addCharacterToWorld(
@@ -154,5 +155,6 @@ export function addCharacterToWorld(
     characterId,
     entryNodeId,
     eventId: event.id,
+    name: tpl.name,
   };
 }

@@ -15,7 +15,7 @@ import { BLOOD_RELATION_KINDS } from "@/domain/enums";
 
 export interface ActionOption {
   type: ActionType;
-  /** 简短提示，例如 "前往 阳光中学（公共, 户外）" */
+  /** 简短提示，例如 "前往 酒馆「雪灯」" */
   hint: string;
   /** 可选目标 id，便于 LLM 直接复用 */
   targetId?: string;

@@ -3,8 +3,16 @@
  * pairSpeakRequests 是纯函数，无 LLM 依赖。
  */
 import { describe, expect, it } from "vitest";
-import { pairSpeakRequests } from "./dialog";
-import type { Action, Character } from "@/domain/types";
+import {
+  pairSpeakRequests,
+  runDialogPhase,
+  type AcceptDecideFn,
+  type TurnDecideFn,
+  type SummaryDecideFn,
+  type SalvageDecideFn,
+  type AcceptDecideResult,
+} from "./dialog";
+import type { Action, Character, DialogTurn, WorldEvent } from "@/domain/types";
 
 function makeChar(id: string, loc: string, currentActionType?: string): Character {
   return {
@@ -136,5 +144,313 @@ describe("pairSpeakRequests", () => {
     const r3 = pairSpeakRequests([speakAction("a", "b", "   ")], chars);
     expect(r3.autoFails).toHaveLength(1);
     expect(r3.autoFails[0].reason).toBe("invalid_request");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// runDialogPhase integration tests (all LLM decide fns mocked)
+// ---------------------------------------------------------------------------
+
+function makeCharFull(
+  id: string,
+  name: string,
+  loc: string,
+  currentActionType?: string,
+): Character {
+  return {
+    id,
+    worldId: "w",
+    name,
+    locationId: loc,
+    personality: { ei: 0, sn: 0, tf: 0, jp: 0 },
+    vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+    emotion: { mood: 0, stress: 0, social_satiety: 0 },
+    abilities: [],
+    shortMemory: [],
+    longMemory: [],
+    relations: {},
+    currentAction: currentActionType
+      ? {
+          type: currentActionType as any,
+          startedAt: 0,
+          endsAt: 10,
+          description: "",
+          interruptThreshold: 3,
+        }
+      : undefined,
+  };
+}
+
+function mockTurn(sayLine: string): TurnDecideFn {
+  return async ({ self }) => ({
+    speakerId: self.id,
+    kind: "say",
+    line: sayLine,
+  });
+}
+
+function mockAccept(result: "accept_speak" | "reject_speak"): AcceptDecideFn {
+  return async ({ requesterId }) => ({
+    type: result,
+    targetId: requesterId,
+    reasoning: result === "accept_speak" ? "好啊" : "不想聊",
+    selfImportance: 2,
+  });
+}
+
+function mockSummary(text: string): SummaryDecideFn {
+  return async () => text;
+}
+
+function mockSalvage(actionType = "observe"): SalvageDecideFn {
+  return async ({ character }) => ({
+    type: actionType as any,
+    actorId: character.id,
+    reasoning: "被拒了，做点别的吧",
+    selfImportance: 2,
+  });
+}
+
+function baseNode(overrides?: Partial<{ id: string; name: string }>): any {
+  return {
+    id: overrides?.id ?? "n1",
+    worldId: "w",
+    parentId: null,
+    name: overrides?.name ?? "广场",
+    description: "",
+    tags: ["public"],
+    capacity: null,
+    privacy: "public",
+    visibleFromParent: true,
+    shortcuts: [],
+    isEntry: false,
+  };
+}
+
+const emptyPerceptions = new Map<string, WorldEvent[]>();
+
+describe("runDialogPhase", () => {
+  it("mutual pair + one-way accepted → 2 dialog events, 4 wait placeholders", async () => {
+    const a = makeCharFull("a", "甲", "n1");
+    const b = makeCharFull("b", "乙", "n1");
+    const c = makeCharFull("c", "丙", "n1");
+    const d = makeCharFull("d", "丁", "n1");
+
+    const rawActions: Action[] = [
+      {
+        type: "speak",
+        actorId: "a",
+        targetId: "b",
+        freeText: "嗨",
+        reasoning: "想和乙说话",
+        selfImportance: 2,
+      },
+      {
+        type: "speak",
+        actorId: "b",
+        targetId: "a",
+        freeText: "你好",
+        reasoning: "也想和甲说话",
+        selfImportance: 3,
+      },
+      {
+        type: "speak",
+        actorId: "c",
+        targetId: "d",
+        freeText: "有空吗",
+        reasoning: "想和丁聊聊",
+        selfImportance: 2,
+      },
+      { type: "read", actorId: "d", reasoning: "读书", selfImportance: 1 },
+    ];
+
+    const result = await runDialogPhase({
+      rawActions,
+      characters: [a, b, c, d],
+      nodes: [baseNode()],
+      perceptions: emptyPerceptions,
+      tick: 5,
+      worldName: "测试",
+      acceptDecide: mockAccept("accept_speak"),
+      turnDecide: mockTurn("嗯嗯"),
+      summaryDecide: mockSummary("一段愉快的闲聊"),
+      salvageDecide: mockSalvage("observe"),
+    });
+
+    expect(result.finalActions).toHaveLength(4);
+    expect(result.dialogEvents).toHaveLength(2);
+
+    // mutual pair (a, b): both wait
+    const aAction = result.finalActions.find((a) => a.actorId === "a")!;
+    const bAction = result.finalActions.find((a) => a.actorId === "b")!;
+    expect(aAction.type).toBe("wait");
+    expect(bAction.type).toBe("wait");
+
+    // accepted c→d: both engaged in dialog, both wait
+    const cAction = result.finalActions.find((a) => a.actorId === "c")!;
+    const dAction = result.finalActions.find((a) => a.actorId === "d")!;
+    expect(cAction.type).toBe("wait");
+    expect(dAction.type).toBe("wait");
+
+    // 4 memory entries (a, b, c, d)
+    expect(result.memoryWrites).toHaveLength(4);
+  });
+
+  it("one-way rejected → requester gets salvage action, both get reject memories", async () => {
+    const a = makeCharFull("a", "甲", "n1");
+    const b = makeCharFull("b", "乙", "n1");
+
+    const rawActions: Action[] = [
+      {
+        type: "speak",
+        actorId: "a",
+        targetId: "b",
+        freeText: "嗨",
+        reasoning: "想聊天",
+        selfImportance: 2,
+      },
+      { type: "read", actorId: "b", reasoning: "读书不理人", selfImportance: 1 },
+    ];
+
+    const result = await runDialogPhase({
+      rawActions,
+      characters: [a, b],
+      nodes: [baseNode()],
+      perceptions: emptyPerceptions,
+      tick: 5,
+      worldName: "测试",
+      acceptDecide: mockAccept("reject_speak"),
+      turnDecide: mockTurn("x"),
+      summaryDecide: mockSummary("x"),
+      salvageDecide: mockSalvage("observe"),
+    });
+
+    expect(result.dialogEvents).toHaveLength(0);
+    const aAction = result.finalActions.find((a) => a.actorId === "a")!;
+    expect(aAction.type).toBe("observe");
+
+    const aMem = result.memoryWrites.find((m) => m.characterId === "a")!;
+    const bMem = result.memoryWrites.find((m) => m.characterId === "b")!;
+    expect(aMem.memory.content).toContain("被拒");
+    expect(bMem.memory.content).toContain("拒绝");
+  });
+
+  it("autoFail (target_sleeping) → requester salvage + memory", async () => {
+    const a = makeCharFull("a", "甲", "n1");
+    const b = makeCharFull("b", "乙", "n1", "sleep");
+
+    const rawActions: Action[] = [
+      {
+        type: "speak",
+        actorId: "a",
+        targetId: "b",
+        freeText: "醒了吗",
+        reasoning: "想聊天",
+        selfImportance: 2,
+      },
+      { type: "sleep", actorId: "b", reasoning: "zzz", selfImportance: 3 },
+    ];
+
+    const result = await runDialogPhase({
+      rawActions,
+      characters: [a, b],
+      nodes: [baseNode()],
+      perceptions: emptyPerceptions,
+      tick: 5,
+      worldName: "测试",
+      acceptDecide: mockAccept("reject_speak"),
+      turnDecide: mockTurn("x"),
+      summaryDecide: mockSummary("x"),
+      salvageDecide: mockSalvage("observe"),
+    });
+
+    expect(result.dialogEvents).toHaveLength(0);
+    const aMem = result.memoryWrites.find((m) => m.characterId === "a")!;
+    expect(aMem.memory.content).toContain("在睡觉");
+  });
+
+  it("accept decision returns illegal type → treated as reject", async () => {
+    const a = makeCharFull("a", "甲", "n1");
+    const b = makeCharFull("b", "乙", "n1");
+
+    const rawActions: Action[] = [
+      {
+        type: "speak",
+        actorId: "a",
+        targetId: "b",
+        freeText: "嗨",
+        reasoning: "想聊天",
+        selfImportance: 2,
+      },
+      { type: "read", actorId: "b", reasoning: "不理", selfImportance: 1 },
+    ];
+
+    const badAccept: AcceptDecideFn = async ({ requesterId }) => ({
+      type: "speak" as any,
+      targetId: requesterId,
+      reasoning: "？",
+      selfImportance: 1,
+    });
+
+    const result = await runDialogPhase({
+      rawActions,
+      characters: [a, b],
+      nodes: [baseNode()],
+      perceptions: emptyPerceptions,
+      tick: 5,
+      worldName: "测试",
+      acceptDecide: badAccept,
+      turnDecide: mockTurn("x"),
+      summaryDecide: mockSummary("x"),
+      salvageDecide: mockSalvage("observe"),
+    });
+
+    const aAction = result.finalActions.find((a) => a.actorId === "a")!;
+    expect(aAction.type).toBe("observe");
+    expect(result.dialogEvents).toHaveLength(0);
+  });
+
+  it("multiple dialog groups → all outcomes collected", async () => {
+    const a = makeCharFull("a", "甲", "n1");
+    const b = makeCharFull("b", "乙", "n1");
+    const c = makeCharFull("c", "丙", "n1");
+    const d = makeCharFull("d", "丁", "n1");
+
+    const rawActions: Action[] = [
+      {
+        type: "speak",
+        actorId: "a",
+        targetId: "b",
+        freeText: "hi1",
+        reasoning: "r",
+        selfImportance: 2,
+      },
+      { type: "read", actorId: "b", reasoning: "r", selfImportance: 1 },
+      {
+        type: "speak",
+        actorId: "c",
+        targetId: "d",
+        freeText: "hi2",
+        reasoning: "r",
+        selfImportance: 2,
+      },
+      { type: "read", actorId: "d", reasoning: "r", selfImportance: 1 },
+    ];
+
+    const result = await runDialogPhase({
+      rawActions,
+      characters: [a, b, c, d],
+      nodes: [baseNode()],
+      perceptions: emptyPerceptions,
+      tick: 5,
+      worldName: "测试",
+      acceptDecide: mockAccept("accept_speak"),
+      turnDecide: mockTurn("嗯"),
+      summaryDecide: mockSummary("聊得不错"),
+      salvageDecide: mockSalvage("wait"),
+    });
+
+    expect(result.dialogEvents).toHaveLength(2);
+    expect(result.memoryWrites).toHaveLength(4);
   });
 });

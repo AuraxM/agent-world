@@ -1,6 +1,7 @@
 "use client";
 
 import type { Character, MapNode, Personality } from "@/domain/types";
+import { formatActionWindow } from "../_lib/profile-format";
 import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
 import { indexNodes } from "../_lib/world";
 
@@ -77,18 +78,42 @@ export function ProfilePane({
     <div className="flex-1 min-h-0 overflow-y-auto pixel-scroll p-3 space-y-3">
       {/* 头部 */}
       <div className="flex items-start gap-3">
-        <span className="npc-chip npc-chip--lg npc-chip--selected pixelated">
+        <span className="npc-chip npc-chip--lg npc-chip--selected pixelated" style={{ fontSize: "36px", width: "60px", height: "60px" }}>
           {NPC_EMOJI[character.id] ?? NPC_FALLBACK_EMOJI}
         </span>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 space-y-1">
           <div className="text-game-lg text-(--color-pixel-fg)">{character.name}</div>
-          <button
-            type="button"
-            onClick={() => onJumpToNode(character.locationId)}
-            className="text-game-sm text-(--color-pixel-accent) hover:underline"
-          >
-            @ {here?.name ?? character.locationId} ↗
-          </button>
+          <div className="text-game-sm">
+            <button
+              type="button"
+              onClick={() => onJumpToNode(character.locationId)}
+              className="text-(--color-pixel-accent) hover:underline"
+            >
+              @ {here?.name ?? character.locationId} ↗
+            </button>
+            {character.homeNodeId
+              && character.homeNodeId !== character.locationId
+              && nodeById.get(character.homeNodeId) && (
+                <span className="text-(--color-pixel-muted)">
+                  {" · 家 "}
+                  {nodeById.get(character.homeNodeId)?.name}
+                </span>
+              )}
+          </div>
+          {character.currentAction && (
+            <div>
+              <span
+                className="inline-block px-1 text-game-xs"
+                style={{
+                  background: "var(--color-pixel-accent)",
+                  color: "var(--color-pixel-border-dark)",
+                  border: "1px solid var(--color-pixel-accent-dark)",
+                }}
+              >
+                {formatActionWindow(character.currentAction)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

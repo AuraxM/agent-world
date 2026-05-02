@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { Character, MapNode } from "@/domain/types";
 import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
 import { indexNodes } from "../_lib/world";
@@ -54,16 +54,19 @@ export function CharacterRail({
 }) {
   const [tab, setTab] = useState<"in" | "out">("in");
   const [placingId, setPlacingId] = useState<string | null>(null);
+  const placingRef = useRef<string | null>(null);
   const nodeById = indexNodes(nodes);
   const inSceneIds = new Set(characters.map((c) => c.id));
   const offSceneTemplates = templates.filter((t) => !inSceneIds.has(t.id));
 
   async function handlePlace(id: string) {
-    if (disabled || placingId) return;
+    if (disabled || placingRef.current !== null) return;
+    placingRef.current = id;
     setPlacingId(id);
     try {
       await onPlace(id);
     } finally {
+      placingRef.current = null;
       setPlacingId(null);
     }
   }

@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/reset — 重置游戏世界（删除当前世界并重新 seed）
  *
- * Body: { worldId?, mapId?, cast? } 均可选，默认重置 morning-town。
+ * Body: { worldId?, mapId?, cast? } 均可选，默认重置 moon-valley。
  */
 import { z } from "zod";
 import { eq } from "drizzle-orm";
@@ -28,14 +28,42 @@ const BodySchema = z.object({
   cast: z.array(CastMemberSchema).min(1).optional(),
 });
 
-const DEFAULT_WORLD_ID = "world-morning-town";
-const DEFAULT_MAP_ID = "morning-town";
+const DEFAULT_WORLD_ID = "world-moon-valley";
+const DEFAULT_MAP_ID = "moon-valley";
 const DEFAULT_CAST: CastMember[] = [
-  { characterId: "char-zhangmo", locationId: "node-zhang-home" },
-  { characterId: "char-lihuan", locationId: "node-town" },
-  { characterId: "char-wanggang", locationId: "node-restaurant", vitals: { hunger: 3 } },
-  { characterId: "char-xiaojing", locationId: "node-park" },
-  { characterId: "char-laoli", locationId: "node-li-home", vitals: { fatigue: 6 } },
+  { characterId: "char-sato-shoichi" },
+  { characterId: "char-sato-yukiko" },
+  { characterId: "char-tanaka-daichi" },
+  { characterId: "char-tanaka-hana" },
+  { characterId: "char-tanaka-yota" },
+  { characterId: "char-suzuki-misaki" },
+  { characterId: "char-suzuki-kotone" },
+  { characterId: "char-takahashi-tetsuya" },
+  { characterId: "char-takahashi-kenta" },
+  { characterId: "char-yamamoto-daiku" },
+  { characterId: "char-ito-chie" },
+  { characterId: "char-ito-akari" },
+  { characterId: "char-nakamura-shizuka" },
+  { characterId: "char-matsumoto-ryoji" },
+  { characterId: "char-saito-ishi" },
+  { characterId: "char-saito-yumi" },
+  { characterId: "char-kimura-fumiko" },
+  { characterId: "char-kato-koji" },
+  { characterId: "char-watanabe-kenji" },
+  { characterId: "char-mori-genjo" },
+  { characterId: "char-yamada-ryuichi" },
+  { characterId: "char-yamada-kaito" },
+  { characterId: "char-ogawa-natsuki" },
+  { characterId: "char-fujiwara-hanae" },
+  { characterId: "char-yoshida-shigeru" },
+  { characterId: "char-ishida-sayuri" },
+  { characterId: "char-kawaguchi-mamoru" },
+  { characterId: "char-kobayashi-jiro" },
+  { characterId: "char-kagami-shinji" },
+  { characterId: "char-ando-midori" },
+  { characterId: "char-takasugi-ryu" },
+  { characterId: "char-nakata-tomekichi" },
+  { characterId: "char-naito-yuki" },
 ];
 
 export async function POST(request: Request) {
@@ -65,7 +93,7 @@ export async function POST(request: Request) {
 
     const result = createWorldFromConfig({
       worldId,
-      name: parsed.data.name ?? "晨曦小镇",
+      name: parsed.data.name ?? "月ノ谷",
       mapId,
       cast,
     });

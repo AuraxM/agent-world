@@ -64,9 +64,9 @@ function providerFormData(form: HTMLFormElement) {
 // ---- helpers ----
 
 const TAB_CLASSES: Record<Tab, string> = {
-  providers: "px-4 py-2 text-xs tracking-widest cursor-pointer border-b-2 transition-colors",
-  reset: "px-4 py-2 text-xs tracking-widest cursor-pointer border-b-2 transition-colors",
-  maps: "px-4 py-2 text-xs tracking-widest cursor-pointer border-b-2 transition-colors",
+  providers: "px-4 py-2 text-game-base tracking-widest cursor-pointer border-b-2 transition-colors",
+  reset: "px-4 py-2 text-game-base tracking-widest cursor-pointer border-b-2 transition-colors",
+  maps: "px-4 py-2 text-game-base tracking-widest cursor-pointer border-b-2 transition-colors",
 };
 
 const TAB_LABELS: Record<Tab, string> = {
@@ -96,7 +96,7 @@ function TreeNode({ node, depth = 0 }: { node: MapNodeConfig; depth?: number }) 
     <div style={{ paddingLeft: depth * 16 }}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 py-1 text-xs hover:text-(--color-pixel-accent) transition-colors text-left w-full"
+        className="flex items-center gap-1 py-1 text-game-base hover:text-(--color-pixel-accent) transition-colors text-left w-full"
       >
         <span className="w-3 text-(--color-pixel-muted)">
           {hasKids ? (open ? "▾" : "▸") : "·"}
@@ -104,10 +104,10 @@ function TreeNode({ node, depth = 0 }: { node: MapNodeConfig; depth?: number }) 
         <span className="text-(--color-pixel-fg)">{node.name}</span>
         <span className="text-(--color-pixel-muted) ml-1">({node.id})</span>
         {node.isEntry && (
-          <span className="text-[10px] text-(--color-pixel-accent) ml-1">入口</span>
+          <span className="text-game-xs text-(--color-pixel-accent) ml-1">入口</span>
         )}
         {node.privacy === "private" && (
-          <span className="text-[10px] text-(--color-pixel-danger)">🔒</span>
+          <span className="text-game-xs text-(--color-pixel-danger)">🔒</span>
         )}
       </button>
       {open && hasKids && (
@@ -118,7 +118,7 @@ function TreeNode({ node, depth = 0 }: { node: MapNodeConfig; depth?: number }) 
         </div>
       )}
       {open && !hasKids && depth >= 2 && (
-        <div style={{ paddingLeft: 20 }} className="text-[10px] text-(--color-pixel-muted) mb-1">
+        <div style={{ paddingLeft: 20 }} className="text-game-xs text-(--color-pixel-muted) mb-1">
           {node.description}
           {node.tags.length > 0 && (
             <span className="ml-1">[{node.tags.join(", ")}]</span>
@@ -141,17 +141,67 @@ export default function AdminPage() {
 
 function AdminContent() {
   const [tab, setTab] = useState<Tab>("providers");
+  const [thinkingEnabled, setThinkingEnabled] = useState(true);
+  const [thinkingLoading, setThinkingLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then((r) => r.json())
+      .then((d) => setThinkingEnabled(d.thinkingEnabled))
+      .catch(() => { /* keep default */ });
+  }, []);
+
+  async function handleThinkingToggle() {
+    const next = !thinkingEnabled;
+    setThinkingLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ thinkingEnabled: next }),
+      });
+      const data = await res.json();
+      if (res.ok) setThinkingEnabled(data.thinkingEnabled);
+    } catch {
+      /* revert on error */
+    } finally {
+      setThinkingLoading(false);
+    }
+  }
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       {/* top bar */}
       <header className="flex items-center gap-4 px-4 py-2 border-b border-(--color-pixel-border-dark) bg-(--color-pixel-bg) shrink-0">
-        <h1 className="text-sm tracking-widest text-(--color-pixel-accent)">
+        <h1 className="text-game-lg tracking-widest text-(--color-pixel-accent)">
           ADMIN · 管理后台
         </h1>
+        <label className="flex items-center gap-2 ml-auto cursor-pointer select-none">
+          <span className="text-game-xs text-(--color-pixel-muted) whitespace-nowrap">
+            {thinkingEnabled ? "LLM Thinking ON" : "LLM Thinking OFF"}
+          </span>
+          <button
+            type="button"
+            onClick={handleThinkingToggle}
+            disabled={thinkingLoading}
+            className={
+              "w-10 h-5 rounded-full border transition-colors " +
+              (thinkingEnabled
+                ? "bg-(--color-pixel-accent) border-(--color-pixel-accent-dark)"
+                : "bg-(--color-pixel-border-dark) border-(--color-pixel-border-light)")
+            }
+          >
+            <span
+              className={
+                "block w-3.5 h-3.5 rounded-full bg-(--color-pixel-bg) transition-transform " +
+                (thinkingEnabled ? "translate-x-5" : "translate-x-0.5")
+              }
+            />
+          </button>
+        </label>
         <a
           href="/"
-          className="text-[10px] text-(--color-pixel-muted) hover:text-(--color-pixel-fg) transition-colors ml-auto"
+          className="text-game-xs text-(--color-pixel-muted) hover:text-(--color-pixel-fg) transition-colors"
         >
           ← 返回游戏
         </a>
@@ -278,27 +328,27 @@ function ProvidersTab() {
   return (
     <div className="max-w-3xl space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xs tracking-widest text-(--color-pixel-muted)">
+        <h2 className="text-game-base tracking-widest text-(--color-pixel-muted)">
           LLM Provider 管理
         </h2>
         <button
           onClick={() => { setShowAdd(!showAdd); setEditingId(null); }}
-          className="px-3 py-1 text-[10px] border border-(--color-pixel-border-light) bg-(--color-pixel-bg-2) text-(--color-pixel-fg) hover:border-(--color-pixel-accent) transition-colors"
+          className="px-3 py-1 text-game-xs border border-(--color-pixel-border-light) bg-(--color-pixel-bg-2) text-(--color-pixel-fg) hover:border-(--color-pixel-accent) transition-colors"
         >
           {showAdd ? "取消" : "+ 添加 Provider"}
         </button>
       </div>
 
       {error && (
-        <div className="px-3 py-2 text-[10px] text-(--color-pixel-danger) border border-(--color-pixel-danger) bg-(--color-pixel-bg-2)">
+        <div className="px-3 py-2 text-game-xs text-(--color-pixel-danger) border border-(--color-pixel-danger) bg-(--color-pixel-bg-2)">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="text-[11px] text-(--color-pixel-muted)">加载中…</div>
+        <div className="text-game-sm text-(--color-pixel-muted)">加载中…</div>
       ) : providers.length === 0 ? (
-        <div className="text-[11px] text-(--color-pixel-muted)">
+        <div className="text-game-sm text-(--color-pixel-muted)">
           暂无 provider，当前使用 .env.local 中的 DeepSeek 配置
         </div>
       ) : null}
@@ -323,9 +373,9 @@ function ProvidersTab() {
             <div className="p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-(--color-pixel-fg) font-bold">{p.name}</span>
+                  <span className="text-game-base text-(--color-pixel-fg) font-bold">{p.name}</span>
                   {p.isActive && (
-                    <span className="text-[9px] px-1 py-0.5 bg-(--color-pixel-accent) text-(--color-pixel-bg)">
+                    <span className="text-game-2xs px-1 py-0.5 bg-(--color-pixel-accent) text-(--color-pixel-bg)">
                       ACTIVE
                     </span>
                   )}
@@ -334,28 +384,28 @@ function ProvidersTab() {
                   {!p.isActive && (
                     <button
                       onClick={() => handleActivate(p.id)}
-                      className="text-[9px] px-2 py-1 border border-(--color-pixel-success) text-(--color-pixel-success) hover:bg-(--color-pixel-bg-2) transition-colors"
+                      className="text-game-2xs px-2 py-1 border border-(--color-pixel-success) text-(--color-pixel-success) hover:bg-(--color-pixel-bg-2) transition-colors"
                     >
                       启用
                     </button>
                   )}
                   <button
                     onClick={() => setEditingId(p.id)}
-                    className="text-[9px] px-2 py-1 border border-(--color-pixel-border-light) text-(--color-pixel-muted) hover:text-(--color-pixel-fg) transition-colors"
+                    className="text-game-2xs px-2 py-1 border border-(--color-pixel-border-light) text-(--color-pixel-muted) hover:text-(--color-pixel-fg) transition-colors"
                   >
                     编辑
                   </button>
                   {!p.isActive && (
                     <button
                       onClick={() => handleDelete(p.id)}
-                      className="text-[9px] px-2 py-1 border border-(--color-pixel-danger) text-(--color-pixel-danger) hover:bg-(--color-pixel-bg-2) transition-colors"
+                      className="text-game-2xs px-2 py-1 border border-(--color-pixel-danger) text-(--color-pixel-danger) hover:bg-(--color-pixel-bg-2) transition-colors"
                     >
                       删除
                     </button>
                   )}
                 </div>
               </div>
-              <div className="text-[10px] text-(--color-pixel-muted) space-y-0.5">
+              <div className="text-game-xs text-(--color-pixel-muted) space-y-0.5">
                 <div>Model: {p.model}</div>
                 <div className="truncate">URL: {p.baseUrl}</div>
                 <div>API Key: {p.apiKey.slice(0, 8)}…{p.apiKey.slice(-4)}</div>
@@ -381,58 +431,58 @@ function ProviderForm({
     <form onSubmit={onSubmit} className="p-3 space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <label className="space-y-1">
-          <span className="text-[9px] text-(--color-pixel-muted)">名称</span>
+          <span className="text-game-2xs text-(--color-pixel-muted)">名称</span>
           <input
             name="name"
             defaultValue={initial?.name ?? ""}
             required
             placeholder="如 DeepSeek"
-            className="w-full px-2 py-1 text-[11px] bg-(--color-pixel-bg) border border-(--color-pixel-border-light) text-(--color-pixel-fg) outline-none focus:border-(--color-pixel-accent)"
+            className="w-full px-2 py-1 text-game-sm bg-(--color-pixel-bg) border border-(--color-pixel-border-light) text-(--color-pixel-fg) outline-none focus:border-(--color-pixel-accent)"
           />
         </label>
         <label className="space-y-1">
-          <span className="text-[9px] text-(--color-pixel-muted)">Model</span>
+          <span className="text-game-2xs text-(--color-pixel-muted)">Model</span>
           <input
             name="model"
             defaultValue={initial?.model ?? ""}
             required
             placeholder="deepseek-v4-flash"
-            className="w-full px-2 py-1 text-[11px] bg-(--color-pixel-bg) border border-(--color-pixel-border-light) text-(--color-pixel-fg) outline-none focus:border-(--color-pixel-accent)"
+            className="w-full px-2 py-1 text-game-sm bg-(--color-pixel-bg) border border-(--color-pixel-border-light) text-(--color-pixel-fg) outline-none focus:border-(--color-pixel-accent)"
           />
         </label>
         <label className="space-y-1 col-span-2">
-          <span className="text-[9px] text-(--color-pixel-muted)">Base URL</span>
+          <span className="text-game-2xs text-(--color-pixel-muted)">Base URL</span>
           <input
             name="baseUrl"
             defaultValue={initial?.baseUrl ?? ""}
             required
             placeholder="https://api.deepseek.com"
-            className="w-full px-2 py-1 text-[11px] bg-(--color-pixel-bg) border border-(--color-pixel-border-light) text-(--color-pixel-fg) outline-none focus:border-(--color-pixel-accent)"
+            className="w-full px-2 py-1 text-game-sm bg-(--color-pixel-bg) border border-(--color-pixel-border-light) text-(--color-pixel-fg) outline-none focus:border-(--color-pixel-accent)"
           />
         </label>
         <label className="space-y-1 col-span-2">
-          <span className="text-[9px] text-(--color-pixel-muted)">API Key</span>
+          <span className="text-game-2xs text-(--color-pixel-muted)">API Key</span>
           <input
             name="apiKey"
             defaultValue={initial?.apiKey ?? ""}
             required
             type="password"
             placeholder="sk-…"
-            className="w-full px-2 py-1 text-[11px] bg-(--color-pixel-bg) border border-(--color-pixel-border-light) text-(--color-pixel-fg) outline-none focus:border-(--color-pixel-accent)"
+            className="w-full px-2 py-1 text-game-sm bg-(--color-pixel-bg) border border-(--color-pixel-border-light) text-(--color-pixel-fg) outline-none focus:border-(--color-pixel-accent)"
           />
         </label>
       </div>
       <div className="flex gap-2">
         <button
           type="submit"
-          className="px-3 py-1 text-[10px] border border-(--color-pixel-accent) text-(--color-pixel-accent) hover:bg-(--color-pixel-bg-2) transition-colors"
+          className="px-3 py-1 text-game-xs border border-(--color-pixel-accent) text-(--color-pixel-accent) hover:bg-(--color-pixel-bg-2) transition-colors"
         >
           保存
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="px-3 py-1 text-[10px] border border-(--color-pixel-border-light) text-(--color-pixel-muted) hover:text-(--color-pixel-fg) transition-colors"
+          className="px-3 py-1 text-game-xs border border-(--color-pixel-border-light) text-(--color-pixel-muted) hover:text-(--color-pixel-fg) transition-colors"
         >
           取消
         </button>
@@ -453,7 +503,7 @@ function ResetTab() {
   useEffect(() => {
     async function fetchWorld() {
       try {
-        const res = await fetch("/api/worlds/world-morning-town");
+        const res = await fetch("/api/worlds/world-moon-valley");
         if (res.ok) {
           const data = await res.json();
           setWorld({ id: data.world.id, name: data.world.name, currentTick: data.world.currentTick });
@@ -477,7 +527,7 @@ function ResetTab() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "reset failed");
       setResult(`世界已重置。地图: ${data.world.mapId}，角色: ${data.world.characterIds.length} 个`);
-      setWorld({ id: data.world.id, name: "晨曦小镇", currentTick: 0 });
+      setWorld({ id: data.world.id, name: "月ノ谷", currentTick: 0 });
     } catch (err) {
       setError(err instanceof Error ? err.message : "unknown error");
     } finally {
@@ -487,15 +537,15 @@ function ResetTab() {
 
   return (
     <div className="max-w-lg space-y-4">
-      <h2 className="text-xs tracking-widest text-(--color-pixel-muted)">重置游戏世界</h2>
+      <h2 className="text-game-base tracking-widest text-(--color-pixel-muted)">重置游戏世界</h2>
 
       {error && (
-        <div className="px-3 py-2 text-[10px] text-(--color-pixel-danger) border border-(--color-pixel-danger) bg-(--color-pixel-bg-2)">
+        <div className="px-3 py-2 text-game-xs text-(--color-pixel-danger) border border-(--color-pixel-danger) bg-(--color-pixel-bg-2)">
           {error}
         </div>
       )}
       {result && (
-        <div className="px-3 py-2 text-[10px] text-(--color-pixel-success) border border-(--color-pixel-success) bg-(--color-pixel-bg-2)">
+        <div className="px-3 py-2 text-game-xs text-(--color-pixel-success) border border-(--color-pixel-success) bg-(--color-pixel-bg-2)">
           {result}
         </div>
       )}
@@ -503,9 +553,9 @@ function ResetTab() {
       <PixelFrame>
         <div className="p-3 space-y-3">
           {loading ? (
-            <div className="text-[11px] text-(--color-pixel-muted)">加载中…</div>
+            <div className="text-game-sm text-(--color-pixel-muted)">加载中…</div>
           ) : world ? (
-            <div className="text-[11px] space-y-1">
+            <div className="text-game-sm space-y-1">
               <div>
                 <span className="text-(--color-pixel-muted)">世界：</span>
                 <span className="text-(--color-pixel-fg)">{world.name}</span>
@@ -517,7 +567,7 @@ function ResetTab() {
               </div>
             </div>
           ) : (
-            <div className="text-[11px] text-(--color-pixel-muted)">
+            <div className="text-game-sm text-(--color-pixel-muted)">
               尚未创建世界，点击下方按钮 seed。
             </div>
           )}
@@ -525,12 +575,12 @@ function ResetTab() {
           <button
             onClick={handleReset}
             disabled={resetting}
-            className="px-4 py-2 text-[10px] border border-(--color-pixel-danger) text-(--color-pixel-danger) hover:bg-(--color-pixel-bg-2) transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-game-xs border border-(--color-pixel-danger) text-(--color-pixel-danger) hover:bg-(--color-pixel-bg-2) transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {resetting ? "重置中…" : "🔄 重置世界"}
           </button>
-          <p className="text-[9px] text-(--color-pixel-muted)">
-            使用默认配置（morning-town + 5 个角色）重新 seed。此操作不可撤销。
+          <p className="text-game-2xs text-(--color-pixel-muted)">
+            使用默认配置（moon-valley + 33 角色）重新 seed。此操作不可撤销。
           </p>
         </div>
       </PixelFrame>
@@ -600,16 +650,16 @@ function MapsTab() {
 
   return (
     <div className="max-w-3xl space-y-4">
-      <h2 className="text-xs tracking-widest text-(--color-pixel-muted)">地图配置预览</h2>
+      <h2 className="text-game-base tracking-widest text-(--color-pixel-muted)">地图配置预览</h2>
 
       {error && (
-        <div className="px-3 py-2 text-[10px] text-(--color-pixel-danger) border border-(--color-pixel-danger) bg-(--color-pixel-bg-2)">
+        <div className="px-3 py-2 text-game-xs text-(--color-pixel-danger) border border-(--color-pixel-danger) bg-(--color-pixel-bg-2)">
           {error}
         </div>
       )}
 
       {listLoading ? (
-        <div className="text-[11px] text-(--color-pixel-muted)">加载中…</div>
+        <div className="text-game-sm text-(--color-pixel-muted)">加载中…</div>
       ) : null}
 
       {/* map selector */}
@@ -619,7 +669,7 @@ function MapsTab() {
             key={m.id}
             onClick={() => setSelectedId(m.id)}
             className={
-              "px-3 py-1 text-[10px] border transition-colors " +
+              "px-3 py-1 text-game-xs border transition-colors " +
               (m.id === selectedId
                 ? "border-(--color-pixel-accent) text-(--color-pixel-accent) bg-(--color-pixel-bg-2)"
                 : "border-(--color-pixel-border-light) text-(--color-pixel-muted) hover:text-(--color-pixel-fg)")
@@ -632,7 +682,7 @@ function MapsTab() {
 
       {/* map detail */}
       {detailLoading && (
-        <div className="text-[11px] text-(--color-pixel-muted)">加载地图配置…</div>
+        <div className="text-game-sm text-(--color-pixel-muted)">加载地图配置…</div>
       )}
       {detail && !detailLoading && (
         <MapDetail map={detail} />
@@ -647,12 +697,12 @@ function MapDetail({ map }: { map: MapConfig }) {
   return (
     <PixelFrame title={`${map.name} (${map.id})`}>
       <div className="p-3 space-y-3">
-        <div className="text-[10px] text-(--color-pixel-muted)">
+        <div className="text-game-xs text-(--color-pixel-muted)">
           {map.description}
         </div>
 
         {/* stats */}
-        <div className="flex gap-4 text-[10px]">
+        <div className="flex gap-4 text-game-xs">
           <span className="text-(--color-pixel-muted)">
             节点数: <span className="text-(--color-pixel-fg)">{map.nodeCount}</span>
           </span>
@@ -663,7 +713,7 @@ function MapDetail({ map }: { map: MapConfig }) {
 
         {/* node tree */}
         <div className="border-t border-(--color-pixel-border-dark) pt-2">
-          <div className="text-[9px] text-(--color-pixel-muted) mb-2">节点树</div>
+          <div className="text-game-2xs text-(--color-pixel-muted) mb-2">节点树</div>
           {tree.map((n) => (
             <TreeNode key={n.id} node={n} />
           ))}
@@ -671,9 +721,9 @@ function MapDetail({ map }: { map: MapConfig }) {
 
         {/* node details table */}
         <div className="border-t border-(--color-pixel-border-dark) pt-2">
-          <div className="text-[9px] text-(--color-pixel-muted) mb-2">节点详情</div>
+          <div className="text-game-2xs text-(--color-pixel-muted) mb-2">节点详情</div>
           <div className="overflow-x-auto">
-            <table className="w-full text-[9px] border-collapse">
+            <table className="w-full text-game-2xs border-collapse">
               <thead>
                 <tr className="text-(--color-pixel-muted) border-b border-(--color-pixel-border-dark)">
                   <th className="text-left py-1 px-2">ID</th>

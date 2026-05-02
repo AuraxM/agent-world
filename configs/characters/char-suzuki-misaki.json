@@ -1,0 +1,36 @@
+{
+  "id": "char-suzuki-misaki",
+  "name": "铃木美咲",
+  "avatar": "🧑‍🌾",
+  "homeNodeId": "node-ranch-house",
+  "personality": {
+    "ei": 3,
+    "sn": -2,
+    "tf": -3,
+    "jp": 2
+  },
+  "abilities": [],
+  "relations": {
+    "char-suzuki-kotone": {
+      "kinds": ["daughter"],
+      "affection": 4,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "丈夫走后，她就是我每天起床的全部理由。"
+    },
+    "char-tanaka-hana": {
+      "kinds": ["friend"],
+      "affection": 3,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "花姐姐总记得给琴音留一块新做的奶酪——这种好我还不上。"
+    },
+    "char-nakamura-shizuka": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "雪灯的暖气和她那张快嘴，是我冬天少数能放松的地方。"
+    }
+  }
+}

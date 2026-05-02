@@ -24,7 +24,7 @@ export function EventsPane({
   return (
     <div className="flex-1 min-h-0 overflow-y-auto pixel-scroll p-3">
       {events.length === 0 ? (
-        <p className="text-xs text-(--color-pixel-muted)">尚无事件…</p>
+        <p className="text-game-base text-(--color-pixel-muted)">尚无事件…</p>
       ) : (
         <ol className="space-y-2">
           {events.map((ev) => {
@@ -32,15 +32,15 @@ export function EventsPane({
             return (
               <li
                 key={ev.id}
-                className="text-xs leading-snug pl-2 border-l-2"
+                className="text-game-base leading-snug pl-2 border-l-2"
                 style={{ borderColor: color }}
               >
-                <div className="text-[10px] text-(--color-pixel-muted)">
+                <div className="text-game-xs text-(--color-pixel-muted)">
                   t={ev.tick} · {ev.category} · 强度 {ev.intensity}
                 </div>
                 <div className="text-(--color-pixel-fg)">{ev.description}</div>
                 {ev.participants.length > 0 && (
-                  <div className="text-[10px] text-(--color-pixel-muted)">
+                  <div className="text-game-xs text-(--color-pixel-muted)">
                     参与者：
                     {ev.participants
                       .map((p) => charById.get(p)?.name ?? p)

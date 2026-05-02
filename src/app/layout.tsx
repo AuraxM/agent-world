@@ -9,8 +9,8 @@ const silkscreen = Silkscreen({
 });
 
 export const metadata: Metadata = {
-  title: "agent-world · 晨曦小镇",
-  description: "LLM-as-NPC 模拟世界 · 像素小镇",
+  title: "agent-world · 月ノ谷",
+  description: "LLM-as-NPC 模拟世界 · 北海道の村",
 };
 
 export default function RootLayout({

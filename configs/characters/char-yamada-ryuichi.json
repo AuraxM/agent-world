@@ -1,0 +1,22 @@
+{
+  "id": "char-yamada-ryuichi",
+  "name": "山田竜一",
+  "avatar": "🎣",
+  "homeNodeId": "node-fisher-hut",
+  "personality": {
+    "ei": -2,
+    "sn": 2,
+    "tf": 3,
+    "jp": -3
+  },
+  "abilities": [],
+  "relations": {
+    "char-tanaka-daichi": {
+      "kinds": ["friend"],
+      "affection": 3,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "他懂牛，我懂鱼，剩下的事我们都没必要说。"
+    }
+  }
+}

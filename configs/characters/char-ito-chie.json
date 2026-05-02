@@ -1,0 +1,36 @@
+{
+  "id": "char-ito-chie",
+  "name": "伊藤千恵",
+  "avatar": "🛒",
+  "homeNodeId": "node-general-store",
+  "personality": {
+    "ei": 3,
+    "sn": -2,
+    "tf": -2,
+    "jp": -2
+  },
+  "abilities": [],
+  "relations": {
+    "char-nakamura-shizuka": {
+      "kinds": ["friend"],
+      "affection": 3,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "我俩一个卖盐一个卖酒，凑在一起就是村里的小报。"
+    },
+    "char-tanaka-hana": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "花姐说话慢——但她记得我妈喜欢的盐的牌子，我就记她一辈子。"
+    },
+    "char-suzuki-misaki": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "美咲来铺子从不闲聊——她那双眼里的疲惫我看一眼就知道，糖给她多塞两块。"
+    }
+  }
+}

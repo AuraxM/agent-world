@@ -70,6 +70,14 @@
   --font-pixel: var(--font-silkscreen);
 }
 
+/* 游戏文字尺寸 */
+.text-game-2xs { font-size: 11px; }
+.text-game-xs { font-size: 12px; }
+.text-game-sm { font-size: 13px; }
+.text-game-base { font-size: 14px; }
+.text-game-lg { font-size: 17px; }
+.text-game-xl { font-size: 22px; }
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -104,6 +112,9 @@ body {
 .node-tile {
   position: absolute;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--tile-base);
   border: 2px solid var(--tile-shadow);
   box-shadow:
@@ -123,13 +134,32 @@ body {
   outline-offset: 2px;
 }
 
-.node-tile--private::after {
-  content: "🔒";
-  position: absolute;
-  top: 2px;
-  right: 4px;
+.node-tile--private .node-tile__header::after {
+  content: " 🔒";
+}
+
+.node-tile__header {
+  flex-shrink: 0;
+  text-align: center;
+  padding: 2px 4px;
   font-size: 12px;
-  filter: drop-shadow(0 1px 0 #000);
+  letter-spacing: 0.1em;
+  color: var(--color-pixel-border-dark);
+  text-shadow: 0 1px 0 var(--color-pixel-fg);
+  background: var(--tile-hi);
+  border-bottom: 1px solid var(--tile-shadow);
+}
+
+.node-tile__body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+  align-content: flex-start;
+  padding: 3px 2px;
+  min-height: 0;
 }
 
 /* NPC 像素小方块头像 */

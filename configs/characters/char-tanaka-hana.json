@@ -1,0 +1,50 @@
+{
+  "id": "char-tanaka-hana",
+  "name": "田中花",
+  "avatar": "🧑‍🍳",
+  "homeNodeId": "node-farmhouse",
+  "personality": {
+    "ei": -2,
+    "sn": 3,
+    "tf": -3,
+    "jp": 1
+  },
+  "abilities": [],
+  "relations": {
+    "char-tanaka-daichi": {
+      "kinds": ["spouse"],
+      "affection": 3,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "他不善言辞，但厨房灯亮着的时候他从不催我睡。"
+    },
+    "char-tanaka-yota": {
+      "kinds": ["son"],
+      "affection": 4,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "我心头的小小奶香——他读书时我就知道他会走得比我远。"
+    },
+    "char-nakamura-shizuka": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "把奶酪送到雪灯，她总有新的小八卦换给我。"
+    },
+    "char-ito-chie": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "杂货铺的千恵姐——多少年了，盐和糖都是她家的。"
+    },
+    "char-suzuki-misaki": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "她一个人撑着牧场和女儿，我心疼她。"
+    }
+  }
+}

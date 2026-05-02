@@ -86,6 +86,21 @@ const baseInput = (): DecideInput => ({
     longMemory: [],
     relations: {},
   },
+  nodes: [
+    {
+      id: "node-x",
+      worldId: "w",
+      parentId: null,
+      name: "测试地",
+      description: "",
+      tags: ["public"],
+      capacity: null,
+      privacy: "public",
+      visibleFromParent: true,
+      shortcuts: [],
+      isEntry: true,
+    },
+  ],
   here: {
     id: "node-x",
     worldId: "w",

@@ -1,12 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { WorldEvent } from "@/domain/types";
+import type { WorldEvent, Action } from "@/domain/types";
 import type { WorldSnapshot } from "../_lib/api";
 
 /** 通过 ?world=<id> 切换世界；未指定时回退到默认演示世界。 */
-const DEFAULT_WORLD_ID = "world-morning-town";
+const DEFAULT_WORLD_ID = "world-moon-valley";
+
+interface DecisionEvent {
+  characterId: string;
+  characterName: string;
+  action: Action;
+}
+
+interface DoneEvent {
+  worldId: string;
+  fromTick: number;
+  toTick: number;
+  eventCount: number;
+}
+
+interface ErrorEvent {
+  error: string;
+  status: number;
+}
 
 export interface UseWorldState {
   snapshot: WorldSnapshot | null;
@@ -14,6 +32,8 @@ export interface UseWorldState {
   loading: boolean;
   error: string | null;
   lastTickMs: number | null;
+  /** 最近一次 tick 中已完成的角色决策数 / 总角色数 */
+  tickProgress: { done: number; total: number } | null;
   refresh: () => Promise<void>;
   advance: () => Promise<void>;
 }
@@ -26,6 +46,11 @@ export function useWorldState(): UseWorldState {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastTickMs, setLastTickMs] = useState<number | null>(null);
+  const [tickProgress, setTickProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -48,28 +73,131 @@ export function useWorldState(): UseWorldState {
   }, [worldId]);
 
   useEffect(() => {
-    // 微任务延迟到 effect 提交后再触发首次拉取，避免同步 setState in effect 警告
     queueMicrotask(() => {
       void refresh();
     });
   }, [refresh]);
 
   const advance = useCallback(async () => {
+    // 取消上一次还在进行中的请求
+    abortRef.current?.abort();
+    const abort = new AbortController();
+    abortRef.current = abort;
+
     setLoading(true);
+    setTickProgress(null);
     const t0 = performance.now();
+
+    // 从 snapshot 获取总角色数
+    const total = snapshot?.characters.length ?? 0;
+
     try {
       const res = await fetch(`/api/worlds/${worldId}/tick`, {
         method: "POST",
         cache: "no-store",
+        signal: abort.signal,
+        headers: { Accept: "text/event-stream" },
       });
-      if (!res.ok) throw new Error(`tick ${res.status}`);
-      setLastTickMs(performance.now() - t0);
-      await refresh();
+
+      if (!res.ok) {
+        // 非 SSE 错误响应
+        let msg = `tick ${res.status}`;
+        try {
+          const body = await res.json();
+          if (body.error) msg = body.error;
+        } catch { /* ignore */ }
+        throw new Error(msg);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("no response body");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let tickDone = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // 解析 SSE 事件（简化：按 \n\n 分隔）
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          const lines = part.split("\n");
+          let eventType = "";
+          let dataStr = "";
+
+          for (const line of lines) {
+            if (line.startsWith("event: ")) {
+              eventType = line.slice(7);
+            } else if (line.startsWith("data: ")) {
+              dataStr = line.slice(6);
+            }
+          }
+
+          if (!dataStr) continue;
+
+          try {
+            const data = JSON.parse(dataStr);
+
+            if (eventType === "decision") {
+              const dec = data as DecisionEvent;
+              // 乐观更新：把角色的新 action 写入 snapshot
+              setSnapshot((prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  characters: prev.characters.map((ch) =>
+                    ch.id === dec.characterId
+                      ? { ...ch, lastThought: { action: dec.action, tick: prev.world.currentTick } as unknown as typeof ch.lastThought }
+                      : ch,
+                  ),
+                };
+              });
+              setTickProgress((prev) => ({
+                done: (prev?.done ?? 0) + 1,
+                total: prev?.total ?? total,
+              }));
+            } else if (eventType === "done") {
+              tickDone = true;
+              setLastTickMs(performance.now() - t0);
+              setTickProgress(null);
+            } else if (eventType === "error") {
+              const err = data as ErrorEvent;
+              throw new Error(err.error);
+            }
+          } catch (e) {
+            if (e instanceof Error && e.message !== "unexpected event") {
+              throw e;
+            }
+          }
+        }
+      }
+
+      if (tickDone) {
+        // 用服务端权威数据做一次全量刷新
+        await refresh();
+      }
     } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       setError(e instanceof Error ? e.message : String(e));
       setLoading(false);
+      setTickProgress(null);
     }
-  }, [refresh, worldId]);
+  }, [refresh, worldId, snapshot?.characters.length]);
 
-  return { snapshot, events, loading, error, lastTickMs, refresh, advance };
+  return {
+    snapshot,
+    events,
+    loading,
+    error,
+    lastTickMs,
+    tickProgress,
+    refresh,
+    advance,
+  };
 }

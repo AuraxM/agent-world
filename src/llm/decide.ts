@@ -16,6 +16,7 @@ import {
 } from "@/domain/schemas";
 import type { Action } from "@/domain/types";
 import type { DecideFn, DecideInput } from "@/engine/tick";
+import { getThinkingEnabled } from "@/engine/settings";
 import { getLLMClient, getModelName, hasApiKey } from "./client";
 import { buildSystemPrompt, buildUserPrompt } from "./prompt";
 
@@ -38,6 +39,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
   const system = buildSystemPrompt({
     character: input.character,
     worldName: input.worldName,
+    nodes: input.nodes,
   });
   const user = buildUserPrompt({
     character: input.character,
@@ -54,12 +56,14 @@ async function callLLM(input: DecideInput): Promise<Action> {
     function: {
       name: ACTION_TOOL_NAME,
       description:
-        "提交你这一 tick 的行动。type 必须是封闭枚举之一；reasoning 必须显式引用一项你自己的性格特征（用文字描述，不要写数值）。",
+        "提交你这一 tick 的行动。type 必须是封闭枚举之一；reasoning 必须显式引用一项你自己的性格特征（用文字描述，不要写数值）。所有文本输出必须使用简体中文。",
       parameters: ActionToolInputSchema,
     },
   };
 
   // 注意：
+  // - thinking 可由管理后台 /admin 的开关全局控制（getThinkingEnabled()）。
+  //   关闭后不传 thinking 字段，provider 走 fast 路由。
   // - 部分 provider（如 DeepSeek 的 reasoner 端点）在 thinking enabled 时**完全
   //   拒绝** tool_choice 的非默认值（"required" 与 forced 都会 400
   //   "deepseek-reasoner does not support this tool_choice"）；故不传
@@ -69,6 +73,11 @@ async function callLLM(input: DecideInput): Promise<Action> {
   //   MAX_OUTPUT_TOKENS 比纯 fast 模式调高，避免 reasoning 阶段把额度耗尽导致
   //   tool_call 被截断
   // - OpenAI Node SDK 不识别 thinking 字段类型，用 spread + Record cast 透传
+  const extra: Record<string, unknown> = {};
+  if (getThinkingEnabled()) {
+    extra.thinking = { type: "enabled" };
+  }
+
   const response = await client.chat.completions.create({
     model: getModelName(),
     max_tokens: MAX_OUTPUT_TOKENS,
@@ -77,7 +86,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
       { role: "user", content: user },
     ],
     tools: [tool],
-    ...({ thinking: { type: "enabled" } } as Record<string, unknown>),
+    ...(extra as Record<string, unknown>),
   });
 
   const message = response.choices[0]?.message;

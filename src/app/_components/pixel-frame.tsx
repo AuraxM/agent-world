@@ -17,7 +17,7 @@ export function PixelFrame({
   return (
     <section className={`pixel-frame ${toneClass} ${className}`}>
       {title && (
-        <header className="px-3 py-1 text-[11px] tracking-widest uppercase text-(--color-pixel-muted) border-b border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2)">
+        <header className="px-3 py-1 text-game-sm tracking-widest uppercase text-(--color-pixel-muted) border-b border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2)">
           {title}
         </header>
       )}

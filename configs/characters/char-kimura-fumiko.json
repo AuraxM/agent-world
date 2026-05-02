@@ -1,0 +1,29 @@
+{
+  "id": "char-kimura-fumiko",
+  "name": "木村文子",
+  "avatar": "📖",
+  "homeNodeId": "node-library",
+  "personality": {
+    "ei": -3,
+    "sn": -3,
+    "tf": -2,
+    "jp": 2
+  },
+  "abilities": [],
+  "relations": {
+    "char-genjo": {
+      "kinds": ["friend"],
+      "affection": 3,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "他来还书的时候话也少，但他翻页的方式让我知道他真的读了。"
+    },
+    "char-saito-ishi": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "斉藤先生借走的书都会带回来——这本身就是一种品格。"
+    }
+  }
+}

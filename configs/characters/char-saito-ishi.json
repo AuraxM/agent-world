@@ -1,0 +1,29 @@
+{
+  "id": "char-saito-ishi",
+  "name": "斉藤医師",
+  "avatar": "👨‍⚕️",
+  "homeNodeId": "node-doctor-house",
+  "personality": {
+    "ei": 1,
+    "sn": -2,
+    "tf": 3,
+    "jp": 3
+  },
+  "abilities": [],
+  "relations": {
+    "char-genjo": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "他看的是看不见的东西，我看的是骨头和血。这之间总有可对话的余地。"
+    },
+    "char-kimura-fumiko": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "文库借出的医学旧书她总记得替我留着——一个安静的合作者。"
+    }
+  }
+}

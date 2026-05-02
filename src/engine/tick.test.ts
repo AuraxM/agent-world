@@ -296,6 +296,39 @@ describe("tick engine v0", () => {
     expect(total).toBeGreaterThan(0);
   });
 
+  it("用完免费移动配额后不再调用 LLM 第 6 次，且保留第 5 次的 reasoning", async () => {
+    let callCount = 0;
+    const decide = async ({
+      character,
+    }: {
+      character: { id: string; locationId: string };
+    }) => {
+      callCount++;
+      const target =
+        character.locationId === "node-root" ? "node-diner" : "node-root";
+      return {
+        type: "move" as const,
+        actorId: character.id,
+        targetNodeId: target,
+        reasoning: `第${callCount}次推理：我想去${target}。`,
+        selfImportance: 2 as const,
+      };
+    };
+
+    const r = await tickModule.tick("test-world", { decide });
+
+    // 两个角色各最多 5 次 LLM 调用（用完配额后直接合成 wait，不调第 6 次）
+    expect(callCount).toBe(10);
+
+    // 每个角色的最终 action 应是 wait，并保留 LLM 第 5 次的真实 reasoning
+    expect(r.decisions).toHaveLength(2);
+    for (const d of r.decisions) {
+      expect(d.action.type).toBe("wait");
+      expect(d.action.reasoning).toMatch(/本小时已走 5 步停在/);
+      expect(d.action.reasoning).toMatch(/第\d+次推理/);
+    }
+  });
+
   it("写入 agent_thoughts 时保留完整 reasoning 不截断", async () => {
     const longReason = "我反复纠结".repeat(60); // ≈ 300 字符，远超 80 字 memory 截断
     const decide = async ({ character }: { character: { id: string } }) => ({

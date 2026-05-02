@@ -141,6 +141,7 @@ describe("buildSystemPrompt", () => {
     const sys = buildSystemPrompt({
       character: baseCharacter,
       worldName: "测试世界",
+      nodes: [restaurant],
     });
     expect(sys).toContain("昼夜节律");
     expect(sys).toContain("生理优先级");
@@ -155,10 +156,77 @@ describe("buildSystemPrompt", () => {
     const sys = buildSystemPrompt({
       character: baseCharacter,
       worldName: "测试世界",
+      nodes: [restaurant],
     });
     // 不应出现裸数字格式（例如 "ei = +2" 或 "外向 = 50"）
     expect(sys).not.toMatch(/ei\s*=\s*[-+]?\d/);
     expect(sys).not.toMatch(/外向性\s*=/);
+  });
+
+  it("地图段渲染：节点带 [id]、父子缩进、★ 标注家、shortcut 单列", () => {
+    const town: MapNode = {
+      id: "node-town",
+      worldId: "w",
+      parentId: null,
+      name: "镇中心",
+      description: "",
+      tags: ["public"],
+      capacity: null,
+      privacy: "public",
+      visibleFromParent: true,
+      shortcuts: [],
+      isEntry: false,
+    };
+    const tavern: MapNode = {
+      id: "node-tavern",
+      worldId: "w",
+      parentId: "node-town",
+      name: "酒馆雪灯",
+      description: "",
+      tags: ["public", "dining"],
+      capacity: null,
+      privacy: "public",
+      visibleFromParent: true,
+      shortcuts: ["node-grocery"],
+      isEntry: false,
+    };
+    const grocery: MapNode = {
+      id: "node-grocery",
+      worldId: "w",
+      parentId: "node-town",
+      name: "杂货铺北之惠",
+      description: "",
+      tags: ["residence"],
+      capacity: null,
+      privacy: "private",
+      visibleFromParent: true,
+      shortcuts: [],
+      isEntry: false,
+    };
+    const sys = buildSystemPrompt({
+      character: { ...baseCharacter, homeNodeId: "node-grocery" },
+      worldName: "测试世界",
+      nodes: [town, tavern, grocery],
+    });
+    expect(sys).toContain("当前世界地图");
+    expect(sys).toContain("镇中心 [node-town]");
+    expect(sys).toContain("- 酒馆雪灯 [node-tavern]"); // 子节点
+    expect(sys).toContain("★ 你的家"); // homeNodeId 注释
+    expect(sys).toContain("特殊通道");
+    // tavern → grocery 是单向 shortcut（grocery 没有反向）
+    expect(sys).toContain("酒馆雪灯 [node-tavern] → 杂货铺北之惠 [node-grocery]");
+  });
+
+  it("地图段在角色自我认知之前（缓存友好：世界静态在前，角色信息在后）", () => {
+    const sys = buildSystemPrompt({
+      character: baseCharacter,
+      worldName: "测试世界",
+      nodes: [restaurant],
+    });
+    const mapIdx = sys.indexOf("当前世界地图");
+    const selfIdx = sys.indexOf("你的自我认知");
+    expect(mapIdx).toBeGreaterThan(0);
+    expect(selfIdx).toBeGreaterThan(mapIdx);
   });
 });
 

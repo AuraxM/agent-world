@@ -5,7 +5,7 @@ import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
 import { indexNodes } from "../_lib/world";
 
 const PERSONALITY_LABELS: Record<keyof Personality, string> = {
-  ei: "E/I",
+  ei: "I/E",
   sn: "N/S",
   tf: "F/T",
   jp: "P/J",
@@ -19,7 +19,7 @@ function PersonalityBar({ label, value }: { label: string; value: number }) {
   const fillStart = isNeg ? pct : 50;
   const fillEnd = isNeg ? 50 : pct;
   return (
-    <div className="flex items-center gap-2 text-[10px]">
+    <div className="flex items-center gap-2 text-game-xs">
       <span className="w-8 text-(--color-pixel-muted)">{label}</span>
       <div className="flex-1 h-2 bg-(--color-pixel-bg) border border-(--color-pixel-border-dark) relative">
         <div className="absolute inset-y-0 left-1/2 w-px bg-(--color-pixel-border-light)" />
@@ -53,7 +53,7 @@ export function ProfilePane({
   if (!character) {
     return (
       <div className="flex-1 min-h-0 flex items-center justify-center p-4">
-        <p className="text-xs text-(--color-pixel-muted) text-center max-w-xs leading-relaxed">
+        <p className="text-game-base text-(--color-pixel-muted) text-center max-w-xs leading-relaxed">
           点击左栏角色卡片或地图上的角色，
           <br />
           查看完整档案与上一轮思考。
@@ -81,11 +81,11 @@ export function ProfilePane({
           {NPC_EMOJI[character.id] ?? NPC_FALLBACK_EMOJI}
         </span>
         <div className="flex-1 min-w-0">
-          <div className="text-sm text-(--color-pixel-fg)">{character.name}</div>
+          <div className="text-game-lg text-(--color-pixel-fg)">{character.name}</div>
           <button
             type="button"
             onClick={() => onJumpToNode(character.locationId)}
-            className="text-[11px] text-(--color-pixel-accent) hover:underline"
+            className="text-game-sm text-(--color-pixel-accent) hover:underline"
           >
             @ {here?.name ?? character.locationId} ↗
           </button>
@@ -94,7 +94,7 @@ export function ProfilePane({
 
       {/* 上一轮思考 */}
       <section className="border-2 border-(--color-pixel-accent-dark) bg-(--color-pixel-bg-2) p-2 space-y-1">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-(--color-pixel-accent)">
+        <div className="flex items-center gap-2 text-game-xs uppercase tracking-widest text-(--color-pixel-accent)">
           <span>上一轮思考</span>
           {lastThought && (
             <>
@@ -103,7 +103,7 @@ export function ProfilePane({
               <span className="text-(--color-pixel-muted)">·</span>
               <span className="text-(--color-pixel-muted)">{lastThought.action.type}</span>
               <span
-                className="ml-auto px-1 text-[9px]"
+                className="ml-auto px-1 text-game-2xs"
                 style={{
                   background: lastThought.success
                     ? "var(--color-pixel-success)"
@@ -117,21 +117,21 @@ export function ProfilePane({
           )}
         </div>
         {!lastThought ? (
-          <p className="text-[11px] text-(--color-pixel-muted)">
+          <p className="text-game-sm text-(--color-pixel-muted)">
             还没有过决策（推进 1 小时后再来看）。
           </p>
         ) : (
           <>
             {lastThought.action.emotionTag && (
-              <div className="inline-block text-[10px] px-1 bg-(--color-pixel-accent) text-(--color-pixel-border-dark)">
+              <div className="inline-block text-game-xs px-1 bg-(--color-pixel-accent) text-(--color-pixel-border-dark)">
                 {lastThought.action.emotionTag}
               </div>
             )}
-            <div className="max-h-40 overflow-y-auto pixel-scroll text-[11px] leading-relaxed text-(--color-pixel-fg) whitespace-pre-wrap">
+            <div className="max-h-40 overflow-y-auto pixel-scroll text-game-sm leading-relaxed text-(--color-pixel-fg) whitespace-pre-wrap">
               {lastThought.action.reasoning}
             </div>
             {lastThought.action.freeText && (
-              <div className="text-[11px] text-(--color-pixel-muted) italic border-t border-(--color-pixel-border-dark) pt-1">
+              <div className="text-game-sm text-(--color-pixel-muted) italic border-t border-(--color-pixel-border-dark) pt-1">
                 &ldquo;{lastThought.action.freeText}&rdquo;
               </div>
             )}
@@ -141,7 +141,7 @@ export function ProfilePane({
 
       {/* 性格 */}
       <section>
-        <div className="text-[10px] uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+        <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
           性格
         </div>
         <div className="space-y-0.5">
@@ -155,10 +155,10 @@ export function ProfilePane({
 
       {/* 生理状态 */}
       <section>
-        <div className="text-[10px] uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+        <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
           生理
         </div>
-        <div className="text-[11px] text-(--color-pixel-fg) flex flex-wrap gap-x-3 gap-y-0.5">
+        <div className="text-game-sm text-(--color-pixel-fg) flex flex-wrap gap-x-3 gap-y-0.5">
           <span>饿 {character.vitals.hunger}</span>
           <span>累 {character.vitals.fatigue}</span>
           <span>脏 {character.vitals.hygiene}</span>
@@ -167,10 +167,10 @@ export function ProfilePane({
 
       {/* 情绪 */}
       <section>
-        <div className="text-[10px] uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+        <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
           情绪
         </div>
-        <div className="text-[11px] text-(--color-pixel-fg) flex flex-wrap gap-x-3 gap-y-0.5">
+        <div className="text-game-sm text-(--color-pixel-fg) flex flex-wrap gap-x-3 gap-y-0.5">
           <span>心情 {character.emotion.mood}</span>
           <span>压力 {character.emotion.stress}</span>
           <span>社交 {character.emotion.social_satiety}</span>
@@ -180,12 +180,12 @@ export function ProfilePane({
       {/* 关系 */}
       {topRelations.length > 0 && (
         <section>
-          <div className="text-[10px] uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+          <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
             关系
           </div>
           <ul className="space-y-1">
             {topRelations.map(([id, rel]) => (
-              <li key={id} className="text-[11px] flex gap-2 items-baseline">
+              <li key={id} className="text-game-sm flex gap-2 items-baseline">
                 <span className="text-(--color-pixel-fg) min-w-[60px]">
                   {charById.get(id)?.name ?? id}
                 </span>
@@ -213,12 +213,12 @@ export function ProfilePane({
       {/* 短期记忆 */}
       {recentMemories.length > 0 && (
         <section>
-          <div className="text-[10px] uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+          <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
             最近记忆
           </div>
           <ul className="space-y-1">
             {recentMemories.map((m) => (
-              <li key={m.id} className="text-[11px] text-(--color-pixel-fg) leading-snug">
+              <li key={m.id} className="text-game-sm text-(--color-pixel-fg) leading-snug">
                 <span className="text-(--color-pixel-muted)">t={m.tick}·★{m.importance}</span>{" "}
                 {m.content}
               </li>

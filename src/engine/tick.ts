@@ -6,7 +6,7 @@
  *   2. vitals 衰减 + emotion 演化 → 衍生 inner 事件
  *   3. 玩家排队的 pending 事件（Stage 1 暂为空）
  *   4. dispatchPerception → 谁看见了什么
- *   5. 对每个角色：
+ *   5. 对每个角色并发：
  *      a. 检查 ongoing action（睡觉/远途 move）：未完成且未被中断 → 自动 wait
  *      b. 否则进入 free-move 决策循环（cost=0 的 move 不结束本 tick，
  *         一次决策最多 5 步免费移动）
@@ -50,6 +50,8 @@ const ACQUAINTANCE_DECAY_TICKS = 336;
 
 export interface DecideInput {
   character: Character;
+  /** 全图节点（世界静态，不随 tick 变）；用于 system prompt 的拓扑渲染，让 LLM 能规划多步路径。 */
+  nodes: MapNode[];
   here: MapNode;
   companions: Character[];
   reachable: MapNode[];
@@ -65,6 +67,12 @@ export type DecideFn = (input: DecideInput) => Promise<Action>;
 export interface TickOptions {
   decide?: DecideFn;
   forceWait?: boolean;
+  /** 每个角色 LLM 决策完成时回调（用于 SSE 流式推送）。 */
+  onCharacterDecision?: (data: {
+    characterId: string;
+    characterName: string;
+    action: Action;
+  }) => void;
 }
 
 export interface TickResult {
@@ -160,183 +168,239 @@ export async function tick(
     : (options.decide ?? DEFAULT_DECIDE);
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
-  // 6. 处理每个角色（顺序，不能并行：free move 改 location 影响后续 perception 推断）
+  // 6. 角色决策（并发：各角色基于 tick 开始时快照独立决策，LLM 调用并行）
   const actionsForExecution: Action[] = [];
 
-  for (const c of characters) {
-    // 6a. 持续行动检查
-    if (c.currentAction && fromTick < c.currentAction.endsAt) {
-      const perceived = perceptions.get(c.id) ?? [];
-      const interrupt = perceived.find(
-        (e) => e.intensity >= c.currentAction!.interruptThreshold,
-      );
-      if (interrupt) {
-        // 中断：部分恢复 + 内心事件 + 进入正常决策流程
-        const halfDone = Math.floor(
-          (fromTick - c.currentAction.startedAt) / 2,
+  // 位置快照：并发任务间互不干扰
+  const locationSnapshot = new Map(characters.map((c) => [c.id, c.locationId]));
+
+  type DecisionTaskResult = {
+    characterId: string;
+    action: Action;
+    freeMoveEvents: WorldEvent[];
+    finalLocationId: string;
+  };
+
+  const decisionTasks: Promise<DecisionTaskResult>[] = characters.map(
+    async (c) => {
+      const freeMoveEvents: WorldEvent[] = [];
+
+      // 6a. 持续行动检查
+      if (c.currentAction && fromTick < c.currentAction.endsAt) {
+        const perceived = perceptions.get(c.id) ?? [];
+        const interrupt = perceived.find(
+          (e) => e.intensity >= c.currentAction!.interruptThreshold,
         );
-        if (c.currentAction.type === "sleep") {
-          c.vitals.fatigue = Math.max(0, c.vitals.fatigue - halfDone);
-        }
-        allEvents.push(
-          makeInnerEvent({
-            worldId,
-            tick: fromTick,
-            charId: c.id,
-            description: `被「${interrupt.description}」打断。`,
-            intensity: 2,
-          }),
-        );
-        c.currentAction = undefined;
-      } else {
-        // 仍在持续：自动 wait，不调用 LLM
-        if (fromTick % 4 === 0) {
-          allEvents.push(
+        if (interrupt) {
+          const halfDone = Math.floor(
+            (fromTick - c.currentAction.startedAt) / 2,
+          );
+          if (c.currentAction.type === "sleep") {
+            c.vitals.fatigue = Math.max(0, c.vitals.fatigue - halfDone);
+          }
+          freeMoveEvents.push(
             makeInnerEvent({
               worldId,
               tick: fromTick,
               charId: c.id,
-              description: `仍在 ${c.currentAction.description}。`,
+              description: `被「${interrupt.description}」打断。`,
+              intensity: 2,
             }),
           );
+          c.currentAction = undefined;
+        } else {
+          if (fromTick % 4 === 0) {
+            freeMoveEvents.push(
+              makeInnerEvent({
+                worldId,
+                tick: fromTick,
+                charId: c.id,
+                description: `仍在 ${c.currentAction.description}。`,
+              }),
+            );
+          }
+          const waitAction: Action = {
+            type: "wait",
+            actorId: c.id,
+            reasoning: `持续行动中：${c.currentAction.description}。`,
+            selfImportance: 1,
+          };
+          options.onCharacterDecision?.({
+            characterId: c.id,
+            characterName: c.name,
+            action: waitAction,
+          });
+          return {
+            characterId: c.id,
+            action: waitAction,
+            freeMoveEvents,
+            finalLocationId: locationSnapshot.get(c.id)!,
+          };
         }
-        const waitAction: Action = {
-          type: "wait",
-          actorId: c.id,
-          reasoning: `持续行动中：${c.currentAction.description}。`,
-          selfImportance: 1,
-        };
+      }
+
+      // 6b. ongoing action 到期：结算效果
+      if (c.currentAction && fromTick === c.currentAction.endsAt) {
+        if (c.currentAction.type === "sleep") {
+          c.vitals.fatigue = 0;
+        }
+        c.currentAction = undefined;
+      }
+
+      // 6c. free move 链（隔离：用局部 location 变量，不污染其他角色视图）
+      let currentLoc = locationSnapshot.get(c.id)!;
+      const localLocationMap = new Map(locationSnapshot);
+      let freeMovesUsed = 0;
+      let action: Action;
+
+      while (true) {
+        localLocationMap.set(c.id, currentLoc);
+        const ctx = buildActionContext(c, nodes, characters, localLocationMap);
+        const recentThoughts = loadRecentThoughts(worldId, c.id, sinceTick);
+        const homeNodeId = homeMap.get(c.id) ?? null;
+        c.homeNodeId = homeNodeId;
+        const facts = deriveAggregatedFacts({
+          character: c,
+          nodes,
+          currentTick: fromTick,
+          recentThoughts,
+          homeNodeId,
+        });
+        const opts = getAvailableActions(ctx, {
+          facts,
+          isSleepHour: dayInfo.isSleepHour,
+        });
+
+        try {
+          action = await decideFn({
+            character: c,
+            nodes,
+            here: ctx.here,
+            companions: ctx.companions,
+            reachable: ctx.reachable,
+            perceived: perceptions.get(c.id) ?? [],
+            options: opts,
+            worldName: world.name,
+            tick: fromTick,
+            facts,
+          });
+        } catch (err) {
+          action = fallbackWait(c);
+          action.reasoning = `LLM 调用失败：${
+            err instanceof Error ? err.message : String(err)
+          }`;
+        }
+
+        if (action.type !== "move" || !action.targetNodeId) break;
+
+        const targetNode = nodeById.get(action.targetNodeId);
+        const isShortcut = ctx.here.shortcuts.includes(action.targetNodeId);
+        const cost = isShortcut ? 0 : (targetNode?.travelCost ?? 0);
+
+        if (cost > 0) {
+          c.currentAction = {
+            type: "move",
+            startedAt: fromTick,
+            endsAt: fromTick + cost,
+            description: `前往 ${targetNode?.name ?? action.targetNodeId} 途中`,
+            interruptThreshold: 5,
+          };
+          action = {
+            type: "wait",
+            actorId: c.id,
+            reasoning: `开始前往 ${targetNode?.name ?? action.targetNodeId}，途中需 ${cost} 小时。`,
+            selfImportance: action.selfImportance,
+          };
+          break;
+        }
+
+        // 应用免费 move
+        const fromNode = ctx.here;
+        const stoppedAt = targetNode?.name ?? action.targetNodeId;
+        currentLoc = action.targetNodeId;
+        freeMovesUsed++;
+        freeMoveEvents.push({
+          id: `evt-${randomUUID().slice(0, 8)}`,
+          worldId,
+          tick: fromTick,
+          category: "action",
+          description: `${c.name} 从 ${fromNode.name} 来到 ${stoppedAt}。`,
+          participants: [c.id],
+          source: "actor",
+          intensity: 1,
+          scope: "node",
+          nodeId: currentLoc,
+          duration: 1,
+        });
+
+        // 用完配额：保留刚才那次 move 的 reasoning，不再调用 LLM 第 N+1 次。
+        if (freeMovesUsed >= MAX_FREE_MOVES) {
+          freeMoveEvents.push(
+            makeInnerEvent({
+              worldId,
+              tick: fromTick,
+              charId: c.id,
+              description: `走到 ${stoppedAt} 时本小时已尽，先停下喘口气。`,
+            }),
+          );
+          action = {
+            type: "wait",
+            actorId: c.id,
+            reasoning: `本小时已走 ${MAX_FREE_MOVES} 步停在 ${stoppedAt}。${action.reasoning}`,
+            selfImportance: action.selfImportance,
+          };
+          break;
+        }
+      }
+
+      // 回调通知（在每个角色 LLM 调用完成后立即推送，不等其他角色）
+      options.onCharacterDecision?.({
+        characterId: c.id,
+        characterName: c.name,
+        action,
+      });
+
+      return {
+        characterId: c.id,
+        action,
+        freeMoveEvents,
+        finalLocationId: currentLoc,
+      };
+    },
+  );
+
+  // 收集结果（每个完成时回调，用于 SSE 流式推送）
+  const settled = await Promise.allSettled(decisionTasks);
+  for (const result of settled) {
+    if (result.status === "fulfilled") {
+      const { characterId, action, freeMoveEvents, finalLocationId } =
+        result.value;
+      const c = characters.find((ch) => ch.id === characterId);
+      if (c) c.locationId = finalLocationId;
+      allEvents.push(...freeMoveEvents);
+      actionsForExecution.push(action);
+      allDecisions.push({ characterId, action, success: true });
+    } else {
+      const errMsg =
+        result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason);
+      const idx = settled.indexOf(result);
+      const c = characters[idx];
+      if (c) {
+        const waitAction = fallbackWait(c);
+        waitAction.reasoning = `决策任务异常：${errMsg}`;
         actionsForExecution.push(waitAction);
         allDecisions.push({
           characterId: c.id,
           action: waitAction,
-          success: true,
+          success: false,
         });
-        continue;
       }
     }
-
-    // 6b. ongoing action 到期：先结算最终效果，再让 LLM 自由决策
-    if (c.currentAction && fromTick === c.currentAction.endsAt) {
-      if (c.currentAction.type === "sleep") {
-        c.vitals.fatigue = 0;
-      }
-      c.currentAction = undefined;
-    }
-
-    // 6c. free move 链
-    let freeMovesUsed = 0;
-    let action: Action;
-
-    while (true) {
-      const ctx = buildActionContext(c, nodes, characters);
-      const recentThoughts = loadRecentThoughts(worldId, c.id, sinceTick);
-      const homeNodeId = homeMap.get(c.id) ?? null;
-      c.homeNodeId = homeNodeId;
-      const facts = deriveAggregatedFacts({
-        character: c,
-        nodes,
-        currentTick: fromTick,
-        recentThoughts,
-        homeNodeId,
-      });
-      const opts = getAvailableActions(ctx, {
-        facts,
-        isSleepHour: dayInfo.isSleepHour,
-      });
-
-      try {
-        action = await decideFn({
-          character: c,
-          here: ctx.here,
-          companions: ctx.companions,
-          reachable: ctx.reachable,
-          perceived: perceptions.get(c.id) ?? [],
-          options: opts,
-          worldName: world.name,
-          tick: fromTick,
-          facts,
-        });
-      } catch (err) {
-        action = fallbackWait(c);
-        action.reasoning = `LLM 调用失败：${
-          err instanceof Error ? err.message : String(err)
-        }`;
-      }
-
-      if (action.type !== "move" || !action.targetNodeId) break;
-
-      const targetNode = nodeById.get(action.targetNodeId);
-      const isShortcut = ctx.here.shortcuts.includes(action.targetNodeId);
-      const cost = isShortcut ? 0 : (targetNode?.travelCost ?? 0);
-
-      if (cost > 0) {
-        // 远途 move：占位 ongoing，本 tick 不再决策（execute 不会真正搬位）
-        c.currentAction = {
-          type: "move",
-          startedAt: fromTick,
-          endsAt: fromTick + cost,
-          description: `前往 ${targetNode?.name ?? action.targetNodeId} 途中`,
-          interruptThreshold: 5,
-        };
-        // 远途：将 action 转成 wait 让本 tick 不真的发生瞬移
-        action = {
-          type: "wait",
-          actorId: c.id,
-          reasoning: `开始前往 ${targetNode?.name ?? action.targetNodeId}，途中需 ${cost} 小时。`,
-          selfImportance: action.selfImportance,
-        };
-        break;
-      }
-
-      if (freeMovesUsed >= MAX_FREE_MOVES) {
-        allEvents.push(
-          makeInnerEvent({
-            worldId,
-            tick: fromTick,
-            charId: c.id,
-            description: "想继续走但只能停下想想。",
-          }),
-        );
-        // 转成 wait 结束本轮
-        action = {
-          type: "wait",
-          actorId: c.id,
-          reasoning: "本 tick 已用完免费移动配额。",
-          selfImportance: 1,
-        };
-        break;
-      }
-
-      // 应用免费 move：直接搬位 + 抛事件
-      const fromNode = ctx.here;
-      c.locationId = action.targetNodeId;
-      freeMovesUsed++;
-      allEvents.push({
-        id: `evt-${randomUUID().slice(0, 8)}`,
-        worldId,
-        tick: fromTick,
-        category: "action",
-        description: `${c.name} 从 ${fromNode.name} 来到 ${targetNode?.name ?? action.targetNodeId}。`,
-        participants: [c.id],
-        source: "actor",
-        intensity: 1,
-        scope: "node",
-        nodeId: c.locationId,
-        duration: 1,
-      });
-    }
-
-    actionsForExecution.push(action);
-    allDecisions.push({
-      characterId: c.id,
-      action,
-      success: true,
-    });
   }
 
   // 7. 执行（move 已在 free-move 循环里处理；execute 内部的 move 分支保留兼容）
-  // 仅把"非 move（或带 cost 的 move 已被改写为 wait）"喂进去
   const execResult = executeActions({
     worldId,
     tick: fromTick,
@@ -403,7 +467,6 @@ function manageRelations(
   tick: number,
   events: WorldEvent[],
 ): void {
-  // 同节点角色两两间是否本 tick 有互动事件
   const byNode = new Map<string, Character[]>();
   for (const c of characters) {
     const arr = byNode.get(c.locationId) ?? [];
@@ -465,10 +528,6 @@ function ensureAcquaintance(
     a.relations[bId] = fresh;
   } else {
     rel.lastInteractionTick = tick;
-    if (!rel.kinds.includes("acquaintance")) {
-      // 已有 friend / partner 等更强关系时不重复加 acquaintance
-      // （仅在没有任何"熟人级别"关系时才加；这里简化为：始终不重复加）
-    }
   }
 }
 

@@ -56,16 +56,16 @@ export const ActionToolInputSchema = {
     free_text: {
       type: "string",
       description:
-        "自由文本（说话内容、行动具体描述）。speak 必填；其它行动选填。",
+        "自由文本（说话内容、行动具体描述）。speak 必填；其它行动选填。必须使用简体中文。",
     },
     reasoning: {
       type: "string",
       description:
-        "内心独白。必须显式引用一项你的性格特征（用文字描述，不要写数值）。",
+        "内心独白。必须显式引用一项你的性格特征（用文字描述，不要写数值）。必须使用简体中文。",
     },
     emotion_tag: {
       type: "string",
-      description: "短情绪标签，例如 nervous / curious / annoyed。",
+      description: "短情绪标签，必须使用简体中文，例如 紧张 / 好奇 / 烦躁。",
     },
     self_importance: {
       type: "integer",

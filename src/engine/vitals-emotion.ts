@@ -158,6 +158,15 @@ export function decayVitals(input: VitalsDecayInput): WorldEvent[] {
   const isEven = tick % 2 === 0;
 
   for (const c of characters) {
+    // 睡眠期间 vitals 冻结：既不衰减也不触发饥饿/疲劳/卫生提醒，
+    // 醒来当 tick（fromTick === endsAt）恢复正常衰减。
+    if (
+      c.currentAction?.type === "sleep" &&
+      tick < c.currentAction.endsAt
+    ) {
+      continue;
+    }
+
     const prevHunger = c.vitals.hunger;
     const prevFatigue = c.vitals.fatigue;
     const prevHygiene = c.vitals.hygiene;

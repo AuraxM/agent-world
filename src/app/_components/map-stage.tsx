@@ -119,7 +119,7 @@ export function MapStage({
     <PixelFrame title="场景" className="flex flex-col h-full min-h-0 overflow-hidden">
       <nav
         aria-label="breadcrumb"
-        className="flex items-center gap-1 px-3 py-1 text-xs text-(--color-pixel-muted) border-b border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2) overflow-x-auto"
+        className="flex items-center gap-1 px-3 py-1 text-game-xs text-(--color-pixel-muted) border-b border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2) overflow-x-auto"
       >
         {path.map((n, i) => (
           <span key={n.id} className="flex items-center gap-1 whitespace-nowrap">
@@ -146,7 +146,7 @@ export function MapStage({
         >
           {children.length === 0 ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
-              <p className="text-xs text-(--color-pixel-muted) max-w-xs leading-relaxed">
+              <p className="text-game-base text-(--color-pixel-muted) max-w-xs leading-relaxed">
                 {current?.description || "（这是一个叶子节点）"}
               </p>
               <div className="flex flex-wrap gap-2 justify-center">
@@ -159,7 +159,7 @@ export function MapStage({
                   />
                 ))}
                 {npcsHere.length === 0 && (
-                  <span className="text-[10px] text-(--color-pixel-muted)">空无一人</span>
+                  <span className="text-game-xs text-(--color-pixel-muted)">空无一人</span>
                 )}
               </div>
             </div>
@@ -179,21 +179,19 @@ export function MapStage({
                   style={style}
                   title={child.description}
                 >
-                  <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[10px] tracking-widest text-(--color-pixel-border-dark) drop-shadow-[0_1px_0_var(--color-pixel-fg)] px-1">
+                  <header className="node-tile__header">
                     {child.name}
-                  </span>
-                  {here.length > 0 && (
-                    <div className="absolute inset-x-0 bottom-1 flex flex-wrap gap-0.5 justify-center">
-                      {here.map((c) => (
-                        <NpcSprite
-                          key={c.id}
-                          c={c}
-                          selected={c.id === selectedCharacterId}
-                          onClick={() => onSelectCharacter(c)}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  </header>
+                  <div className="node-tile__body pixel-scroll">
+                    {here.map((c) => (
+                      <NpcSprite
+                        key={c.id}
+                        c={c}
+                        selected={c.id === selectedCharacterId}
+                        onClick={() => onSelectCharacter(c)}
+                      />
+                    ))}
+                  </div>
                 </button>
               );
             })
@@ -202,7 +200,7 @@ export function MapStage({
           {/* 当前节点本身的 NPC（在子节点之外，例如小镇主街）*/}
           {children.length > 0 && npcsHere.length > 0 && (
             <div className="absolute inset-x-0 bottom-0 px-2 py-1 flex flex-wrap gap-1 justify-end bg-(--color-pixel-bg)/70 backdrop-blur-[1px] border-t border-(--color-pixel-border-dark)">
-              <span className="text-[10px] text-(--color-pixel-muted) self-center mr-1">街上：</span>
+              <span className="text-game-xs text-(--color-pixel-muted) self-center mr-1">街上：</span>
               {npcsHere.map((c) => (
                 <NpcSprite
                   key={c.id}

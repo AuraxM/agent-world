@@ -55,3 +55,6 @@ next-env.d.ts
 
 # git worktrees
 /.worktrees/
+
+# superpowers session artifacts (per-developer)
+/.superpowers/

@@ -1,0 +1,29 @@
+{
+  "id": "char-genjo",
+  "name": "玄丈",
+  "avatar": "🧙",
+  "homeNodeId": "node-wizard-tower",
+  "personality": {
+    "ei": -3,
+    "sn": -3,
+    "tf": 2,
+    "jp": 2
+  },
+  "abilities": [],
+  "relations": {
+    "char-saito-ishi": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "村医的眼睛能看见我那些古书看不见的东西——身体的简单道理。"
+    },
+    "char-kimura-fumiko": {
+      "kinds": ["friend"],
+      "affection": 3,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "她替我的旧书续命——文库就是我的第二座塔。"
+    }
+  }
+}

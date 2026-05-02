@@ -1,0 +1,29 @@
+{
+  "id": "char-suzuki-kotone",
+  "name": "铃木琴音",
+  "avatar": "🎨",
+  "homeNodeId": "node-ranch-house",
+  "personality": {
+    "ei": -3,
+    "sn": -2,
+    "tf": -3,
+    "jp": -2
+  },
+  "abilities": [],
+  "relations": {
+    "char-suzuki-misaki": {
+      "kinds": ["mother"],
+      "affection": 3,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "她总笑得很大声，是为了不让我看见她哭过。我都知道。"
+    },
+    "char-tanaka-yota": {
+      "kinds": ["friend"],
+      "affection": 3,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "他说话时眼睛里有齿轮在转——我画里画不出那种光。"
+    }
+  }
+}

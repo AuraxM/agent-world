@@ -45,11 +45,14 @@ export function buildActionContext(
   character: Character,
   nodes: MapNode[],
   characters: Character[],
+  /** 并发 tick 时传入各角色的位置快照；不传则读 character.locationId */
+  locationOverrides?: ReadonlyMap<string, string>,
 ): ActionContext {
-  const here = nodes.find((n) => n.id === character.locationId);
+  const loc = locationOverrides?.get(character.id) ?? character.locationId;
+  const here = nodes.find((n) => n.id === loc);
   if (!here) {
     throw new Error(
-      `character ${character.id} located at unknown node ${character.locationId}`,
+      `character ${character.id} located at unknown node ${loc}`,
     );
   }
   const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -71,7 +74,9 @@ export function buildActionContext(
   }
 
   const companions = characters.filter(
-    (c) => c.id !== character.id && c.locationId === here.id,
+    (c) =>
+      c.id !== character.id &&
+      (locationOverrides?.get(c.id) ?? c.locationId) === loc,
   );
   return { self: character, here, companions, reachable };
 }

@@ -96,6 +96,52 @@ describe("decayVitals", () => {
     const inner = evs.find((e) => /洗浴|脏/.test(e.description));
     expect(inner).toBeTruthy();
   });
+
+  it("睡眠期间 vitals 冻结，不衰减也不触发提醒", () => {
+    const c = mkChar("a", { hunger: 9, fatigue: 5, hygiene: 12 });
+    c.currentAction = {
+      type: "sleep",
+      startedAt: 0,
+      endsAt: 8,
+      description: "在家睡觉",
+      interruptThreshold: 5,
+    };
+    const evs = decayVitals({ characters: [c], worldId: "w", tick: 4 });
+    expect(c.vitals.hunger).toBe(9);
+    expect(c.vitals.fatigue).toBe(5);
+    expect(c.vitals.hygiene).toBe(12);
+    expect(evs).toHaveLength(0);
+  });
+
+  it("醒来当 tick（tick === endsAt）恢复正常衰减", () => {
+    const c = mkChar("a", { hunger: 5, fatigue: 5, hygiene: 5 });
+    c.currentAction = {
+      type: "sleep",
+      startedAt: 0,
+      endsAt: 8,
+      description: "在家睡觉",
+      interruptThreshold: 5,
+    };
+    decayVitals({ characters: [c], worldId: "w", tick: 8 });
+    expect(c.vitals.hunger).toBe(6);
+    expect(c.vitals.fatigue).toBe(6);
+    expect(c.vitals.hygiene).toBe(6); // tick=8 偶数
+  });
+
+  it("非睡眠的 ongoing action（如 move）vitals 正常衰减", () => {
+    const c = mkChar("a", { hunger: 5, fatigue: 5, hygiene: 5 });
+    c.currentAction = {
+      type: "move",
+      startedAt: 0,
+      endsAt: 4,
+      description: "前往车站",
+      interruptThreshold: 5,
+    };
+    decayVitals({ characters: [c], worldId: "w", tick: 2 });
+    expect(c.vitals.hunger).toBe(6);
+    expect(c.vitals.fatigue).toBe(6);
+    expect(c.vitals.hygiene).toBe(6);
+  });
 });
 
 describe("evolveEmotions", () => {

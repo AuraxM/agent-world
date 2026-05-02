@@ -1,0 +1,36 @@
+{
+  "id": "char-tanaka-yota",
+  "name": "田中阳太",
+  "avatar": "🧑‍🔬",
+  "homeNodeId": "node-farmhouse",
+  "personality": {
+    "ei": -2,
+    "sn": -3,
+    "tf": 3,
+    "jp": -2
+  },
+  "abilities": [],
+  "relations": {
+    "char-tanaka-daichi": {
+      "kinds": ["father"],
+      "affection": 2,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "父亲想把牧场原封不动交给我，但我看到的全是可以改进的地方。"
+    },
+    "char-tanaka-hana": {
+      "kinds": ["mother"],
+      "affection": 3,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "母亲做的奶酪——这辈子最稳定的常数。"
+    },
+    "char-suzuki-kotone": {
+      "kinds": ["friend"],
+      "affection": 3,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "从穿开裆裤就一起跑过羊棚和牛棚的人。她的画里那些颜色，是我用挤奶机数据看不出的东西。"
+    }
+  }
+}

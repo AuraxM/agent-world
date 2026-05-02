@@ -1,0 +1,22 @@
+{
+  "id": "char-takahashi-tetsuya",
+  "name": "高桥铁也",
+  "avatar": "⚒️",
+  "homeNodeId": "node-blacksmith",
+  "personality": {
+    "ei": -2,
+    "sn": 3,
+    "tf": 2,
+    "jp": -2
+  },
+  "abilities": [],
+  "relations": {
+    "char-nakamura-shizuka": {
+      "kinds": ["friend"],
+      "affection": 3,
+      "since": 0,
+      "lastInteractionTick": 0,
+      "note": "她的话能压过我炉子的风声——这本身就是种本事。"
+    }
+  }
+}

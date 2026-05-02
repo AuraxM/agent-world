@@ -1,21 +1,19 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useViewState } from "../_hooks/use-view-state";
 import { useWorldState } from "../_hooks/use-world-state";
+import { useFollow } from "../_hooks/use-follow";
 import { findRootNode } from "../_lib/world";
-import { CharacterRail } from "./character-rail";
-import { EventsPane } from "./events-pane";
-import { MapStage } from "./map-stage";
-import { PixelFrame } from "./pixel-frame";
-import { ProfilePane } from "./profile-pane";
 import { TopBar } from "./top-bar";
+import { TickBar } from "./tick-bar";
 
 export function Dashboard() {
   const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto, templates, placeCharacter } = useWorldState();
   const view = useViewState();
+  const { followingId, follow, clear: clearFollow, isFollowing } = useFollow();
+  const [injectOpen, setInjectOpen] = useState(false);
 
-  // 第一次 snapshot 到位时初始化 currentNode 为根节点
   useEffect(() => {
     if (!snapshot) return;
     const root = findRootNode(snapshot.nodes);
@@ -27,71 +25,106 @@ export function Dashboard() {
     return snapshot.characters.find((c) => c.id === view.selectedCharacterId) ?? null;
   }, [snapshot, view.selectedCharacterId]);
 
+  const followingCharacter = useMemo(() => {
+    if (!snapshot || !followingId) return null;
+    return snapshot.characters.find((c) => c.id === followingId) ?? null;
+  }, [snapshot, followingId]);
+
+  // keyboard shortcut for inject drawer
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "E" || e.key === "e") {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        e.preventDefault();
+        setInjectOpen((prev) => !prev);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <TopBar
         tick={snapshot?.world.currentTick ?? 0}
         worldName={snapshot?.world.name ?? "加载中…"}
-        loading={loading}
-        onAdvance={() => void advance()}
-        lastTickMs={lastTickMs}
-        tickProgress={tickProgress}
-        error={error}
-        autoMode={autoMode}
-        onStartAuto={() => void startAuto()}
-        onStopAuto={stopAuto}
+        currentNodeId={view.currentNodeId}
+        nodes={snapshot?.nodes ?? []}
+        followingName={followingCharacter?.name ?? null}
+        onJumpToNode={view.setCurrentNode}
+        onClearFollow={clearFollow}
       />
+
       {!snapshot || !view.currentNodeId ? (
-        <div className="flex-1 flex items-center justify-center text-(--color-pixel-muted) text-game-lg">
+        <div className="flex-1 flex items-center justify-center text-(--text-on-frame-muted) text-body-lg">
           {error ? `加载失败：${error}` : loading ? "加载中…" : "无数据"}
         </div>
       ) : (
-        <main className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[480px_1fr_360px] grid-rows-[minmax(0,1fr)] gap-2 p-2 overflow-hidden">
-          {/* 左列：角色列表 + 角色档案 */}
-          <div className="min-h-0 min-w-0 overflow-hidden flex flex-col gap-2">
-            <div className="flex-[0_0_45%] min-h-0 overflow-hidden">
-              <CharacterRail
-                characters={snapshot.characters}
-                nodes={snapshot.nodes}
-                selectedId={view.selectedCharacterId}
-                onSelect={(c) => view.selectCharacter(c.id, c.locationId)}
-                templates={templates}
-                onPlace={placeCharacter}
-                disabled={loading || autoMode?.running || false}
-              />
+        <div
+          className="flex-1 min-h-0 grid gap-0 overflow-hidden"
+          style={{
+            gridTemplateColumns: "200px 1fr 360px",
+            gridTemplateRows: "1fr 56px",
+            gridTemplateAreas: `
+              "tree stream right"
+              "bottom bottom bottom"
+            `,
+            minWidth: 1200,
+          }}
+        >
+          {/* Left: Tree sidebar (placeholder — Task 9) */}
+          <div style={{ gridArea: "tree" }} className="min-h-0 min-w-0 overflow-hidden bg-(--frame-2) border-r-2 border-(--border)">
+            <div className="flex items-center justify-center h-full text-body-sm text-(--text-on-frame-muted)">
+              {/* TODO: TreeSidebar (Task 9) — 200px */}
+              地图树 (Task 9)
             </div>
-            <PixelFrame
-              title="角色档案"
-              className="flex flex-col flex-1 min-h-0 overflow-hidden"
-            >
-              <ProfilePane
-                character={selectedCharacter}
-                nodes={snapshot.nodes}
-                onJumpToNode={view.setCurrentNode}
-                characters={snapshot.characters}
-              />
-            </PixelFrame>
           </div>
-          <div className="min-h-0 min-w-0 overflow-hidden">
-            <MapStage
-              nodes={snapshot.nodes}
-              characters={snapshot.characters}
-              currentNodeId={view.currentNodeId}
-              selectedCharacterId={view.selectedCharacterId}
-              onEnterNode={view.setCurrentNode}
-              onSelectCharacter={(c) => view.selectCharacter(c.id)}
+
+          {/* Center: Event stream (placeholder — Task 11) */}
+          <div style={{ gridArea: "stream" }} className="min-h-0 min-w-0 overflow-hidden bg-(--frame)">
+            <div className="flex items-center justify-center h-full text-body-sm text-(--text-on-frame-muted)">
+              {/* TODO: EventStream (Task 11) */}
+              事件流主体 (Task 11)
+            </div>
+          </div>
+
+          {/* Right: minimap + character profile (placeholder — Tasks 12-13) */}
+          <div style={{ gridArea: "right" }} className="min-h-0 min-w-0 overflow-hidden flex flex-col bg-(--frame-2) border-l-2 border-(--border)">
+            <div className="flex-[0_0_220px] flex items-center justify-center border-b-2 border-(--border) text-body-sm text-(--text-on-frame-muted)">
+              小地图 (Task 12)
+            </div>
+            <div className="flex-1 flex items-center justify-center text-body-sm text-(--text-on-frame-muted)">
+              角色档案 (Task 13)
+            </div>
+          </div>
+
+          {/* Bottom: Tick bar */}
+          <div style={{ gridArea: "bottom" }}>
+            <TickBar
+              tick={snapshot.world.currentTick}
+              loading={loading}
+              onAdvance={() => void advance()}
+              autoMode={autoMode}
+              onStartAuto={() => void startAuto()}
+              onStopAuto={stopAuto}
+              lastTickMs={lastTickMs}
+              tickProgress={tickProgress}
+              onOpenInject={() => setInjectOpen(true)}
             />
           </div>
-          {/* 右列：事件流 */}
-          <div className="min-h-0 min-w-0 overflow-hidden">
-            <PixelFrame
-              title="事件流（新→旧）"
-              className="flex flex-col h-full min-h-0 overflow-hidden"
-            >
-              <EventsPane events={events} characters={snapshot.characters} />
-            </PixelFrame>
+        </div>
+      )}
+
+      {/* Inject drawer placeholder (Task 14) */}
+      {injectOpen && (
+        <>
+          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setInjectOpen(false)} />
+          <div className="fixed top-0 right-0 bottom-0 w-[420px] z-50 bg-(--panel) border-l-2 border-(--border) flex items-center justify-center text-body-sm text-(--text-muted)">
+            投放事件 (Task 14)
+            <button onClick={() => setInjectOpen(false)} className="absolute top-3 right-3 cursor-pointer">✕</button>
           </div>
-        </main>
+        </>
       )}
     </div>
   );

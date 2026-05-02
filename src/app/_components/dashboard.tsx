@@ -12,7 +12,7 @@ import { ProfilePane } from "./profile-pane";
 import { TopBar } from "./top-bar";
 
 export function Dashboard() {
-  const { snapshot, events, loading, error, lastTickMs, tickProgress, advance } = useWorldState();
+  const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto } = useWorldState();
   const view = useViewState();
 
   // 第一次 snapshot 到位时初始化 currentNode 为根节点
@@ -37,6 +37,9 @@ export function Dashboard() {
         lastTickMs={lastTickMs}
         tickProgress={tickProgress}
         error={error}
+        autoMode={autoMode}
+        onStartAuto={() => void startAuto()}
+        onStopAuto={stopAuto}
       />
       {!snapshot || !view.currentNodeId ? (
         <div className="flex-1 flex items-center justify-center text-(--color-pixel-muted) text-game-lg">

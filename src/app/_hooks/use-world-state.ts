@@ -35,7 +35,10 @@ export interface UseWorldState {
   /** 最近一次 tick 中已完成的角色决策数 / 总角色数 */
   tickProgress: { done: number; total: number } | null;
   refresh: () => Promise<void>;
-  advance: () => Promise<void>;
+  advance: () => Promise<boolean>;
+  autoMode: { running: boolean; total: number; done: number } | null;
+  startAuto: (n?: number) => Promise<void>;
+  stopAuto: () => void;
 }
 
 export function useWorldState(): UseWorldState {
@@ -51,6 +54,12 @@ export function useWorldState(): UseWorldState {
     total: number;
   } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [autoMode, setAutoMode] = useState<{
+    running: boolean;
+    total: number;
+    done: number;
+  } | null>(null);
+  const shouldStopRef = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -78,7 +87,7 @@ export function useWorldState(): UseWorldState {
     });
   }, [refresh]);
 
-  const advance = useCallback(async () => {
+  const advance = useCallback(async (): Promise<boolean> => {
     // 取消上一次还在进行中的请求
     abortRef.current?.abort();
     const abort = new AbortController();
@@ -182,13 +191,39 @@ export function useWorldState(): UseWorldState {
         // 用服务端权威数据做一次全量刷新
         await refresh();
       }
+      return tickDone;
     } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
+      if (e instanceof DOMException && e.name === "AbortError") return false;
       setError(e instanceof Error ? e.message : String(e));
       setLoading(false);
       setTickProgress(null);
+      return false;
     }
   }, [refresh, worldId, snapshot?.characters.length]);
+
+  const startAuto = useCallback(
+    async (n: number = 24) => {
+      if (loading || autoMode?.running) return;
+      shouldStopRef.current = false;
+      setAutoMode({ running: true, total: n, done: 0 });
+      try {
+        for (let i = 0; i < n; i++) {
+          if (shouldStopRef.current) break;
+          const ok = await advance();
+          if (!ok) break;
+          setAutoMode((prev) => (prev ? { ...prev, done: prev.done + 1 } : prev));
+        }
+      } finally {
+        shouldStopRef.current = false;
+        setAutoMode(null);
+      }
+    },
+    [advance, loading, autoMode],
+  );
+
+  const stopAuto = useCallback(() => {
+    shouldStopRef.current = true;
+  }, []);
 
   return {
     snapshot,
@@ -199,5 +234,8 @@ export function useWorldState(): UseWorldState {
     tickProgress,
     refresh,
     advance,
+    autoMode,
+    startAuto,
+    stopAuto,
   };
 }

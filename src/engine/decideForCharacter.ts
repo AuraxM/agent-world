@@ -24,7 +24,7 @@ import {
   loadWorld,
   saveWorld,
 } from "./store";
-import { getLanguage } from "./settings";
+import { getLanguage, getThinkingEnabled } from "./settings";
 import { db, schema } from "@/db/client";
 import { loadAllCharacters } from "@/config/loader";
 import { buildSystemPrompt, buildUserPrompt, timeOfDay } from "@/llm/prompt";
@@ -67,6 +67,7 @@ function buildHomeMap(): Map<string, string> {
  * 注：events_log 表把整个 WorldEvent 序列化进 payload_json 列；这里直接解出。
  */
 function loadEventsAtTick(worldId: string, tick: number): WorldEvent[] {
+  // 单 tick 过滤，事件之间无内在顺序，故省略 orderBy；perception 不依赖排序。
   const rows = db
     .select()
     .from(schema.eventsLog)
@@ -141,7 +142,6 @@ export async function decideForCharacter(
           ActionSchema,
           ActionToolInputSchema,
         } = await import("@/domain/schemas");
-        const { getThinkingEnabled } = await import("./settings");
         const OpenAI = (await import("openai")).default;
 
         const system = buildSystemPrompt({

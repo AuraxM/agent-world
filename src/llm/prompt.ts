@@ -15,6 +15,7 @@ import { BLOOD_RELATION_KINDS } from "@/domain/enums";
 import type { AggregatedFacts } from "@/engine/facts";
 import type {
   Character,
+  DialogTurn,
   Emotion,
   MapNode,
   Memory,
@@ -635,6 +636,175 @@ function characterBlock(
       : "- 能力：（无值得一提的特殊能力）",
   );
   return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// dialog prompt builders
+// ---------------------------------------------------------------------------
+
+/**
+ * 接受/拒绝决策 prompt。
+ * B 看到 A 的开场白（freeText），决定是否接茬。
+ * A 的 reasoning 不可见（仅 freeText 暴露给对方）。
+ */
+export function buildAcceptDecisionPrompt(args: {
+  self: Character;
+  requesterName: string;
+  freeText: string;
+  here: MapNode;
+  perceived: WorldEvent[];
+  companions: Character[];
+  tick: number;
+  language?: Language;
+}): string {
+  const { self, requesterName, freeText, here, perceived, companions, tick } = args;
+  const language = args.language ?? "zh";
+  const t = timeOfDay(tick, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW);
+  const fatigue = qualifyVital(self.vitals.fatigue, "fatigue");
+  const hunger = qualifyVital(self.vitals.hunger, "hunger");
+
+  const lines: string[] = [];
+
+  lines.push(`${requesterName} 想和你说话："${freeText}"`);
+  lines.push("");
+  lines.push(`你当前的状态：`);
+  lines.push(`- 时间：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}）`);
+  lines.push(`- 在 ${here.name}`);
+  lines.push(`- 疲惫：${fatigue.phrase}`);
+  lines.push(`- 饥饿：${hunger.phrase}`);
+  lines.push(`- 心情：${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
+  lines.push(`- 压力：${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
+  lines.push(`- 社交满足：${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
+  lines.push("");
+
+  lines.push("你的性格特征：");
+  for (const s of describePersonality(self.personality)) {
+    lines.push(`- ${s}`);
+  }
+  lines.push("");
+
+  // B 当前感知（如果有）
+  if (perceived.length > 0) {
+    lines.push("你刚刚感知到的事件：");
+    lines.push(describeEvents(perceived));
+    lines.push("");
+  }
+
+  // 同节点其他人（如果有）
+  if (companions.length > 0) {
+    const topPeers = selectTopPeers(self, companions, tick);
+    lines.push("同节点其他人：");
+    lines.push(describeRelations(self, topPeers, tick));
+    lines.push("");
+  }
+
+  lines.push(
+    language === "zh"
+      ? "决定：你是否要和这个人说话？请调用 submit_accept_decision 工具，输出 accept_speak 或 reject_speak。"
+      : language === "en"
+        ? "Decide: will you talk to this person? Call submit_accept_decision with accept_speak or reject_speak."
+        : "決定：この人と話しますか？submit_accept_decision を呼び出し、accept_speak か reject_speak を返してください。",
+  );
+
+  return lines.join("\n");
+}
+
+/**
+ * 对话单轮 prompt。speaker 基于 transcript 历史输出下一句话或 leave。
+ */
+export function buildDialogTurnPrompt(args: {
+  self: Character;
+  peer: Character;
+  transcript: DialogTurn[];
+  isSoftLimit: boolean;
+  turnCount: number;
+  language?: Language;
+}): string {
+  const { self, peer, transcript, isSoftLimit, turnCount } = args;
+  const language = args.language ?? "zh";
+
+  const history = transcript
+    .map((t) => {
+      const name = t.speakerId === self.id ? self.name : peer.name;
+      if (t.kind === "leave") return `${name}：…先离开了。`;
+      return `${name}：${t.line ?? ""}`;
+    })
+    .join("\n");
+
+  const lines: string[] = [];
+  lines.push(`你正在和 ${peer.name} 对话。`);
+  lines.push("");
+
+  lines.push("你的性格特征：");
+  for (const s of describePersonality(self.personality)) {
+    lines.push(`- ${s}`);
+  }
+  lines.push("");
+
+  lines.push("对话记录：");
+  lines.push(history);
+  lines.push("");
+
+  if (isSoftLimit) {
+    if (language === "zh") {
+      lines.push(`⚠ 对话已进行 ${turnCount} 句，请考虑自然收尾——最好在 1-2 句内结束这次交谈。`);
+    } else if (language === "en") {
+      lines.push(`⚠ This conversation has reached ${turnCount} exchanges. Please wrap it up naturally — ideally within 1-2 more turns.`);
+    } else {
+      lines.push(`⚠ この会話は ${turnCount} 回のやり取りに達しました。自然に締めくくってください——できればあと 1〜2 回で終わらせてください。`);
+    }
+    lines.push("");
+  }
+
+  const sayOrLeave =
+    language === "zh"
+      ? `现在轮到你说话。请调用 submit_dialog_turn 工具：kind="say" 并填写 line（你说的内容），或 kind="leave" 结束对话离开。`
+      : language === "en"
+        ? `It's your turn. Call submit_dialog_turn: kind="say" with line (what you say), or kind="leave" to end the conversation and walk away.`
+        : `あなたの番です。submit_dialog_turn を呼び出してください：kind="say" で line に発言内容を、または kind="leave" で会話を終了します。`;
+  lines.push(sayOrLeave);
+
+  return lines.join("\n");
+}
+
+/**
+ * 对话摘要 prompt。对话结束后生成 1-2 句摘要。
+ */
+export function buildDialogSummaryPrompt(args: {
+  openerName: string;
+  responderName: string;
+  transcript: DialogTurn[];
+  language?: Language;
+}): string {
+  const { openerName, responderName, transcript } = args;
+  const language = args.language ?? "zh";
+
+  const history = transcript
+    .map((t) => {
+      const name = t.speakerId === openerName ? openerName : responderName;
+      if (t.kind === "leave") return `${name}：…先离开了。`;
+      return `${name}：${t.line ?? ""}`;
+    })
+    .join("\n");
+
+  const instruction =
+    language === "zh"
+      ? `以下是一段对话的完整记录。请用 1-2 句话总结这次对话的核心内容与氛围。调用 submit_dialog_summary 工具返回你的摘要。\n\n对话：\n${history}`
+      : language === "en"
+        ? `Below is the transcript of a conversation. Summarize its core content and atmosphere in 1-2 sentences. Call submit_dialog_summary to return your summary.\n\nConversation:\n${history}`
+        : `以下は会話の文字起こしです。この会話の核心的な内容と雰囲気を 1〜2 文で要約してください。submit_dialog_summary を呼び出して要約を返してください。\n\n会話：\n${history}`;
+
+  return instruction;
+}
+
+/**
+ * 补救轮 context 行。附加到主决策的 buildUserPrompt 末尾，
+ * 告知 A 被拒/autoFail 后必须选非 speak 的行动。
+ */
+export function buildSalvageContext(args: {
+  rejectReason: string;
+}): string {
+  return `⚠ ${args.rejectReason} 你不能再对任何人发起对话邀请。请选一个其他行动。`;
 }
 
 export function buildSystemPrompt(args: {

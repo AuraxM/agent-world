@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Character, MapNode, Personality } from "@/domain/types";
-import { formatActionWindow } from "../_lib/profile-format";
+import { affectionTone, formatActionWindow, vitalThreshold } from "../_lib/profile-format";
 import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
 import { indexNodes } from "../_lib/world";
 
@@ -35,6 +35,77 @@ function PersonalityBar({ label, value }: { label: string; value: number }) {
               : "var(--color-pixel-success)",
           }}
         />
+      </div>
+      <span className="w-8 text-right text-(--color-pixel-fg)">{value}</span>
+    </div>
+  );
+}
+
+/** [-min..+max] 双向条；居中分隔线，负值左红、正值右绿。 */
+function BiBar({
+  label,
+  value,
+  min = -4,
+  max = 4,
+}: {
+  label: string;
+  value: number;
+  min?: number;
+  max?: number;
+}) {
+  const span = max - min;
+  const pct = ((value - min) / span) * 100;
+  const isNeg = value < 0;
+  const fillStart = isNeg ? pct : 50;
+  const fillEnd = isNeg ? 50 : pct;
+  return (
+    <div className="flex items-center gap-2 text-game-xs">
+      <span className="w-8 text-(--color-pixel-muted)">{label}</span>
+      <div className="flex-1 h-2 bg-(--color-pixel-bg) border border-(--color-pixel-border-dark) relative">
+        <div className="absolute inset-y-0 left-1/2 w-px bg-(--color-pixel-border-light)" />
+        <div
+          className="absolute inset-y-0"
+          style={{
+            left: `${fillStart}%`,
+            width: `${fillEnd - fillStart}%`,
+            background: isNeg
+              ? "var(--color-pixel-danger)"
+              : "var(--color-pixel-success)",
+          }}
+        />
+      </div>
+      <span className="w-8 text-right text-(--color-pixel-fg)">{value}</span>
+    </div>
+  );
+}
+
+/** [0..max] 单向条；颜色按 (danger, warn) 阈值渐变。 */
+function UniBar({
+  label,
+  value,
+  max,
+  danger,
+  warn,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  danger: number;
+  warn: number;
+}) {
+  const pct = Math.min(100, Math.max(0, (value / max) * 100));
+  const tier = vitalThreshold(value, danger, warn);
+  const color =
+    tier === "danger"
+      ? "var(--color-pixel-danger)"
+      : tier === "warn"
+        ? "var(--color-pixel-accent)"
+        : "var(--color-pixel-success)";
+  return (
+    <div className="flex items-center gap-2 text-game-xs">
+      <span className="w-8 text-(--color-pixel-muted)">{label}</span>
+      <div className="flex-1 h-2 bg-(--color-pixel-bg) border border-(--color-pixel-border-dark) overflow-hidden">
+        <div className="h-full" style={{ width: `${pct}%`, background: color }} />
       </div>
       <span className="w-8 text-right text-(--color-pixel-fg)">{value}</span>
     </div>
@@ -186,6 +257,35 @@ export function ProfilePane({
         )}
       </section>
 
+      {/* 状态仪表盘（hero） */}
+      <section
+        className="border-2 border-(--color-pixel-accent-dark) bg-(--color-pixel-bg-2) p-2"
+        style={{ boxShadow: "inset 0 0 0 1px var(--color-pixel-accent)" }}
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+              生理
+            </div>
+            <div className="space-y-0.5">
+              <UniBar label="饿" value={character.vitals.hunger} max={16} danger={10} warn={6} />
+              <UniBar label="累" value={character.vitals.fatigue} max={16} danger={10} warn={6} />
+              <UniBar label="脏" value={character.vitals.hygiene} max={16} danger={10} warn={6} />
+            </div>
+          </div>
+          <div>
+            <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+              情绪
+            </div>
+            <div className="space-y-0.5">
+              <BiBar label="心" value={character.emotion.mood} />
+              <UniBar label="压" value={character.emotion.stress} max={4} danger={3} warn={2} />
+              <BiBar label="社" value={character.emotion.social_satiety} />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 性格 */}
       <section>
         <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
@@ -197,30 +297,6 @@ export function ProfilePane({
               <PersonalityBar key={k} label={PERSONALITY_LABELS[k]} value={v} />
             ),
           )}
-        </div>
-      </section>
-
-      {/* 生理状态 */}
-      <section>
-        <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
-          生理
-        </div>
-        <div className="text-game-sm text-(--color-pixel-fg) flex flex-wrap gap-x-3 gap-y-0.5">
-          <span>饿 {character.vitals.hunger}</span>
-          <span>累 {character.vitals.fatigue}</span>
-          <span>脏 {character.vitals.hygiene}</span>
-        </div>
-      </section>
-
-      {/* 情绪 */}
-      <section>
-        <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
-          情绪
-        </div>
-        <div className="text-game-sm text-(--color-pixel-fg) flex flex-wrap gap-x-3 gap-y-0.5">
-          <span>心情 {character.emotion.mood}</span>
-          <span>压力 {character.emotion.stress}</span>
-          <span>社交 {character.emotion.social_satiety}</span>
         </div>
       </section>
 

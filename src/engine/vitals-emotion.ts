@@ -16,6 +16,7 @@
  * - mood ≤ -3 / stress ≥ 3 / social_satiety ≤ -3: 每 8 tick
  */
 import { randomUUID } from "node:crypto";
+import { TICKS_PER_HOUR } from "@/domain/enums";
 import type { Character, Emotion, WorldEvent } from "@/domain/types";
 
 // ---- thresholds ----
@@ -150,10 +151,18 @@ function checkVitalCrossing(args: VitalCrossingCheck): void {
 
 // 0..8 慢段（偶数 tick +1，等价 +0.5/h）；8..13 标段（+1/h）；13..16 快段（+2/h）。
 // 总耗时 ~21h 到顶，留出夜间补觉空间。
-function fatigueIncrement(currentFatigue: number, isEven: boolean): number {
-  if (currentFatigue < 8) return isEven ? 1 : 0;
+function fatigueIncrement(currentFatigue: number, isEvenHour: boolean): number {
+  if (currentFatigue < 8) return isEvenHour ? 1 : 0;
   if (currentFatigue < 13) return 1;
   return 2;
+}
+
+function isHourTick(tick: number): boolean {
+  return tick % TICKS_PER_HOUR === 0;
+}
+
+function isEvenHour(tick: number): boolean {
+  return Math.floor(tick / TICKS_PER_HOUR) % 2 === 0;
 }
 
 // ---- vitals decay ----
@@ -167,7 +176,8 @@ export interface VitalsDecayInput {
 export function decayVitals(input: VitalsDecayInput): WorldEvent[] {
   const { characters, worldId, tick } = input;
   const inner: WorldEvent[] = [];
-  const isEven = tick % 2 === 0;
+  const hourTick = isHourTick(tick);
+  const evenHour = isEvenHour(tick);
 
   for (const c of characters) {
     // 睡眠 / 小睡期间 vitals 冻结：既不衰减也不触发饥饿/疲劳/卫生提醒，
@@ -187,15 +197,18 @@ export function decayVitals(input: VitalsDecayInput): WorldEvent[] {
     const prevFatigue = c.vitals.fatigue;
     const prevHygiene = c.vitals.hygiene;
 
-    if (!onTravel || isEven) {
-      c.vitals.hunger = Math.min(VITAL_MAX, c.vitals.hunger + 1);
-      c.vitals.fatigue = Math.min(
-        VITAL_MAX,
-        c.vitals.fatigue + fatigueIncrement(c.vitals.fatigue, isEven),
-      );
-    }
-    if (isEven && !onTravel) {
-      c.vitals.hygiene = Math.min(VITAL_MAX, c.vitals.hygiene + 1);
+    // Vitals only decay at hour boundaries
+    if (hourTick) {
+      if (!onTravel || evenHour) {
+        c.vitals.hunger = Math.min(VITAL_MAX, c.vitals.hunger + 1);
+        c.vitals.fatigue = Math.min(
+          VITAL_MAX,
+          c.vitals.fatigue + fatigueIncrement(c.vitals.fatigue, evenHour),
+        );
+      }
+      if (evenHour && !onTravel) {
+        c.vitals.hygiene = Math.min(VITAL_MAX, c.vitals.hygiene + 1);
+      }
     }
 
     checkVitalCrossing({
@@ -326,21 +339,23 @@ export interface EmotionEvolutionInput {
 export function evolveEmotions(input: EmotionEvolutionInput): WorldEvent[] {
   const { characters, worldId, tick, hasCompanions } = input;
   const inner: WorldEvent[] = [];
-  const isEven = tick % 2 === 0;
+  const evenHour = isEvenHour(tick);
+  const hourTick = isHourTick(tick);
+  const totalHours = Math.floor(tick / TICKS_PER_HOUR);
 
   for (const c of characters) {
-    // mood: even tick → toward 0 by 1
-    if (isEven && c.emotion.mood !== 0) {
+    // mood: even hour → toward 0 by 1
+    if (hourTick && evenHour && c.emotion.mood !== 0) {
       c.emotion.mood += c.emotion.mood > 0 ? -1 : 1;
     }
 
-    // stress: every STRESS_DECAY_INTERVAL ticks → -1
-    if (tick > 0 && tick % STRESS_DECAY_INTERVAL === 0) {
+    // stress: every 24 hours → -1
+    if (totalHours > 0 && totalHours % STRESS_DECAY_INTERVAL === 0 && hourTick) {
       c.emotion.stress = Math.max(0, c.emotion.stress - 1);
     }
 
-    // social_satiety: even tick → +1 if companions, -1 if alone
-    if (isEven) {
+    // social_satiety: even hour → +1 if companions, -1 if alone
+    if (hourTick && evenHour) {
       const hasPeer = hasCompanions.get(c.id) ?? false;
       if (hasPeer) {
         c.emotion.social_satiety = Math.min(4, c.emotion.social_satiety + 1);
@@ -350,14 +365,14 @@ export function evolveEmotions(input: EmotionEvolutionInput): WorldEvent[] {
     }
 
     // throttled threshold reminders
-    if (c.emotion.mood <= -3 && tick > 0 && tick % REMINDER_MOOD === 0) {
+    if (c.emotion.mood <= -3 && totalHours > 0 && totalHours % REMINDER_MOOD === 0 && hourTick) {
       inner.push(makeInnerEvent({
         worldId, tick, charId: c.id,
         description: "心情低落，情绪需要出口。",
         intensity: 2,
       }));
     }
-    if (c.emotion.stress >= 3 && tick > 0 && tick % REMINDER_STRESS === 0) {
+    if (c.emotion.stress >= 3 && totalHours > 0 && totalHours % REMINDER_STRESS === 0 && hourTick) {
       inner.push(makeInnerEvent({
         worldId, tick, charId: c.id,
         description: "压力很大，需要放松。",
@@ -366,8 +381,9 @@ export function evolveEmotions(input: EmotionEvolutionInput): WorldEvent[] {
     }
     if (
       c.emotion.social_satiety <= -3 &&
-      tick > 0 &&
-      tick % REMINDER_SOCIAL_SATIETY_LOW === 0
+      totalHours > 0 &&
+      totalHours % REMINDER_SOCIAL_SATIETY_LOW === 0 &&
+      hourTick
     ) {
       inner.push(makeInnerEvent({
         worldId, tick, charId: c.id,

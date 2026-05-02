@@ -7,6 +7,10 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  buildAcceptDecisionPrompt,
+  buildDialogTurnPrompt,
+  buildDialogSummaryPrompt,
+  buildSalvageContext,
   buildSystemPrompt,
   buildUserPrompt,
   describeEmotion,
@@ -14,7 +18,7 @@ import {
   timeOfDay,
 } from "./prompt";
 import type { AggregatedFacts } from "@/engine/facts";
-import type { Character, MapNode } from "@/domain/types";
+import type { Character, DialogTurn, MapNode } from "@/domain/types";
 
 const baseCharacter: Character = {
   id: "char-x",
@@ -330,7 +334,7 @@ describe("buildUserPrompt", () => {
       },
     });
     expect(out).toContain("已在 老王饭馆 连续 14 小时");
-    expect(out).toContain("上一 tick 你的行动：说话");
+    expect(out).toContain("上一 tick 你的行动：邀请说话");
     expect(out).toContain("你好啊");
     expect(out).toContain("距上次 rest/sleep：12 小时");
     expect(out).toContain("距上次 eat：7 小时");
@@ -501,5 +505,145 @@ describe("arrivalIntro", () => {
     });
     expect(out).toContain("到着したばかり");
     expect(out).toContain("理由");
+  });
+});
+
+describe("buildAcceptDecisionPrompt", () => {
+  it("contains requester name, freeText, and self state (zh)", () => {
+    const result = buildAcceptDecisionPrompt({
+      self: {
+        ...baseCharacter,
+        name: "乙",
+        emotion: { mood: -1, stress: 1, social_satiety: 0 },
+      },
+      requesterName: "甲",
+      freeText: "今天天气不错，一起散步吗？",
+      here: restaurant,
+      perceived: [],
+      companions: [],
+      tick: 12,
+    });
+    expect(result).toContain("甲");
+    expect(result).toContain("今天天气不错，一起散步吗？");
+    expect(result).toContain("submit_accept_decision");
+  });
+
+  it("includes perceived events when present", () => {
+    const result = buildAcceptDecisionPrompt({
+      self: baseCharacter,
+      requesterName: "甲",
+      freeText: "嗨",
+      here: restaurant,
+      perceived: [
+        {
+          id: "e1",
+          worldId: "w",
+          tick: 5,
+          category: "inner",
+          description: "肚子叫了",
+          participants: [baseCharacter.id],
+          source: "inner",
+          intensity: 2,
+          scope: "private",
+          audienceCharacterId: baseCharacter.id,
+          duration: 1,
+        } as any,
+      ],
+      companions: [],
+      tick: 5,
+    });
+    expect(result).toContain("肚子叫了");
+  });
+});
+
+describe("buildDialogTurnPrompt", () => {
+  const transcript: DialogTurn[] = [
+    { speakerId: "a", kind: "say", line: "今天天气真好。" },
+    { speakerId: "b", kind: "say", line: "是啊，适合出去走走。" },
+    { speakerId: "a", kind: "say", line: "你最近在忙什么？" },
+  ];
+
+  it("renders transcript and speaker context (zh)", () => {
+    const result = buildDialogTurnPrompt({
+      self: { ...baseCharacter, id: "b", name: "乙" },
+      peer: { ...baseCharacter, id: "a", name: "甲" },
+      transcript,
+      isSoftLimit: false,
+      turnCount: 3,
+    });
+    expect(result).toContain("甲");
+    expect(result).toContain("乙");
+    expect(result).toContain("今天天气真好");
+    expect(result).toContain("submit_dialog_turn");
+  });
+
+  it("adds soft limit warning when isSoftLimit=true", () => {
+    const result = buildDialogTurnPrompt({
+      self: { ...baseCharacter, id: "b", name: "乙" },
+      peer: { ...baseCharacter, id: "a", name: "甲" },
+      transcript,
+      isSoftLimit: true,
+      turnCount: 8,
+    });
+    expect(result).toContain("收尾");
+  });
+
+  it("no soft limit warning when isSoftLimit=false", () => {
+    const result = buildDialogTurnPrompt({
+      self: { ...baseCharacter, id: "b", name: "乙" },
+      peer: { ...baseCharacter, id: "a", name: "甲" },
+      transcript,
+      isSoftLimit: false,
+      turnCount: 5,
+    });
+    expect(result).not.toContain("收尾");
+  });
+});
+
+describe("buildDialogSummaryPrompt", () => {
+  const transcript: DialogTurn[] = [
+    { speakerId: "a", kind: "say", line: "你好。" },
+    { speakerId: "b", kind: "say", line: "你好！很高兴见到你。" },
+  ];
+
+  it("renders full transcript and requests summary", () => {
+    const result = buildDialogSummaryPrompt({
+      openerName: "a",
+      responderName: "b",
+      transcript,
+    });
+    expect(result).toContain("a：你好");
+    expect(result).toContain("b：你好！很高兴见到你");
+    expect(result).toContain("submit_dialog_summary");
+  });
+});
+
+describe("buildSalvageContext", () => {
+  it("includes reject reason and speak ban", () => {
+    const result = buildSalvageContext({
+      rejectReason: "乙 拒绝了你的对话请求。",
+    });
+    expect(result).toContain("乙 拒绝了你的对话请求。");
+    expect(result).toContain("不能再对任何人发起对话邀请");
+  });
+});
+
+describe("ACTION_NAMES speak label", () => {
+  it("speak is labeled as 邀请说话", () => {
+    const out = buildUserPrompt({
+      character: baseCharacter,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options: [{ type: "wait", hint: "等" }],
+      tick: 5,
+      facts: {
+        homeNodeId: null,
+        homeNodeName: null,
+        hoursAtCurrentLocation: 0,
+        todayActionCounts: { speak: 1 } as Record<string, number>,
+      },
+    });
+    expect(out).toContain("邀请说话");
   });
 });

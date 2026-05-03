@@ -7,8 +7,9 @@ description: Use when the user asks you to create, design, add, or modify a map,
 
 This project drives an LLM-NPC simulation off two folders of JSON configs:
 
-- `configs/maps/<map-id>.json` — one map per file (a tree of nodes)
-- `configs/characters/<char-id>.json` — one character template per file (location-agnostic)
+- `configs/maps/<pack-id>/manifest.json` — id, name, description, language
+- `configs/maps/<pack-id>/map.json` — pure node tree (id + nodes, no name/description)
+- `configs/maps/<pack-id>/characters/<char-id>.json` — character templates
 
 The runtime engine reads them through `src/config/loader.ts` (Zod-validated). Every change must round-trip through that validator or seeding will fail.
 
@@ -16,6 +17,7 @@ The runtime engine reads them through `src/config/loader.ts` (Zod-validated). Ev
 
 1. **Clarify with the user first.** Don't draft anything until you know:
    - For a map: theme, scale (rough node count), tone, what kind of "entry" makes sense (公交车站 / 码头 / 传送阵 / 港口 / 城门 / 机场…), and what "bathing" facility fits the setting (公共浴池 / 家中浴室 / 河边温泉 …).
+   - **language** ("zh" | "en" | "ja") — REQUIRED. Ask the user explicitly. Do NOT default.
    - For a **character**: origin (local/visitor), name, age, gender, profession (from `PROFESSIONS` enum), MBTI archetype, `activityNodeId`, `restNodeId`, `sleepWindow`, and target relations to existing characters.
 2. **Read the current state** so you don't collide:
    - `configs/maps/` and `configs/characters/` for existing ids/names.
@@ -26,9 +28,10 @@ The runtime engine reads them through `src/config/loader.ts` (Zod-validated). Ev
    - Examples: `references/examples/map.json`, `references/examples/character.json`.
 4. **Validate** before declaring done:
    ```bash
-   tsx .claude/skills/agent-world-config/scripts/validate.ts <path-to-file>
+   tsx .claude/skills/agent-world-config/scripts/validate.ts configs/maps/<pack-id>/manifest.json
+   tsx .claude/skills/agent-world-config/scripts/validate.ts configs/maps/<pack-id>/map.json
    ```
-   The validator uses the same Zod schemas the loader uses; passing here means the seed/load path will accept the file.
+   The validator uses the same Zod schemas the loader uses; passing here means the seed/load path will accept the file. Note that `map.json` no longer carries `name` or `description` — those are in `manifest.json`.
 5. **Tell the user** how to test the new config end-to-end:
    - Maps: create a fresh world via `POST /api/worlds` with `mapId: "<new-id>"` and a cast.
    - Characters: include in a `cast` member at world creation, or `POST /api/worlds/:id/characters` to inject mid-run.

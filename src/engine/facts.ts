@@ -54,10 +54,13 @@ export interface DeriveFactsInput {
 const TODAY_WINDOW = 24 * TICKS_PER_HOUR; // 120 ticks = 1 game day
 
 export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts {
-  const { character, nodes, currentTick, recentThoughts, homeNodeId } = input;
+  const { character, nodes, currentTick, recentThoughts, activityNodeId, restNodeId } = input;
 
-  const homeNodeName = homeNodeId
-    ? (nodes.find((n) => n.id === homeNodeId)?.name ?? null)
+  const activityNodeName = activityNodeId
+    ? (nodes.find((n) => n.id === activityNodeId)?.name ?? null)
+    : null;
+  const restNodeName = restNodeId
+    ? (nodes.find((n) => n.id === restNodeId)?.name ?? null)
     : null;
 
   // 找最近一次成功 move：用于推算 hoursAtCurrentLocation
@@ -113,8 +116,10 @@ export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts 
     : undefined;
 
   return {
-    homeNodeId,
-    homeNodeName,
+    activityNodeId,
+    activityNodeName,
+    restNodeId,
+    restNodeName,
     hoursAtCurrentLocation,
     lastAction,
     lastRestTick,

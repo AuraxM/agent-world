@@ -39,6 +39,10 @@ const baseCharacter: Character = {
   id: "char-x",
   worldId: "w",
   name: "测试角色",
+  age: 25,
+  gender: "other",
+  profession: "student",
+  biography: "一个测试角色。",
   locationId: "node-here",
   personality: { ei: 0, sn: 0, tf: 0, jp: 0 },
   vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
@@ -47,6 +51,8 @@ const baseCharacter: Character = {
   shortMemory: [],
   longMemory: [],
   relations: {},
+  activityNodeId: null,
+  restNodeId: null,
 };
 
 const baseNodes: MapNode[] = [
@@ -85,16 +91,19 @@ describe("deriveAggregatedFacts", () => {
       nodes: baseNodes,
       currentTick: 40,
       recentThoughts: [],
-      homeNodeId: "node-home",
+      activityNodeId: "node-home",
+      restNodeId: "node-home",
     });
 
-    expect(facts.hoursAtCurrentLocation).toBe(8);
+    expect(facts.hoursAtCurrentLocation).toBe(8); // 40 ticks / 5 = 8 game hours
     expect(facts.lastAction).toBeUndefined();
     expect(facts.lastRestTick).toBeUndefined();
     expect(facts.lastEatTick).toBeUndefined();
     expect(facts.todayActionCounts).toEqual({});
-    expect(facts.homeNodeId).toBe("node-home");
-    expect(facts.homeNodeName).toBe("我的家");
+    expect(facts.activityNodeId).toBe("node-home");
+    expect(facts.activityNodeName).toBe("我的家");
+    expect(facts.restNodeId).toBe("node-home");
+    expect(facts.restNodeName).toBe("我的家");
   });
 
   it("最近 move 决定 hoursAtCurrentLocation", () => {
@@ -111,11 +120,12 @@ describe("deriveAggregatedFacts", () => {
       nodes: baseNodes,
       currentTick: 24,
       recentThoughts: thoughts,
-      homeNodeId: null,
+      activityNodeId: null,
+      restNodeId: null,
     });
 
     // 最近一次成功 move 是 tick=8 → hours = (24 - 8) / 5 = 3
-    expect(facts.hoursAtCurrentLocation).toBe(3);
+    expect(facts.hoursAtCurrentLocation).toBe(3); // (24-8)/5 = 3 game hours
     expect(facts.lastEatTick).toBe(7);
   });
 
@@ -129,9 +139,10 @@ describe("deriveAggregatedFacts", () => {
       nodes: baseNodes,
       currentTick: 24,
       recentThoughts: thoughts,
-      homeNodeId: null,
+      activityNodeId: null,
+      restNodeId: null,
     });
-    expect(facts.hoursAtCurrentLocation).toBe(3);
+    expect(facts.hoursAtCurrentLocation).toBe(3); // (24-8)/5 = 3 game hours
   });
 
   it("lastRestTick 取最近一次成功 rest", () => {
@@ -146,7 +157,8 @@ describe("deriveAggregatedFacts", () => {
       nodes: baseNodes,
       currentTick: 11,
       recentThoughts: thoughts,
-      homeNodeId: null,
+      activityNodeId: null,
+      restNodeId: null,
     });
     expect(facts.lastRestTick).toBe(8);
   });
@@ -165,7 +177,8 @@ describe("deriveAggregatedFacts", () => {
       nodes: baseNodes,
       currentTick: 126,
       recentThoughts: thoughts,
-      homeNodeId: null,
+      activityNodeId: null,
+      restNodeId: null,
     });
     expect(facts.todayActionCounts.speak).toBe(3);
     expect(facts.todayActionCounts.observe).toBe(1);
@@ -183,7 +196,8 @@ describe("deriveAggregatedFacts", () => {
       nodes: baseNodes,
       currentTick: 11,
       recentThoughts: [stale],
-      homeNodeId: null,
+      activityNodeId: null,
+      restNodeId: null,
     });
     expect(facts.lastAction).toEqual({
       type: "speak",
@@ -193,15 +207,18 @@ describe("deriveAggregatedFacts", () => {
     });
   });
 
-  it("homeNodeId 找不到节点时 homeNodeName 为 null", () => {
+  it("activityNodeId/restNodeId 找不到节点时 activityNodeName/restNodeName 为 null", () => {
     const facts = deriveAggregatedFacts({
       character: baseCharacter,
       nodes: baseNodes,
       currentTick: 0,
       recentThoughts: [],
-      homeNodeId: "node-ghost",
+      activityNodeId: "node-ghost",
+      restNodeId: "node-ghost",
     });
-    expect(facts.homeNodeId).toBe("node-ghost");
-    expect(facts.homeNodeName).toBeNull();
+    expect(facts.activityNodeId).toBe("node-ghost");
+    expect(facts.activityNodeName).toBeNull();
+    expect(facts.restNodeId).toBe("node-ghost");
+    expect(facts.restNodeName).toBeNull();
   });
 });

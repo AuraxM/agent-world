@@ -232,7 +232,8 @@ export async function tick(
   );
 
   // 5. 准备决策上下文公共变量
-  const homeMap = buildHomeMap();
+  const activityMap = buildActivityNodeMap();
+  const restMap = buildRestNodeMap();
   const sleepWindowMap = buildSleepWindowMap();
   const sinceTick = Math.max(0, fromTick - FACTS_LOOKBACK_TICKS);
   const baseTime = timeOfDay(fromTick); // hour/day/period 全局；isSleepHour 在循环内逐角色算
@@ -373,8 +374,10 @@ export async function tick(
       localLocationMap.set(c.id, currentLoc);
       const ctx = buildActionContext(c, nodes, characters, localLocationMap);
       const recentThoughts = loadRecentThoughts(worldId, c.id, sinceTick);
-      const homeNodeId = homeMap.get(c.id) ?? null;
-      c.homeNodeId = homeNodeId;
+      const activityNodeId = activityMap.get(c.id) ?? null;
+      const restNodeId = restMap.get(c.id) ?? null;
+      c.activityNodeId = activityNodeId;
+      c.restNodeId = restNodeId;
       const sleepWindow = sleepWindowMap.get(c.id) ?? DEFAULT_SLEEP_WINDOW;
       c.sleepWindow = sleepWindow;
       const isSleepHour = inSleepWindow(baseTime.hour, sleepWindow);
@@ -383,7 +386,8 @@ export async function tick(
         nodes,
         currentTick: fromTick,
         recentThoughts,
-        homeNodeId,
+        activityNodeId,
+        restNodeId,
       });
       const opts = getAvailableActions(ctx, {
         facts,
@@ -535,7 +539,8 @@ export async function tick(
         characters,
       );
       const recentThoughts = loadRecentThoughts(worldId, input.character.id, sinceTick);
-      const homeNodeId = homeMap.get(input.character.id) ?? null;
+      const sActivityId = activityMap.get(input.character.id) ?? null;
+      const sRestId = restMap.get(input.character.id) ?? null;
       const sleepWindow = sleepWindowMap.get(input.character.id) ?? DEFAULT_SLEEP_WINDOW;
       const isSleepHour = inSleepWindow(baseTime.hour, sleepWindow);
       const facts = deriveAggregatedFacts({
@@ -543,7 +548,8 @@ export async function tick(
         nodes,
         currentTick: fromTick,
         recentThoughts,
-        homeNodeId,
+        activityNodeId: sActivityId,
+        restNodeId: sRestId,
       });
       const opts = getAvailableActions(ctx, { facts, isSleepHour });
 
@@ -552,7 +558,8 @@ export async function tick(
           character: {
             ...input.character,
             sleepWindow,
-            homeNodeId,
+            activityNodeId: sActivityId,
+            restNodeId: sRestId,
           },
           nodes,
           here: ctx.here,
@@ -649,11 +656,23 @@ export async function tick(
   };
 }
 
-function buildHomeMap(): Map<string, string> {
+function buildActivityNodeMap(): Map<string, string> {
   const m = new Map<string, string>();
   try {
     for (const tpl of loadAllCharacters()) {
-      if (tpl.homeNodeId) m.set(tpl.id, tpl.homeNodeId);
+      if (tpl.activityNodeId) m.set(tpl.id, tpl.activityNodeId);
+    }
+  } catch {
+    // configs 目录不可读时静默
+  }
+  return m;
+}
+
+function buildRestNodeMap(): Map<string, string> {
+  const m = new Map<string, string>();
+  try {
+    for (const tpl of loadAllCharacters()) {
+      if (tpl.restNodeId) m.set(tpl.id, tpl.restNodeId);
     }
   } catch {
     // configs 目录不可读时静默

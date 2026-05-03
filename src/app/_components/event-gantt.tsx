@@ -57,13 +57,14 @@ export function EventGantt({
     if (!el) return;
 
     function handleWheel(e: WheelEvent) {
-      // Only hijack if the event target is within the scroll area (not the name column)
-      if (e.target instanceof HTMLElement && el!.contains(e.target)) {
-        // If Shift is held, let browser handle native horizontal scroll
-        if (e.shiftKey) return;
-        e.preventDefault();
-        el!.scrollLeft += e.deltaY;
-      }
+      if (!(e.target instanceof HTMLElement && el!.contains(e.target))) return;
+      if (e.shiftKey) return;
+      // Left of 100px = name column → native vertical scroll
+      const rect = el!.getBoundingClientRect();
+      if (e.clientX < rect.left + 100) return;
+      // Right side = card area → wheel Y → horizontal scroll
+      e.preventDefault();
+      el!.scrollLeft += e.deltaY;
     }
 
     el.addEventListener("wheel", handleWheel, { passive: false });

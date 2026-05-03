@@ -2,43 +2,16 @@
   "id": "char-nakamura-shizuka",
   "name": "中村静香",
   "avatar": "🍶",
-  "homeNodeId": "node-izakaya-quarters",
+  "age": 32,
+  "gender": "female",
+  "profession": "innkeeper",
+  "biography": "中村静香だよ。居酒屋をやってる。明るく振る舞ってるけど、実は結構神経質なところもあるんだよね。店に来るお客さんの笑顔が何よりのエネルギー。",
+  "activityNodeId": "node-izakaya-quarters",
+  "restNodeId": "node-izakaya-quarters",
   "sleepWindow": { "start": 2, "duration": 8 },
-  "personality": {
-    "ei": 3,
-    "sn": 2,
-    "tf": -3,
-    "jp": 1
-  },
+  "personality": { "ei": 3, "sn": -1, "tf": -3, "jp": 0 },
   "abilities": [],
   "relations": {
-    "char-takahashi-tetsuya": {
-      "kinds": ["friend"],
-      "affection": 3,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "他炉子里那把火烧了多少年，我最清楚——也只有他能烫修我那只老酒壶。"
-    },
-    "char-ito-chie": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "千恵姐的杂货铺是我每日采购也是消息中转站。"
-    },
-    "char-tanaka-hana": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "花姐的奶酪能让我酒馆的客人多坐半个时辰。"
-    },
-    "char-suzuki-misaki": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "美咲一个人扛太多事，我喊她来喝杯什么的，她从不肯收酒钱。"
-    }
+    "char-takahashi-tetsuya": { "kinds": ["friend"], "affection": 2, "note": "よく飲みに来る常連", "since": 0, "lastInteractionTick": 0 }
   }
 }

@@ -1,30 +1,17 @@
 {
   "id": "char-kimura-fumiko",
   "name": "木村文子",
-  "avatar": "📖",
-  "homeNodeId": "node-library-quarters",
+  "avatar": "📚",
+  "age": 35,
+  "gender": "female",
+  "profession": "librarian",
+  "biography": "木村文子と申します。図書館の司書をしております。本に囲まれて育ったため、人と話すより本を読む方が得意です。でも最近はもう少し外の世界を知りたいと思い始めています。",
+  "activityNodeId": "node-library-quarters",
+  "restNodeId": "node-library-quarters",
   "sleepWindow": { "start": 0, "duration": 8 },
-  "personality": {
-    "ei": -3,
-    "sn": -3,
-    "tf": -2,
-    "jp": 2
-  },
+  "personality": { "ei": -2, "sn": 1, "tf": 2, "jp": 2 },
   "abilities": [],
   "relations": {
-    "char-genjo": {
-      "kinds": ["friend"],
-      "affection": 3,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "他来还书的时候话也少，但他翻页的方式让我知道他真的读了。"
-    },
-    "char-saito-ishi": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "斉藤先生借走的书都会带回来——这本身就是一种品格。"
-    }
+    "char-saito-ishi": { "kinds": ["friend"], "affection": 1, "note": "よく本を借りに来る", "since": 0, "lastInteractionTick": 0 }
   }
 }

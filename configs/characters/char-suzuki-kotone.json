@@ -2,29 +2,16 @@
   "id": "char-suzuki-kotone",
   "name": "铃木琴音",
   "avatar": "🎨",
-  "homeNodeId": "node-ranch-house",
+  "age": 28,
+  "gender": "female",
+  "profession": "tailor",
+  "biography": "鈴木琴音です。裁縫が得意で、町の人たちの服を繕ったり作ったりしています。美咲は妹で、一緒に牧場に住んでいます。小さい頃から手先が器用で、絵を描くのも好きです。",
+  "activityNodeId": "node-ranch-house",
+  "restNodeId": "node-ranch-house",
   "sleepWindow": { "start": 23, "duration": 8 },
-  "personality": {
-    "ei": -3,
-    "sn": -2,
-    "tf": -3,
-    "jp": -2
-  },
+  "personality": { "ei": -1, "sn": -2, "tf": 0, "jp": -2 },
   "abilities": [],
   "relations": {
-    "char-suzuki-misaki": {
-      "kinds": ["mother"],
-      "affection": 3,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "她总笑得很大声，是为了不让我看见她哭过。我都知道。"
-    },
-    "char-tanaka-yota": {
-      "kinds": ["friend"],
-      "affection": 3,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "他说话时眼睛里有齿轮在转——我画里画不出那种光。"
-    }
+    "char-suzuki-misaki": { "kinds": ["sister", "colleague"], "affection": 3, "note": "妹で牧場仲間", "since": 0, "lastInteractionTick": 0 }
   }
 }

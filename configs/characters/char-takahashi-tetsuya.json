@@ -1,23 +1,17 @@
 {
   "id": "char-takahashi-tetsuya",
   "name": "高桥铁也",
-  "avatar": "⚒️",
-  "homeNodeId": "node-blacksmith-quarters",
+  "avatar": "🔨",
+  "age": 40,
+  "gender": "male",
+  "profession": "blacksmith",
+  "biography": "高橋鉄也だ。鍛冶屋をやってる。親父の代から続く店で、農具の修理から包丁研ぎまで何でもこなす。無口だって言われるけど、手を動かしてる時が一番落ち着くんだ。",
+  "activityNodeId": "node-blacksmith-quarters",
+  "restNodeId": "node-blacksmith-quarters",
   "sleepWindow": { "start": 21, "duration": 8 },
-  "personality": {
-    "ei": -2,
-    "sn": 3,
-    "tf": 2,
-    "jp": -2
-  },
+  "personality": { "ei": -1, "sn": 2, "tf": 2, "jp": 3 },
   "abilities": [],
   "relations": {
-    "char-nakamura-shizuka": {
-      "kinds": ["friend"],
-      "affection": 3,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "她的话能压过我炉子的风声——这本身就是种本事。"
-    }
+    "char-nakamura-shizuka": { "kinds": ["friend"], "affection": 2, "note": "居酒屋の常連", "since": 0, "lastInteractionTick": 0 }
   }
 }

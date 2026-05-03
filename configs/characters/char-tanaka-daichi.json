@@ -1,37 +1,18 @@
 {
   "id": "char-tanaka-daichi",
   "name": "田中大地",
-  "avatar": "👨‍🌾",
-  "homeNodeId": "node-farmhouse",
+  "avatar": "🧑‍🌾",
+  "age": 45,
+  "gender": "male",
+  "profession": "farmer",
+  "biography": "田中大地だ。代々この町で農業を営んでいる。花とは二十年来の夫婦で、息子の陽太も今年で高校を卒業だ。厳しいことは言わないが、家族を大切に思っている。",
+  "activityNodeId": "node-farmhouse",
+  "restNodeId": "node-farmhouse",
   "sleepWindow": { "start": 20, "duration": 8 },
-  "personality": {
-    "ei": 2,
-    "sn": 3,
-    "tf": 2,
-    "jp": 3
-  },
+  "personality": { "ei": 0, "sn": 2, "tf": 1, "jp": 2 },
   "abilities": [],
   "relations": {
-    "char-tanaka-hana": {
-      "kinds": ["spouse"],
-      "affection": 3,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "三十多年同枕共眠，她的奶酪是这辈子最熟悉的香气。"
-    },
-    "char-tanaka-yota": {
-      "kinds": ["son"],
-      "affection": 2,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "儿子总爱琢磨那些机器，不像我当年只会埋头干活——但牧场迟早是他的。"
-    },
-    "char-yamada-ryuichi": {
-      "kinds": ["friend"],
-      "affection": 3,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "几十年的老钓友，我们的话比鱼竿还短。"
-    }
+    "char-tanaka-hana": { "kinds": ["spouse", "colleague"], "affection": 3, "note": "妻", "since": 0, "lastInteractionTick": 0 },
+    "char-tanaka-yota": { "kinds": ["son"], "affection": 3, "note": "息子", "since": 0, "lastInteractionTick": 0 }
   }
 }

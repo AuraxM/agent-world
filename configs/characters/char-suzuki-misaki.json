@@ -2,36 +2,16 @@
   "id": "char-suzuki-misaki",
   "name": "铃木美咲",
   "avatar": "🧑‍🌾",
-  "homeNodeId": "node-ranch-house",
+  "age": 25,
+  "gender": "female",
+  "profession": "farmer",
+  "biography": "鈴木美咲！牧場で働いてるよ。姉の琴音と二人で頑張ってる。体を動かすのが大好きで、朝早く起きるのは全然苦じゃない。動物たちも家族同然だよ。",
+  "activityNodeId": "node-ranch-house",
+  "restNodeId": "node-ranch-house",
   "sleepWindow": { "start": 21, "duration": 8 },
-  "personality": {
-    "ei": 3,
-    "sn": -2,
-    "tf": -3,
-    "jp": 2
-  },
+  "personality": { "ei": 1, "sn": 2, "tf": -1, "jp": -1 },
   "abilities": [],
   "relations": {
-    "char-suzuki-kotone": {
-      "kinds": ["daughter"],
-      "affection": 4,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "丈夫走后，她就是我每天起床的全部理由。"
-    },
-    "char-tanaka-hana": {
-      "kinds": ["friend"],
-      "affection": 3,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "花姐姐总记得给琴音留一块新做的奶酪——这种好我还不上。"
-    },
-    "char-nakamura-shizuka": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "雪灯的暖气和她那张快嘴，是我冬天少数能放松的地方。"
-    }
+    "char-suzuki-kotone": { "kinds": ["sister", "colleague"], "affection": 3, "note": "姉で牧場仲間", "since": 0, "lastInteractionTick": 0 }
   }
 }

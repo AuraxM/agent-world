@@ -2,22 +2,14 @@
   "id": "char-yamada-ryuichi",
   "name": "山田竜一",
   "avatar": "🎣",
-  "homeNodeId": "node-fisher-hut",
+  "age": 55,
+  "gender": "male",
+  "profession": "fisherman",
+  "biography": "山田竜一だ。もう五十年以上この町の海と川で漁をしている。潮の満ち引きも魚の通り道も全部頭に入っている。若い奴らに教えることも多くなった。そろそろ引退も考えてるが、海が俺を離してくれない。",
+  "activityNodeId": "node-fisher-hut",
+  "restNodeId": "node-fisher-hut",
   "sleepWindow": { "start": 19, "duration": 8 },
-  "personality": {
-    "ei": -2,
-    "sn": 2,
-    "tf": 3,
-    "jp": -3
-  },
+  "personality": { "ei": 1, "sn": 3, "tf": 1, "jp": 2 },
   "abilities": [],
-  "relations": {
-    "char-tanaka-daichi": {
-      "kinds": ["friend"],
-      "affection": 3,
-      "since": 0,
-      "lastInteractionTick": 0,
-      "note": "他懂牛，我懂鱼，剩下的事我们都没必要说。"
-    }
-  }
+  "relations": {}
 }

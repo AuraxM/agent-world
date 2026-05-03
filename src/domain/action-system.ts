@@ -9,6 +9,7 @@ export interface ActionInput {
   target_node_id?: string;
   free_text?: string;
   reason?: string;
+  amount?: number;
   arrival_action?: {
     action_type: string;
     free_text?: string;
@@ -57,7 +58,8 @@ export type StateChange =
   | { kind: "adjustMood"; delta: number }
   | { kind: "adjustStress"; delta: number }
   | { kind: "setOngoingAction"; action: import("./types").OngoingAction }
-  | { kind: "clearOngoingAction" };
+  | { kind: "clearOngoingAction" }
+  | { kind: "adjustMoney"; amount: number; reason: string };
 
 // ---- ActionOption: presented to LLM ----
 

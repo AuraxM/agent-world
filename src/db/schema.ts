@@ -74,6 +74,9 @@ export const characters = sqliteTable(
     age: integer("age").notNull().default(30),
     gender: text("gender").notNull().default("male"),
     profession: text("profession").notNull().default("farmer"),
+    money: integer("money").notNull().default(0),
+    incomeLevel: integer("income_level").notNull().default(0),
+    expenseExempt: integer("expense_exempt", { mode: "boolean" }).notNull().default(false),
     biography: text("biography").notNull().default(""),
     origin: text("origin").notNull().default("local"),
     locationId: text("location_id").notNull(),
@@ -169,4 +172,24 @@ export const snapshots = sqliteTable(
       .default(sql`(unixepoch() * 1000)`),
   },
   (t) => [index("snapshots_world_tick_idx").on(t.worldId, t.tick)],
+);
+
+export const transactions = sqliteTable(
+  "transactions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    worldId: text("world_id")
+      .notNull()
+      .references(() => worlds.id, { onDelete: "cascade" }),
+    tick: integer("tick").notNull(),
+    characterId: text("character_id").notNull(),
+    amount: integer("amount").notNull(),
+    category: text("category", { enum: ["expense", "income", "transfer_in", "transfer_out"] })
+      .notNull(),
+    description: text("description").notNull().default(""),
+    counterpartyId: text("counterparty_id"),
+  },
+  (t) => [
+    index("transactions_world_char_tick_idx").on(t.worldId, t.characterId, t.tick),
+  ],
 );

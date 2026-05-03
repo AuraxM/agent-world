@@ -8,6 +8,9 @@ import {
 } from "./schemas";
 import type { CharacterTemplate, Manifest, MapConfig } from "./types";
 import type { PackValidation } from "./loader-types";
+import { PROFESSION_INCOME_TIERS } from "@/domain/enums";
+import { DEFAULT_ECONOMY_CONFIG } from "./types";
+import type { EconomyConfig } from "./types";
 
 function configsRoot(): string {
   return (
@@ -172,4 +175,15 @@ export function firstEntryNodeId(map: MapConfig): string {
     );
   }
   return entry.id;
+}
+
+/** Load economy config from manifest, falling back to defaults. */
+export function loadEconomyConfig(mapId: string): EconomyConfig {
+  const manifest = loadManifest(mapId);
+  return manifest.economy ?? DEFAULT_ECONOMY_CONFIG;
+}
+
+/** Resolve a profession string to its income tier (0-3). */
+export function resolveIncomeLevel(profession: string): number {
+  return (PROFESSION_INCOME_TIERS as Record<string, number>)[profession] ?? 0;
 }

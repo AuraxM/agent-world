@@ -38,6 +38,9 @@ function mkChar(
     shortMemory: [],
     longMemory: [],
     relations: {},
+    money: 100,
+    incomeLevel: 0,
+    expenseExempt: false,
   };
 }
 

@@ -616,6 +616,13 @@ function characterBlock(
     `- 性别：${character.gender === "male" ? "男" : character.gender === "female" ? "女" : "其他"}`,
     `- 身份：${PROFESSION_LABELS[character.profession] ?? character.profession}`,
   ];
+  // Economic status (static info)
+  if (character.expenseExempt) {
+    lines.push("- 生存开销：免单（未成年人或全包游客）");
+  } else {
+    lines.push("- 生存开销：吃饭 15💰/次，洗澡 10💰/次");
+  }
+  lines.push(`- 当前持有：${character.money} 金钱`);
   const actNode = character.activityNodeId
     ? nodes.find((n) => n.id === character.activityNodeId)
     : undefined;
@@ -967,6 +974,22 @@ export function buildUserPrompt(args: {
     lines.push("⚠ 你身上很脏但当前位置不能洗浴，应优先 move 去澡堂或浴室。");
   }
   lines.push("");
+
+  // Economic state
+  if (!character.expenseExempt) {
+    const eatCost = 15;
+    const batheCost = 10;
+    lines.push("你的经济状态：");
+    lines.push(`- 持有金钱：${character.money}`);
+    lines.push(`- 生存开销：吃饭 ${eatCost}/次，洗澡 ${batheCost}/次`);
+    if (character.money < Math.max(eatCost, batheCost)) {
+      lines.push("⚠️ 资金紧张：余额不足以支付下一次吃饭/洗澡的费用。你必须想办法获得收入，或者向他人求助。");
+    }
+    if (character.incomeLevel <= 0) {
+      lines.push("- 你目前没有工作收入来源。");
+    }
+    lines.push("");
+  }
 
   // 5. 同节点其他人物（最多 5）—— 0 人时整段省略
   if (companions.length > 0) {

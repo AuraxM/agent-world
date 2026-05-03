@@ -17,5 +17,8 @@
     "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "谷村さん。祭典の準備や案内でいつも助けてもらってる。", "since": 0, "lastInteractionTick": 0 },
     "char-nogami-takashi": { "kinds": ["friend"], "affection": 2, "note": "野上教授。囲碁友達。神社の古文書に書かれた温泉記述の解読を手伝ってもらった。", "since": 0, "lastInteractionTick": 0 },
     "char-kishita-michiko": { "kinds": ["friend"], "affection": 1, "note": "木下先生。神社の階段で転んだ参拝者の応急処置をいつも頼んでる。", "since": 0, "lastInteractionTick": 0 }
-  }
+  },
+  "initialMoney": 300,
+  "expenseExempt": false,
+  "incomeMultiplier": 1.0
 }

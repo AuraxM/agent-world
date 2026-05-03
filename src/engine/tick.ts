@@ -37,8 +37,9 @@ import {
   saveWorld,
   type LoadedWorld,
 } from "./store";
-import { loadAllCharacters, loadManifest } from "@/config/loader";
+import { loadAllCharacters, loadManifest, loadEconomyConfig } from "@/config/loader";
 import type { Language } from "@/config/types";
+import { updateAllEconomicSnapshots } from "./economy";
 import type {
   Action,
   Character,
@@ -251,6 +252,24 @@ export async function tick(
   allEvents.push(
     ...evolveEmotions({ characters, worldId, tick: fromTick, hasCompanions }),
   );
+
+  // Low-money detection: generate inner events for characters in financial distress
+  const economyConfig = loadEconomyConfig(world.mapId);
+  const maxSurvivalCost = Math.max(
+    economyConfig.survivalCosts.eat,
+    economyConfig.survivalCosts.bathe,
+  );
+  for (const c of characters) {
+    if (!c.expenseExempt && c.money < maxSurvivalCost && c.incomeLevel <= 0) {
+      allEvents.push(makeInnerEvent({
+        worldId,
+        tick: fromTick,
+        charId: c.id,
+        description: "经济困难，余额不足以支付基本生存开销，需要帮助。",
+        intensity: 3,
+      }));
+    }
+  }
 
   // 3. 占位：外部排队事件
   const scheduledEvents: WorldEvent[] = [];
@@ -722,7 +741,10 @@ export async function tick(
     })),
   );
 
+  // Economic snapshot: update every 24 game hours
   if (world.currentTick > 0 && world.currentTick % (24 * TICKS_PER_HOUR) === 0) {
+    const economyCfg = loadEconomyConfig(world.mapId);
+    updateAllEconomicSnapshots(worldId, world.currentTick, characters, economyCfg);
     persistSnapshot(loaded);
   }
 

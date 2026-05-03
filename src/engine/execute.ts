@@ -8,6 +8,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { clamp, resetVital } from "./vitals-emotion";
+import { recordTransaction } from "./economy";
 import type {
   Action,
   Character,
@@ -23,7 +24,7 @@ import type {
 } from "@/domain/enums";
 import { BLOOD_RELATION_KINDS, TICKS_PER_HOUR } from "@/domain/enums";
 import { actionRegistry } from "@/domain/action-system";
-import type { StateChange } from "@/domain/action-system";
+import type { Outcome, StateChange } from "@/domain/action-system";
 
 const SHORT_MEMORY_LIMIT = 50;
 const SLEEP_DURATION = 8 * TICKS_PER_HOUR; // 40 ticks
@@ -108,7 +109,12 @@ function updateAffection(
   rel.lastInteractionTick = tick;
 }
 
-function applyStateChange(c: Character, sc: StateChange): void {
+function applyStateChange(
+  c: Character,
+  sc: StateChange,
+  worldId: string,
+  tick: number,
+): void {
   switch (sc.kind) {
     case "resetVital":
       resetVital(c, sc.vital);
@@ -130,6 +136,15 @@ function applyStateChange(c: Character, sc: StateChange): void {
       break;
     case "clearOngoingAction":
       c.currentAction = undefined;
+      break;
+    case "adjustMoney":
+      c.money += sc.amount;
+      recordTransaction(
+        worldId, tick, c.id,
+        sc.amount,
+        sc.amount > 0 ? "income" : "expense",
+        sc.reason,
+      );
       break;
   }
 }
@@ -226,13 +241,14 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
     // Execute via definition
     let success = true;
     let reason: string | undefined;
+    let outcome: Outcome | undefined;
     try {
-      const outcome = def.execute(ctx, actionInput);
+      outcome = def.execute(ctx, actionInput);
 
       // Apply state changes
       if (outcome.stateChanges) {
         for (const sc of outcome.stateChanges) {
-          applyStateChange(actor, sc);
+          applyStateChange(actor, sc, worldId, tick);
         }
       }
 
@@ -271,6 +287,27 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
     } catch (err) {
       success = false;
       reason = `执行失败：${err instanceof Error ? err.message : String(err)}`;
+    }
+
+    // Handle give: credit recipient
+    if (action.type === "give" && action.targetId) {
+      const target = charById.get(action.targetId);
+      if (target && outcome?.stateChanges) {
+        const givenAmount = outcome.stateChanges
+          .filter((sc) => sc.kind === "adjustMoney" && sc.amount < 0)
+          .reduce((sum, sc) => sum + (sc.kind === "adjustMoney" ? -sc.amount : 0), 0);
+        if (givenAmount > 0) {
+          target.money += givenAmount;
+          recordTransaction(worldId, tick, target.id, givenAmount, "transfer_in",
+            `收到 ${actor.name} 转账`, actor.id);
+          pushMemory(target, {
+            id: `mem-${randomUUID().slice(0, 8)}`,
+            tick,
+            importance: 4,
+            content: `${actor.name} 给了我 ${givenAmount} 金钱。`,
+          });
+        }
+      }
     }
 
     resolvedActions.push({ action, success, reason });

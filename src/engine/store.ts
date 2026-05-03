@@ -80,6 +80,9 @@ export function loadWorld(worldId: string): LoadedWorld {
     age: c.age,
     gender: c.gender as Character["gender"],
     profession: c.profession as Character["profession"],
+    money: c.money,
+    incomeLevel: c.incomeLevel,
+    expenseExempt: !!c.expenseExempt,
     biography: c.biography,
     origin: c.origin as Character["origin"],
     locationId: c.locationId,
@@ -127,6 +130,9 @@ export function saveWorld(loaded: LoadedWorld): void {
         .update(schema.characters)
         .set({
           locationId: c.locationId,
+          money: c.money,
+          incomeLevel: c.incomeLevel,
+          expenseExempt: c.expenseExempt,
           vitalsJson: JSON.stringify(c.vitals),
           emotionJson: JSON.stringify(c.emotion),
           shortMemoryJson: JSON.stringify(c.shortMemory),

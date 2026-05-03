@@ -35,5 +35,8 @@
       "since": 0,
       "lastInteractionTick": 0
     }
-  }
+  },
+  "initialMoney": 3000,
+  "expenseExempt": false,
+  "incomeMultiplier": 0
 }

@@ -9,27 +9,14 @@
 import OpenAI from "openai";
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import {
-  ACTION_TOOL_NAME,
-  ActionSchema,
-  ActionToolInputSchema,
-  type ActionPayload,
-  ACCEPT_TOOL_NAME,
-  AcceptDecisionSchema,
-  AcceptToolSchema,
-  DIALOG_TURN_TOOL_NAME,
-  DialogTurnSchema,
-  DialogTurnToolSchema,
-  DIALOG_SUMMARY_TOOL_NAME,
-  DialogSummarySchema,
-  DialogSummaryToolSchema,
-  SALVAGE_TOOL_NAME,
-  SalvageActionSchema,
-  SalvageToolSchema,
-  type AcceptDecisionPayload,
-  type DialogTurnPayload,
-  type DialogSummaryPayload,
-  type SalvageActionPayload,
+  ACTION_TOOL_NAME, buildActionSchema, buildActionToolSchema,
+  buildSalvageActionSchema, buildSalvageToolSchema,
+  ACCEPT_TOOL_NAME, AcceptDecisionSchema, AcceptToolSchema,
+  DIALOG_TURN_TOOL_NAME, DialogTurnSchema, DialogTurnToolSchema,
+  DIALOG_SUMMARY_TOOL_NAME, DialogSummarySchema, DialogSummaryToolSchema,
+  type AcceptDecisionPayload, type DialogTurnPayload, type DialogSummaryPayload,
 } from "@/domain/schemas";
+import { actionRegistry } from "@/domain/action-system";
 import type { Action, Character, DialogTurn, MapNode, WorldEvent } from "@/domain/types";
 import type { Language } from "@/config/types";
 import type { DecideFn, DecideInput } from "@/engine/tick";
@@ -78,13 +65,15 @@ async function callLLM(input: DecideInput): Promise<Action> {
     language,
   });
 
+  const actionTypes = Array.from(actionRegistry.types());
+
   const tool: ChatCompletionTool = {
     type: "function",
     function: {
       name: ACTION_TOOL_NAME,
       description:
         "提交你这一 tick 的行动。type 必须是封闭枚举之一；reasoning 必须显式引用一项你自己的性格特征（用文字描述，不要写数值）。",
-      parameters: ActionToolInputSchema,
+      parameters: buildActionToolSchema(actionTypes),
     },
   };
 
@@ -133,7 +122,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     );
   }
 
-  const result = ActionSchema.safeParse(parsedArgs);
+  const result = buildActionSchema(actionTypes).safeParse(parsedArgs);
   if (!result.success) {
     throw new Error(`tool_call 参数不符合 ActionSchema：${result.error.message}`);
   }
@@ -141,7 +130,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
   return payloadToAction(result.data, input.character.id);
 }
 
-function payloadToAction(p: ActionPayload, actorId: string): Action {
+function payloadToAction(p: Record<string, any>, actorId: string): Action {
   return {
     type: p.action_type,
     actorId,
@@ -465,12 +454,14 @@ export async function llmSalvageDecide(
   });
   const salvageCtx = buildSalvageContext({ rejectReason: input.rejectReason });
 
+  const salvageActionTypes = Array.from(actionRegistry.types());
+
   const tool: ChatCompletionTool = {
     type: "function",
     function: {
-      name: SALVAGE_TOOL_NAME,
+      name: ACTION_TOOL_NAME,
       description: "提交你这一 tick 的行动（禁止 speak/accept_speak/reject_speak/leave_dialog）。",
-      parameters: SalvageToolSchema,
+      parameters: buildSalvageToolSchema(salvageActionTypes),
     },
   };
 
@@ -489,14 +480,15 @@ export async function llmSalvageDecide(
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.find(
-        (c) => c.type === "function" && c.function.name === SALVAGE_TOOL_NAME,
+        (c) => c.type === "function" && c.function.name === ACTION_TOOL_NAME,
       );
       if (!toolCall || toolCall.type !== "function") {
         throw new Error("LLM 没有返回 salvage tool_call");
       }
 
       const parsed = JSON.parse(toolCall.function.arguments);
-      const result = SalvageActionSchema.safeParse(parsed);
+      const { schema: salvageSchema } = buildSalvageActionSchema(salvageActionTypes);
+      const result = salvageSchema.safeParse(parsed);
       if (!result.success) {
         throw new Error(`SalvageAction 参数不符合 schema：${result.error.message}`);
       }

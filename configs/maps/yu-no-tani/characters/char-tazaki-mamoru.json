@@ -16,5 +16,8 @@
     "char-matsuoka-sayo": { "kinds": ["friend"], "affection": 2, "note": "「いろり」の小夜さん。仕事終わりにいつも同じ席で焼酎。", "since": 0, "lastInteractionTick": 0 },
     "char-okubo-kenta": { "kinds": ["friend"], "affection": 1, "note": "大久保さん。農園の脇の配管を時々見に行く。", "since": 0, "lastInteractionTick": 0 },
     "char-yamada-takafumi": { "kinds": ["friend"], "affection": 1, "note": "山田さん。浴場の木造部分の修繕を頼んでる。配管と木工、いいコンビだ。", "since": 0, "lastInteractionTick": 0 }
-  }
+  },
+  "initialMoney": 100,
+  "expenseExempt": false,
+  "incomeMultiplier": 1.0
 }

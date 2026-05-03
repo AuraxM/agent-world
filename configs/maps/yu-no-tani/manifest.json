@@ -3,5 +3,22 @@
   "name": "汤之谷",
   "description": "深山幽谷间一座温泉观光乡。县道尽头巴士站外，石板温泉街蜿蜒沿溪，老旅馆、公共浴场、土产店、酒馆鳞次栉比。冬季积雪盈峰时游客稀少，春樱秋叶两季最为热闹。外界来的人多半因了观光宣传册上那张'汤烟中的灯笼街'照片——来了才发现，照片没骗人。",
   "language": "zh",
-  "startDate": "2026-05-03T08:00:00"
+  "startDate": "2026-05-03T08:00:00",
+  "economy": {
+    "survivalCosts": {
+      "eat": 15,
+      "bathe": 10
+    },
+    "professionIncomes": {
+      "high": { "min": 80, "max": 120 },
+      "medium": { "min": 40, "max": 70 },
+      "low": { "min": 10, "max": 30 },
+      "none": { "min": 0, "max": 0 }
+    },
+    "wealthTiers": [100, 500, 2000],
+    "balanceThresholds": {
+      "positive": [10, 50, 150, 400],
+      "negative": [0.1, 0.3, 0.6, 1.0]
+    }
+  }
 }

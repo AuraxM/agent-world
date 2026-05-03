@@ -17,5 +17,8 @@
     "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "绢代さん。配達ついでに長話。いつも気にかけてくれてありがたい。", "since": 0, "lastInteractionTick": 0 },
     "char-ogawa-saori": { "kinds": ["friend"], "affection": 3, "note": "沙織ちゃん。子どもの頃から知ってる。まるで孫娘みたい。", "since": 0, "lastInteractionTick": 0 },
     "char-kishita-michiko": { "kinds": ["friend"], "affection": 2, "note": "木下先生。月一の往診で世話になってる。よく話を聞いてくれるいい医者。", "since": 0, "lastInteractionTick": 0 }
-  }
+  },
+  "initialMoney": 100,
+  "expenseExempt": false,
+  "incomeMultiplier": 1.0
 }

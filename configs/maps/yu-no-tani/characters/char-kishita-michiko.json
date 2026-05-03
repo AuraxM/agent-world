@@ -17,5 +17,8 @@
     "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "谷村さん。診療所に来る患者さんの様子をいつも教えてくれる。谷のアンテナ。", "since": 0, "lastInteractionTick": 0 },
     "char-nogami-takashi": { "kinds": ["friend"], "affection": 1, "note": "野上教授。温泉の地質調査の話を聞くのが面白い。たまに膝の相談も。", "since": 0, "lastInteractionTick": 0 },
     "char-guji-masayuki": { "kinds": ["friend"], "affection": 1, "note": "宮司さん。お互い年配者を支える立場で話が合う。", "since": 0, "lastInteractionTick": 0 }
-  }
+  },
+  "initialMoney": 800,
+  "expenseExempt": false,
+  "incomeMultiplier": 1.0
 }

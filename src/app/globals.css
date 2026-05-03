@@ -435,36 +435,71 @@ body {
  * ================================================================ */
 
 .gantt-card {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 4px;
-  border: var(--ring-1) solid;
-  border-radius: 2px;
-  cursor: pointer;
+  position: absolute;
+  width: 200px;
+  height: 48px;
+  background: var(--panel);
+  border: var(--ring-2) solid var(--border);
+  box-shadow:
+    inset 0 0 0 var(--ring-2) var(--border-amber),
+    0 var(--ring-1) 0 var(--border-soft);
+  padding: 4px 6px;
   font-family: var(--font-pixel), monospace;
   font-size: var(--font-pixel-2xs);
-  white-space: nowrap;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   overflow: hidden;
-  text-overflow: ellipsis;
-  transition: filter 0.1s;
-  width: calc(100% - 2px);
+  z-index: 1;
 }
+
 .gantt-card:hover {
-  filter: brightness(1.3);
+  filter: brightness(1.1);
 }
 
 .gantt-card--important {
-  box-shadow: inset 0 0 0 var(--ring-1) var(--danger);
+  border-color: var(--danger);
+  box-shadow:
+    inset 0 0 0 var(--ring-2) var(--danger),
+    0 var(--ring-1) 0 var(--border-soft);
+}
+
+.gantt-card--important::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--ring-2));
+  top: calc(-1 * var(--ring-2));
+  bottom: calc(-1 * var(--ring-2));
+  width: 4px;
+  background: var(--danger);
 }
 
 .gantt-card__badge {
   font-size: 7px;
-  color: var(--text-on-frame-faint);
-  background: rgba(255,255,255,0.15);
+  color: var(--text-on-frame);
+  background: color-mix(in srgb, var(--border-amber) 20%, transparent);
   border-radius: 3px;
-  padding: 0 2px;
-  line-height: 1.2;
+  padding: 0 3px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.gantt-card__location {
+  font-size: 7px;
+  color: var(--text-on-frame-muted);
+  border: var(--ring-1) solid var(--border-amber);
+  padding: 0 3px;
+  white-space: nowrap;
+}
+
+.gantt-card__important-badge {
+  font-size: 7px;
+  color: var(--panel);
+  background: var(--danger);
+  padding: 0 3px;
+  white-space: nowrap;
 }
 
 .gantt-row__header {

@@ -1,7 +1,7 @@
 // src/app/_components/gantt-row.tsx
 "use client";
 
-import type { Character, MapNode, WorldEvent } from "@/domain/types";
+import type { Character, WorldEvent } from "@/domain/types";
 import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
 import {
   TICK_WIDTH,

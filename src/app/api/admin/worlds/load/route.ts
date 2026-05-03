@@ -25,7 +25,7 @@ const BodySchema = z.object({
   cast: z.array(CastMemberSchema).optional(),
 });
 
-const DEFAULT_WORLD_ID = "world-default";
+const WORLD_ID_PREFIX = "world";
 
 export async function POST(request: Request) {
   let json: unknown = {};
@@ -72,9 +72,9 @@ export async function POST(request: Request) {
       }));
     }
 
-    const worldId = DEFAULT_WORLD_ID;
+    const worldId = `${WORLD_ID_PREFIX}-${mapId}`;
 
-    // Delete existing world
+    // Delete existing world with this mapId (cascade removes nodes/characters/events)
     db.delete(schema.worlds).where(eq(schema.worlds.id, worldId)).run();
 
     const result = createWorldFromConfig({

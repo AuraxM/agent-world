@@ -49,6 +49,7 @@ const validChar = {
   age: 25,
   gender: "male" as const,
   profession: "farmer" as const,
+  origin: "local" as const,
   biography: "私はテストキャラクターです。",
   personality: { ei: 0, sn: 0, tf: 0, jp: 0 },
   abilities: [],
@@ -159,6 +160,11 @@ describe("loadAllCharacters", () => {
     const { biography: _, ...noBio } = validChar;
     writeChar("no-bio", noBio);
     expect(() => loadAllCharacters()).toThrow(/biography/);
+  });
+
+  it("origin 不是枚举值被拒", () => {
+    writeChar("bad-origin", { ...validChar, origin: "alien" });
+    expect(() => loadAllCharacters()).toThrow(/origin/);
   });
 
   it("profession 不是枚举值被拒", () => {

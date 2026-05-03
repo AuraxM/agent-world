@@ -3,9 +3,11 @@ import type {
   EventCategory,
   EventScope,
   EventSource,
+  Gender,
   NodeTag,
   ObjectiveRelationKind,
   Privacy,
+  Profession,
 } from "./enums";
 
 /** 1 tick = 1/5 游戏小时（5 ticks/hour）。tick 0 是世界开始的整点。 */
@@ -156,6 +158,11 @@ export interface Character {
   worldId: string;
   name: string;
   avatar?: string;
+  age: number;
+  gender: Gender;
+  profession: Profession;
+  /** 第一人称生平简介，CoC 车卡风格。 */
+  biography: string;
   locationId: string;
   personality: Personality;
   vitals: Vitals;
@@ -171,14 +178,15 @@ export interface Character {
   /** API 注入：最近一轮的完整 Action（含 reasoning），DB 不存。 */
   lastThought?: AgentThought;
   /**
-   * 角色的"家"节点。来源是 character 配置文件，运行时由 facts 模块注入。
-   * 不写入 DB（Stage 1 schema 不变）；Stage 2 迁移到 character 表字段。
+   * 角色的活动处节点（工作/学习/日常活动地点）。
+   * 来源是 character 配置文件，运行时由 tick 注入，不写入 DB。
    */
-  homeNodeId?: string | null;
+  activityNodeId?: string | null;
   /**
-   * 角色的作息时间窗口。来源是 character 配置文件，运行时由 tick 注入。
-   * 缺省视为 22:00–06:00。同样不写入 DB。
+   * 角色的休息处节点（睡眠/私人时间地点）。
+   * 来源是 character 配置文件，运行时由 tick 注入，不写入 DB。
    */
+  restNodeId?: string | null;
   sleepWindow?: SleepWindow;
 }
 

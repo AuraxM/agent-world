@@ -4,10 +4,11 @@
  *
  * 输入是只读的：
  *   - `character`：当前角色（locationId / lastThought 等）
- *   - `nodes`：本世界全部节点（用于 home name lookup）
+ *   - `nodes`：本世界全部节点（用于 activity/rest node name lookup）
  *   - `currentTick`：本次决策的 fromTick（尚未推进）
  *   - `recentThoughts`：最近 N tick 的 thought 列表，**按 tick DESC 排序**
- *   - `homeNodeId`：来自 character 模板配置（loadCharacter().homeNodeId）
+ *   - `activityNodeId`：来自 character 模板配置（loadCharacter().activityNodeId）
+ *   - `restNodeId`：来自 character 模板配置（loadCharacter().restNodeId）
  *
  * 不查库、不写库；纯函数便于单测。
  */
@@ -20,8 +21,10 @@ import type {
 } from "@/domain/types";
 
 export interface AggregatedFacts {
-  homeNodeId: string | null;
-  homeNodeName: string | null;
+  activityNodeId: string | null;
+  activityNodeName: string | null;
+  restNodeId: string | null;
+  restNodeName: string | null;
   /** 自上次成功 move 起，已在当前节点停留的小时数；从未移动则等于 currentTick / TICKS_PER_HOUR。 */
   hoursAtCurrentLocation: number;
   lastAction?: {
@@ -44,7 +47,8 @@ export interface DeriveFactsInput {
   currentTick: Tick;
   /** 按 tick DESC；调用方负责保证顺序与范围（推荐 [currentTick-48, currentTick) ）。 */
   recentThoughts: AgentThought[];
-  homeNodeId: string | null;
+  activityNodeId: string | null;
+  restNodeId: string | null;
 }
 
 const TODAY_WINDOW = 24 * TICKS_PER_HOUR; // 120 ticks = 1 game day

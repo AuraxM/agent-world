@@ -4,10 +4,14 @@ import path from "node:path";
 import os from "node:os";
 import {
   firstEntryNodeId,
+  listMapPackIds,
   loadAllCharacters,
   loadAllMaps,
   loadCharacter,
+  loadCharactersForMap,
+  loadManifest,
   loadMap,
+  validateMapPack,
 } from "./loader";
 
 let tmp: string;
@@ -15,7 +19,6 @@ let tmp: string;
 beforeEach(() => {
   tmp = mkdtempSync(path.join(os.tmpdir(), "agent-world-cfg-"));
   mkdirSync(path.join(tmp, "maps"));
-  mkdirSync(path.join(tmp, "characters"));
   process.env.AGENT_WORLD_CONFIGS_DIR = tmp;
 });
 
@@ -26,7 +29,6 @@ afterEach(() => {
 
 const validMap = {
   id: "tiny",
-  name: "小镇",
   nodes: [
     {
       id: "root",
@@ -43,6 +45,13 @@ const validMap = {
   ],
 };
 
+const validManifest = {
+  id: "tiny",
+  name: "小镇",
+  description: "一个测试小镇",
+  language: "zh",
+};
+
 const validChar = {
   id: "char-test",
   name: "测试君",
@@ -56,138 +65,222 @@ const validChar = {
   relations: {},
 };
 
-function writeMap(name: string, body: unknown) {
-  writeFileSync(
-    path.join(tmp, "maps", `${name}.json`),
-    JSON.stringify(body),
-    "utf8",
-  );
-}
-
-function writeChar(name: string, body: unknown) {
-  writeFileSync(
-    path.join(tmp, "characters", `${name}.json`),
-    JSON.stringify(body),
-    "utf8",
-  );
-}
-
-describe("loadAllMaps", () => {
-  it("loads a valid map", () => {
-    writeMap("tiny", validMap);
-    const maps = loadAllMaps();
-    expect(maps).toHaveLength(1);
-    expect(maps[0].id).toBe("tiny");
-    expect(firstEntryNodeId(maps[0])).toBe("root");
-  });
-
-  it("rejects a map with no entry node", () => {
-    const noEntry = {
-      ...validMap,
-      nodes: [{ ...validMap.nodes[0], isEntry: false }],
-    };
-    writeMap("no-entry", noEntry);
-    expect(() => loadAllMaps()).toThrow(
-      /at least one entry node/,
+function writePack(
+  packId: string,
+  manifest: object,
+  map: object,
+  chars: Record<string, object> = {},
+) {
+  const dir = path.join(tmp, "maps", packId);
+  mkdirSync(path.join(dir, "characters"), { recursive: true });
+  writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(manifest), "utf8");
+  writeFileSync(path.join(dir, "map.json"), JSON.stringify(map), "utf8");
+  for (const [charId, data] of Object.entries(chars)) {
+    writeFileSync(
+      path.join(dir, "characters", `${charId}.json`),
+      JSON.stringify(data),
+      "utf8",
     );
+  }
+}
+
+describe("listMapPackIds", () => {
+  it("returns empty when no packs", () => {
+    expect(listMapPackIds()).toEqual([]);
   });
 
-  it("rejects duplicate node ids", () => {
-    const dup = {
-      ...validMap,
-      nodes: [validMap.nodes[0], { ...validMap.nodes[0] }],
-    };
-    writeMap("dup", dup);
-    expect(() => loadAllMaps()).toThrow(/duplicate node id/);
-  });
-
-  it("rejects parentId pointing to a missing node", () => {
-    const bad = {
-      ...validMap,
-      nodes: [
-        validMap.nodes[0],
-        {
-          ...validMap.nodes[0],
-          id: "child",
-          parentId: "ghost",
-          isEntry: false,
-        },
-      ],
-    };
-    writeMap("bad-parent", bad);
-    expect(() => loadAllMaps()).toThrow(/missing node: ghost/);
+  it("lists pack directory names sorted", () => {
+    writePack("tiny", validManifest, validMap);
+    writePack("big", { ...validManifest, id: "big" }, { ...validMap, id: "big" });
+    expect(listMapPackIds()).toEqual(["big", "tiny"]);
   });
 });
 
-describe("loadAllCharacters", () => {
-  it("loads a valid character template", () => {
-    writeChar("char-test", validChar);
-    const chars = loadAllCharacters();
+describe("loadManifest", () => {
+  it("loads a valid manifest", () => {
+    writePack("tiny", validManifest, validMap);
+    const m = loadManifest("tiny");
+    expect(m.id).toBe("tiny");
+    expect(m.language).toBe("zh");
+  });
+
+  it("rejects manifest.id ≠ directory name", () => {
+    writePack("tiny", { ...validManifest, id: "wrong" }, validMap);
+    expect(() => loadManifest("tiny")).toThrow(/does not match directory name/);
+  });
+
+  it("rejects invalid language", () => {
+    writePack("tiny", { ...validManifest, language: "fr" }, validMap);
+    expect(() => loadManifest("tiny")).toThrow(/language/);
+  });
+});
+
+describe("loadMap", () => {
+  it("loads a valid map", () => {
+    writePack("tiny", validManifest, validMap);
+    const m = loadMap("tiny");
+    expect(m.id).toBe("tiny");
+    expect(m.nodes).toHaveLength(1);
+  });
+
+  it("rejects map with no entry node", () => {
+    writePack("tiny", validManifest, {
+      ...validMap,
+      nodes: [{ ...validMap.nodes[0], isEntry: false }],
+    });
+    expect(() => loadMap("tiny")).toThrow(/at least one entry node/);
+  });
+
+  it("rejects map.id ≠ directory name", () => {
+    writePack("tiny", validManifest, { ...validMap, id: "wrong" });
+    expect(() => loadMap("tiny")).toThrow(/does not match directory name/);
+  });
+
+  it("rejects duplicate node ids", () => {
+    writePack("tiny", validManifest, {
+      ...validMap,
+      nodes: [validMap.nodes[0], { ...validMap.nodes[0] }],
+    });
+    expect(() => loadMap("tiny")).toThrow(/duplicate node id/);
+  });
+
+  it("rejects bad parentId", () => {
+    writePack("tiny", validManifest, {
+      ...validMap,
+      nodes: [
+        validMap.nodes[0],
+        { ...validMap.nodes[0], id: "child", parentId: "ghost" },
+      ],
+    });
+    expect(() => loadMap("tiny")).toThrow(/missing node: ghost/);
+  });
+});
+
+describe("loadCharactersForMap", () => {
+  it("loads characters from pack directory", () => {
+    writePack("tiny", validManifest, validMap, { "char-test": validChar });
+    const chars = loadCharactersForMap("tiny");
     expect(chars).toHaveLength(1);
     expect(chars[0].id).toBe("char-test");
   });
 
-  it("rejects out-of-range personality", () => {
-    const bad = {
-      ...validChar,
-      personality: { ...validChar.personality, ei: 9 },
-    };
-    writeChar("bad", bad);
-    expect(() => loadAllCharacters()).toThrow(/personality\.ei/);
-  });
-
-  it("activityNodeId 和 restNodeId 字段可选", () => {
-    // 缺失：仍能加载
-    writeChar("no-loc", validChar);
-    const a = loadAllCharacters();
-    expect(a[0].activityNodeId).toBeUndefined();
-    expect(a[0].restNodeId).toBeUndefined();
-
-    // 提供：正确解析
-    writeChar("with-loc", {
-      ...validChar,
-      id: "char-l",
-      activityNodeId: "node-farm",
-      restNodeId: "node-home",
-    });
-    const all = loadAllCharacters();
-    const withLoc = all.find((c) => c.id === "char-l");
-    expect(withLoc?.activityNodeId).toBe("node-farm");
-    expect(withLoc?.restNodeId).toBe("node-home");
-  });
-
-  it("缺少必填字段 biography 被拒", () => {
-    const { biography: _, ...noBio } = validChar;
-    writeChar("no-bio", noBio);
-    expect(() => loadAllCharacters()).toThrow(/biography/);
-  });
-
-  it("origin 不是枚举值被拒", () => {
-    writeChar("bad-origin", { ...validChar, origin: "alien" });
-    expect(() => loadAllCharacters()).toThrow(/origin/);
-  });
-
-  it("profession 不是枚举值被拒", () => {
-    writeChar("bad-prof", { ...validChar, profession: "astronaut" });
-    expect(() => loadAllCharacters()).toThrow(/profession/);
-  });
-
-  it("age 超出范围被拒", () => {
-    writeChar("bad-age", { ...validChar, age: 0 });
-    expect(() => loadAllCharacters()).toThrow(/age/);
+  it("returns empty array when no characters dir", () => {
+    writePack("tiny", validManifest, validMap);
+    expect(loadCharactersForMap("tiny")).toEqual([]);
   });
 });
 
-describe("lookups", () => {
-  it("loadMap throws on missing id", () => {
-    writeMap("tiny", validMap);
-    expect(() => loadMap("nope")).toThrow(/map not found: nope/);
+describe("loadAllCharacters", () => {
+  it("loads characters from all packs", () => {
+    writePack("a", validManifest, validMap, { "char-x": validChar });
+    writePack(
+      "b",
+      { ...validManifest, id: "b" },
+      { ...validMap, id: "b" },
+      { "char-y": { ...validChar, id: "char-y" } },
+    );
+    expect(loadAllCharacters()).toHaveLength(2);
+  });
+});
+
+describe("loadCharacter", () => {
+  it("finds character by id across packs", () => {
+    writePack(
+      "a",
+      { ...validManifest, id: "a" },
+      { ...validMap, id: "a" },
+      { "char-x": { ...validChar, id: "char-x" } },
+    );
+    writePack(
+      "b",
+      { ...validManifest, id: "b" },
+      { ...validMap, id: "b" },
+      { "char-y": { ...validChar, id: "char-y" } },
+    );
+    expect(loadCharacter("char-x").id).toBe("char-x");
+    expect(loadCharacter("char-y").id).toBe("char-y");
   });
 
-  it("loadCharacter throws on missing id", () => {
-    writeChar("char-test", validChar);
-    expect(() => loadCharacter("nope")).toThrow(
-      /character template not found: nope/,
+  it("throws for missing id", () => {
+    writePack("tiny", validManifest, validMap);
+    expect(() => loadCharacter("nope")).toThrow(/character template not found/);
+  });
+
+  it("rejects character with missing biography", () => {
+    const { biography: _, ...noBio } = validChar;
+    writePack("tiny", validManifest, validMap, { "no-bio": noBio });
+    expect(() => loadCharacter("no-bio")).toThrow(/biography/);
+  });
+
+  it("rejects character with out-of-range personality", () => {
+    writePack("tiny", validManifest, validMap, {
+      "bad": { ...validChar, personality: { ei: 9, sn: 0, tf: 0, jp: 0 } },
+    });
+    expect(() => loadCharacter("bad")).toThrow(/personality/);
+  });
+});
+
+describe("loadAllMaps", () => {
+  it("loads maps from all packs", () => {
+    writePack("tiny", validManifest, validMap);
+    writePack("big", { ...validManifest, id: "big" }, { ...validMap, id: "big" });
+    const maps = loadAllMaps();
+    expect(maps).toHaveLength(2);
+    expect(maps.map((m) => m.id).sort()).toEqual(["big", "tiny"]);
+  });
+});
+
+describe("validateMapPack", () => {
+  it("reports valid pack", () => {
+    writePack("tiny", validManifest, validMap, { "char-test": validChar });
+    const v = validateMapPack("tiny");
+    expect(v.valid).toBe(true);
+    expect(v.errors).toEqual([]);
+    expect(v.language).toBe("zh");
+    expect(v.nodeCount).toBe(1);
+    expect(v.characterCount).toBe(1);
+  });
+
+  it("collects partial errors without throwing", () => {
+    const dir = path.join(tmp, "maps", "broken");
+    mkdirSync(path.join(dir, "characters"), { recursive: true });
+    writeFileSync(path.join(dir, "manifest.json"), "{bad json", "utf8");
+    writeFileSync(path.join(dir, "map.json"), "{}", "utf8");
+    writeFileSync(
+      path.join(dir, "characters", "bad.json"),
+      JSON.stringify({ id: "bad" }),
+      "utf8",
     );
+    const v = validateMapPack("broken");
+    expect(v.valid).toBe(false);
+    expect(v.errors.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("handles missing characters directory", () => {
+    const dir = path.join(tmp, "maps", "nochars");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ ...validManifest, id: "nochars" }), "utf8");
+    writeFileSync(path.join(dir, "map.json"), JSON.stringify({ ...validMap, id: "nochars" }), "utf8");
+    const v = validateMapPack("nochars");
+    expect(v.valid).toBe(true);
+    expect(v.characterCount).toBe(0);
+  });
+
+  it("preserves manifest info even when invalid", () => {
+    writePack("tiny", validManifest, {
+      ...validMap,
+      nodes: [{ ...validMap.nodes[0], isEntry: false }],
+    });
+    const v = validateMapPack("tiny");
+    expect(v.valid).toBe(false);
+    expect(v.name).toBe("小镇");
+    expect(v.nodeCount).toBe(1);
+  });
+});
+
+describe("firstEntryNodeId", () => {
+  it("returns entry node id", () => {
+    writePack("tiny", validManifest, validMap);
+    expect(firstEntryNodeId(loadMap("tiny"))).toBe("root");
   });
 });

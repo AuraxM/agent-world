@@ -19,7 +19,9 @@
  */
 import { randomUUID } from "node:crypto";
 import { TICKS_PER_HOUR } from "@/domain/enums";
-import { buildActionContext, getAvailableActions } from "./actions";
+import { buildActionContext } from "./actions";
+import { actionRegistry } from "@/domain/action-system";
+import { BUILTIN_ACTIONS } from "./actions-builtin";
 import { executeActions } from "./execute";
 import { deriveAggregatedFacts, type AggregatedFacts } from "./facts";
 import { findPath } from "./pathfinding";
@@ -194,6 +196,14 @@ function pushMoveInitMemory(
   }
 }
 
+let _actionsInitialized = false;
+
+function ensureActionsInitialized(): void {
+  if (_actionsInitialized) return;
+  _actionsInitialized = true;
+  actionRegistry.registerAll(BUILTIN_ACTIONS);
+}
+
 export async function tick(
   worldId: string,
   options: TickOptions = {},
@@ -201,7 +211,23 @@ export async function tick(
   const loaded = loadWorld(worldId);
   const { world, nodes, characters } = loaded;
   const fromTick = world.currentTick;
-  const language = loadManifest(world.mapId).language;
+  const manifest = loadManifest(world.mapId);
+  const language = manifest.language;
+
+  // Register built-in actions (idempotent)
+  ensureActionsInitialized();
+
+  // Load mod actions if defined
+  if (manifest.actions) {
+    try {
+      const { loadModActions } = await import("@/config/loader");
+      const modDefs = loadModActions(world.mapId);
+      actionRegistry.registerAll(modDefs);
+    } catch (err) {
+      console.warn(`Failed to load mod actions for ${world.mapId}:`, err);
+    }
+  }
+
   const allEvents: WorldEvent[] = [];
   const allDecisions: Array<{
     characterId: string;
@@ -271,30 +297,31 @@ export async function tick(
         );
 
         if (interrupt) {
-          // Handle interrupt for sleep/nap: partial recovery
-          if (c.currentAction.type === "sleep" || c.currentAction.type === "nap") {
-            const ticksDone = fromTick - c.currentAction.startedAt;
-            const hoursDone = Math.floor(ticksDone / TICKS_PER_HOUR);
-            if (c.currentAction.type === "sleep") {
-              c.vitals.fatigue = Math.max(0, c.vitals.fatigue - hoursDone);
-            } else if (c.currentAction.type === "nap") {
-              const reduction = Math.floor((hoursDone * 6) / 4);
-              c.vitals.fatigue = Math.max(0, c.vitals.fatigue - reduction);
+          const actionDef = actionRegistry.get(c.currentAction!.type);
+          if (actionDef?.onInterrupt) {
+            const here = nodeById.get(locationSnapshot.get(c.id) ?? c.locationId);
+            if (here) {
+              const ctx = {
+                worldId, tick: fromTick, self: c, here,
+                companions: [], reachable: [], isSleepHour: false, facts: {} as any,
+              };
+              const outcome = actionDef.onInterrupt(ctx, `被「${interrupt.description}」打断`);
+              c.shortMemory.push({
+                id: `mem-${randomUUID().slice(0, 8)}`,
+                tick: fromTick,
+                importance: 4,
+                content: outcome.memory,
+              });
             }
-            if (c.vitals.fatigue < 16) c.vitals.fatigueCapTicks = 0;
-          }
-          // For move: initiation memory already written, no arrival memory needed
-
-          // Write interruption memory (before clearing currentAction)
-          const desc = c.currentAction.description;
-          c.shortMemory.push({
-            id: `mem-${randomUUID().slice(0, 8)}`,
-            tick: fromTick,
-            importance: 4,
-            content: `${desc}被「${interrupt.description}」打断。`,
-          });
-          if (c.shortMemory.length > 50) {
-            c.shortMemory.splice(0, c.shortMemory.length - 50);
+          } else {
+            // Generic interrupt memory if no onInterrupt hook
+            const desc = c.currentAction.description;
+            c.shortMemory.push({
+              id: `mem-${randomUUID().slice(0, 8)}`,
+              tick: fromTick,
+              importance: 4,
+              content: `${desc}被「${interrupt.description}」打断。`,
+            });
           }
 
           freeMoveEvents.push(
@@ -337,7 +364,7 @@ export async function tick(
             finalLocationId: c.locationId,
           };
         } else {
-          // sleep/nap: existing auto-wait logic
+          // sleep: existing auto-wait logic
           if (fromTick % (4 * TICKS_PER_HOUR) === 0) {
             freeMoveEvents.push(
               makeInnerEvent({
@@ -370,35 +397,50 @@ export async function tick(
       }
 
       // 6b. ongoing action 到期：结算效果。
-      // 用 >= 而非 ===：异常恢复 / 快进越界时也能正确结算，避免 sleep 完成
-      // 但 fatigue 没归零的死循环。
       if (c.currentAction && fromTick >= c.currentAction.endsAt) {
-        // Write completion memory
-        if (c.currentAction.type === "sleep") {
-          c.shortMemory.push({
-            id: `mem-${randomUUID().slice(0, 8)}`,
-            tick: fromTick,
-            importance: 3,
-            content: "一觉睡醒，神清气爽。",
-          });
-        } else if (c.currentAction.type === "nap") {
-          c.shortMemory.push({
-            id: `mem-${randomUUID().slice(0, 8)}`,
-            tick: fromTick,
-            importance: 3,
-            content: "小睡醒来，恢复了一些精神。",
-          });
-        }
-        if (c.shortMemory.length > 50) {
-          c.shortMemory.splice(0, c.shortMemory.length - 50);
-        }
-
-        if (c.currentAction.type === "sleep") {
-          c.vitals.fatigue = 0;
-          c.vitals.fatigueCapTicks = 0;
-        } else if (c.currentAction.type === "nap") {
-          c.vitals.fatigue = Math.max(0, c.vitals.fatigue - 6);
-          if (c.vitals.fatigue < 16) c.vitals.fatigueCapTicks = 0;
+        const actionDef = actionRegistry.get(c.currentAction!.type);
+        if (actionDef?.onComplete) {
+          // Build minimal context
+          const here = nodeById.get(locationSnapshot.get(c.id) ?? c.locationId);
+          if (here) {
+            const ctx = {
+              worldId, tick: fromTick, self: c, here,
+              companions: [], reachable: [], isSleepHour: false, facts: {} as any,
+            };
+            const outcome = actionDef.onComplete(ctx);
+            c.shortMemory.push({
+              id: `mem-${randomUUID().slice(0, 8)}`,
+              tick: fromTick,
+              importance: 3,
+              content: outcome.memory,
+            });
+            if (outcome.stateChanges) {
+              for (const sc of outcome.stateChanges) {
+                // Apply state changes inline (simplified):
+                if (sc.kind === "resetVital") {
+                  c.vitals[sc.vital] = 0;
+                  if (sc.vital === "fatigue") c.vitals.fatigueCapTicks = 0;
+                } else if (sc.kind === "adjustVital" && sc.vital === "fatigue") {
+                  c.vitals.fatigue = Math.max(0, c.vitals.fatigue + sc.delta);
+                  if (c.vitals.fatigue < 16) c.vitals.fatigueCapTicks = 0;
+                }
+              }
+            }
+            if (outcome.event) {
+              allEvents.push({
+                id: `evt-${randomUUID().slice(0, 8)}`,
+                worldId, tick: fromTick,
+                category: outcome.event.category,
+                description: outcome.event.description,
+                participants: [c.id],
+                source: "actor",
+                intensity: outcome.event.intensity ?? 1,
+                scope: outcome.event.scope ?? "node",
+                nodeId: c.locationId,
+                duration: 1,
+              });
+            }
+          }
         }
         c.currentAction = undefined;
       }
@@ -409,7 +451,6 @@ export async function tick(
       let action: Action;
 
       localLocationMap.set(c.id, currentLoc);
-      const ctx = buildActionContext(c, nodes, characters, localLocationMap);
       const recentThoughts = loadRecentThoughts(worldId, c.id, sinceTick);
       const activityNodeId = activityMap.get(c.id) ?? null;
       const restNodeId = restMap.get(c.id) ?? null;
@@ -426,10 +467,8 @@ export async function tick(
         activityNodeId,
         restNodeId,
       });
-      const opts = getAvailableActions(ctx, {
-        facts,
-        isSleepHour,
-      });
+      const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, isSleepHour, facts, localLocationMap);
+      const opts = actionRegistry.buildOptions(ctx);
 
       try {
         action = await decideFn({
@@ -572,11 +611,6 @@ export async function tick(
     turnDecide: (input) => llmDialogTurn(input),
     summaryDecide: (input) => llmDialogSummarize(input),
     salvageDecide: async (input) => {
-      const ctx = buildActionContext(
-        input.character,
-        nodes,
-        characters,
-      );
       const recentThoughts = loadRecentThoughts(worldId, input.character.id, sinceTick);
       const sActivityId = activityMap.get(input.character.id) ?? null;
       const sRestId = restMap.get(input.character.id) ?? null;
@@ -590,7 +624,8 @@ export async function tick(
         activityNodeId: sActivityId,
         restNodeId: sRestId,
       });
-      const opts = getAvailableActions(ctx, { facts, isSleepHour });
+      const ctx = buildActionContext(input.character, nodes, characters, worldId, fromTick, isSleepHour, facts);
+      const opts = actionRegistry.buildOptions(ctx);
 
       try {
         return await llmSalvageDecide({

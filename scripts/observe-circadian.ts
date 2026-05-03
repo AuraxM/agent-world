@@ -24,10 +24,11 @@ import {
   inSleepWindow,
 } from "@/llm/prompt";
 import type { Action } from "@/domain/types";
+import { TICKS_PER_HOUR } from "@/domain/enums";
 
 const WORLD_ID = "world-observe-circadian";
 const MAP_ID = "moon-valley";
-const TICKS = 48;
+const TICKS = 48 * TICKS_PER_HOUR;
 
 const CAST: CastMember[] = [
   { characterId: "char-tanaka-daichi", locationId: "node-farmhouse" },
@@ -176,7 +177,7 @@ async function main() {
       const node = w.nodes.find((n) => n.id === c.locationId);
       trace.push({
         tick: r.fromTick,
-        hour: r.fromTick % 24,
+        hour: Math.floor(r.fromTick / TICKS_PER_HOUR) % 24,
         charId: c.id,
         charName: c.name,
         action: dec?.action.type ?? "?",
@@ -207,7 +208,7 @@ async function main() {
     console.log(`\n=== ${rows[0].charName} (sleepWindow=${winText}) ===`);
     console.log("Day Hr  | Action       ok | Location          | fat hun hyg | mood capF capH");
     for (const r of rows) {
-      const day = Math.floor(r.tick / 24);
+      const day = Math.floor(r.tick / (24 * TICKS_PER_HOUR));
       const inWin = inSleepWindow(r.hour, win) ? "*" : " ";
       console.log(
         `${day} ${String(r.hour).padStart(2, "0")}${inWin} | ${r.action.padEnd(13)}${r.ok ? "T" : "F"} | ${r.loc.padEnd(18)} | ${String(r.fatigue).padStart(2)} ${String(r.hunger).padStart(3)} ${String(r.hygiene).padStart(3)} | ${String(r.mood).padStart(3)} ${String(r.fatigueCap).padStart(3)} ${String(r.hungerCap).padStart(3)}`,

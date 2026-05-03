@@ -40,6 +40,7 @@ export const ManifestSchema: z.ZodType<Manifest> = z.object({
       message: "must be a valid ISO 8601 datetime string",
     })
     .optional(),
+  actions: z.string().optional(),
 });
 
 /** 一张地图。要求：≥1 个 isEntry 节点；节点 id 唯一；parentId 必须能在同文件中解析（除根）。 */

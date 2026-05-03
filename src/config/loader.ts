@@ -8,6 +8,7 @@ import {
 } from "./schemas";
 import type { CharacterTemplate, Manifest, MapConfig } from "./types";
 import type { PackValidation } from "./loader-types";
+import type { ActionDefinition } from "@/domain/action-system";
 
 function configsRoot(): string {
   return (
@@ -96,6 +97,23 @@ export function loadAllCharacters(): CharacterTemplate[] {
 /** 加载所有地图。 */
 export function loadAllMaps(): MapConfig[] {
   return listMapPackIds().map((id) => loadMap(id));
+}
+
+/** 加载地图包的自定义 ActionDefinition 列表（通过 manifest.actions 字段）。 */
+export function loadModActions(packId: string): ActionDefinition[] {
+  const manifest = loadManifest(packId);
+  if (!manifest.actions) return [];
+
+  const actionsPath = path.join(mapsRoot(), packId, manifest.actions);
+  if (!existsSync(actionsPath)) {
+    console.warn(`Mod actions file not found: ${actionsPath}`);
+    return [];
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require(actionsPath);
+  const defs: ActionDefinition[] = Array.isArray(mod) ? mod : (mod.default ?? []);
+  return defs;
 }
 
 /** 按 id 在所有包中查找单个角色。 */

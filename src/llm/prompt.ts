@@ -21,14 +21,15 @@ import type {
   Memory,
   Personality,
   SleepWindow,
-  Tick,
   WorldEvent,
 } from "@/domain/types";
 import type { ActionOption } from "@/engine/actions";
 import type { Language } from "@/config/types";
 import { actionRegistry } from "@/domain/action-system";
 
-const RECENT_MEMORY_LIMIT = 8;
+const SHORT_MEMORY_LIMIT = 6;
+const DAILY_MEMORY_LIMIT = 6;
+const WEEKLY_MEMORY_LIMIT = 6;
 const MAX_PEERS_IN_PROMPT = 5;
 /** 14 游戏日 = 14 * 24 = 336 小时；与 tick.ts 保持同步。 */
 const ACQUAINTANCE_DECAY_TICKS = 336 * TICKS_PER_HOUR;
@@ -180,29 +181,49 @@ function describeRelations(
 // memories / events / options
 // ---------------------------------------------------------------------------
 
-function describeMemories(memories: Memory[]): string {
-  // 过滤掉离线启发式脚本写入的伪记忆（observe-circadian.ts 等）
-  const filtered = memories.filter((m) => !m.content.includes("[heuristic]"));
-  const recent = filtered.slice(-RECENT_MEMORY_LIMIT);
-  if (recent.length === 0) return "（暂无记忆）";
-  // 折叠相邻 content 完全相同的条目为单行
-  type Group = { startTick: Tick; endTick: Tick; content: string; count: number };
-  const groups: Group[] = [];
-  for (const m of recent) {
-    const last = groups[groups.length - 1];
-    if (last && last.content === m.content) {
-      last.endTick = m.tick;
-      last.count += 1;
-    } else {
-      groups.push({ startTick: m.tick, endTick: m.tick, content: m.content, count: 1 });
+function describeMemoryTiers(
+  short: Memory[],
+  daily: Memory[],
+  weekly: Memory[],
+): string {
+  const lines: string[] = [];
+
+  // 短期记忆
+  const filteredShort = short.filter((m) => !m.content.includes("[heuristic]"));
+  const recentShort = filteredShort.slice(-SHORT_MEMORY_LIMIT);
+  lines.push("你的近期短期记忆：");
+  if (recentShort.length === 0) {
+    lines.push("（暂无）");
+  } else {
+    for (const m of recentShort) {
+      lines.push(`- t=${m.tick}: ${m.content}`);
     }
   }
-  return groups
-    .map((g) => {
-      if (g.count === 1) return `- t=${g.startTick}: ${g.content}`;
-      return `- t=${g.startTick}-${g.endTick}: ${g.content}（连续 ${g.count} 次）`;
-    })
-    .join("\n");
+  lines.push("");
+
+  // 日记忆
+  const recentDaily = daily.slice(-DAILY_MEMORY_LIMIT);
+  if (recentDaily.length > 0) {
+    lines.push("你的日记忆（最近几天的摘要）：");
+    for (const m of recentDaily) {
+      const gameDay = Math.floor(m.tick / (24 * TICKS_PER_HOUR));
+      lines.push(`- 第 ${gameDay} 天: ${m.content}`);
+    }
+    lines.push("");
+  }
+
+  // 周记忆
+  const recentWeekly = weekly.slice(-WEEKLY_MEMORY_LIMIT);
+  if (recentWeekly.length > 0) {
+    lines.push("你的周记忆（最近几周的摘要）：");
+    for (const m of recentWeekly) {
+      const weekNum = Math.floor(m.tick / (7 * 24 * TICKS_PER_HOUR));
+      lines.push(`- 第 ${weekNum} 周: ${m.content}`);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n");
 }
 
 function describeEvents(events: WorldEvent[]): string {
@@ -1010,9 +1031,12 @@ export function buildUserPrompt(args: {
     lines.push("");
   }
 
-  // 7. 短期记忆
-  lines.push("你的近期短期记忆：");
-  lines.push(describeMemories(character.shortMemory));
+  // 7. 三层记忆（短期 / 日 / 周）
+  lines.push(describeMemoryTiers(
+    character.shortMemory,
+    character.dailyMemory,
+    character.longMemory,
+  ));
   lines.push("");
 
   // 8. 可选行动

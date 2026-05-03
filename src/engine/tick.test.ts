@@ -32,6 +32,7 @@ beforeAll(async () => {
   const STATEMENTS = [
     `CREATE TABLE IF NOT EXISTS worlds (
       id TEXT PRIMARY KEY, name TEXT NOT NULL,
+      map_id TEXT NOT NULL DEFAULT '',
       current_tick INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
       updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
@@ -101,8 +102,8 @@ beforeAll(async () => {
 
   const WORLD_ID = "test-world";
   sqlite
-    .prepare(`INSERT INTO worlds (id, name) VALUES (?, ?)`)
-    .run(WORLD_ID, "测试世界");
+    .prepare(`INSERT INTO worlds (id, name, map_id) VALUES (?, ?, ?)`)
+    .run(WORLD_ID, "测试世界", "test-world");
   sqlite
     .prepare(
       `INSERT INTO nodes (id, world_id, parent_id, name, tags_json, privacy) VALUES (?, ?, NULL, ?, ?, ?)`,

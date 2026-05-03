@@ -10,6 +10,7 @@
  * 无 IO 依赖：所有 LLM 调用通过注入的 decide 函数完成，测试时全部 mock。
  */
 import { randomUUID } from "node:crypto";
+import type { Language } from "@/config/types";
 import type { Action, Character, MapNode, Memory, WorldEvent } from "@/domain/types";
 import type { DialogTurn } from "@/domain/types";
 
@@ -72,6 +73,7 @@ export type AcceptDecideFn = (input: {
   perceived: WorldEvent[];
   companions: Character[];
   tick: number;
+  language: Language;
 }) => Promise<AcceptDecideResult>;
 
 export type TurnDecideFn = (input: {
@@ -80,6 +82,7 @@ export type TurnDecideFn = (input: {
   transcript: DialogTurn[];
   isSoftLimit: boolean;
   turnCount: number;
+  language: Language;
 }) => Promise<DialogTurn>;
 
 export type SummaryDecideFn = (input: {
@@ -88,12 +91,14 @@ export type SummaryDecideFn = (input: {
   responderName: string;
   responderId: string;
   transcript: DialogTurn[];
+  language: Language;
 }) => Promise<string>;
 
 export type SalvageDecideFn = (input: {
   character: Character;
   tick: number;
   rejectReason: string;
+  language: Language;
 }) => Promise<Action>;
 
 // ---------------------------------------------------------------------------
@@ -239,6 +244,7 @@ async function runOneDialog(
   chars: Map<string, Character>,
   turnDecide: TurnDecideFn,
   summaryDecide: SummaryDecideFn,
+  language: Language,
 ): Promise<DialogOutcomeInternal> {
   const opener = chars.get(openerId)!;
   const responder = chars.get(responderId)!;
@@ -260,6 +266,7 @@ async function runOneDialog(
           responderName: responder.name,
           responderId: responderId,
           transcript,
+          language,
         }),
       );
     } catch {
@@ -294,6 +301,7 @@ async function runOneDialog(
           transcript,
           isSoftLimit,
           turnCount: transcript.length,
+          language,
         }),
       );
     } catch {
@@ -323,6 +331,7 @@ export interface RunDialogPhaseInput {
   perceptions: Map<string, WorldEvent[]>;
   tick: number;
   worldName: string;
+  language: Language;
   acceptDecide: AcceptDecideFn;
   turnDecide: TurnDecideFn;
   summaryDecide: SummaryDecideFn;
@@ -362,6 +371,7 @@ export async function runDialogPhase(
         character: char,
         tick,
         rejectReason: reason,
+        language: input.language,
       }).then((action) => ({ actorId: af.requester, action })),
     );
   }
@@ -388,6 +398,7 @@ export async function runDialogPhase(
           perceived,
           companions,
           tick,
+          language: input.language,
         });
       } catch {
         result = {
@@ -443,6 +454,7 @@ export async function runDialogPhase(
           character: requester,
           tick,
           rejectReason: `${targetName} 拒绝了你的对话请求。`,
+          language: input.language,
         }).then((action) => ({ actorId: pa.requester, action })),
       );
     }
@@ -473,6 +485,7 @@ export async function runDialogPhase(
           charById,
           input.turnDecide,
           input.summaryDecide,
+          input.language,
         ),
       ),
     ),

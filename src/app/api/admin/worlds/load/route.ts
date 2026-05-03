@@ -1,12 +1,11 @@
-/**
- * POST /api/admin/reset — 重置游戏世界（删除当前世界并重新 seed）
- *
- * Body: { worldId?, mapId?, cast? } 均可选，默认重置 moon-valley。
- */
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db/client";
 import { createWorldFromConfig, type CastMember } from "@/engine/createWorld";
+import {
+  loadCharactersForMap,
+  validateMapPack,
+} from "@/config/loader";
 
 const VitalsOverride = z
   .object({
@@ -22,33 +21,11 @@ const CastMemberSchema = z.object({
 });
 
 const BodySchema = z.object({
-  worldId: z.string().min(1).optional(),
-  name: z.string().min(1).optional(),
-  mapId: z.string().min(1).optional(),
-  cast: z.array(CastMemberSchema).min(1).optional(),
+  mapId: z.string().min(1),
+  cast: z.array(CastMemberSchema).optional(),
 });
 
-const DEFAULT_WORLD_ID = "world-yu-no-tani";
-const DEFAULT_MAP_ID = "yu-no-tani";
-const DEFAULT_CAST: CastMember[] = [
-  { characterId: "char-yumori-kosuke" },
-  { characterId: "char-ogawa-saori" },
-  { characterId: "char-nakamura-yuto" },
-  { characterId: "char-yamada-takafumi" },
-  { characterId: "char-tanimura-kinuyo" },
-  { characterId: "char-matsuoka-sayo" },
-  { characterId: "char-suzuki-kazuo" },
-  { characterId: "char-tanaka-yayoi" },
-  { characterId: "char-tazaki-mamoru" },
-  { characterId: "char-sato-haru" },
-  { characterId: "char-guji-masayuki" },
-  { characterId: "char-kishita-michiko" },
-  { characterId: "char-yoshida-eiichi" },
-  { characterId: "char-okubo-kenta" },
-  { characterId: "char-okubo-miwa" },
-  { characterId: "char-shiraishi-aoi" },
-  { characterId: "char-nogami-takashi" },
-];
+const DEFAULT_WORLD_ID = "world-default";
 
 export async function POST(request: Request) {
   let json: unknown = {};
@@ -59,6 +36,7 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ error: "invalid JSON body" }, { status: 400 });
   }
+
   const parsed = BodySchema.safeParse(json);
   if (!parsed.success) {
     return Response.json(
@@ -67,22 +45,45 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    const worldId = parsed.data.worldId ?? DEFAULT_WORLD_ID;
-    const mapId = parsed.data.mapId ?? DEFAULT_MAP_ID;
-    const cast = parsed.data.cast ?? DEFAULT_CAST;
+  const { mapId, cast: castInput } = parsed.data;
 
-    // 级联删除旧世界
+  // Validate pack format first
+  const validation = validateMapPack(mapId);
+  if (!validation.valid) {
+    return Response.json(
+      { error: "map pack validation failed", errors: validation.errors },
+      { status: 400 },
+    );
+  }
+
+  try {
+    // Build cast: if not provided, use all characters in the pack
+    let cast: CastMember[];
+    if (castInput) {
+      cast = castInput.map((c) => ({
+        characterId: c.characterId,
+        locationId: c.locationId,
+        vitals: c.vitals,
+      }));
+    } else {
+      const allChars = loadCharactersForMap(mapId);
+      cast = allChars.map((c) => ({
+        characterId: c.id,
+      }));
+    }
+
+    const worldId = DEFAULT_WORLD_ID;
+
+    // Delete existing world
     db.delete(schema.worlds).where(eq(schema.worlds.id, worldId)).run();
 
     const result = createWorldFromConfig({
       worldId,
-      name: parsed.data.name ?? "汤之谷",
+      name: validation.name,
       mapId,
       cast,
     });
 
-    // 清除 LLM client 缓存（世界重置后重新开始）
     globalThis.__agent_world_llm__ = undefined;
 
     return Response.json({

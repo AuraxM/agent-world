@@ -3,13 +3,8 @@
  * 通过 /api/admin/settings 读写。
  */
 
-export type Language = "zh" | "en" | "ja";
-
-export const SUPPORTED_LANGUAGES: readonly Language[] = ["zh", "en", "ja"];
-
 interface Settings {
   thinkingEnabled: boolean;
-  language: Language;
 }
 
 declare global {
@@ -21,7 +16,6 @@ function read(): Settings {
   if (!globalThis.__agent_world_settings__) {
     globalThis.__agent_world_settings__ = {
       thinkingEnabled: true,
-      language: "zh",
     };
   }
   return globalThis.__agent_world_settings__;
@@ -33,16 +27,4 @@ export function getThinkingEnabled(): boolean {
 
 export function setThinkingEnabled(v: boolean): void {
   read().thinkingEnabled = v;
-}
-
-export function getLanguage(): Language {
-  return read().language;
-}
-
-export function setLanguage(v: Language): void {
-  read().language = v;
-}
-
-export function isSupportedLanguage(v: unknown): v is Language {
-  return typeof v === "string" && (SUPPORTED_LANGUAGES as readonly string[]).includes(v);
 }

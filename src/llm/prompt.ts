@@ -25,7 +25,7 @@ import type {
   WorldEvent,
 } from "@/domain/types";
 import type { ActionOption } from "@/engine/actions";
-import type { Language } from "@/engine/settings";
+import type { Language } from "@/config/types";
 
 const RECENT_MEMORY_LIMIT = 8;
 const MAX_PEERS_IN_PROMPT = 5;

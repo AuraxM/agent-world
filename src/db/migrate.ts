@@ -25,6 +25,7 @@ const STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS worlds (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    map_id TEXT NOT NULL DEFAULT '',
     current_tick INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
@@ -138,6 +139,10 @@ const CHARACTERS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
   { name: "origin", ddl: "ALTER TABLE characters ADD COLUMN origin TEXT NOT NULL DEFAULT 'local'" },
 ];
 
+const WORLDS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
+  { name: "map_id", ddl: "ALTER TABLE worlds ADD COLUMN map_id TEXT NOT NULL DEFAULT ''" },
+];
+
 const tx = sqlite.transaction(() => {
   for (const stmt of STATEMENTS) sqlite.exec(stmt);
   const nodeCols = sqlite
@@ -153,6 +158,13 @@ const tx = sqlite.transaction(() => {
   const haveCharCols = new Set(charCols.map((c) => c.name));
   for (const col of CHARACTERS_NEW_COLUMNS) {
     if (!haveCharCols.has(col.name)) sqlite.exec(col.ddl);
+  }
+  const worldCols = sqlite
+    .prepare(`PRAGMA table_info(worlds)`)
+    .all() as { name: string }[];
+  const haveWorldCols = new Set(worldCols.map((c) => c.name));
+  for (const col of WORLDS_NEW_COLUMNS) {
+    if (!haveWorldCols.has(col.name)) sqlite.exec(col.ddl);
   }
 });
 tx();

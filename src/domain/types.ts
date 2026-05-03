@@ -288,6 +288,7 @@ export interface DialogTurn {
 export interface World {
   id: string;
   name: string;
+  mapId: string;
   currentTick: Tick;
   createdAt: number;
   updatedAt: number;

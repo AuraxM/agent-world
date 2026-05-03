@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  ACTION_TYPES,
   EVENT_CATEGORIES,
   EVENT_SCOPES,
   EVENT_SOURCES,
@@ -17,95 +16,70 @@ const RELATION_CHANGE_TYPES = [
 ] as const;
 
 /**
- * Action schema —— LLM 通过 tool-use 强制返回的结构。
- * 字段命名故意用 snake_case 与工具调用约定一致；
- * 引擎在 execute 阶段会把它转成 camelCase 的 Action 对象。
+ * Builder functions for dynamic action schemas.
+ * Takes actionTypes from the world config so each world/map-pack can define
+ * its own set of available actions.
  */
-export const ActionSchema = z.object({
-  action_type: z.enum(ACTION_TYPES),
-  target_id: z.string().optional(),
-  target_node_id: z.string().optional(),
-  free_text: z.string().max(500).optional(),
-  reasoning: z.string().min(1).max(800),
-  emotion_tag: z.string().max(40).optional(),
-  self_importance: z.union([
-    z.literal(1),
-    z.literal(2),
-    z.literal(3),
-    z.literal(4),
-    z.literal(5),
-  ]),
-  change_type: z.enum(RELATION_CHANGE_TYPES).optional(),
-  reason: z.string().max(200).optional(),
-  arrival_action: z.object({
-    action_type: z.enum(ACTION_TYPES),
-    free_text: z.string().max(500).optional(),
+export const ACTION_TOOL_NAME = "submit_action";
+export const SALVAGE_TOOL_NAME = "submit_action";
+
+export function buildActionSchema(actionTypes: string[]) {
+  if (actionTypes.length === 0) {
+    throw new Error("buildActionSchema: actionTypes must not be empty");
+  }
+  const types = actionTypes as [string, ...string[]];
+  return z.object({
+    action_type: z.enum(types),
     target_id: z.string().optional(),
     target_node_id: z.string().optional(),
-  }).optional(),
-});
-export type ActionPayload = z.infer<typeof ActionSchema>;
+    free_text: z.string().max(500).optional(),
+    reasoning: z.string().min(1).max(800),
+    emotion_tag: z.string().max(40).optional(),
+    self_importance: z.union([
+      z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5),
+    ]),
+    change_type: z.enum(RELATION_CHANGE_TYPES).optional(),
+    reason: z.string().max(200).optional(),
+    arrival_action: z.object({
+      action_type: z.enum(types),
+      free_text: z.string().max(500).optional(),
+      target_id: z.string().optional(),
+      target_node_id: z.string().optional(),
+    }).optional(),
+  });
+}
+export type ActionPayload = z.infer<ReturnType<typeof buildActionSchema>>;
 
-/** Tool definition：直接喂给 OpenAI/Anthropic SDK 的 function tool。 */
-export const ACTION_TOOL_NAME = "submit_action";
-export const ActionToolInputSchema = {
-  type: "object" as const,
-  properties: {
-    action_type: { type: "string", enum: [...ACTION_TYPES] },
-    target_id: {
-      type: "string",
-      description: "目标角色或物体 id，可选。",
-    },
-    target_node_id: {
-      type: "string",
-      description: "目标节点 id（仅 move/flee 等位移行动需要）。",
-    },
-    free_text: {
-      type: "string",
-      description:
-        "自由文本（说话内容、行动具体描述）。speak 必填；其它行动选填。",
-    },
-    reasoning: {
-      type: "string",
-      description:
-        "内心独白。必须显式引用一项你的性格特征（用文字描述，不要写数值）。",
-    },
-    emotion_tag: {
-      type: "string",
-      description: "短情绪标签，例如 紧张 / 好奇 / 烦躁。",
-    },
-    self_importance: {
-      type: "integer",
-      enum: [1, 2, 3, 4, 5],
-      description: "1-5 自评要不要长期记住。",
-    },
-    change_type: {
-      type: "string",
-      enum: [...RELATION_CHANGE_TYPES],
-      description: "仅在 action_type=update_relation 时使用。",
-    },
-    reason: {
-      type: "string",
-      description:
-        "仅 move：移动原因，例如'去酒馆找田中喝酒'。将被记入记忆。",
-    },
-    arrival_action: {
-      type: "object",
-      description:
-        "仅 move：到达目的地后要自动执行的动作。包含 action_type、可选的 free_text/target_id/target_node_id。",
-      properties: {
-        action_type: { type: "string", enum: [...ACTION_TYPES] },
-        free_text: { type: "string", description: "说话内容或行动描述。" },
-        target_id: { type: "string", description: "交互目标的 character id。" },
-        target_node_id: { type: "string", description: "交互目标的节点 id。" },
+export function buildActionToolSchema(actionTypes: string[]) {
+  return {
+    type: "object" as const,
+    properties: {
+      action_type: { type: "string", enum: actionTypes },
+      target_id: { type: "string", description: "目标角色或物体 id，可选。" },
+      target_node_id: { type: "string", description: "目标节点 id（仅 move 等位移行动需要）。" },
+      free_text: { type: "string", description: "自由文本（说话内容、行动具体描述）。speak 必填；其它行动选填。" },
+      reasoning: { type: "string", description: "内心独白。必须显式引用一项你的性格特征（用文字描述，不要写数值）。" },
+      emotion_tag: { type: "string", description: "短情绪标签，例如 紧张 / 好奇 / 烦躁。" },
+      self_importance: { type: "integer", enum: [1, 2, 3, 4, 5], description: "1-5 自评要不要长期记住。" },
+      change_type: { type: "string", enum: [...RELATION_CHANGE_TYPES], description: "仅在 action_type=update_relation 时使用。" },
+      reason: { type: "string", description: "仅 move：移动原因。" },
+      arrival_action: {
+        type: "object",
+        description: "仅 move：到达目的地后要自动执行的动作。",
+        properties: {
+          action_type: { type: "string", enum: actionTypes },
+          free_text: { type: "string", description: "说话内容或行动描述。" },
+          target_id: { type: "string", description: "交互目标的 character id。" },
+          target_node_id: { type: "string", description: "交互目标的节点 id。" },
+        },
+        required: ["action_type"],
+        additionalProperties: false,
       },
-      required: ["action_type"],
-      additionalProperties: false,
     },
-  },
-  required: ["action_type", "reasoning", "self_importance"],
-  additionalProperties: false,
-};
+    required: ["action_type", "reasoning", "self_importance"],
+    additionalProperties: false,
+  };
+}
 
 /** Personality 校验：MBTI 4 维 [-4, 4] 整数。 */
 export const PersonalitySchema = z.object({
@@ -162,7 +136,7 @@ export const MapNodeSchema = z.object({
 
 /** 已执行 Action 的内部表示（snake_case → camelCase 后的形态）。 */
 export const ExecutedActionSchema = z.object({
-  type: z.enum(ACTION_TYPES),
+  type: z.string(),
   actorId: z.string(),
   targetId: z.string().optional(),
   targetNodeId: z.string().optional(),
@@ -274,71 +248,64 @@ export const DialogSummaryToolSchema = {
   additionalProperties: false,
 };
 
-// Salvage decision: same as ActionSchema but action_type excludes speak/accept_speak/reject_speak/leave_dialog
-const _salvageActionTypesFiltered = ACTION_TYPES.filter(
-  (t) => t !== "speak" && t !== "accept_speak" && t !== "reject_speak" && t !== "leave_dialog",
-);
-if (_salvageActionTypesFiltered.length === 0) {
-  throw new Error("SALVAGE_ACTION_TYPES is empty — check exclusion list");
-}
-const SALVAGE_ACTION_TYPES = _salvageActionTypesFiltered as [string, ...string[]];
-
-export const SalvageActionSchema = z.object({
-  action_type: z.enum(SALVAGE_ACTION_TYPES),
-  target_id: z.string().optional(),
-  target_node_id: z.string().optional(),
-  free_text: z.string().max(500).optional(),
-  reasoning: z.string().min(1).max(800),
-  emotion_tag: z.string().max(40).optional(),
-  self_importance: z.union([
-    z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5),
-  ]),
-  change_type: z.enum(RELATION_CHANGE_TYPES).optional(),
-  reason: z.string().max(200).optional(),
-  arrival_action: z.object({
-    action_type: z.enum(SALVAGE_ACTION_TYPES),
-    free_text: z.string().max(500).optional(),
+export function buildSalvageActionSchema(actionTypes: string[]) {
+  const filtered = actionTypes.filter(
+    (t) => t !== "speak" && t !== "accept_speak" && t !== "reject_speak" && t !== "leave_dialog",
+  );
+  if (filtered.length === 0) throw new Error("Salvage action types empty");
+  const types = filtered as [string, ...string[]];
+  const schema = z.object({
+    action_type: z.enum(types),
     target_id: z.string().optional(),
     target_node_id: z.string().optional(),
-  }).optional(),
-});
-export type SalvageActionPayload = z.infer<typeof SalvageActionSchema>;
+    free_text: z.string().max(500).optional(),
+    reasoning: z.string().min(1).max(800),
+    emotion_tag: z.string().max(40).optional(),
+    self_importance: z.union([
+      z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5),
+    ]),
+    change_type: z.enum(RELATION_CHANGE_TYPES).optional(),
+    reason: z.string().max(200).optional(),
+    arrival_action: z.object({
+      action_type: z.enum(types),
+      free_text: z.string().max(500).optional(),
+      target_id: z.string().optional(),
+      target_node_id: z.string().optional(),
+    }).optional(),
+  });
+  return { schema, types };
+}
 
-export const SALVAGE_TOOL_NAME = "submit_action";
-export const SalvageToolSchema = {
-  type: "object" as const,
-  properties: {
-    action_type: { type: "string", enum: [...SALVAGE_ACTION_TYPES] },
-    target_id: { type: "string", description: "目标角色 id，可选。" },
-    target_node_id: { type: "string", description: "目标节点 id（仅 move 等位移行动需要）。" },
-    free_text: { type: "string", description: "自由文本。" },
-    reasoning: { type: "string", description: "内心独白。必须显式引用性格特征文字描述。" },
-    emotion_tag: { type: "string", description: "短情绪标签。" },
-    self_importance: { type: "integer", enum: [1, 2, 3, 4, 5], description: "1-5 自评重要度。" },
-    change_type: {
-      type: "string",
-      enum: [...RELATION_CHANGE_TYPES],
-      description: "仅在 action_type=update_relation 时使用。",
-    },
-    reason: {
-      type: "string",
-      description:
-        "仅 move：移动原因，例如'去酒馆找田中喝酒'。将被记入记忆。",
-    },
-    arrival_action: {
-      type: "object",
-      description:
-        "仅 move：到达目的地后要自动执行的动作。包含 action_type、可选的 free_text/target_id/target_node_id。",
-      properties: {
-        action_type: { type: "string", enum: [...SALVAGE_ACTION_TYPES] },
-        free_text: { type: "string", description: "说话内容或行动描述。" },
-        target_id: { type: "string", description: "交互目标的 character id。" },
-        target_node_id: { type: "string", description: "交互目标的节点 id。" },
+export function buildSalvageToolSchema(actionTypes: string[]) {
+  const filtered = actionTypes.filter(
+    (t) => t !== "speak" && t !== "accept_speak" && t !== "reject_speak" && t !== "leave_dialog",
+  );
+  return {
+    type: "object" as const,
+    properties: {
+      action_type: { type: "string", enum: filtered },
+      target_id: { type: "string", description: "目标角色 id，可选。" },
+      target_node_id: { type: "string", description: "目标节点 id（仅 move 等位移行动需要）。" },
+      free_text: { type: "string", description: "自由文本。" },
+      reasoning: { type: "string", description: "内心独白。必须显式引用性格特征文字描述。" },
+      emotion_tag: { type: "string", description: "短情绪标签。" },
+      self_importance: { type: "integer", enum: [1, 2, 3, 4, 5], description: "1-5 自评重要度。" },
+      change_type: { type: "string", enum: [...RELATION_CHANGE_TYPES], description: "仅在 action_type=update_relation 时使用。" },
+      reason: { type: "string", description: "仅 move：移动原因。" },
+      arrival_action: {
+        type: "object",
+        description: "仅 move：到达目的地后要自动执行的动作。",
+        properties: {
+          action_type: { type: "string", enum: filtered },
+          free_text: { type: "string", description: "说话内容或行动描述。" },
+          target_id: { type: "string", description: "交互目标的 character id。" },
+          target_node_id: { type: "string", description: "交互目标的节点 id。" },
+        },
+        required: ["action_type"],
+        additionalProperties: false,
       },
-      required: ["action_type"],
-      additionalProperties: false,
     },
-  },
-  required: ["action_type", "reasoning", "self_importance"],
-  additionalProperties: false,
-};
+    required: ["action_type", "reasoning", "self_importance"],
+    additionalProperties: false,
+  };
+}

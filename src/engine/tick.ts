@@ -20,6 +20,7 @@
 import { randomUUID } from "node:crypto";
 import { TICKS_PER_HOUR } from "@/domain/enums";
 import { buildActionContext } from "./actions";
+import { compressSleepMemories } from "./memory-compression";
 import { actionRegistry } from "@/domain/action-system";
 import { BUILTIN_ACTIONS } from "./actions-builtin";
 import { executeActions } from "./execute";
@@ -705,6 +706,19 @@ export async function tick(
   }
 
   // ── End Phase 4.5 ──
+
+  // Phase 4.6: Memory compression for characters going to sleep
+  const sleepActionsForCompression = actionsForExecution.filter(a => a.type === "sleep");
+  if (sleepActionsForCompression.length > 0) {
+    await Promise.all(
+      sleepActionsForCompression.map(async (action) => {
+        const c = characters.find(ch => ch.id === action.actorId);
+        if (c) {
+          await compressSleepMemories(c, fromTick, language);
+        }
+      }),
+    );
+  }
 
   // 7. 执行（move 已在 free-move 循环里处理；execute 内部的 move 分支保留兼容）
   const execResult = executeActions({

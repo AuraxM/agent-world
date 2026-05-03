@@ -289,7 +289,7 @@ export interface DialogTurn {
   reasoning?: string;
 }
 
-/** 一笔金钱交易记录。 */
+/** 一笔金钱交易记录。id 为 SQLite autoincrement integer（不同于其他实体的 string id）。 */
 export interface Transaction {
   id: number;
   worldId: string;

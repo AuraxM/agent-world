@@ -168,6 +168,7 @@ function handleOngoingMove(
       actorId: c.id,
       reasoning: `正在前往目的地途中（第 ${nextStep}/${path.length - 1} 步）。`,
       selfImportance: 1,
+      skipMemory: true,
     },
     arrived: false,
   };
@@ -337,6 +338,7 @@ export async function tick(
             actorId: c.id,
             reasoning: `持续行动中：${c.currentAction.description}。`,
             selfImportance: 1,
+            skipMemory: true,
           };
           options.onCharacterDecision?.({
             characterId: c.id,

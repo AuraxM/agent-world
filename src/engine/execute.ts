@@ -547,6 +547,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
         );
         break;
       }
+      case "study":
       case "work":
       case "read":
       case "observe":
@@ -612,6 +613,8 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
 
 function humanVerb(type: ActionType): string {
   switch (type) {
+    case "study":
+      return "在学习";
     case "work":
       return "在工作/学习";
     case "read":

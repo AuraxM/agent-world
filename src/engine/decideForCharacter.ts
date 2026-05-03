@@ -200,31 +200,56 @@ export async function decideForCharacter(
           const client = getLLMClient();
           const extra: Record<string, unknown> = {};
           if (getThinkingEnabled()) extra.thinking = { type: "enabled" };
-          const resp = await client.chat.completions.create({
-            model: getModelName(),
-            max_tokens: 4096,
-            messages: [
-              { role: "system", content: system },
-              { role: "user", content: user },
-            ],
-            tools,
-            ...extra,
-          });
-          const tc = resp.choices[0]?.message?.tool_calls?.find(
-            (x) => x.type === "function" && x.function.name.startsWith("action_"),
-          );
-          if (!tc || tc.type !== "function") {
-            throw new Error("LLM 没有返回 action_* tool_call");
+          const model = getModelName();
+
+          const messages: Array<Record<string, unknown>> = [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ];
+
+          let actionType: string | null = null;
+          let p: Record<string, any> | null = null;
+
+          const MAX_ROUNDS = 3;
+          for (let round = 0; round < MAX_ROUNDS; round++) {
+            const resp = await client.chat.completions.create({
+              model,
+              max_tokens: 4096,
+              messages: messages as any,
+              tools,
+              ...extra,
+            });
+
+            const msg = resp.choices[0]?.message;
+            if (!msg) throw new Error("LLM 返回空 message");
+
+            // 保留 reasoning_content（DeepSeek 要求回传）
+            const assistantMsg: Record<string, unknown> = { role: "assistant", content: msg.content ?? "" };
+            if ((msg as any).tool_calls) assistantMsg.tool_calls = (msg as any).tool_calls;
+            if ((msg as any).reasoning_content) assistantMsg.reasoning_content = (msg as any).reasoning_content;
+            messages.push(assistantMsg);
+
+            const tc = (msg.tool_calls ?? []).find(
+              (x: any) => x.type === "function" && x.function.name.startsWith("action_"),
+            );
+            if (tc && tc.type === "function") {
+              actionType = actionTypeFromToolName(tc.function.name);
+              if (!actionType) throw new Error(`无法从 tool name "${tc.function.name}" 提取 action type`);
+              const parsed = PerActionSchema.safeParse(JSON.parse(tc.function.arguments));
+              if (!parsed.success) throw new Error(`tool_call 参数不符合 schema：${parsed.error.message}`);
+              p = parsed.data as Record<string, any>;
+              break;
+            }
+
+            if (round < MAX_ROUNDS - 1) {
+              messages.push({ role: "user", content: "请调用对应的 action_* 工具提交你的行动决定。不要输出纯文本，必须调用工具。" });
+            }
           }
-          const actionType = actionTypeFromToolName(tc.function.name);
-          if (!actionType) {
-            throw new Error(`无法从 tool name "${tc.function.name}" 提取 action type`);
+
+          if (!actionType || !p) {
+            throw new Error(`LLM ${MAX_ROUNDS} 轮均未返回 tool_call`);
           }
-          const parsed = PerActionSchema.safeParse(JSON.parse(tc.function.arguments));
-          if (!parsed.success) {
-            throw new Error(`tool_call 参数不符合 schema：${parsed.error.message}`);
-          }
-          const p = parsed.data;
+
           action = {
             type: actionType,
             actorId: c.id,

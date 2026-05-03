@@ -45,14 +45,84 @@ export const llmDecide: DecideFn = async (input) => {
   }
 };
 
-async function callLLM(input: DecideInput): Promise<Action> {
+const MAX_TOOL_CALL_ROUNDS = 3;
+
+/** 从 response message 提取 assistant 消息，保留 reasoning_content（DeepSeek 要求回传）。 */
+function captureAssistantMsg(msg: any): Record<string, unknown> {
+  const m: Record<string, unknown> = { role: "assistant", content: msg.content ?? "" };
+  if (msg.tool_calls) m.tool_calls = msg.tool_calls;
+  if (msg.reasoning_content) m.reasoning_content = msg.reasoning_content;
+  return m;
+}
+
+const TOOL_CALL_NUDGE = "请调用对应的 action_* 工具提交你的行动决定。不要输出纯文本，必须调用工具。";
+
+/**
+ * 带 reasoning 续推循环的 LLM 调用：
+ * - 最多 MAX_TOOL_CALL_ROUNDS 轮
+ * - 每轮若 LLM 未调 tool，把 assistant 消息 + 催促 nudge 追加到 messages 继续
+ * - 保证 reasoning_content 在每一轮都被回传（DeepSeek 要求）
+ */
+async function callLLMWithRetry(
+  messages: Array<Record<string, unknown>>,
+  tools: Array<{ type: "function"; function: { name: string; description: string; parameters: Record<string, unknown> } }>,
+  fallbackLabel: string,
+): Promise<{ actionType: string; data: Record<string, any> }> {
   const client = getLLMClient();
-  const language = input.language;
+  const extra: Record<string, unknown> = {};
+  if (getThinkingEnabled()) extra.thinking = { type: "enabled" };
+
+  for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
+    const response = await client.chat.completions.create({
+      model: getModelName(),
+      max_tokens: MAX_OUTPUT_TOKENS,
+      messages: messages as any,
+      tools,
+      ...(extra as Record<string, unknown>),
+    });
+
+    const msg = response.choices[0]?.message;
+    if (!msg) throw new Error("LLM 返回空 message");
+
+    // 保留 reasoning_content，追加为 assistant 消息
+    messages.push(captureAssistantMsg(msg));
+
+    const toolCall = (msg.tool_calls ?? []).find(
+      (c: any) => c.type === "function" && c.function.name.startsWith("action_"),
+    );
+    if (toolCall && toolCall.type === "function") {
+      const actionType = actionTypeFromToolName(toolCall.function.name);
+      if (!actionType) throw new Error(`无法从 tool name "${toolCall.function.name}" 提取 action type`);
+
+      let parsedArgs: unknown;
+      try {
+        parsedArgs = JSON.parse(toolCall.function.arguments);
+      } catch (e) {
+        throw new Error(`tool_call.arguments 不是合法 JSON：${e instanceof Error ? e.message : String(e)}`);
+      }
+
+      const result = buildPerActionSchema().safeParse(parsedArgs);
+      if (!result.success) {
+        throw new Error(`tool_call 参数不符合 schema：${result.error.message}`);
+      }
+      return { actionType, data: result.data as Record<string, any> };
+    }
+
+    // 未调 tool → 推进续推
+    if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+      messages.push({ role: "user", content: TOOL_CALL_NUDGE });
+    }
+  }
+
+  throw new Error(`${fallbackLabel} ${MAX_TOOL_CALL_ROUNDS} 轮均未返回 tool_call`);
+}
+
+async function callLLM(input: DecideInput): Promise<Action> {
   const system = buildSystemPrompt({
     character: input.character,
     worldName: input.worldName,
     nodes: input.nodes,
-    language,
+    language: input.language,
   });
   const user = buildUserPrompt({
     character: input.character,
@@ -62,55 +132,18 @@ async function callLLM(input: DecideInput): Promise<Action> {
     options: input.options,
     tick: input.tick,
     facts: input.facts,
-    language,
+    language: input.language,
   });
 
   const tools = buildActionTools(input.ctx);
 
-  const extra: Record<string, unknown> = {};
-  if (getThinkingEnabled()) {
-    extra.thinking = { type: "enabled" };
-  }
+  const messages: Array<Record<string, unknown>> = [
+    { role: "system", content: system },
+    { role: "user", content: user },
+  ];
 
-  const response = await client.chat.completions.create({
-    model: getModelName(),
-    max_tokens: MAX_OUTPUT_TOKENS,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user },
-    ],
-    tools,
-        ...(extra as Record<string, unknown>),
-  });
-
-  const message = response.choices[0]?.message;
-  const toolCall = message?.tool_calls?.find(
-    (c) => c.type === "function" && c.function.name.startsWith("action_"),
-  );
-  if (!toolCall || toolCall.type !== "function") {
-    throw new Error("LLM 没有返回 action_* tool_call");
-  }
-
-  const actionType = actionTypeFromToolName(toolCall.function.name);
-  if (!actionType) {
-    throw new Error(`无法从 tool name "${toolCall.function.name}" 提取 action type`);
-  }
-
-  let parsedArgs: unknown;
-  try {
-    parsedArgs = JSON.parse(toolCall.function.arguments);
-  } catch (e) {
-    throw new Error(
-      `tool_call.arguments 不是合法 JSON：${e instanceof Error ? e.message : String(e)}`,
-    );
-  }
-
-  const result = buildPerActionSchema().safeParse(parsedArgs);
-  if (!result.success) {
-    throw new Error(`tool_call 参数不符合 schema：${result.error.message}`);
-  }
-
-  return payloadToAction(actionType, result.data, input.character.id);
+  const { actionType, data } = await callLLMWithRetry(messages, tools, "LLM");
+  return payloadToAction(actionType, data, input.character.id);
 }
 
 function payloadToAction(actionType: string, p: Record<string, any>, actorId: string): Action {
@@ -416,7 +449,6 @@ export async function llmSalvageDecide(
     selfImportance: 1,
   };
 
-  const client = getLLMClient();
   const language = input.language;
 
   const system = buildSystemPrompt({
@@ -439,37 +471,19 @@ export async function llmSalvageDecide(
 
   const tools = buildSalvageActionTools(input.ctx);
 
+  const messages: Array<Record<string, unknown>> = [
+    { role: "system", content: system },
+    { role: "user", content: user + "\n\n" + salvageCtx },
+  ];
+
   let lastAction: Action | null = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const response = await client.chat.completions.create({
-        model: getModelName(),
-        max_tokens: MAX_OUTPUT_TOKENS,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user + "\n\n" + salvageCtx },
-        ],
+      const { actionType, data } = await callLLMWithRetry(
+        messages.map((m) => ({ ...m })), // shallow copy per attempt
         tools,
-              });
-
-      const message = response.choices[0]?.message;
-      const toolCall = message?.tool_calls?.find(
-        (c) => c.type === "function" && c.function.name.startsWith("action_"),
+        "Salvage",
       );
-      if (!toolCall || toolCall.type !== "function") {
-        throw new Error("LLM 没有返回 salvage tool_call");
-      }
-
-      const actionType = actionTypeFromToolName(toolCall.function.name);
-      if (!actionType) {
-        throw new Error(`无法从 tool name "${toolCall.function.name}" 提取 action type`);
-      }
-
-      const parsed = JSON.parse(toolCall.function.arguments);
-      const result = buildPerActionSchema().safeParse(parsed);
-      if (!result.success) {
-        throw new Error(`SalvageAction 参数不符合 schema：${result.error.message}`);
-      }
 
       // Double-check: no speak family
       if (actionType === "speak" || actionType === "accept_speak" || actionType === "reject_speak" || actionType === "leave_dialog") {
@@ -479,20 +493,20 @@ export async function llmSalvageDecide(
       return {
         type: actionType,
         actorId: input.character.id,
-        targetId: result.data.target_id,
-        targetNodeId: result.data.target_node_id,
-        freeText: result.data.free_text,
-        reasoning: result.data.reasoning,
-        emotionTag: result.data.emotion_tag,
-        selfImportance: result.data.self_importance,
-        changeType: result.data.change_type,
-        reason: result.data.reason,
-        arrivalAction: result.data.arrival_action
+        targetId: data.target_id,
+        targetNodeId: data.target_node_id,
+        freeText: data.free_text,
+        reasoning: data.reasoning,
+        emotionTag: data.emotion_tag,
+        selfImportance: data.self_importance,
+        changeType: data.change_type,
+        reason: data.reason,
+        arrivalAction: data.arrival_action
           ? {
-              type: result.data.arrival_action.action_type as Action["type"],
-              freeText: result.data.arrival_action.free_text,
-              targetId: result.data.arrival_action.target_id,
-              targetNodeId: result.data.arrival_action.target_node_id,
+              type: data.arrival_action.action_type as Action["type"],
+              freeText: data.arrival_action.free_text,
+              targetId: data.arrival_action.target_id,
+              targetNodeId: data.arrival_action.target_node_id,
             }
           : undefined,
       };

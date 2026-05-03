@@ -1,5 +1,5 @@
 /**
- * 观测脚本：本地启发式决策跑 48 tick（两轮 24h），打印每个 NPC 的作息曲线
+ * 观测脚本：本地启发式决策跑 240 tick（48 游戏小时 / 两轮 24h），打印每个 NPC 的作息曲线
  * 与汇总指标，验证 vitals/emotion/作息系统改动后的实际行为。
  *
  * 用法：tsx scripts/observe-circadian.ts

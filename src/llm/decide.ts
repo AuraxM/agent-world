@@ -31,8 +31,9 @@ import {
   type SalvageActionPayload,
 } from "@/domain/schemas";
 import type { Action, Character, DialogTurn, MapNode, WorldEvent } from "@/domain/types";
+import type { Language } from "@/config/types";
 import type { DecideFn, DecideInput } from "@/engine/tick";
-import { getLanguage, getThinkingEnabled } from "@/engine/settings";
+import { getThinkingEnabled } from "@/engine/settings";
 import { getLLMClient, getModelName, hasApiKey } from "./client";
 import {
   buildAcceptDecisionPrompt,
@@ -59,7 +60,7 @@ export const llmDecide: DecideFn = async (input) => {
 
 async function callLLM(input: DecideInput): Promise<Action> {
   const client = getLLMClient();
-  const language = getLanguage();
+  const language = input.language;
   const system = buildSystemPrompt({
     character: input.character,
     worldName: input.worldName,
@@ -190,6 +191,7 @@ export interface DialogTurnInput {
   transcript: DialogTurn[];
   isSoftLimit: boolean;
   turnCount: number;
+  language?: Language;
 }
 
 /**
@@ -200,7 +202,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn>
   if (!hasApiKey()) throw new Error("没有激活的 LLM provider");
 
   const client = getLLMClient();
-  const language = getLanguage();
+  const language: Language = input.language ?? "zh";
 
   const prompt = buildDialogTurnPrompt({
     self: input.self,
@@ -270,6 +272,7 @@ export interface DialogSummaryInput {
   responderName: string;
   responderId: string;
   transcript: DialogTurn[];
+  language?: Language;
 }
 
 /**
@@ -280,7 +283,7 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<str
   if (!hasApiKey()) return `（摘要生成失败：双方聊了 ${input.transcript.length} 句）`;
 
   const client = getLLMClient();
-  const language = getLanguage();
+  const language: Language = input.language ?? "zh";
 
   const prompt = buildDialogSummaryPrompt({
     openerName: input.openerName,
@@ -349,6 +352,7 @@ export interface AcceptDecisionInput {
   perceived: WorldEvent[];
   companions: Character[];
   tick: number;
+  language?: Language;
 }
 
 export async function llmAcceptDecide(
@@ -359,7 +363,7 @@ export async function llmAcceptDecide(
   }
 
   const client = getLLMClient();
-  const language = getLanguage();
+  const language: Language = input.language ?? "zh";
 
   const prompt = buildAcceptDecisionPrompt({
     self: input.character,
@@ -441,7 +445,7 @@ export async function llmSalvageDecide(
   };
 
   const client = getLLMClient();
-  const language = getLanguage();
+  const language = input.language;
 
   const system = buildSystemPrompt({
     character: input.character,

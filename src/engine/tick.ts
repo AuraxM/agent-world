@@ -35,7 +35,8 @@ import {
   saveWorld,
   type LoadedWorld,
 } from "./store";
-import { loadAllCharacters } from "@/config/loader";
+import { loadAllCharacters, loadManifest } from "@/config/loader";
+import type { Language } from "@/config/types";
 import type {
   Action,
   Character,
@@ -69,6 +70,7 @@ export interface DecideInput {
   worldName: string;
   tick: number;
   facts: AggregatedFacts;
+  language: Language;
 }
 
 export type DecideFn = (input: DecideInput) => Promise<Action>;
@@ -199,6 +201,7 @@ export async function tick(
   const loaded = loadWorld(worldId);
   const { world, nodes, characters } = loaded;
   const fromTick = world.currentTick;
+  const language = loadManifest(world.mapId).language;
   const allEvents: WorldEvent[] = [];
   const allDecisions: Array<{
     characterId: string;
@@ -440,6 +443,7 @@ export async function tick(
           worldName: world.name,
           tick: fromTick,
           facts,
+          language,
         });
       } catch (err) {
         action = fallbackWait(c);
@@ -563,6 +567,7 @@ export async function tick(
     perceptions,
     tick: fromTick,
     worldName: world.name,
+    language,
     acceptDecide: (input) => llmAcceptDecide(input),
     turnDecide: (input) => llmDialogTurn(input),
     summaryDecide: (input) => llmDialogSummarize(input),
@@ -605,6 +610,7 @@ export async function tick(
           tick: fromTick,
           facts,
           rejectReason: input.rejectReason,
+          language,
         });
       } catch {
         return {

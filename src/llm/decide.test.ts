@@ -133,6 +133,7 @@ const baseInput = (): DecideInput => ({
     hoursAtCurrentLocation: 0,
     todayActionCounts: {},
   },
+  language: "zh",
 });
 
 describe("llmDecide (OpenAI-compatible function calling)", () => {

@@ -24,9 +24,9 @@ import {
   loadWorld,
   saveWorld,
 } from "./store";
-import { getLanguage, getThinkingEnabled } from "./settings";
+import { getThinkingEnabled } from "./settings";
 import { db, schema } from "@/db/client";
-import { loadAllCharacters } from "@/config/loader";
+import { loadAllCharacters, loadManifest } from "@/config/loader";
 import {
   buildSystemPrompt,
   buildUserPrompt,
@@ -157,7 +157,7 @@ export async function decideForCharacter(
   });
 
   // 3. 决策（强制 arrivalIntro）
-  const language = getLanguage();
+  const language = loadManifest(world.mapId).language;
   let action: Action;
   try {
     // 注意：当前 llmDecide 内部自己 build prompt，不接受 arrivalIntro。
@@ -273,6 +273,7 @@ export async function decideForCharacter(
         worldName: world.name,
         tick: fromTick,
         facts,
+        language,
       });
     }
   } catch (err) {

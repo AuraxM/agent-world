@@ -46,6 +46,7 @@ export function loadWorld(worldId: string): LoadedWorld {
   const world: World = {
     id: w.id,
     name: w.name,
+    mapId: w.mapId,
     currentTick: w.currentTick,
     createdAt: w.createdAt.getTime(),
     updatedAt: w.updatedAt.getTime(),
@@ -114,6 +115,7 @@ export function saveWorld(loaded: LoadedWorld): void {
     tx
       .update(schema.worlds)
       .set({
+        mapId: loaded.world.mapId,
         currentTick: loaded.world.currentTick,
         updatedAt: now,
       })

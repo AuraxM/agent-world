@@ -587,10 +587,12 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
       }
     }
 
-    pushMemory(
-      actor,
-      memFromAction(tick, action, success ? "我刚刚" : "我尝试但失败"),
-    );
+    if (!action.skipMemory) {
+      pushMemory(
+        actor,
+        memFromAction(tick, action, success ? "我刚刚" : "我尝试但失败"),
+      );
+    }
 
     // Write arrival memory if this action was triggered by a move arrival
     if (action.isArrivalAction && action.arrivalNodeName) {

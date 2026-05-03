@@ -260,6 +260,8 @@ export interface Action {
   isArrivalAction?: boolean;
   /** isArrivalAction 为 true 时的目的地节点名（写记忆用） */
   arrivalNodeName?: string;
+  /** 引擎内部标记：该 action 不写入 shortMemory（用于锁状态持续期间的自动 wait） */
+  skipMemory?: boolean;
 }
 
 /** 世界全量快照。每 24 tick 持久化一次。 */

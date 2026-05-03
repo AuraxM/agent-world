@@ -12,6 +12,7 @@ import { RelationGraph } from "./relation-graph";
 import { TreeSidebar } from "./tree-sidebar";
 import { ProfilePane } from "./profile-pane";
 import { EventStream } from "./event-stream";
+import { EventGantt } from "./event-gantt";
 import { InjectDrawer } from "./inject-drawer";
 
 export function Dashboard() {
@@ -19,7 +20,7 @@ export function Dashboard() {
   const view = useViewState();
   const { followingId, follow, clear: clearFollow, isFollowing } = useFollow();
   const [injectOpen, setInjectOpen] = useState(false);
-  const [centerTab, setCenterTab] = useState<"stream" | "map" | "relations">("stream");
+  const [centerTab, setCenterTab] = useState<"stream" | "map" | "gantt" | "relations">("stream");
 
   useEffect(() => {
     if (!snapshot) return;
@@ -104,6 +105,7 @@ export function Dashboard() {
               {([
                 ["stream", "事件流"],
                 ["map", "小地图"],
+                ["gantt", "甘特图"],
                 ["relations", "关系图"],
               ] as const).map(([key, label]) => (
                 <button
@@ -142,6 +144,16 @@ export function Dashboard() {
                   selectedCharacterId={view.selectedCharacterId}
                   onEnterNode={view.setCurrentNode}
                   onSelectCharacter={(c) => view.selectCharacter(c.id)}
+                />
+              )}
+              {centerTab === "gantt" && (
+                <EventGantt
+                  events={events}
+                  characters={snapshot.characters}
+                  nodes={snapshot.nodes}
+                  onJumpToNode={view.setCurrentNode}
+                  onSelectCharacter={(c) => view.selectCharacter(c.id)}
+                  onFollow={follow}
                 />
               )}
               {centerTab === "relations" && <RelationGraph />}

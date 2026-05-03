@@ -1,11 +1,12 @@
 import { TICKS_PER_HOUR } from "@/domain/enums";
 
-/** 1 tick = 12 游戏分钟（60 min / TICKS_PER_HOUR） */
-const MS_PER_TICK = 12 * 60 * 1000;
+/** 1 tick = (60 / TICKS_PER_HOUR) game minutes, in milliseconds */
+const MS_PER_TICK = (60 / TICKS_PER_HOUR) * 60 * 1000;
+
+const GAME_EPOCH = new Date("2026-05-01T00:00:00");
 
 function tickToDate(tick: number): Date {
-  const start = new Date("2026-05-01T00:00:00");
-  return new Date(start.getTime() + tick * MS_PER_TICK);
+  return new Date(GAME_EPOCH.getTime() + tick * MS_PER_TICK);
 }
 
 /** tick → "2026/05/01 08:24" */

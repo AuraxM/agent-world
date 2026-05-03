@@ -24,6 +24,10 @@ const baseCharacter: Character = {
   id: "char-x",
   worldId: "w",
   name: "测试角色",
+  age: 25,
+  gender: "male",
+  profession: "merchant",
+  biography: "一个普通的测试角色。",
   locationId: "node-here",
   personality: { ei: 2, sn: 0, tf: 0, jp: 0 },
   vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
@@ -49,8 +53,10 @@ const restaurant: MapNode = {
 };
 
 const emptyFacts: AggregatedFacts = {
-  homeNodeId: null,
-  homeNodeName: null,
+  activityNodeId: null,
+  activityNodeName: null,
+  restNodeId: null,
+  restNodeName: null,
   hoursAtCurrentLocation: 0,
   todayActionCounts: {},
 };
@@ -208,7 +214,7 @@ describe("buildSystemPrompt", () => {
       isEntry: false,
     };
     const sys = buildSystemPrompt({
-      character: { ...baseCharacter, homeNodeId: "node-grocery" },
+      character: { ...baseCharacter, restNodeId: "node-grocery" },
       worldName: "测试世界",
       nodes: [town, tavern, grocery],
     });
@@ -216,7 +222,7 @@ describe("buildSystemPrompt", () => {
     expect(sys).toContain("镇中心 [node-town]");
     expect(sys).toContain("- 酒馆雪灯 [node-tavern]"); // 子节点
     // home 标注从 map graph 挪到角色块（缓存友好：map 段对所有 NPC 字节一致）
-    expect(sys).toContain("你的家：杂货铺北之惠 [node-grocery]");
+    expect(sys).toContain("你的休息处：杂货铺北之惠 [node-grocery]");
     expect(sys).not.toContain("★ 你的家");
     expect(sys).toContain("特殊通道");
     // tavern → grocery 是单向 shortcut（grocery 没有反向）
@@ -245,7 +251,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 25,
-      facts: { ...emptyFacts, homeNodeId: "node-home", homeNodeName: "我的家" },
+      facts: { ...emptyFacts, restNodeId: "node-home", restNodeName: "我的家" },
     });
     expect(out).toContain("第 0 日 05:00");
     expect(out).toContain("凌晨");
@@ -264,7 +270,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
-      facts: { ...emptyFacts, homeNodeId: "node-home", homeNodeName: "我的家" },
+      facts: { ...emptyFacts, restNodeId: "node-home", restNodeName: "我的家" },
     });
     expect(out).toContain("⚠");
     expect(out).toContain("应优先 move 回 我的家");
@@ -288,7 +294,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
-      facts: { ...emptyFacts, homeNodeId: "node-home", homeNodeName: "我的家" },
+      facts: { ...emptyFacts, restNodeId: "node-home", restNodeName: "我的家" },
     });
     expect(out).not.toContain("⚠");
   });
@@ -319,8 +325,10 @@ describe("buildUserPrompt", () => {
       options: [{ type: "wait", hint: "等" }],
       tick: 12,
       facts: {
-        homeNodeId: null,
-        homeNodeName: null,
+        activityNodeId: null,
+        activityNodeName: null,
+        restNodeId: null,
+        restNodeName: null,
         hoursAtCurrentLocation: 14,
         lastAction: {
           type: "speak",
@@ -640,8 +648,10 @@ describe("ACTION_NAMES speak label", () => {
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
       facts: {
-        homeNodeId: null,
-        homeNodeName: null,
+        activityNodeId: null,
+        activityNodeName: null,
+        restNodeId: null,
+        restNodeName: null,
         hoursAtCurrentLocation: 0,
         todayActionCounts: { speak: 1 } as Record<string, number>,
       },

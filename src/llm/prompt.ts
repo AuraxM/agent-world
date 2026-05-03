@@ -10,7 +10,7 @@
  * - reasoning 必须显式引用一项性格特征的**文字描述**，禁止数值。
  * - vitals + emotion 全部以定性文字呈现给 LLM；prompt 不暴露任何 [-4,4] 的内部数字。
  */
-import type { ActionType } from "@/domain/enums";
+import type { ActionType, Profession } from "@/domain/enums";
 import { BLOOD_RELATION_KINDS, TICKS_PER_HOUR } from "@/domain/enums";
 import type { AggregatedFacts } from "@/engine/facts";
 import type {
@@ -605,6 +605,15 @@ function describeMapGraph(nodes: MapNode[]): string {
   return out;
 }
 
+const PROFESSION_LABELS: Record<Profession, string> = {
+  farmer: "农民", rancher: "牧场主", fisherman: "渔夫", lumberjack: "伐木工", hunter: "猎人",
+  chef: "厨师", baker: "面包师", brewer: "酿酒师",
+  blacksmith: "铁匠", carpenter: "木匠", tailor: "裁缝",
+  merchant: "商人", grocer: "杂货店主", innkeeper: "旅店老板",
+  doctor: "医生", nurse: "护士", teacher: "教师", librarian: "图书管理员",
+  priest: "神官", mailman: "邮递员", mayor: "镇长官", student: "学生", unemployed: "无业",
+};
+
 /**
  * 角色专属"自我认知"块。放 system prompt 末尾，前面 worldRules + mapGraph +
  * languageInstruction 都在所有 NPC 之间字节一致 → prompt cache 在跨角色调用时
@@ -618,14 +627,24 @@ function characterBlock(
   const lines: string[] = [
     "你的自我认知：",
     `- 名字：${character.name}`,
+    `- 年龄：${character.age} 岁`,
+    `- 性别：${character.gender === "male" ? "男" : character.gender === "female" ? "女" : "其他"}`,
+    `- 身份：${PROFESSION_LABELS[character.profession] ?? character.profession}`,
   ];
-  const homeNode = character.homeNodeId
-    ? nodes.find((n) => n.id === character.homeNodeId)
+  const actNode = character.activityNodeId
+    ? nodes.find((n) => n.id === character.activityNodeId)
     : undefined;
-  if (homeNode) {
-    lines.push(`- 你的家：${homeNode.name} [${homeNode.id}]`);
+  const restNode = character.restNodeId
+    ? nodes.find((n) => n.id === character.restNodeId)
+    : undefined;
+  if (actNode) {
+    lines.push(`- 你的活动处：${actNode.name} [${actNode.id}]`);
+  }
+  if (restNode) {
+    lines.push(`- 你的休息处：${restNode.name} [${restNode.id}]`);
   }
   lines.push(`- 作息窗口：${formatSleepWindow(sleepWindow)}`);
+  lines.push(`- 生平简介：${character.biography}`);
   lines.push("- 性格特征（用文字描述，**禁止在 reasoning 里写数值**）：");
   for (const s of describePersonality(character.personality)) {
     lines.push(`  · ${s}`);
@@ -905,8 +924,8 @@ export function buildUserPrompt(args: {
     `当前时间：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}${t.isSleepHour ? "，已是你的作息时段" : ""}）。tick=${tick}`,
   );
   const winText = formatSleepWindow(sleepWindow);
-  if (facts.homeNodeName) {
-    lines.push(`你的常规作息：${winText} 在 ${facts.homeNodeName} 休息。`);
+  if (facts.restNodeName) {
+    lines.push(`你的常规作息：${winText} 在 ${facts.restNodeName} 休息。`);
   } else {
     lines.push(`你的常规作息：${winText}（未设定固定住所）。`);
   }
@@ -952,7 +971,7 @@ export function buildUserPrompt(args: {
   if (fatigueUrgent && !hereCanRest(here)) {
     lines.push(
       `⚠ 你过度疲惫但当前位置不能休息${
-        facts.homeNodeName ? `，应优先 move 回 ${facts.homeNodeName}` : "，应优先 move 回有床的住所"
+        facts.restNodeName ? `，应优先 move 回 ${facts.restNodeName}` : "，应优先 move 回有床的住所"
       }。`,
     );
   }

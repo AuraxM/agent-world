@@ -12,22 +12,23 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/db/client";
 import { createWorldFromConfig, type CastMember } from "@/engine/createWorld";
 
-const WORLD_ID = "world-moon-valley";
-const MAP_ID = "moon-valley";
+const WORLD_ID = "world-yu-no-tani";
+const MAP_ID = "yu-no-tani";
 
 const CAST: CastMember[] = [
-  { characterId: "char-tanaka-daichi", locationId: "node-farmhouse" },
-  { characterId: "char-tanaka-hana", locationId: "node-farmhouse" },
-  { characterId: "char-tanaka-yota", locationId: "node-farmhouse" },
-  { characterId: "char-suzuki-misaki", locationId: "node-ranch-house" },
-  { characterId: "char-suzuki-kotone", locationId: "node-ranch-house" },
-  { characterId: "char-yamada-ryuichi", locationId: "node-fisher-hut" },
-  { characterId: "char-genjo", locationId: "node-wizard-tower" },
-  { characterId: "char-nakamura-shizuka", locationId: "node-izakaya" },
-  { characterId: "char-takahashi-tetsuya", locationId: "node-blacksmith" },
-  { characterId: "char-ito-chie", locationId: "node-general-store" },
-  { characterId: "char-saito-ishi", locationId: "node-doctor-house" },
-  { characterId: "char-kimura-fumiko", locationId: "node-library" },
+  { characterId: "char-yumori-kosuke", locationId: "node-inn" },
+  { characterId: "char-yumori-ayako", locationId: "node-inn" },
+  { characterId: "char-wakamatsu-naoki", locationId: "node-inn" },
+  { characterId: "char-ogawa-misaki", locationId: "node-inn" },
+  { characterId: "char-tanimura-kinuyo", locationId: "node-store-quarters" },
+  { characterId: "char-matsuoka-sayo", locationId: "node-izakaya" },
+  { characterId: "char-shiraishi-aoi", locationId: "node-studio" },
+  { characterId: "char-guji-san", locationId: "node-shrine" },
+  { characterId: "char-nogami-prof", locationId: "node-geologist-cabin" },
+  { characterId: "char-tazaki-mamoru", locationId: "node-public-bath" },
+  { characterId: "char-sato-haru", locationId: "node-old-house" },
+  { characterId: "char-yoshida-driver", locationId: "node-bus-stop" },
+  { characterId: "char-yamane-kazuma", locationId: "node-hunter-hut" },
 ];
 
 function main() {
@@ -35,7 +36,7 @@ function main() {
 
   const r = createWorldFromConfig({
     worldId: WORLD_ID,
-    name: "月之谷",
+    name: "汤之谷",
     mapId: MAP_ID,
     cast: CAST,
   });

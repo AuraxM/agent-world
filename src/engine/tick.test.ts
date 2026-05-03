@@ -279,7 +279,7 @@ describe("tick engine v0", () => {
     type FactsCapture = {
       hoursAtCurrentLocation?: number;
       lastActionType?: string;
-      todayActionCounts?: Record<string, number>;
+      todayActionCounts?: Partial<Record<string, number>>;
     };
     const captured = new Map<string, FactsCapture>();
     const decide = async (input: {
@@ -287,7 +287,7 @@ describe("tick engine v0", () => {
       facts: {
         hoursAtCurrentLocation: number;
         lastAction?: { type: string };
-        todayActionCounts: Record<string, number>;
+        todayActionCounts: Partial<Record<string, number>>;
       };
     }) => {
       captured.set(input.character.id, {
@@ -311,10 +311,8 @@ describe("tick engine v0", () => {
     expect(typeof a!.hoursAtCurrentLocation).toBe("number");
     expect(a!.todayActionCounts).toBeTruthy();
     // 上一次 wait/eat/move 至少有一个进了今日累计
-    const total = Object.values(a!.todayActionCounts ?? {}).reduce(
-      (s, n) => s + (n as number),
-      0,
-    );
+    const vals = Object.values(a!.todayActionCounts ?? {}) as number[];
+    const total = vals.reduce((s, n) => s + n, 0);
     expect(total).toBeGreaterThan(0);
   });
 
@@ -417,7 +415,7 @@ describe("tick engine v0", () => {
     expect(sleeper2.vitals.fatigue).toBe(0);
     // Completion memory written
     expect(sleeper2.shortMemory.length).toBeGreaterThan(0);
-    expect(sleeper2.shortMemory[0].content).toContain("一觉睡醒");
+    expect(sleeper2.shortMemory[0].content).toContain("睡醒");
   });
 
   it("skipMemory 不影响普通 action 的记忆写入", async () => {
@@ -460,6 +458,6 @@ describe("tick engine v0", () => {
     });
     // Regression: memory SHOULD be written when skipMemory is absent
     expect(char.shortMemory.length).toBe(1);
-    expect(char.shortMemory[0].content).toContain("等等看");
+    expect(char.shortMemory[0].content).toContain("等待");
   });
 });

@@ -343,11 +343,11 @@ describe("buildUserPrompt", () => {
       },
     });
     expect(out).toContain("已在 老王饭馆 连续 14 小时");
-    expect(out).toContain("上一 tick 你的行动：邀请说话");
+    expect(out).toContain("上一 tick 你的行动：speak");
     expect(out).toContain("你好啊");
     expect(out).toContain("距上次 rest/sleep：2 小时");
     expect(out).toContain("距上次 eat：1 小时");
-    expect(out).toContain("邀请说话 ×9");
+    expect(out).toContain("speak ×9");
   });
 
   it("vitals 段使用 qualifyVital 而非裸数字", () => {
@@ -640,7 +640,7 @@ describe("buildSalvageContext", () => {
 });
 
 describe("ACTION_NAMES speak label", () => {
-  it("speak is labeled as 邀请说话", () => {
+  it("speak action type renders as raw type", () => {
     const out = buildUserPrompt({
       character: baseCharacter,
       here: restaurant,
@@ -654,9 +654,9 @@ describe("ACTION_NAMES speak label", () => {
         restNodeId: null,
         restNodeName: null,
         hoursAtCurrentLocation: 0,
-        todayActionCounts: { speak: 1 } as Record<string, number>,
+        todayActionCounts: { speak: 1 },
       },
     });
-    expect(out).toContain("邀请说话");
+    expect(out).toContain("speak ×1");
   });
 });

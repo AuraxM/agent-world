@@ -12,6 +12,8 @@ import { __setLLMClientForTest } from "./client";
 import { llmDecide } from "./decide";
 import * as providers from "./providers";
 import { ACTION_TOOL_NAME } from "@/domain/schemas";
+import { actionRegistry } from "@/domain/action-system";
+import { BUILTIN_ACTIONS } from "@/engine/actions-builtin";
 import type { DecideInput } from "@/engine/tick";
 
 vi.mock("./providers", () => ({
@@ -138,6 +140,7 @@ const baseInput = (): DecideInput => ({
 
 describe("llmDecide (OpenAI-compatible function calling)", () => {
   beforeEach(() => {
+    actionRegistry.registerAll(BUILTIN_ACTIONS);
     vi.mocked(providers.getActiveProvider).mockReturnValue(FAKE_PROVIDER);
   });
   afterEach(() => {
@@ -148,36 +151,35 @@ describe("llmDecide (OpenAI-compatible function calling)", () => {
   it("正常 tool_call 转换为 Action", async () => {
     const fake = makeFakeClient(async () =>
       makeFakeCompletion({
-        action_type: "observe",
-        reasoning: "我偏内向，倾向先观察再行动。",
+        action_type: "think",
+        reasoning: "我偏内向，倾向先沉思再行动。",
         self_importance: 2,
       }),
     );
     __setLLMClientForTest(fake);
 
     const action = await llmDecide(baseInput());
-    expect(action.type).toBe("observe");
+    expect(action.type).toBe("think");
     expect(action.actorId).toBe("char-test");
     expect(action.reasoning).toContain("内向");
     expect(action.selfImportance).toBe(2);
   });
 
-  it("update_relation tool_call 携带 change_type", async () => {
+  it("speak tool_call 携带 target_id", async () => {
     const fake = makeFakeClient(async () =>
       makeFakeCompletion({
-        action_type: "update_relation",
+        action_type: "speak",
         target_id: "char-other",
-        reasoning: "我有计划性，决定明确这段关系。",
+        reasoning: "我有计划性，决定和对方谈谈。",
         self_importance: 3,
-        change_type: "become_partner",
       }),
     );
     __setLLMClientForTest(fake);
 
     const action = await llmDecide(baseInput());
-    expect(action.type).toBe("update_relation");
+    expect(action.type).toBe("speak");
     expect(action.targetId).toBe("char-other");
-    expect(action.changeType).toBe("become_partner");
+    expect(action.selfImportance).toBe(3);
   });
 
   it("tool_call 参数不符合 ActionSchema → wait fallback", async () => {

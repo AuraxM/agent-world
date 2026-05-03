@@ -404,7 +404,7 @@ describe("tick engine v0", () => {
 
   it("skipMemory 不影响普通 action 的记忆写入", async () => {
     const { executeActions } = await import("./execute");
-    const char = {
+    const char: any = {
       id: "char-x",
       worldId: "w",
       name: "X",
@@ -421,12 +421,12 @@ describe("tick engine v0", () => {
       longMemory: [],
       relations: {},
     };
-    const node = {
+    const node: any = {
       id: "n1", worldId: "w", parentId: null, name: "测试节点",
       description: "", tags: ["public"], capacity: null, privacy: "public" as const,
-      visibleFromParent: true, shortcuts: [], isEntry: false,
+      visibleFromParent: true, shortcuts: [], isEntry: false, travelCost: null,
     };
-    const action = {
+    const action: any = {
       type: "wait" as const,
       actorId: "char-x",
       reasoning: "等等看。",

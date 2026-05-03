@@ -8,7 +8,7 @@
  * - 异常注入路径降级为 wait
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -100,6 +100,21 @@ beforeAll(async () => {
   ];
   for (const s of STATEMENTS) sqlite.exec(s);
 
+  // 创建临时 configs 目录，提供 test-world manifest
+  const configsDir = path.join(tmpDir, "configs", "maps", "test-world");
+  mkdirSync(configsDir, { recursive: true });
+  writeFileSync(
+    path.join(configsDir, "manifest.json"),
+    JSON.stringify({ id: "test-world", name: "测试世界", language: "zh" }),
+    "utf8",
+  );
+  writeFileSync(
+    path.join(configsDir, "map.json"),
+    JSON.stringify({ id: "test-world", nodes: [] }),
+    "utf8",
+  );
+  process.env.AGENT_WORLD_CONFIGS_DIR = path.join(tmpDir, "configs");
+
   const WORLD_ID = "test-world";
   sqlite
     .prepare(`INSERT INTO worlds (id, name, map_id) VALUES (?, ?, ?)`)
@@ -155,6 +170,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  delete process.env.AGENT_WORLD_CONFIGS_DIR;
   // Windows 上 better-sqlite3 进程持有 WAL 文件锁，rmSync 可能 EPERM；
   // 测试环境不严格清理也可以接受
   try {

@@ -1,15 +1,11 @@
 import {
-  getLanguage,
   getThinkingEnabled,
-  isSupportedLanguage,
-  setLanguage,
   setThinkingEnabled,
 } from "@/engine/settings";
 
 export async function GET() {
   return Response.json({
     thinkingEnabled: getThinkingEnabled(),
-    language: getLanguage(),
   });
 }
 
@@ -24,18 +20,9 @@ export async function POST(request: Request) {
   if (typeof body.thinkingEnabled === "boolean") {
     setThinkingEnabled(body.thinkingEnabled);
   }
-  if (body.language !== undefined) {
-    if (!isSupportedLanguage(body.language)) {
-      return Response.json(
-        { error: "unsupported language; must be one of zh/en/ja" },
-        { status: 400 },
-      );
-    }
-    setLanguage(body.language);
-  }
+  // language field is now ignored — language is determined by the map pack
 
   return Response.json({
     thinkingEnabled: getThinkingEnabled(),
-    language: getLanguage(),
   });
 }

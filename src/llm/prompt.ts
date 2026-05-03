@@ -1035,3 +1035,85 @@ export function buildUserPrompt(args: {
 
   return lines.join("\n");
 }
+
+// ---------------------------------------------------------------------------
+// memory compression prompt builders
+// ---------------------------------------------------------------------------
+
+/**
+ * 构建睡觉时的记忆压缩 prompt。输入清醒期的短期记忆，输出第一人称日摘要。
+ */
+export function buildMemoryCompressionPrompt(args: {
+  characterName: string;
+  memories: Memory[];
+  language?: Language;
+}): string {
+  const { characterName, memories } = args;
+  const language = args.language ?? "zh";
+
+  if (memories.length === 0) {
+    if (language === "zh") return `你是 ${characterName}。自从上次睡觉后，你没有值得记住的经历。调用 submit_memory_summary 返回"今天很平静，没什么特别的事。"`;
+    if (language === "en") return `You are ${characterName}. You had no notable experiences since you last slept. Call submit_memory_summary with "A quiet day with nothing much happening."`;
+    return `あなたは${characterName}です。前回の睡眠以降、特に記憶に残る出来事はありませんでした。submit_memory_summary で「今日は穏やかな一日だった」と返してください。`;
+  }
+
+  const memoryLines = memories
+    .map((m) => `- t=${m.tick}: ${m.content}`)
+    .join("\n");
+
+  if (language === "zh") {
+    return `你是 ${characterName}，正在回顾从上次睡醒到现在的经历。以下是这段时间发生的事情：
+
+${memoryLines}
+
+请用 2-5 句简体中文（第一人称"我"）总结这段清醒期间最主要的事情、与人互动和感受。调用 submit_memory_summary 工具返回你的摘要。`;
+  }
+  if (language === "en") {
+    return `You are ${characterName}, reviewing experiences since you last woke up. Here's what happened:
+
+${memoryLines}
+
+Summarize the most important events, interactions, and feelings in 2-5 English sentences using first person. Call submit_memory_summary to return your summary.`;
+  }
+  return `あなたは${characterName}です。前回起きてから今までの出来事を振り返っています：
+
+${memoryLines}
+
+この間の主な出来事、人との交流、感情を日本語の第一人称で2〜5文にまとめてください。submit_memory_summary を呼び出して要約を返してください。`;
+}
+
+/**
+ * 构建周记忆压缩 prompt。输入 7 条日摘要，输出周摘要。
+ */
+export function buildWeeklyCompressionPrompt(args: {
+  characterName: string;
+  dailySummaries: string[];
+  language?: Language;
+}): string {
+  const { characterName, dailySummaries } = args;
+  const language = args.language ?? "zh";
+
+  const lines = dailySummaries
+    .map((s, i) => `第 ${i + 1} 天：${s}`)
+    .join("\n");
+
+  if (language === "zh") {
+    return `你是 ${characterName}，正在回顾这一周（7 天）的生活。以下是每天的摘要：
+
+${lines}
+
+请用 2-4 句简体中文（第一人称"我"）总结这一周最主要的生活变化、重要事件和情感起伏。调用 submit_memory_summary 工具返回你的摘要。`;
+  }
+  if (language === "en") {
+    return `You are ${characterName}, reviewing your past week (7 days). Here are your daily summaries:
+
+${lines}
+
+Summarize the key life changes, important events, and emotional shifts of this week in 2-4 English sentences using first person. Call submit_memory_summary to return your summary.`;
+  }
+  return `あなたは${characterName}です。この一週間（7日間）を振り返っています：
+
+${lines}
+
+この一週間の主な生活の変化、重要な出来事、感情の起伏を日本語の第一人称で2〜4文にまとめてください。submit_memory_summary を呼び出して要約を返してください。`;
+}

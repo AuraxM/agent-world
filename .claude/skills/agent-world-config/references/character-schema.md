@@ -9,7 +9,13 @@ A character template is a **location-agnostic** identity definition. Where the c
   "id": "char-zhangmo",       // kebab-case, must match filename stem
   "name": "张默",              // display name (Chinese OK)
   "avatar": "🤐",              // optional; single emoji works as a sprite stand-in
-  "homeNodeId": "node-zhang-home",  // optional; the LLM will be told 22:00–06:00 should be here
+  "age": 25,                   // 1-120
+  "gender": "male",            // "male" | "female" | "other"
+  "profession": "farmer",      // from PROFESSIONS enum (23 values)
+  "biography": "我是...",       // first-person bio, CoC-style; required
+  "activityNodeId": "node-farm", // optional; work/study/daily activity location
+  "restNodeId": "node-home",    // optional; sleep/private time location
+  "sleepWindow": { ... },      // optional; defaults to {start:22, duration:8}
   "personality": { ... },     // MBTI 4 dims, all required
   "abilities": [],            // v0 placeholder; usually empty
   "relations": { ... }        // map of other character id → relation
@@ -69,9 +75,32 @@ A's relation to B is independent from B's relation to A. Crushes / unrequited fe
 
 Only include relations to characters that actually exist in `configs/characters/`. The validator does NOT cross-reference this; the runtime tolerates orphan relation keys but the LLM ignores them.
 
-## `homeNodeId`
+## `activityNodeId` and `restNodeId`
 
-Optional. If set, the LLM prompt will tell the character "你的常规作息：22:00–06:00 在 X 休息" and recommend `move` back home when fatigue is high outside private spaces. Skipping this is fine for transient or homeless characters.
+Both optional. `activityNodeId` is where the character goes for work/study/daily activity; `restNodeId` is where they sleep. They can be the same node. The LLM prompt will tell the character about both locations.
+
+If omitted, the character won't have location-based work/study hints and won't get rest-location guidance when tired.
+
+## Identity fields
+
+### `age`
+Required. Integer 1-120.
+
+### `gender`
+Required. One of `"male"`, `"female"`, `"other"`.
+
+### `profession`
+Required. Must be one of the 23 `PROFESSIONS` enum values (see `src/domain/enums.ts`):
+- 农业与采集: `farmer`, `rancher`, `fisherman`, `lumberjack`, `hunter`
+- 餐饮与食品: `chef`, `baker`, `brewer`
+- 手工与制造: `blacksmith`, `carpenter`, `tailor`
+- 商业与服务: `merchant`, `grocer`, `innkeeper`
+- 医疗与教育: `doctor`, `nurse`, `teacher`, `librarian`
+- 公共与其他: `priest`, `mailman`, `mayor`, `student`, `unemployed`
+
+### `biography`
+Required. First-person narrative (CoC character sheet style). Example:
+> 私は斉藤。この町で20年医者をやっている。父も医者だった。患者の笑顔が何よりの報酬だ。
 
 ## Avatars
 
@@ -80,6 +109,9 @@ Single-emoji `avatar` is the easiest — used by `src/app/_lib/sprite.ts` as a r
 ## Common mistakes
 
 - Including `locationId`, `vitals`, `emotion`, or `statuses` in the template — those are runtime state.
+- Forgetting required fields: `age`, `gender`, `profession`, or `biography`.
+- Using a `profession` value not in the closed enum.
+- `age` outside 1-120 range.
 - Personality values out of `[-4, 4]` or non-integer — the validator rejects.
 - Forgetting `since` / `lastInteractionTick` on relations — both are required (use 0 for fresh templates).
 - Single-kind `kinds: []` — must have ≥ 1 entry; use the closed enum.

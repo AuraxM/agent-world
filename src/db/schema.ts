@@ -16,6 +16,7 @@ import {
 export const worlds = sqliteTable("worlds", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  mapId: text("map_id").notNull().default(""),
   currentTick: integer("current_tick").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()

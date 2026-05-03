@@ -23,7 +23,12 @@ export function EventGantt({
   onSelectCharacter: (c: Character) => void;
   onFollow: (id: string) => void;
 }) {
-  const [tickCount, setTickCount] = useState(DEFAULT_TICK_WINDOW);
+  const tickCount = useMemo(() => {
+    if (events.length === 0) return DEFAULT_TICK_WINDOW;
+    const max = Math.max(...events.map((e) => e.tick));
+    const min = Math.min(...events.map((e) => e.tick));
+    return Math.max(DEFAULT_TICK_WINDOW, max - min + 1);
+  }, [events]);
   const [selectedEvent, setSelectedEvent] = useState<WorldEvent | null>(null);
   const [popupAnchor, setPopupAnchor] = useState<DOMRect | null>(null);
 

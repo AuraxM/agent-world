@@ -9,7 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db/client";
-import { loadCharacter } from "@/config/loader";
+import { loadCharacter, resolveIncomeLevel } from "@/config/loader";
 import { appendEventsLog } from "./store";
 import type { Emotion, Vitals, WorldEvent } from "@/domain/types";
 
@@ -144,6 +144,15 @@ export function addCharacterToWorld(
     duration: 1,
   };
 
+  // Compute economy defaults
+  const initialMoney = tpl.initialMoney ?? (
+    tpl.origin === "visitor" && tpl.profession === "unemployed" ? 3000 : 200
+  );
+  const expenseExempt = tpl.expenseExempt ?? (tpl.age < 18);
+  const rawIncomeLevel = resolveIncomeLevel(tpl.profession);
+  const incomeLevel = (tpl.age < 18) ? 0 : rawIncomeLevel;
+  const incomeMultiplier = tpl.incomeMultiplier ?? 1.0;
+
   db.transaction((tx) => {
     tx.insert(schema.characters)
       .values({
@@ -154,6 +163,10 @@ export function addCharacterToWorld(
         age: tpl.age,
         gender: tpl.gender,
         profession: tpl.profession,
+        money: initialMoney,
+        incomeLevel,
+        expenseExempt,
+        incomeMultiplier,
         biography: tpl.biography,
         origin: tpl.origin,
         locationId: entryNodeId!,

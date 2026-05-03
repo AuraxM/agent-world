@@ -65,6 +65,7 @@ beforeAll(async () => {
       money INTEGER NOT NULL DEFAULT 0,
       income_level INTEGER NOT NULL DEFAULT 0,
       expense_exempt INTEGER NOT NULL DEFAULT 0,
+      income_multiplier REAL NOT NULL DEFAULT 1.0,
       personality_json TEXT NOT NULL,
       vitals_json TEXT NOT NULL DEFAULT '{"hunger":0,"fatigue":0,"hygiene":0}',
       emotion_json TEXT NOT NULL DEFAULT '{"mood":0,"stress":0,"social_satiety":0}',

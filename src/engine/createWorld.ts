@@ -170,6 +170,7 @@ export function createWorldFromConfig(
       // Minors get 0 income level regardless of profession
       const rawIncomeLevel = resolveIncomeLevel(m.tpl.profession);
       const incomeLevel = (m.tpl.age < 18) ? 0 : rawIncomeLevel;
+      const incomeMultiplier = m.tpl.incomeMultiplier ?? 1.0;
 
       tx.insert(schema.characters)
         .values({
@@ -183,6 +184,7 @@ export function createWorldFromConfig(
           money: initialMoney,
           incomeLevel,
           expenseExempt,
+          incomeMultiplier,
           biography: m.tpl.biography,
           origin: m.tpl.origin,
           locationId: m.locationId,

@@ -14,7 +14,8 @@ import {
   ACCEPT_TOOL_NAME, AcceptDecisionSchema, AcceptToolSchema,
   DIALOG_TURN_TOOL_NAME, DialogTurnSchema, DialogTurnToolSchema,
   DIALOG_SUMMARY_TOOL_NAME, DialogSummarySchema, DialogSummaryToolSchema,
-  type AcceptDecisionPayload, type DialogTurnPayload, type DialogSummaryPayload,
+  MEMORY_SUMMARY_TOOL_NAME, MemorySummarySchema, MemorySummaryToolSchema,
+  type AcceptDecisionPayload, type DialogTurnPayload, type DialogSummaryPayload, type MemorySummaryPayload,
 } from "@/domain/schemas";
 import type { Action, Character, DialogTurn, MapNode, WorldEvent } from "@/domain/types";
 import type { Language } from "@/config/types";
@@ -342,6 +343,64 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<str
     }
   }
   return `（摘要生成失败：双方聊了 ${input.transcript.length} 句）`;
+}
+
+/**
+ * 记忆压缩摘要。用于睡觉时的日/周记忆压缩。
+ * 失败重试 1 次，仍失败返回占位摘要。
+ */
+export async function llmMemoryCompress(args: {
+  prompt: string;
+  language?: Language;
+}): Promise<string> {
+  if (!hasApiKey()) return "（摘要生成失败：无可用的 LLM provider）";
+
+  const client = getLLMClient();
+  const language: Language = args.language ?? "zh";
+
+  const tool: ChatCompletionTool = {
+    type: "function",
+    function: {
+      name: MEMORY_SUMMARY_TOOL_NAME,
+      description: "返回记忆摘要。",
+      parameters: MemorySummaryToolSchema,
+    },
+  };
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await client.chat.completions.create({
+        model: getModelName(),
+        max_tokens: 512,
+        messages: [
+          {
+            role: "system",
+            content: `你是一个记忆摘要助手。请根据提供的事件列表生成简洁的记忆摘要。\n\n${languageInstruction(language)}`,
+          },
+          { role: "user", content: args.prompt },
+        ],
+        tools: [tool],
+      });
+
+      const message = response.choices[0]?.message;
+      const toolCall = message?.tool_calls?.find(
+        (c) => c.type === "function" && c.function.name === MEMORY_SUMMARY_TOOL_NAME,
+      );
+      if (!toolCall || toolCall.type !== "function") {
+        throw new Error("LLM 没有返回 memory_summary tool_call");
+      }
+
+      const parsed = JSON.parse(toolCall.function.arguments);
+      const result = MemorySummarySchema.safeParse(parsed);
+      if (!result.success) {
+        throw new Error(`MemorySummary 参数不符合 schema：${result.error.message}`);
+      }
+      return result.data.summary;
+    } catch {
+      if (attempt === 0) continue;
+    }
+  }
+  return "（摘要生成失败）";
 }
 
 /**

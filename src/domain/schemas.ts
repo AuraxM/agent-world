@@ -283,3 +283,18 @@ export const DialogSummaryToolSchema = {
   additionalProperties: false,
 };
 
+// Memory summary (for sleep-triggered memory compression)
+export const MemorySummarySchema = z.object({
+  summary: z.string(),
+});
+export type MemorySummaryPayload = z.infer<typeof MemorySummarySchema>;
+
+export const MEMORY_SUMMARY_TOOL_NAME = "submit_memory_summary";
+export const MemorySummaryToolSchema = {
+  type: "object" as const,
+  properties: {
+    summary: { type: "string", description: "记忆摘要（第一人称简体中文）" },
+  },
+  required: ["summary"],
+  additionalProperties: false,
+} as const;

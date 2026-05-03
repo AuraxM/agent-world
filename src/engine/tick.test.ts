@@ -59,6 +59,7 @@ beforeAll(async () => {
       gender TEXT NOT NULL DEFAULT 'male',
       profession TEXT NOT NULL DEFAULT 'farmer',
       biography TEXT NOT NULL DEFAULT '',
+      origin TEXT NOT NULL DEFAULT 'local',
       location_id TEXT NOT NULL,
       personality_json TEXT NOT NULL,
       vitals_json TEXT NOT NULL DEFAULT '{"hunger":0,"fatigue":0,"hygiene":0}',

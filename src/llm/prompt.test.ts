@@ -10,15 +10,17 @@ import {
   buildAcceptDecisionPrompt,
   buildDialogTurnPrompt,
   buildDialogSummaryPrompt,
+  buildMemoryCompressionPrompt,
   buildSalvageContext,
   buildSystemPrompt,
   buildUserPrompt,
+  buildWeeklyCompressionPrompt,
   describeEmotion,
   qualifyVital,
   timeOfDay,
 } from "./prompt";
 import type { AggregatedFacts } from "@/engine/facts";
-import type { Character, DialogTurn, MapNode } from "@/domain/types";
+import type { Character, DialogTurn, MapNode, Memory } from "@/domain/types";
 
 const baseCharacter: Character = {
   id: "char-x",
@@ -390,6 +392,53 @@ describe("buildUserPrompt", () => {
     expect(out).toContain("压力大");
     expect(out).toContain("很孤单");
   });
+
+  it("renders three-tier memories (short/daily/weekly)", () => {
+    const character: Character = {
+      ...baseCharacter,
+      shortMemory: [
+        { id: "m1", tick: 118, importance: 2, content: "我在饭馆吃了晚饭。" },
+        { id: "m2", tick: 119, importance: 3, content: "我和酒馆老板聊了几句。" },
+      ],
+      dailyMemory: [
+        { id: "d1", tick: 120, importance: 3, content: "今天在饭馆工作，和几个人聊了天，晚上在广场散了步。" },
+        { id: "d2", tick: 240, importance: 3, content: "今天在家休息，下午去了市场。" },
+      ],
+      longMemory: [
+        { id: "w1", tick: 840, importance: 4, content: "这一周主要在酒馆工作，认识了新来的邮递员田中。" },
+      ],
+    };
+    const out = buildUserPrompt({
+      character,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options: [{ type: "wait", hint: "等" }],
+      tick: 245,
+      facts: emptyFacts,
+    });
+    expect(out).toContain("你的近期短期记忆");
+    expect(out).toContain("我在饭馆吃了晚饭");
+    expect(out).toContain("你的日记忆");
+    expect(out).toContain("今天在饭馆工作");
+    expect(out).toContain("你的周记忆");
+    expect(out).toContain("这一周主要在酒馆工作");
+  });
+
+  it("no daily/weekly memories omits their sections", () => {
+    const out = buildUserPrompt({
+      character: baseCharacter,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options: [{ type: "wait", hint: "等" }],
+      tick: 5,
+      facts: emptyFacts,
+    });
+    expect(out).toContain("你的近期短期记忆");
+    expect(out).not.toContain("你的日记忆");
+    expect(out).not.toContain("你的周记忆");
+  });
 });
 
 describe("language", () => {
@@ -663,5 +712,84 @@ describe("ACTION_NAMES speak label", () => {
       },
     });
     expect(out).toContain("speak ×1");
+  });
+});
+
+describe("buildMemoryCompressionPrompt", () => {
+  const sampleMemories: Memory[] = [
+    { id: "m1", tick: 10, importance: 2, content: "我在酒馆吃了一顿饭。" },
+    { id: "m2", tick: 15, importance: 3, content: '我对田中说："今天天气真不错。"' },
+    { id: "m3", tick: 20, importance: 1, content: "我在广场散步。" },
+  ];
+
+  it("zh: includes character name and memory content", () => {
+    const result = buildMemoryCompressionPrompt({
+      characterName: "测试",
+      memories: sampleMemories,
+    });
+    expect(result).toContain("测试");
+    expect(result).toContain("我在酒馆吃了一顿饭");
+    expect(result).toContain("submit_memory_summary");
+  });
+
+  it("zh: empty memories returns placeholder prompt", () => {
+    const result = buildMemoryCompressionPrompt({
+      characterName: "测试",
+      memories: [],
+    });
+    expect(result).toContain("submit_memory_summary");
+  });
+
+  it("en: renders in English", () => {
+    const result = buildMemoryCompressionPrompt({
+      characterName: "Test",
+      memories: sampleMemories,
+      language: "en",
+    });
+    expect(result).toContain("You are Test");
+    expect(result).toContain("submit_memory_summary");
+  });
+
+  it("ja: renders in Japanese", () => {
+    const result = buildMemoryCompressionPrompt({
+      characterName: "テスト",
+      memories: sampleMemories,
+      language: "ja",
+    });
+    expect(result).toContain("テスト");
+    expect(result).toContain("submit_memory_summary");
+  });
+});
+
+describe("buildWeeklyCompressionPrompt", () => {
+  const dailySummaries = [
+    "在酒馆工作，和田中聊了几句。",
+    "去广场散步，遇到了新来的邮递员。",
+    "在家休息了一天。",
+    "去市场买菜，遇到了老朋友。",
+    "工作很忙，没怎么和人说话。",
+    "在酒馆喝了几杯，和老板聊了天。",
+    "去教堂祈祷，心情平静。",
+  ];
+
+  it("zh: includes all 7 daily summaries", () => {
+    const result = buildWeeklyCompressionPrompt({
+      characterName: "测试",
+      dailySummaries,
+    });
+    expect(result).toContain("测试");
+    expect(result).toContain("第 1 天");
+    expect(result).toContain("第 7 天");
+    expect(result).toContain("submit_memory_summary");
+  });
+
+  it("en: renders in English", () => {
+    const result = buildWeeklyCompressionPrompt({
+      characterName: "Test",
+      dailySummaries,
+      language: "en",
+    });
+    expect(result).toContain("You are Test");
+    expect(result).toContain("submit_memory_summary");
   });
 });

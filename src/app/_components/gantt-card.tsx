@@ -4,7 +4,6 @@
 import type { WorldEvent } from "@/domain/types";
 import {
   getCategoryIcon,
-  getCategoryStyle,
   getOtherParticipants,
 } from "../_lib/gantt-utils";
 import type { Character } from "@/domain/types";
@@ -20,7 +19,6 @@ export function GanttCard({
   excludeId: string;
   onClick: (rect: DOMRect) => void;
 }) {
-  const style = getCategoryStyle(event.category);
   const icon = getCategoryIcon(event.category);
   const others = getOtherParticipants(event, charById, excludeId);
   const important = event.intensity >= 3;
@@ -29,10 +27,6 @@ export function GanttCard({
     <button
       type="button"
       className={`gantt-card ${important ? "gantt-card--important" : ""}`}
-      style={{
-        background: style.bg,
-        borderColor: style.border,
-      }}
       title={`T=${event.tick} ${event.description}`}
       onClick={(e) => onClick(e.currentTarget.getBoundingClientRect())}
     >

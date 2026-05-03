@@ -1,20 +1,39 @@
 {
   "id": "char-shiraishi-aoi",
   "name": "白石葵",
-  "avatar": "🏺",
-  "age": 32,
+  "avatar": "🎨",
+  "age": 33,
   "gender": "female",
-  "profession": "tailor",
-  "origin": "local",
-  "biography": "我是白石葵，做陶的。七年前从东京搬来。以前在设计师事务所工作，后来手痒得不行，只想碰土。谷里的泥和灰调出来的釉，烧出来颜色粗朴，可就是这谷的味道。一个人待着没什么，但偶尔也会觉得有点冷清。",
-  "activityNodeId": "node-studio",
-  "restNodeId": "node-studio-quarters",
-  "sleepWindow": { "start": 0, "duration": 8 },
-  "personality": { "ei": -2, "sn": -2, "tf": -2, "jp": 1 },
+  "profession": "unemployed",
+  "origin": "visitor",
+  "biography": "我是白石葵、陶芸家。七年前東京のデザイン事務所を辞めてこの谷に移り住んだ。土を触りたくてたまらなかった。谷の泥と灰で調合した釉薬——焼き上がりの色は東京では絶対に出せない。鈴木さんが店で扱ってくれてる。見晴台でスケッチするのが休日の過ごし方。",
+  "activityNodeId": "node-pottery",
+  "restNodeId": "node-pottery-quarters",
+  "sleepWindow": {
+    "start": 0,
+    "duration": 8
+  },
+  "personality": {
+    "ei": -2,
+    "sn": -2,
+    "tf": -2,
+    "jp": 0
+  },
   "abilities": [],
   "relations": {
-    "char-wakamatsu-naoki": { "kinds": ["friend"], "affection": 3, "note": "料理长。想让我的器皿配他的菜。", "since": 0, "lastInteractionTick": 0 },
-    "char-matsuoka-sayo": { "kinds": ["friend"], "affection": 3, "note": "小夜。移居前辈，偶尔去喝一杯。", "since": 0, "lastInteractionTick": 0 },
-    "char-ogawa-misaki": { "kinds": ["friend"], "affection": 2, "note": "美咲。向往东京，在她身上看到过去的自己。", "since": 0, "lastInteractionTick": 0 }
+    "char-suzuki-kazuo": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "鈴木さん。作品を「山の音」で扱ってくれてる。いい理解者。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-nogami-takashi": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "野上教授。同じ移住者同士、たまに源泉や土の話で盛り上がる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   }
 }

@@ -1,0 +1,53 @@
+{
+  "id": "char-okubo-kenta",
+  "name": "大久保健太",
+  "avatar": "🌱",
+  "age": 38,
+  "gender": "male",
+  "profession": "farmer",
+  "origin": "local",
+  "biography": "我是大久保健太、農家三代目。山麓の畑で野菜を作ってる。夏はトマトと胡瓜、秋は南瓜と里芋——旅館の若松料理長やエマさんのカフェに卸すのが主な出荷先。温泉街が賑わうとうちの野菜もよく売れる。妻の美和と二人三脚でやってる。",
+  "activityNodeId": "node-farm",
+  "restNodeId": "node-farmhouse",
+  "sleepWindow": {
+    "start": 21,
+    "duration": 8
+  },
+  "personality": {
+    "ei": 0,
+    "sn": -1,
+    "tf": 1,
+    "jp": 1
+  },
+  "abilities": [],
+  "relations": {
+    "char-okubo-miwa": {
+      "kinds": ["spouse", "colleague"],
+      "affection": 4,
+      "note": "妻で相棒。直売所と経理は全部任せてる。頭が上がらない。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-wakamatsu-ren": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "若松料理長。毎朝の納品で料理の話を聞くのが楽しみ。うちの野菜を一番うまく使ってくれる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-takahashi-ema": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "エマさん。果物やハーブを卸してる。ジャムの新作を試食するのが楽しみ。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-tazaki-mamoru": {
+      "kinds": ["friend"],
+      "affection": 1,
+      "note": "田崎さん。畑の脇の水源配管を見てもらってる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    }
+  }
+}

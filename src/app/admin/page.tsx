@@ -543,7 +543,7 @@ function ResetTab() {
   useEffect(() => {
     async function fetchWorld() {
       try {
-        const res = await fetch("/api/worlds/world-moon-valley");
+        const res = await fetch("/api/worlds/world-yu-no-tani");
         if (res.ok) {
           const data = await res.json();
           setWorld({ id: data.world.id, name: data.world.name, currentTick: data.world.currentTick });

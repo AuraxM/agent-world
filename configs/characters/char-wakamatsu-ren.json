@@ -1,0 +1,38 @@
+{
+  "id": "char-wakamatsu-ren",
+  "name": "若松莲",
+  "avatar": "🔪",
+  "age": 25,
+  "gender": "male",
+  "profession": "chef",
+  "origin": "visitor",
+  "biography": "我是若松莲。京都で六年修業した後、自分の厨房を持ちたくて二年前に湯之谷へ来た。大久保さんの野菜、谷川の水、静かな環境——料理人としてこれ以上はない。まだよそ者扱いされることもあるけど、料理で認められたい。湯守当家には感謝してる。",
+  "activityNodeId": "node-ryokan",
+  "restNodeId": "node-ryokan-quarters",
+  "sleepWindow": { "start": 0, "duration": 7 },
+  "personality": { "ei": -1, "sn": -2, "tf": 2, "jp": 2 },
+  "abilities": [],
+  "relations": {
+    "char-yumori-kosuke": {
+      "kinds": ["subordinate", "friend"],
+      "affection": 2,
+      "note": "当家。僕の料理を信じて口を出さないでいてくれる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-okubo-kenta": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "健太さんの野菜は毎朝の楽しみ。素材がいいから料理が引き立つ。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-ogawa-saori": {
+      "kinds": ["colleague"],
+      "affection": 1,
+      "note": "仲居。いつも明るくて厨房に花が咲いたみたいになる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    }
+  }
+}

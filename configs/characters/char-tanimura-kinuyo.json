@@ -2,20 +2,66 @@
   "id": "char-tanimura-kinuyo",
   "name": "谷村绢代",
   "avatar": "📮",
-  "age": 54,
+  "age": 58,
   "gender": "female",
   "profession": "grocer",
   "origin": "local",
-  "biography": "我是谷村绢代，杂货铺兼邮局一个人打理。来这谷里三十年，谁买什么、谁给谁寄信，我全知道。知道，但不说是本分。十年前丈夫被熊伤了，走了。这以后就一个人。店就是我的全部。",
-  "activityNodeId": "node-store-quarters",
+  "biography": "我是谷村绢代，谷の雑貨屋兼郵便局を三十年。この店のカウンターは谷の井戸端会議場——誰が何を買ったか、誰にどんな郵便が届いたか、だいたい知ってる。口は堅いけどね。毎朝吉田さんのバスで届く郵便物を仕分けるのが日課。谷の情報はここに集まる。",
+  "activityNodeId": "node-general-store",
   "restNodeId": "node-store-quarters",
-  "sleepWindow": { "start": 22, "duration": 8 },
-  "personality": { "ei": 0, "sn": 1, "tf": 1, "jp": 2 },
+  "sleepWindow": {
+    "start": 22,
+    "duration": 7
+  },
+  "personality": {
+    "ei": 2,
+    "sn": -1,
+    "tf": 0,
+    "jp": 1
+  },
   "abilities": [],
   "relations": {
-    "char-yumori-kosuke": { "kinds": ["friend"], "affection": 2, "note": "旅馆老板。每天来取邮件。", "since": 0, "lastInteractionTick": 0 },
-    "char-matsuoka-sayo": { "kinds": ["friend"], "affection": 3, "note": "酒馆的小夜。商店街靠得住的邻居。", "since": 0, "lastInteractionTick": 0 },
-    "char-tazaki-mamoru": { "kinds": ["friend"], "affection": 2, "note": "田崎。不说话但靠得住。", "since": 0, "lastInteractionTick": 0 },
-    "char-yoshida-driver": { "kinds": ["friend"], "affection": 2, "note": "吉田。邮件的搬运工，辛苦了。", "since": 0, "lastInteractionTick": 0 }
+    "char-yumori-kosuke": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "湯守の当家。毎日郵便を取りに来る。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-yoshida-eiichi": {
+      "kinds": ["friend"],
+      "affection": 3,
+      "note": "バスの吉田さん。毎朝郵便物を運んでくれる。谷のライフライン。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-sato-haru": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "佐藤さん。配達ついでにいつも長話になる。小玉の写真が増える一方。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-guji-masayuki": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "宮司さん。祭典の案内状をいつも預かる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-kishita-michiko": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "木下先生。薬の問い合わせや患者さんの様子を聞いたり。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-tanaka-yayoi": {
+      "kinds": ["friend"],
+      "affection": 1,
+      "note": "弥生さん。仕立てた浴衣の評判をいつも教えてくれる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   }
 }

@@ -16,19 +16,26 @@ const WORLD_ID = "world-yu-no-tani";
 const MAP_ID = "yu-no-tani";
 
 const CAST: CastMember[] = [
-  { characterId: "char-yumori-kosuke", locationId: "node-inn" },
-  { characterId: "char-yumori-ayako", locationId: "node-inn" },
-  { characterId: "char-wakamatsu-naoki", locationId: "node-inn" },
-  { characterId: "char-ogawa-misaki", locationId: "node-inn" },
+  // --- 本地人 (15) ---
+  { characterId: "char-yumori-kosuke", locationId: "node-ryokan-quarters" },
+  { characterId: "char-ogawa-saori", locationId: "node-ryokan-quarters" },
+  { characterId: "char-nakamura-yuto", locationId: "node-cafe-quarters" },
+  { characterId: "char-yamada-takafumi", locationId: "node-carpenter-house" },
   { characterId: "char-tanimura-kinuyo", locationId: "node-store-quarters" },
-  { characterId: "char-matsuoka-sayo", locationId: "node-izakaya" },
-  { characterId: "char-shiraishi-aoi", locationId: "node-studio" },
-  { characterId: "char-guji-san", locationId: "node-shrine" },
-  { characterId: "char-nogami-prof", locationId: "node-geologist-cabin" },
-  { characterId: "char-tazaki-mamoru", locationId: "node-public-bath" },
+  { characterId: "char-matsuoka-sayo", locationId: "node-izakaya-quarters" },
+  { characterId: "char-suzuki-kazuo", locationId: "node-souvenir-shop-quarters" },
+  { characterId: "char-tanaka-yayoi", locationId: "node-tailor-quarters" },
+  { characterId: "char-tazaki-mamoru", locationId: "node-caretaker-house" },
   { characterId: "char-sato-haru", locationId: "node-old-house" },
-  { characterId: "char-yoshida-driver", locationId: "node-bus-stop" },
-  { characterId: "char-yamane-kazuma", locationId: "node-hunter-hut" },
+  { characterId: "char-guji-masayuki", locationId: "node-priest-house" },
+  { characterId: "char-kishita-michiko", locationId: "node-clinic-quarters" },
+  { characterId: "char-yoshida-eiichi", locationId: "node-bus-stop" },
+  { characterId: "char-okubo-kenta", locationId: "node-farmhouse" },
+  { characterId: "char-okubo-miwa", locationId: "node-farmhouse" },
+  // --- 外来客 (2, 已融入) ---
+  { characterId: "char-shiraishi-aoi", locationId: "node-pottery-quarters" },
+  { characterId: "char-nogami-takashi", locationId: "node-annex-quarters" },
+  // 候选池 (mid-game 投放): char-wakamatsu-ren, char-takahashi-ema, char-yamane-kazuma
 ];
 
 function main() {

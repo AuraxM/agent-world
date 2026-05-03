@@ -28,21 +28,26 @@ const BodySchema = z.object({
   cast: z.array(CastMemberSchema).min(1).optional(),
 });
 
-const DEFAULT_WORLD_ID = "world-moon-valley";
-const DEFAULT_MAP_ID = "moon-valley";
+const DEFAULT_WORLD_ID = "world-yu-no-tani";
+const DEFAULT_MAP_ID = "yu-no-tani";
 const DEFAULT_CAST: CastMember[] = [
-  { characterId: "char-genjo" },
-  { characterId: "char-ito-chie" },
-  { characterId: "char-kimura-fumiko" },
-  { characterId: "char-nakamura-shizuka" },
-  { characterId: "char-saito-ishi" },
-  { characterId: "char-suzuki-kotone" },
-  { characterId: "char-suzuki-misaki" },
-  { characterId: "char-takahashi-tetsuya" },
-  { characterId: "char-tanaka-daichi" },
-  { characterId: "char-tanaka-hana" },
-  { characterId: "char-tanaka-yota" },
-  { characterId: "char-yamada-ryuichi" },
+  { characterId: "char-yumori-kosuke" },
+  { characterId: "char-ogawa-saori" },
+  { characterId: "char-nakamura-yuto" },
+  { characterId: "char-yamada-takafumi" },
+  { characterId: "char-tanimura-kinuyo" },
+  { characterId: "char-matsuoka-sayo" },
+  { characterId: "char-suzuki-kazuo" },
+  { characterId: "char-tanaka-yayoi" },
+  { characterId: "char-tazaki-mamoru" },
+  { characterId: "char-sato-haru" },
+  { characterId: "char-guji-masayuki" },
+  { characterId: "char-kishita-michiko" },
+  { characterId: "char-yoshida-eiichi" },
+  { characterId: "char-okubo-kenta" },
+  { characterId: "char-okubo-miwa" },
+  { characterId: "char-shiraishi-aoi" },
+  { characterId: "char-nogami-takashi" },
 ];
 
 export async function POST(request: Request) {
@@ -72,7 +77,7 @@ export async function POST(request: Request) {
 
     const result = createWorldFromConfig({
       worldId,
-      name: parsed.data.name ?? "月ノ谷",
+      name: parsed.data.name ?? "汤之谷",
       mapId,
       cast,
     });

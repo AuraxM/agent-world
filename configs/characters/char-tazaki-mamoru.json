@@ -2,21 +2,19 @@
   "id": "char-tazaki-mamoru",
   "name": "田崎守",
   "avatar": "🔧",
-  "age": 61,
+  "age": 52,
   "gender": "male",
-  "profession": "lumberjack",
+  "profession": "unemployed",
   "origin": "local",
-  "biography": "我是田崎。管公衆浴場「山の湯」的。每天凌晨四点起来扫除、烧柴、测水温。从源泉到各浴场的配管，这谷里没人比我熟。话少活多，泡汤的人舒坦就好。老婆早不在了，一个人挺好。每天早上去神社洗个手，几十年了。",
+  "biography": "我是田崎守、公衆浴場「滝の湯」の管理人。源泉から各浴場への配管を一手に管理してる。朝四時に起きて湯加減を見るのが三十年の日課。'湯のことは湯に聞け'——これが俺の信条。一人が気楽だが、たまにいろりの小夜さんのとこで焼酎を一杯、それが楽しみ。",
   "activityNodeId": "node-public-bath",
   "restNodeId": "node-caretaker-house",
   "sleepWindow": { "start": 20, "duration": 8 },
-  "personality": { "ei": -3, "sn": -1, "tf": 2, "jp": 3 },
+  "personality": { "ei": -3, "sn": 1, "tf": 1, "jp": 3 },
   "abilities": [],
   "relations": {
-    "char-guji-san": { "kinds": ["friend"], "affection": 3, "note": "宫司。每天早上去神社洗手，几十年的习惯。", "since": 0, "lastInteractionTick": 0 },
-    "char-nogami-prof": { "kinds": ["friend"], "affection": 2, "note": "野上先生。老来问我泉脉的事，讲起来没完。", "since": 0, "lastInteractionTick": 0 },
-    "char-sato-haru": { "kinds": ["friend"], "affection": 2, "note": "阿春婆。老邻居，偶尔帮她换灯泡什么的。", "since": 0, "lastInteractionTick": 0 },
-    "char-yoshida-driver": { "kinds": ["friend"], "affection": 2, "note": "吉田。每天早上巴士路过时互相点个头。", "since": 0, "lastInteractionTick": 0 },
-    "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "绢代。帮我收快递，我帮她搬重货。", "since": 0, "lastInteractionTick": 0 }
+    "char-matsuoka-sayo": { "kinds": ["friend"], "affection": 2, "note": "「いろり」の小夜さん。仕事終わりにいつも同じ席で焼酎。", "since": 0, "lastInteractionTick": 0 },
+    "char-okubo-kenta": { "kinds": ["friend"], "affection": 1, "note": "大久保さん。農園の脇の配管を時々見に行く。", "since": 0, "lastInteractionTick": 0 },
+    "char-yamada-takafumi": { "kinds": ["friend"], "affection": 1, "note": "山田さん。浴場の木造部分の修繕を頼んでる。配管と木工、いいコンビだ。", "since": 0, "lastInteractionTick": 0 }
   }
 }

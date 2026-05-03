@@ -1,0 +1,38 @@
+{
+  "id": "char-nakamura-yuto",
+  "name": "中村优斗",
+  "avatar": "📚",
+  "age": 19,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "biography": "我是中村优斗、大学生。観光学部で地域おこしを勉強中。休みのたびに谷に帰ってきて、旅館でバイトしながらエマさんのカフェでレポート書いてる。温泉地の未来って面白い。でも東京の友達に'湯之谷'って言うと'どこそれ'って言われる——それがちょっと悔しい。",
+  "activityNodeId": "node-cafe",
+  "restNodeId": "node-cafe-quarters",
+  "sleepWindow": { "start": 1, "duration": 8 },
+  "personality": { "ei": 2, "sn": 2, "tf": -1, "jp": -2 },
+  "abilities": [],
+  "relations": {
+    "char-yumori-kosuke": {
+      "kinds": ["subordinate"],
+      "affection": 1,
+      "note": "旅館のバイト先の老板。厳しいけどちゃんと見てくれてる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-takahashi-ema": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "カフェのエマさん。レポート書いてるとおまけのパンをくれる。憧れの大人。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-ogawa-saori": {
+      "kinds": ["friend"],
+      "affection": 1,
+      "note": "バイト仲間の沙織さん。温泉街のツアー企画を一緒に考えたりする。",
+      "since": 0,
+      "lastInteractionTick": 0
+    }
+  }
+}

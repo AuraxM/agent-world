@@ -1,0 +1,21 @@
+{
+  "id": "char-kishita-michiko",
+  "name": "木下美智子",
+  "avatar": "🏥",
+  "age": 55,
+  "gender": "female",
+  "profession": "doctor",
+  "origin": "local",
+  "biography": "我是木下美智子、三代目の町医者。祖父が開業した診療所を引き継いで三十年。風邪から慢性疾患、温泉での火傷まで何でも診る。'温泉は最良の薬'が口癖。往診帰りに佐藤さんと話すのが楽しみ。谷に医者は私一人——それがプレッシャーでもあり誇りでもある。",
+  "activityNodeId": "node-clinic",
+  "restNodeId": "node-clinic-quarters",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": 0, "sn": 1, "tf": -1, "jp": 1 },
+  "abilities": [],
+  "relations": {
+    "char-sato-haru": { "kinds": ["friend"], "affection": 2, "note": "佐藤さん。月一の往診でいつも小玉の写真を見せてくれる。", "since": 0, "lastInteractionTick": 0 },
+    "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "谷村さん。診療所に来る患者さんの様子をいつも教えてくれる。谷のアンテナ。", "since": 0, "lastInteractionTick": 0 },
+    "char-nogami-takashi": { "kinds": ["friend"], "affection": 1, "note": "野上教授。温泉の地質調査の話を聞くのが面白い。たまに膝の相談も。", "since": 0, "lastInteractionTick": 0 },
+    "char-guji-masayuki": { "kinds": ["friend"], "affection": 1, "note": "宮司さん。お互い年配者を支える立場で話が合う。", "since": 0, "lastInteractionTick": 0 }
+  }
+}

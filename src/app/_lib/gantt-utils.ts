@@ -14,28 +14,8 @@ export const CATEGORY_ICONS: Record<string, string> = {
   env: "🌦️",
 };
 
-export const CATEGORY_STYLES: Record<string, { bg: string; border: string }> = {
-  action:  { bg: "rgba(92,156,230,0.25)", border: "rgba(92,156,230,0.45)" },
-  social:  { bg: "rgba(108,191,108,0.25)", border: "rgba(108,191,108,0.45)" },
-  burst:   { bg: "rgba(239,68,68,0.25)",  border: "rgba(239,68,68,0.45)" },
-  quest:   { bg: "rgba(234,179,8,0.25)",  border: "rgba(234,179,8,0.45)" },
-  inner:   { bg: "rgba(148,163,184,0.2)", border: "rgba(148,163,184,0.35)" },
-  system:  { bg: "rgba(212,168,87,0.2)",  border: "rgba(212,168,87,0.35)" },
-  time:    { bg: "rgba(148,163,184,0.15)",border: "rgba(148,163,184,0.3)" },
-  env:     { bg: "rgba(148,163,184,0.15)",border: "rgba(148,163,184,0.3)" },
-};
-
-export const FALLBACK_STYLE = {
-  bg: "rgba(100,100,100,0.15)",
-  border: "rgba(100,100,100,0.3)",
-};
-
 export function getCategoryIcon(category: string): string {
   return CATEGORY_ICONS[category] ?? "";
-}
-
-export function getCategoryStyle(category: string): { bg: string; border: string } {
-  return CATEGORY_STYLES[category] ?? FALLBACK_STYLE;
 }
 
 /** Compute visible tick window: newest at endTick, span back tickCount ticks. */

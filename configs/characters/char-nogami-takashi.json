@@ -1,0 +1,46 @@
+{
+  "id": "char-nogami-takashi",
+  "name": "野上隆",
+  "avatar": "📖",
+  "age": 63,
+  "gender": "male",
+  "profession": "teacher",
+  "origin": "visitor",
+  "biography": "我是野上隆、元地質学教授。五年前定年退職と同時に湯之谷の別館へ移住。この谷の温泉地質は論文を三本書けるほど面白い。毎朝森林歩道を散策し、午後は源泉のデータを取る。夜は宮司さんと囲碁——退職後の人生、なかなか悪くない。",
+  "activityNodeId": "node-annex",
+  "restNodeId": "node-annex-quarters",
+  "sleepWindow": {
+    "start": 22,
+    "duration": 7
+  },
+  "personality": {
+    "ei": -1,
+    "sn": 3,
+    "tf": 2,
+    "jp": 1
+  },
+  "abilities": [],
+  "relations": {
+    "char-guji-masayuki": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "宮司さん。囲碁友達。神社の古文書に書かれた温泉記述を一緒に読んだ。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-shiraishi-aoi": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "白石さん。同じ移住者。彼女の釉薬の原料になる土の成分分析を手伝った。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-kishita-michiko": {
+      "kinds": ["friend"],
+      "affection": 1,
+      "note": "木下先生。膝の診察のついでに温泉療法の話をいつもこぼしてしまう。",
+      "since": 0,
+      "lastInteractionTick": 0
+    }
+  }
+}

@@ -6,7 +6,6 @@ import {
   tickRangeDesc,
   isSleepTick,
   getCategoryIcon,
-  getCategoryStyle,
   TICK_WIDTH,
   stackEventsAtTick,
 } from "./gantt-utils";
@@ -164,19 +163,6 @@ describe("getCategoryIcon", () => {
 
   it("returns empty for unknown", () => {
     expect(getCategoryIcon("unknown" as any)).toBe("");
-  });
-});
-
-describe("getCategoryStyle", () => {
-  it("maps known category", () => {
-    const s = getCategoryStyle("action");
-    expect(s.bg).toContain("rgba");
-    expect(s.border).toContain("rgba");
-  });
-
-  it("returns fallback for unknown", () => {
-    const s = getCategoryStyle("unknown" as any);
-    expect(s.bg).toBeDefined();
   });
 });
 

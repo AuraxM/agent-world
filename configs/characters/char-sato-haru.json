@@ -6,15 +6,16 @@
   "gender": "female",
   "profession": "unemployed",
   "origin": "local",
-  "biography": "我是佐藤春，在这谷里活了七十多年了。结婚、生子、送走老伴，一辈子都在这个屋子里。现在养了一只三毛猫叫小玉，每天晒太阳、做酱菜、看看电视。冬天难熬，但春天溪水解冻的声音，听多少年都听不腻。年轻时也是旅馆的仲居呢。",
+  "biography": "我是佐藤春、この谷で七十余年。結婚、出産、伴侶を見送り……人生の全てがこの家にある。今は三毛猫の小玉と二人暮らし。冬は難儀だけど、春に谷川の氷が解ける音を聞くたびに、もう一年生きようと思う。若い時は旅館の仲居だったんだよ。",
   "activityNodeId": "node-old-house",
   "restNodeId": "node-old-house",
   "sleepWindow": { "start": 20, "duration": 9 },
   "personality": { "ei": 1, "sn": 0, "tf": -1, "jp": -1 },
   "abilities": [],
   "relations": {
-    "char-guji-san": { "kinds": ["friend"], "affection": 3, "note": "宫司。同代人，一起看这谷变老。", "since": 0, "lastInteractionTick": 0 },
-    "char-tazaki-mamoru": { "kinds": ["friend"], "affection": 2, "note": "田崎。帮过我不少忙，是个靠得住的人。", "since": 0, "lastInteractionTick": 0 },
-    "char-ogawa-misaki": { "kinds": ["friend"], "affection": 3, "note": "美咲。常来看我，像孙女一样。", "since": 0, "lastInteractionTick": 0 }
+    "char-guji-masayuki": { "kinds": ["friend"], "affection": 3, "note": "宮司さん。同世代、一緒にこの谷の変わりようを見てきた。", "since": 0, "lastInteractionTick": 0 },
+    "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "绢代さん。配達ついでに長話。いつも気にかけてくれてありがたい。", "since": 0, "lastInteractionTick": 0 },
+    "char-ogawa-saori": { "kinds": ["friend"], "affection": 3, "note": "沙織ちゃん。子どもの頃から知ってる。まるで孫娘みたい。", "since": 0, "lastInteractionTick": 0 },
+    "char-kishita-michiko": { "kinds": ["friend"], "affection": 2, "note": "木下先生。月一の往診で世話になってる。よく話を聞いてくれるいい医者。", "since": 0, "lastInteractionTick": 0 }
   }
 }

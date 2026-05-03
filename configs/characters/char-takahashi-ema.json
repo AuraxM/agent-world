@@ -1,0 +1,53 @@
+{
+  "id": "char-takahashi-ema",
+  "name": "エマ·高桥",
+  "avatar": "🍞",
+  "age": 29,
+  "gender": "female",
+  "profession": "baker",
+  "origin": "visitor",
+  "biography": "我是エマ·高桥、「山猫」の店主。神戸でパン職人をしてたけど、三年前にこの谷に移住した。谷の酵母で起こしたパン、谷の水で淹れたコーヒー——この場所の素材が私の仕事を変えた。観光客も地元の人も同じテーブルでパンを頬張る。そういう空間が作りたかった。",
+  "activityNodeId": "node-cafe",
+  "restNodeId": "node-cafe-quarters",
+  "sleepWindow": {
+    "start": 23,
+    "duration": 7
+  },
+  "personality": {
+    "ei": 2,
+    "sn": 2,
+    "tf": -1,
+    "jp": -1
+  },
+  "abilities": [],
+  "relations": {
+    "char-matsuoka-sayo": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "小夜さん。同業者として刺激し合える存在。お互いの店を行き来してる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-okubo-kenta": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "健太さん。パンに使う野菜や果物を分けてもらってる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-okubo-miwa": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "美和さん。ジャムのレシピを一緒に考えたり。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-nakamura-yuto": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "優斗くん。いつも窓際でレポート書いてる。谷の未来を考えてる姿が眩しい。",
+      "since": 0,
+      "lastInteractionTick": 0
+    }
+  }
+}

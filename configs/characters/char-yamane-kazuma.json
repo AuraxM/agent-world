@@ -1,20 +1,39 @@
 {
   "id": "char-yamane-kazuma",
   "name": "山根一马",
-  "avatar": "🪓",
-  "age": 44,
+  "avatar": "🏹",
+  "age": 40,
   "gender": "male",
   "profession": "hunter",
-  "origin": "local",
-  "biography": "我是山根。打猎、伐木，一个人住在山道入口的小屋。每两周下一次山，卖毛皮和山菜，买烟买酒，去「围炉里」喝两杯。不需要太多人，也不需要太多话。冬天最难熬——但雪停之后的第一个早晨，从山顶看谷底，什么都值了。",
+  "origin": "visitor",
+  "biography": "我是山根一马、猟師だ。十年前北海道からここへ移ってきた——人が少なくて猟が多い土地を探して。冬は毛皮、秋はキノコ、春は山菜。余った獲物は酒馆の小夜さんに届けてる。吉田さんに麓までの運搬を頼むこともある。一人が性に合ってるが、たまの無駄話は嫌いじゃない。",
   "activityNodeId": "node-hunter-hut",
   "restNodeId": "node-hunter-hut",
-  "sleepWindow": { "start": 21, "duration": 8 },
-  "personality": { "ei": -3, "sn": -2, "tf": 2, "jp": 0 },
+  "sleepWindow": {
+    "start": 21,
+    "duration": 8
+  },
+  "personality": {
+    "ei": -3,
+    "sn": 2,
+    "tf": 1,
+    "jp": 1
+  },
   "abilities": [],
   "relations": {
-    "char-yoshida-driver": { "kinds": ["friend"], "affection": 2, "note": "吉田。帮我运货下山，偶尔捎句话。", "since": 0, "lastInteractionTick": 0 },
-    "char-matsuoka-sayo": { "kinds": ["friend"], "affection": 2, "note": "「围炉里」女将。两周去喝一次，是下山最重要的一站。", "since": 0, "lastInteractionTick": 0 },
-    "char-tanimura-kinuyo": { "kinds": ["acquaintance"], "affection": 0, "note": "绢代。帮我收皮毛订单。", "since": 0, "lastInteractionTick": 0 }
+    "char-yoshida-eiichi": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "吉田さん。毛皮や乾物をバスで運んでもらう。冬場は特に世話になる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-matsuoka-sayo": {
+      "kinds": ["friend"],
+      "affection": 1,
+      "note": "「いろり」の小夜さん。獲れたての山菜やジビエを持ち込む。",
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   }
 }

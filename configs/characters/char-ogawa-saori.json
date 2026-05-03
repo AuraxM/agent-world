@@ -1,0 +1,45 @@
+{
+  "id": "char-ogawa-saori",
+  "name": "小川沙織",
+  "avatar": "🌸",
+  "age": 26,
+  "gender": "female",
+  "profession": "unemployed",
+  "origin": "local",
+  "biography": "我是小川沙織，旅馆「汤守」的仲居。谷生まれ谷育ち、生まれた時から温泉の湯気の中で育った。接客が好きで、旅館の看板娘って呼ばれるのが密かな誇り。いつか東京も見てみたいけど、今はここが一番。お客さんの'ありがとう'が何よりの報酬です。",
+  "activityNodeId": "node-ryokan",
+  "restNodeId": "node-ryokan-quarters",
+  "sleepWindow": { "start": 0, "duration": 7 },
+  "personality": { "ei": 2, "sn": 0, "tf": -1, "jp": -1 },
+  "abilities": [],
+  "relations": {
+    "char-yumori-kosuke": {
+      "kinds": ["subordinate", "friend"],
+      "affection": 2,
+      "note": "当家。口下手だけど誰より谷のことを考えてる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-sato-haru": {
+      "kinds": ["friend"],
+      "affection": 3,
+      "note": "佐藤おばあちゃん。子どもの頃からかわいがってもらってる。小玉の写真をよく見せてくれる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-nakamura-yuto": {
+      "kinds": ["friend"],
+      "affection": 1,
+      "note": "バイト仲間。大学生。たまに観光の話で盛り上がる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-wakamatsu-ren": {
+      "kinds": ["colleague"],
+      "affection": 1,
+      "note": "料理長。厨房で真剣な顔してる時の横顔、けっこうかっこいいと思う。",
+      "since": 0,
+      "lastInteractionTick": 0
+    }
+  }
+}

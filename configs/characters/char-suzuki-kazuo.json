@@ -1,0 +1,53 @@
+{
+  "id": "char-suzuki-kazuo",
+  "name": "铃木和夫",
+  "avatar": "🏺",
+  "age": 42,
+  "gender": "male",
+  "profession": "merchant",
+  "origin": "local",
+  "biography": "我是铃木和夫、土产店「山の音」店主。民芸と地元作家の作品を一手に扱ってる。白石葵の陶器はうちの人気商品——彼女の作品を見つけた時の直感は当たった。商品の説明を始めると止まらないのが玉に瑕。でも、お客さんの'これいいね'の一言で一日が報われる。",
+  "activityNodeId": "node-souvenir-shop",
+  "restNodeId": "node-souvenir-shop-quarters",
+  "sleepWindow": {
+    "start": 23,
+    "duration": 8
+  },
+  "personality": {
+    "ei": 2,
+    "sn": 0,
+    "tf": 0,
+    "jp": -1
+  },
+  "abilities": [],
+  "relations": {
+    "char-shiraishi-aoi": {
+      "kinds": ["friend"],
+      "affection": 2,
+      "note": "白石葵。彼女の作品は店の看板。センスを信頼してる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-yoshida-eiichi": {
+      "kinds": ["friend"],
+      "affection": 1,
+      "note": "吉田さん。下山ついでに仕入れを頼むことも。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-yamada-takafumi": {
+      "kinds": ["friend"],
+      "affection": 1,
+      "note": "山田さん。店の什器を作ってもらった。木の質感が商品を引き立てる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-tanaka-yayoi": {
+      "kinds": ["friend"],
+      "affection": 1,
+      "note": "弥生さん。手ぬぐいのオリジナル柄を一緒に考えてる。",
+      "since": 0,
+      "lastInteractionTick": 0
+    }
+  }
+}

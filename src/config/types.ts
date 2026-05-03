@@ -33,6 +33,8 @@ export interface Manifest {
   startDate?: string;
   /** Path to actions.js relative to the map pack directory. */
   actions?: string;
+  /** Optional economy configuration overrides. */
+  economy?: EconomyConfig;
 }
 
 /** 一份角色配置文件 = 不含位置/世界/运行期字段的纯模板。 */
@@ -47,3 +49,47 @@ export type CharacterTemplate = Omit<
   | "currentAction"
   | "lastThought"
 >;
+
+export interface SurvivalCosts {
+  eat: number;
+  bathe: number;
+}
+
+export interface ProfessionIncomeRange {
+  min: number;
+  max: number;
+}
+
+export interface ProfessionIncomes {
+  high: ProfessionIncomeRange;
+  medium: ProfessionIncomeRange;
+  low: ProfessionIncomeRange;
+  none: ProfessionIncomeRange;
+}
+
+export interface BalanceThresholds {
+  positive: [number, number, number, number];
+  negative: [number, number, number, number];
+}
+
+export interface EconomyConfig {
+  survivalCosts: SurvivalCosts;
+  professionIncomes: ProfessionIncomes;
+  wealthTiers: [number, number, number];
+  balanceThresholds: BalanceThresholds;
+}
+
+export const DEFAULT_ECONOMY_CONFIG: EconomyConfig = {
+  survivalCosts: { eat: 15, bathe: 10 },
+  professionIncomes: {
+    high: { min: 80, max: 120 },
+    medium: { min: 40, max: 70 },
+    low: { min: 10, max: 30 },
+    none: { min: 0, max: 0 },
+  },
+  wealthTiers: [100, 500, 2000],
+  balanceThresholds: {
+    positive: [10, 50, 150, 400],
+    negative: [0.1, 0.3, 0.6, 1.0],
+  },
+};

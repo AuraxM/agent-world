@@ -38,6 +38,18 @@ export const PROFESSIONS = [
 ] as const;
 export type Profession = (typeof PROFESSIONS)[number];
 
+/** 职业 → 收入等级映射（0=none, 1=low, 2=medium, 3=high）。manifest 可覆盖。 */
+export const PROFESSION_INCOME_TIERS: Record<Profession, number> = {
+  doctor: 3, merchant: 3,
+  farmer: 2, rancher: 2, fisherman: 2, lumberjack: 2, hunter: 2,
+  chef: 2, baker: 2, brewer: 2,
+  blacksmith: 2, carpenter: 2, tailor: 2,
+  grocer: 2, innkeeper: 2,
+  nurse: 2, teacher: 2, librarian: 2,
+  priest: 2, mailman: 2, mayor: 2,
+  student: 0, unemployed: 0,
+};
+
 export const GENDERS = ["male", "female", "other"] as const;
 export type Gender = (typeof GENDERS)[number];
 

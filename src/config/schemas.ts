@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { NODE_TAGS, OBJECTIVE_RELATION_KINDS, PROFESSIONS, GENDERS, CHARACTER_ORIGINS } from "@/domain/enums";
 import { PersonalitySchema, RelationSchema } from "@/domain/schemas";
-import type { MapConfig, CharacterTemplate, MapNodeConfig } from "./types";
+import type { Manifest, MapConfig, CharacterTemplate, MapNodeConfig } from "./types";
 
 /** 节点（文件内格式）：相比运行时缺 `worldId`。 */
 export const MapNodeConfigSchema: z.ZodType<MapNodeConfig> = z.object({
@@ -28,12 +28,18 @@ export const MapNodeConfigSchema: z.ZodType<MapNodeConfig> = z.object({
   spriteKey: z.string().optional(),
 });
 
+/** 地图包 manifest —— 每个地图包目录下的 manifest.json。 */
+export const ManifestSchema: z.ZodType<Manifest> = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  language: z.enum(["zh", "en", "ja"]),
+});
+
 /** 一张地图。要求：≥1 个 isEntry 节点；节点 id 唯一；parentId 必须能在同文件中解析（除根）。 */
 export const MapConfigSchema: z.ZodType<MapConfig> = z
   .object({
     id: z.string().min(1),
-    name: z.string().min(1),
-    description: z.string().optional(),
     nodes: z.array(MapNodeConfigSchema).min(1),
   })
   .superRefine((cfg, ctx) => {

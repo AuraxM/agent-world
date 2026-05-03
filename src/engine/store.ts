@@ -80,6 +80,7 @@ export function loadWorld(worldId: string): LoadedWorld {
     gender: c.gender as Character["gender"],
     profession: c.profession as Character["profession"],
     biography: c.biography,
+    origin: c.origin as Character["origin"],
     locationId: c.locationId,
     personality: JSON.parse(c.personalityJson),
     vitals: JSON.parse(c.vitalsJson),

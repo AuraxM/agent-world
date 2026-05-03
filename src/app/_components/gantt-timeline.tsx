@@ -19,6 +19,7 @@ export function GanttTimeline({
       style={{
         display: "flex",
         gap: 0,
+        paddingLeft: 100,
         position: "sticky",
         top: 0,
         zIndex: 3,

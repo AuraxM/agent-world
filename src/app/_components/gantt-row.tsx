@@ -8,6 +8,7 @@ import {
   isSleepTick,
   stackEventsAtTick,
 } from "../_lib/gantt-utils";
+import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
 import { GanttCard } from "./gantt-card";
 
 export function GanttRow({
@@ -46,16 +47,14 @@ export function GanttRow({
     }
   }
 
-  // Compute row height: max top + 54px card height + padding
   const maxTop = stacked.length > 0
     ? Math.max(...stacked.map((s) => s.top))
     : 0;
   const rowHeight = Math.max(60, maxTop + 54 + 12);
 
-  // Sleep bar: find contiguous sleep ranges
   let sleepRanges: { left: number; width: number }[] = [];
   if (sleepTicks.length > 0) {
-    sleepTicks.sort((a, b) => b - a); // descending
+    sleepTicks.sort((a, b) => b - a);
     let rangeStart = sleepTicks[0]!;
     let rangeEnd = sleepTicks[0]!;
     for (let i = 1; i < sleepTicks.length; i++) {
@@ -80,40 +79,86 @@ export function GanttRow({
     <div
       className="gantt-row"
       style={{
-        position: "relative",
-        minHeight: rowHeight,
+        display: "flex",
+        alignItems: "stretch",
         borderBottom: "1px solid rgba(184,138,74,0.1)",
+        minHeight: rowHeight,
       }}
     >
-      {stacked.map(({ event, left, top }) => (
-        <div key={event.id} style={{ position: "absolute", left, top }}>
-          <GanttCard
-            event={event}
-            charById={charById}
-            nodeById={nodeById}
-            excludeId={character.id}
-            onClick={(rect) => onEventClick(event, rect)}
-          />
-        </div>
-      ))}
-
-      {/* Sleep window bars */}
-      {sleepRanges.map((r, i) => (
-        <div
-          key={i}
+      {/* Sticky name cell */}
+      <div
+        style={{
+          minWidth: 100,
+          maxWidth: 100,
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "4px 8px",
+          borderRight: "2px solid var(--accent-strong)",
+          background: "var(--frame)",
+          position: "sticky",
+          left: 0,
+          zIndex: 2,
+        }}
+      >
+        <span
           style={{
-            position: "absolute",
-            left: r.left,
-            top: rowHeight - 12,
-            width: r.width,
-            height: 8,
-            background: "rgba(212,168,87,0.15)",
-            border: "1px dashed rgba(212,168,87,0.3)",
-            borderRadius: 1,
-            pointerEvents: "none",
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 11,
+            background: "var(--frame-2)",
+            flexShrink: 0,
           }}
-        />
-      ))}
+        >
+          {NPC_EMOJI[character.id] ?? NPC_FALLBACK_EMOJI}
+        </span>
+        <span
+          className="text-pixel-xs font-semibold text-(--text-on-frame)"
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {character.name}
+        </span>
+      </div>
+
+      {/* Cards area */}
+      <div style={{ flex: 1, position: "relative" }}>
+        {stacked.map(({ event, left, top }) => (
+          <div key={event.id} style={{ position: "absolute", left, top }}>
+            <GanttCard
+              event={event}
+              charById={charById}
+              nodeById={nodeById}
+              excludeId={character.id}
+              onClick={(rect) => onEventClick(event, rect)}
+            />
+          </div>
+        ))}
+
+        {sleepRanges.map((r, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: r.left,
+              top: rowHeight - 12,
+              width: r.width,
+              height: 8,
+              background: "rgba(212,168,87,0.15)",
+              border: "1px dashed rgba(212,168,87,0.3)",
+              borderRadius: 1,
+              pointerEvents: "none",
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }

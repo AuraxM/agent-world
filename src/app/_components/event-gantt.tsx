@@ -3,7 +3,6 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { Character, MapNode, WorldEvent } from "@/domain/types";
 import { DEFAULT_TICK_WINDOW, getTickWindow, TICK_WIDTH } from "../_lib/gantt-utils";
-import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
 import { GanttTimeline } from "./gantt-timeline";
 import { GanttRow } from "./gantt-row";
 import { GanttPopup } from "./gantt-popup";
@@ -103,88 +102,27 @@ export function EventGantt({
         </div>
       </div>
 
-      {/* Body: flex row — left fixed names + right scrollable */}
-      <div className="flex-1 flex" style={{ overflow: "hidden" }}>
-        {/* LEFT: fixed character name column */}
-        <div
-          style={{
-            minWidth: 100,
-            maxWidth: 100,
-            background: "var(--frame)",
-            borderRight: "2px solid var(--accent-strong)",
-            flexShrink: 0,
-            zIndex: 3,
-            display: "flex",
-            flexDirection: "column",
-            overflowY: "auto",
-          }}
-          className="pixel-scroll"
-        >
-          {/* Spacer matching timeline header height */}
-          <div style={{ height: 42, borderBottom: "1px solid rgba(184,138,74,0.2)" }} />
+      {/* Body: single scroll container */}
+      <div
+        ref={scrollRef}
+        className="flex-1 pixel-scroll"
+        style={{ overflow: "auto" }}
+      >
+        <div style={{ width: contentWidth + 100, display: "flex", flexDirection: "column" }}>
+          <GanttTimeline startTick={startTick} endTick={endTick} />
+
           {characters.map((c) => (
-            <div
+            <GanttRow
               key={c.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                padding: "4px 8px",
-                borderBottom: "1px solid rgba(184,138,74,0.1)",
-                minHeight: 60,
-              }}
-            >
-              <span
-                style={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: "50%",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 11,
-                  background: "var(--frame-2)",
-                  flexShrink: 0,
-                }}
-              >
-                {NPC_EMOJI[c.id] ?? NPC_FALLBACK_EMOJI}
-              </span>
-              <span
-                className="text-pixel-xs font-semibold text-(--text-on-frame)"
-                style={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {c.name}
-              </span>
-            </div>
+              character={c}
+              events={events}
+              startTick={startTick}
+              endTick={endTick}
+              characters={characters}
+              nodes={nodes}
+              onEventClick={handleEventClick}
+            />
           ))}
-        </div>
-
-        {/* RIGHT: scrollable timeline + cards area */}
-        <div
-          ref={scrollRef}
-          className="pixel-scroll"
-          style={{ overflow: "auto", flex: 1 }}
-        >
-          <div style={{ width: contentWidth, display: "flex", flexDirection: "column" }}>
-            <GanttTimeline startTick={startTick} endTick={endTick} />
-
-            {characters.map((c) => (
-              <GanttRow
-                key={c.id}
-                character={c}
-                events={events}
-                startTick={startTick}
-                endTick={endTick}
-                characters={characters}
-                nodes={nodes}
-                onEventClick={handleEventClick}
-              />
-            ))}
-          </div>
         </div>
       </div>
 

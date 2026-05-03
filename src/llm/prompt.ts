@@ -472,7 +472,7 @@ function worldRules(): string {
 移动机制：1 tick = 1/5 游戏小时（5 ticks = 1 小时）。移动时你需要指定目的地（任意地图节点）、移动原因（如"去酒馆找田中喝酒"）和到达后要做的动作（arrival_action）。引擎会自动计算最短路径，每走一步消耗 1 tick。移动期间你无法主动决策（类似睡觉），但可被高强度事件打断。到达后自动执行你声明的到达动作。
 
 昼夜节律：
-- 1 日 = 24 tick。每个角色有自己的作息窗口（你本人的窗口与家见下方"自我认知"块）。
+- 1 日 = 120 tick（24 小时 × 5 tick/小时）。每个角色有自己的作息窗口（你本人的窗口与家见下方"自我认知"块）。
 - 在你的作息窗口内，应在自己的住所睡觉（sleep）。除非有强烈理由（紧急事件、夜班、关键人际冲突），打破自己的作息是反常的，必须在 reasoning 里明确解释。
 - 在作息窗口外，即使疲惫也只能 nap（小睡 4 小时），不能 sleep——把整段大觉留给作息时段，否则会打乱节律。
 
@@ -873,12 +873,12 @@ function describeContinuity(
   lines.push(
     facts.lastRestTick === undefined
       ? "- 距上次 rest/sleep：从未休息过"
-      : `- 距上次 rest/sleep：${currentTick - facts.lastRestTick} 小时`,
+      : `- 距上次 rest/sleep：${Math.floor((currentTick - facts.lastRestTick) / TICKS_PER_HOUR)} 小时`,
   );
   lines.push(
     facts.lastEatTick === undefined
       ? "- 距上次 eat：从未进食过"
-      : `- 距上次 eat：${currentTick - facts.lastEatTick} 小时`,
+      : `- 距上次 eat：${Math.floor((currentTick - facts.lastEatTick) / TICKS_PER_HOUR)} 小时`,
   );
 
   lines.push(`- 今日累计：${formatActionCounts(facts.todayActionCounts)}`);

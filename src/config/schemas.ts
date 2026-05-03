@@ -4,7 +4,7 @@
  * 复用 `src/domain/enums.ts` 的封闭枚举，确保配置层和运行时层共享同一份词汇表。
  */
 import { z } from "zod";
-import { NODE_TAGS, OBJECTIVE_RELATION_KINDS } from "@/domain/enums";
+import { NODE_TAGS, OBJECTIVE_RELATION_KINDS, PROFESSIONS, GENDERS } from "@/domain/enums";
 import { PersonalitySchema, RelationSchema } from "@/domain/schemas";
 import type { MapConfig, CharacterTemplate, MapNodeConfig } from "./types";
 
@@ -93,9 +93,12 @@ export const CharacterTemplateSchema: z.ZodType<CharacterTemplate> = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   avatar: z.string().optional(),
-  /** 角色"家"节点的 id；prompt 引导回家时用。可选，向后兼容。 */
-  homeNodeId: z.string().min(1).nullable().optional(),
-  /** 个体作息时间窗口；缺省 22:00 起 8 小时。 */
+  age: z.number().int().min(1).max(120),
+  gender: z.enum(GENDERS),
+  profession: z.enum(PROFESSIONS),
+  biography: z.string().min(1),
+  activityNodeId: z.string().min(1).nullable().optional(),
+  restNodeId: z.string().min(1).nullable().optional(),
   sleepWindow: SleepWindowSchema.optional(),
   personality: PersonalitySchema,
   abilities: z.array(AbilitySchema),

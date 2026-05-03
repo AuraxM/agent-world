@@ -282,6 +282,15 @@ export async function tick(
           }
           // For move: initiation memory already written, no arrival memory needed
 
+          // Write interruption memory (before clearing currentAction)
+          const desc = c.currentAction.description;
+          c.shortMemory.push({
+            id: `mem-${randomUUID().slice(0, 8)}`,
+            tick: fromTick,
+            importance: 4,
+            content: `${desc}被「${interrupt.description}」打断。`,
+          });
+
           freeMoveEvents.push(
             makeInnerEvent({
               worldId,
@@ -358,6 +367,23 @@ export async function tick(
       // 用 >= 而非 ===：异常恢复 / 快进越界时也能正确结算，避免 sleep 完成
       // 但 fatigue 没归零的死循环。
       if (c.currentAction && fromTick >= c.currentAction.endsAt) {
+        // Write completion memory
+        if (c.currentAction.type === "sleep") {
+          c.shortMemory.push({
+            id: `mem-${randomUUID().slice(0, 8)}`,
+            tick: fromTick,
+            importance: 3,
+            content: "一觉睡醒，神清气爽。",
+          });
+        } else if (c.currentAction.type === "nap") {
+          c.shortMemory.push({
+            id: `mem-${randomUUID().slice(0, 8)}`,
+            tick: fromTick,
+            importance: 3,
+            content: "小睡醒来，恢复了一些精神。",
+          });
+        }
+
         if (c.currentAction.type === "sleep") {
           c.vitals.fatigue = 0;
           c.vitals.fatigueCapTicks = 0;

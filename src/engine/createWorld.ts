@@ -95,6 +95,7 @@ export function createWorldFromConfig(
       .values({
         id: worldId,
         name,
+        mapId,
         currentTick: 0,
         createdAt: now,
         updatedAt: now,

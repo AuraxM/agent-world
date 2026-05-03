@@ -1,6 +1,6 @@
 import type { WorldEvent, Character, SleepWindow } from "@/domain/types";
 
-export const TICK_WIDTH = 72;
+export const TICK_WIDTH = 100;
 export const DEFAULT_TICK_WINDOW = 8;
 
 export const CATEGORY_ICONS: Record<string, string> = {
@@ -119,4 +119,41 @@ export function isSleepTick(tick: number, sleepWindow: SleepWindow): boolean {
   }
   // wraps midnight
   return hour >= sleepWindow.start || hour < end;
+}
+
+export type StackedEvent = {
+  event: WorldEvent;
+  left: number;
+  top: number;
+};
+
+/**
+ * Compute absolute positions for events within a character row.
+ * left = (maxTick - event.tick) * TICK_WIDTH
+ * Events at the same tick stack vertically: first at top=6, each subsequent +52.
+ */
+export function stackEventsAtTick(
+  events: WorldEvent[],
+  maxTick: number,
+): StackedEvent[] {
+  // Group by tick
+  const byTick = new Map<number, WorldEvent[]>();
+  for (const ev of events) {
+    const arr = byTick.get(ev.tick) ?? [];
+    arr.push(ev);
+    byTick.set(ev.tick, arr);
+  }
+
+  const result: StackedEvent[] = [];
+  for (const [tick, evs] of byTick) {
+    const left = (maxTick - tick) * TICK_WIDTH;
+    for (let i = 0; i < evs.length; i++) {
+      result.push({
+        event: evs[i]!,
+        left,
+        top: 6 + i * 52,
+      });
+    }
+  }
+  return result;
 }

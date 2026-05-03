@@ -56,6 +56,10 @@ const STATEMENTS = [
     world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     avatar TEXT,
+    age INTEGER NOT NULL DEFAULT 30,
+    gender TEXT NOT NULL DEFAULT 'male',
+    profession TEXT NOT NULL DEFAULT 'farmer',
+    biography TEXT NOT NULL DEFAULT '',
     location_id TEXT NOT NULL,
     personality_json TEXT NOT NULL,
     vitals_json TEXT NOT NULL DEFAULT '{"hunger":0,"fatigue":0,"hygiene":0}',
@@ -126,6 +130,10 @@ const CHARACTERS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
     name: "emotion_json",
     ddl: `ALTER TABLE characters ADD COLUMN emotion_json TEXT NOT NULL DEFAULT '{"mood":0,"stress":0,"social_satiety":0}'`,
   },
+  { name: "age", ddl: "ALTER TABLE characters ADD COLUMN age INTEGER NOT NULL DEFAULT 30" },
+  { name: "gender", ddl: "ALTER TABLE characters ADD COLUMN gender TEXT NOT NULL DEFAULT 'male'" },
+  { name: "profession", ddl: "ALTER TABLE characters ADD COLUMN profession TEXT NOT NULL DEFAULT 'farmer'" },
+  { name: "biography", ddl: "ALTER TABLE characters ADD COLUMN biography TEXT NOT NULL DEFAULT ''" },
 ];
 
 const tx = sqlite.transaction(() => {

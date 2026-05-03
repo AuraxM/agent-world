@@ -70,6 +70,10 @@ export const characters = sqliteTable(
       .references(() => worlds.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     avatar: text("avatar"),
+    age: integer("age").notNull().default(30),
+    gender: text("gender").notNull().default("male"),
+    profession: text("profession").notNull().default("farmer"),
+    biography: text("biography").notNull().default(""),
     locationId: text("location_id").notNull(),
     personalityJson: text("personality_json").notNull(),
     vitalsJson: text("vitals_json")

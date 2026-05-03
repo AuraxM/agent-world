@@ -13,6 +13,15 @@ const PERSONALITY_LABELS: Record<keyof Personality, string> = {
   jp: "P/J",
 };
 
+const PROFESSION_LABELS: Record<string, string> = {
+  farmer: "农民", rancher: "牧场主", fisherman: "渔夫", lumberjack: "伐木工", hunter: "猎人",
+  chef: "厨师", baker: "面包师", brewer: "酿酒师",
+  blacksmith: "铁匠", carpenter: "木匠", tailor: "裁缝",
+  merchant: "商人", grocer: "杂货店主", innkeeper: "旅店老板",
+  doctor: "医生", nurse: "护士", teacher: "教师", librarian: "图书管理员",
+  priest: "神官", mailman: "邮递员", mayor: "镇长官", student: "学生", unemployed: "无业",
+};
+
 /** [-min..+max] 双向条；居中分隔线，负值左红、正值右绿。 */
 function BiBar({
   label,
@@ -228,6 +237,13 @@ export function ProfilePane({
             </span>
             <div className="flex-1 min-w-0 space-y-1">
               <div className="text-game-lg text-(--color-pixel-fg)">{character.name}</div>
+              <div className="text-game-sm text-(--color-pixel-muted)">
+                {PROFESSION_LABELS[character.profession] ?? character.profession}
+                {" · "}
+                {character.age} 岁
+                {" · "}
+                {character.gender === "male" ? "男" : character.gender === "female" ? "女" : "其他"}
+              </div>
               <div className="text-game-sm">
                 <button
                   type="button"
@@ -236,12 +252,30 @@ export function ProfilePane({
                 >
                   @ {here?.name ?? character.locationId} ↗
                 </button>
-                {character.homeNodeId
-                  && character.homeNodeId !== character.locationId
-                  && nodeById.get(character.homeNodeId) && (
+                {character.activityNodeId && nodeById.get(character.activityNodeId) && (
+                  <span className="text-(--color-pixel-muted)">
+                    {" · 活动处 "}
+                    <button
+                      type="button"
+                      onClick={() => onJumpToNode(character.activityNodeId!)}
+                      className="text-(--color-pixel-accent) hover:underline"
+                    >
+                      {nodeById.get(character.activityNodeId)?.name}
+                    </button>
+                  </span>
+                )}
+                {character.restNodeId
+                  && character.restNodeId !== character.activityNodeId
+                  && nodeById.get(character.restNodeId) && (
                     <span className="text-(--color-pixel-muted)">
-                      {" · 家 "}
-                      {nodeById.get(character.homeNodeId)?.name}
+                      {" · 休息处 "}
+                      <button
+                        type="button"
+                        onClick={() => onJumpToNode(character.restNodeId!)}
+                        className="text-(--color-pixel-accent) hover:underline"
+                      >
+                        {nodeById.get(character.restNodeId)?.name}
+                      </button>
                     </span>
                   )}
               </div>

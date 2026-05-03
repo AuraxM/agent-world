@@ -7,7 +7,7 @@
  * Stage 1 ≤ 5 NPC，冲突极少发生；这里实现保留接口正确性。
  */
 import { randomUUID } from "node:crypto";
-import { applyEmotionEvent, clamp, resetVital } from "./vitals-emotion";
+import { clamp, resetVital } from "./vitals-emotion";
 import type {
   Action,
   Character,
@@ -18,11 +18,12 @@ import type {
   WorldEvent,
 } from "@/domain/types";
 import type {
-  ActionType,
   EventCategory,
   ObjectiveRelationKind,
 } from "@/domain/enums";
 import { BLOOD_RELATION_KINDS, TICKS_PER_HOUR } from "@/domain/enums";
+import { actionRegistry } from "@/domain/action-system";
+import type { StateChange } from "@/domain/action-system";
 
 const SHORT_MEMORY_LIMIT = 50;
 const SLEEP_DURATION = 8 * TICKS_PER_HOUR; // 40 ticks
@@ -45,7 +46,7 @@ export interface ExecuteResult {
   resolvedActions: Array<{ action: Action; success: boolean; reason?: string }>;
 }
 
-const EXCLUSIVE_TYPES: ReadonlySet<ActionType> = new Set<ActionType>([
+const EXCLUSIVE_TYPES: ReadonlySet<string> = new Set<string>([
   "attack",
   "interact_object",
   "interact_person",
@@ -107,6 +108,32 @@ function updateAffection(
   rel.lastInteractionTick = tick;
 }
 
+function applyStateChange(c: Character, sc: StateChange): void {
+  switch (sc.kind) {
+    case "resetVital":
+      resetVital(c, sc.vital);
+      break;
+    case "adjustVital":
+      c.vitals[sc.vital] = clamp(c.vitals[sc.vital] + sc.delta, 0, 16);
+      break;
+    case "setLocation":
+      c.locationId = sc.nodeId;
+      break;
+    case "adjustMood":
+      c.emotion.mood = clamp(c.emotion.mood + sc.delta, -4, 4);
+      break;
+    case "adjustStress":
+      c.emotion.stress = clamp(c.emotion.stress + sc.delta, 0, 4);
+      break;
+    case "setOngoingAction":
+      c.currentAction = sc.action;
+      break;
+    case "clearOngoingAction":
+      c.currentAction = undefined;
+      break;
+  }
+}
+
 export function executeActions(input: ExecuteInput): ExecuteResult {
   const { worldId, tick, characters, nodes, actions } = input;
   const charById = new Map(characters.map((c) => [c.id, c]));
@@ -154,482 +181,102 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
     }
     if (key) claimed.add(key);
 
+    // Lookup definition from registry
+    const def = actionRegistry.get(action.type);
+    if (!def) {
+      // Unknown action type → fallback
+      const memo: Memory = {
+        id: `mem-${randomUUID().slice(0, 8)}`, tick, importance: 1,
+        content: `我尝试了未知的行动：${action.type}`,
+      };
+      pushMemory(actor, memo);
+      resolvedActions.push({ action, success: false, reason: `未知action type: ${action.type}` });
+      events.push(makeEvent({
+        worldId, tick, category: "action",
+        description: `${actor.name} 茫然地站着。`,
+        participants: [actor.id], intensity: 1, scope: "node", nodeId: actor.locationId,
+      }));
+      continue;
+    }
+
+    // Build ActionContext for the definition
+    const here = nodeById.get(actor.locationId)!;
+    const ctx = {
+      worldId, tick, self: actor, here,
+      companions: [],  // execution doesn't need companions
+      reachable: nodes.filter((n) => n.id !== actor.locationId),
+      isSleepHour: false,
+      facts: {} as any,  // execution doesn't need facts
+    };
+
+    // Build ActionInput from the Action
+    const actionInput = {
+      target_id: action.targetId,
+      target_node_id: action.targetNodeId,
+      free_text: action.freeText,
+      reason: action.reason,
+      arrival_action: action.arrivalAction ? {
+        action_type: action.arrivalAction.type,
+        free_text: action.arrivalAction.freeText,
+        target_id: action.arrivalAction.targetId,
+        target_node_id: action.arrivalAction.targetNodeId,
+      } : undefined,
+    };
+
+    // Execute via definition
     let success = true;
     let reason: string | undefined;
+    try {
+      const outcome = def.execute(ctx, actionInput);
 
-    switch (action.type) {
-      case "move": {
-        if (!action.targetNodeId) {
-          success = false;
-          reason = "move 缺少 target_node_id";
-          break;
+      // Apply state changes
+      if (outcome.stateChanges) {
+        for (const sc of outcome.stateChanges) {
+          applyStateChange(actor, sc);
         }
-        const target = nodeById.get(action.targetNodeId);
-        if (!target) {
-          success = false;
-          reason = `目标节点不存在: ${action.targetNodeId}`;
-          break;
-        }
-        const fromId = actor.locationId;
-        actor.locationId = target.id;
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 从 ${nodeById.get(fromId)?.name ?? fromId} 来到 ${target.name}。`,
-            participants: [actor.id],
-            intensity: 1,
-            scope: "node",
-            nodeId: target.id,
-          }),
-        );
-        break;
       }
-      case "eat": {
-        const here = nodeById.get(actor.locationId);
-        if (!here?.tags.includes("dining")) {
-          success = false;
-          reason = "当前不在用餐场所";
-          break;
-        }
-        resetVital(actor, "hunger");
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 在 ${here.name} 吃了一顿。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: here.id,
-          }),
-        );
-        break;
-      }
-      case "rest": {
-        actor.vitals.fatigue = Math.max(0, actor.vitals.fatigue - 2);
-        const here = nodeById.get(actor.locationId);
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 在 ${here?.name ?? "某处"} 休息了一会儿。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: actor.locationId,
-          }),
-        );
-        break;
-      }
-      case "sleep": {
-        const here = nodeById.get(actor.locationId);
-        if (
-          !(here?.tags.includes("residence") || here?.privacy === "private")
-        ) {
-          success = false;
-          reason = "当前位置不能睡觉";
-          break;
-        }
-        actor.currentAction = {
-          type: "sleep",
-          startedAt: tick,
-          endsAt: tick + SLEEP_DURATION,
-          description: `在 ${here.name} 睡觉`,
-          interruptThreshold: SLEEP_INTERRUPT_THRESHOLD,
-        };
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 在 ${here.name} 躺下准备睡觉。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: here.id,
-          }),
-        );
-        break;
-      }
-      case "nap": {
-        // 4 小时小睡：白天补觉。挂 currentAction 4h，期间 vitals 冻结。
-        // 完成时一次性 -6 fatigue（执行 finalize 在 tick.ts:6b）；中断按已睡时长按比例扣。
-        // interruptThreshold=3 < sleep 的 4，所以更易被打断——小睡本就轻浅。
-        const here = nodeById.get(actor.locationId);
-        if (
-          !(here?.tags.includes("residence") || here?.privacy === "private")
-        ) {
-          success = false;
-          reason = "当前位置不能小睡";
-          break;
-        }
-        actor.currentAction = {
-          type: "nap",
-          startedAt: tick,
-          endsAt: tick + NAP_DURATION,
-          description: `在 ${here.name} 小睡`,
-          interruptThreshold: NAP_INTERRUPT_THRESHOLD,
-        };
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 在 ${here.name} 蜷起来打个盹。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: here.id,
-            intensity: 1,
-          }),
-        );
-        break;
-      }
-      case "bathe": {
-        const here = nodeById.get(actor.locationId);
-        if (!here?.tags.includes("bathing")) {
-          success = false;
-          reason = "当前位置不能洗浴";
-          break;
-        }
-        resetVital(actor, "hygiene");
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 在 ${here.name} 洗了个澡。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: here.id,
-          }),
-        );
-        break;
-      }
-      case "exercise": {
-        const here = nodeById.get(actor.locationId);
-        if (
-          !(here?.tags.includes("outdoor") || here?.tags.includes("playground"))
-        ) {
-          success = false;
-          reason = "当前位置不能运动";
-          break;
-        }
-        actor.emotion.mood = clamp(actor.emotion.mood + 1, -4, 4);
-        actor.emotion.stress = clamp(actor.emotion.stress - 1, 0, 4);
-        actor.vitals.fatigue = Math.min(16, actor.vitals.fatigue + 2);
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 在 ${here.name} 运动了一会儿。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: here.id,
-            intensity: 1,
-          }),
-        );
-        break;
-      }
-      case "meditate": {
-        const here = nodeById.get(actor.locationId);
-        if (!(here?.privacy === "private" || here?.tags.includes("quiet"))) {
-          success = false;
-          reason = "当前位置不适合冥想";
-          break;
-        }
-        actor.emotion.stress = clamp(actor.emotion.stress - 2, 0, 4);
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 在 ${here.name} 闭目冥想。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: here.id,
-            intensity: 1,
-          }),
-        );
-        break;
-      }
-      case "write": {
-        const here = nodeById.get(actor.locationId);
-        if (!here?.tags.includes("indoor")) {
-          success = false;
-          reason = "当前位置不适合书写";
-          break;
-        }
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 在 ${here.name} 写了点东西${
-              action.freeText ? `：${action.freeText}` : ""
-            }。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: here.id,
-            intensity: 1,
-          }),
-        );
-        break;
-      }
-      case "groom": {
-        const here = nodeById.get(actor.locationId);
-        if (
-          !(here?.tags.includes("residence") || here?.privacy === "private")
-        ) {
-          success = false;
-          reason = "当前位置不适合整理仪容";
-          break;
-        }
-        actor.vitals.hygiene = Math.max(0, actor.vitals.hygiene - 1);
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 在 ${here.name} 整理仪容。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: here.id,
-            intensity: 1,
-          }),
-        );
-        break;
-      }
-      case "pace": {
-        const here = nodeById.get(actor.locationId);
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 在 ${here?.name ?? "某处"} 来回踱步。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: actor.locationId,
-            intensity: 1,
-          }),
-        );
-        break;
-      }
-      case "speak": {
-        // speak 不应到达 execute（dialog 阶段已替换为占位 wait）
-        success = false;
-        reason = "speak action 未被 dialog 阶段处理——防御性回退";
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 欲言又止。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: actor.locationId,
-            intensity: 1,
-          }),
-        );
-        break;
-      }
-      case "attack":
-      case "help":
-      case "gift":
-      case "interact_person": {
-        const target = action.targetId ? charById.get(action.targetId) : null;
-        if (!target) {
-          success = false;
-          reason = "target_id 不存在或未指定";
-          break;
-        }
-        const verbs: Record<string, string> = {
-          attack: "挑衅了",
-          help: "帮助了",
-          gift: "送给了",
-          interact_person: "与之互动：",
-        };
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "social",
-            description: `${actor.name} ${verbs[action.type]} ${target.name}${
-              action.freeText ? `（${action.freeText}）` : ""
-            }`,
-            participants: [actor.id, target.id],
-            scope: "node",
-            nodeId: actor.locationId,
-            intensity: action.type === "attack" ? 4 : 2,
-          }),
-        );
 
-        if (action.type === "attack") {
-          updateAffection(actor, target.id, -2, tick);
-          updateAffection(target, actor.id, -2, tick);
-          applyEmotionEvent(actor.emotion, "attacked_other");
-          applyEmotionEvent(target.emotion, "attacked_self");
-        } else if (action.type === "help" || action.type === "gift") {
-          updateAffection(actor, target.id, 1, tick);
-          updateAffection(target, actor.id, 1, tick);
-          applyEmotionEvent(actor.emotion, "helped_gifted");
-          applyEmotionEvent(target.emotion, "received_help_gift");
-        } else {
-          // interact_person: just update lastInteractionTick if relations exist
-          if (actor.relations[target.id]) {
-            actor.relations[target.id].lastInteractionTick = tick;
-          }
-          if (target.relations[actor.id]) {
-            target.relations[actor.id].lastInteractionTick = tick;
-          }
-        }
-
-        pushMemory(target, {
+      // Write memory
+      if (!action.skipMemory) {
+        pushMemory(actor, {
           id: `mem-${randomUUID().slice(0, 8)}`,
           tick,
-          importance: action.type === "attack" ? 4 : 2,
-          content: `${actor.name} ${verbs[action.type]} 我${
-            action.freeText ? `（${action.freeText}）` : ""
-          }`,
+          importance: action.selfImportance,
+          content: outcome.memory,
         });
-        break;
       }
-      case "flee": {
-        const here = nodeById.get(actor.locationId);
-        const fallback = here?.parentId ? nodeById.get(here.parentId) : null;
-        if (fallback) actor.locationId = fallback.id;
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 仓促离开。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: actor.locationId,
-            intensity: 2,
-          }),
-        );
-        break;
-      }
-      case "update_relation": {
-        const target = action.targetId ? charById.get(action.targetId) : null;
-        if (!target || !action.changeType) {
-          success = false;
-          reason = "update_relation 需要 target_id 和 change_type";
-          break;
-        }
-        const result = applyRelationChange(
-          actor,
-          target,
-          action.changeType,
+
+      // Write arrival memory
+      if (action.isArrivalAction && action.arrivalNodeName) {
+        pushMemory(actor, {
+          id: `mem-${randomUUID().slice(0, 8)}`,
           tick,
-        );
-        success = result.success;
-        reason = result.reason;
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "social",
-            description: `${actor.name} ${
-              result.success ? "变更了与" : "试图变更与"
-            } ${target.name} 的关系：${action.changeType}${
-              result.reason ? `（${result.reason}）` : ""
-            }`,
-            participants: [actor.id, target.id],
-            scope: "node",
-            nodeId: actor.locationId,
-            intensity: result.success ? 3 : 1,
-          }),
-        );
-        break;
+          importance: 3,
+          content: `${actor.name} 到达了 ${action.arrivalNodeName}，开始 ${action.type}`,
+        });
       }
-      case "study":
-      case "work":
-      case "read":
-      case "observe":
-      case "use_ability":
-      case "interact_object": {
-        const here = nodeById.get(actor.locationId);
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} ${humanVerb(action.type)}：${
-              action.freeText ?? "（默不作声）"
-            }`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: here?.id ?? actor.locationId,
-            intensity: 1,
-          }),
-        );
-        break;
-      }
-      case "wait": {
-        events.push(
-          makeEvent({
-            worldId,
-            tick,
-            category: "action",
-            description: `${actor.name} 静静地等着。`,
-            participants: [actor.id],
-            scope: "node",
-            nodeId: actor.locationId,
-            intensity: 1,
-          }),
-        );
-        break;
-      }
-    }
 
-    if (!action.skipMemory) {
-      pushMemory(
-        actor,
-        memFromAction(tick, action, success ? "我刚刚" : "我尝试但失败"),
-      );
-    }
-
-    // Write arrival memory if this action was triggered by a move arrival
-    if (action.isArrivalAction && action.arrivalNodeName) {
-      const arrivalContent = success
-        ? `${actor.name} 到达了 ${action.arrivalNodeName}，开始 ${action.type}`
-        : `${actor.name} 到达了 ${action.arrivalNodeName}，但 ${reason ?? "执行失败"}`;
-      pushMemory(actor, {
-        id: `mem-${randomUUID().slice(0, 8)}`,
-        tick,
-        importance: 3,
-        content: arrivalContent,
-      });
+      // Generate WorldEvent
+      if (outcome.event) {
+        events.push(makeEvent({
+          worldId, tick,
+          category: outcome.event.category,
+          description: outcome.event.description,
+          participants: [actor.id],
+          intensity: outcome.event.intensity ?? 1,
+          scope: outcome.event.scope ?? "node",
+          nodeId: actor.locationId,
+        }));
+      }
+    } catch (err) {
+      success = false;
+      reason = `执行失败：${err instanceof Error ? err.message : String(err)}`;
     }
 
     resolvedActions.push({ action, success, reason });
   }
 
   return { events, resolvedActions };
-}
-
-function humanVerb(type: ActionType): string {
-  switch (type) {
-    case "study":
-      return "在学习";
-    case "work":
-      return "在工作/学习";
-    case "read":
-      return "在阅读";
-    case "observe":
-      return "在观察";
-    case "use_ability":
-      return "施展能力";
-    case "interact_object":
-      return "摆弄物件";
-    default:
-      return type;
-  }
 }
 
 // ---- relation change helpers ----

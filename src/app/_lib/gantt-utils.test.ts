@@ -6,8 +6,9 @@ import {
   tickRangeDesc,
   isSleepTick,
   getCategoryIcon,
-  getCategoryLabel,
   getCategoryStyle,
+  TICK_WIDTH,
+  stackEventsAtTick,
 } from "./gantt-utils";
 import type { WorldEvent } from "@/domain/types";
 
@@ -166,16 +167,6 @@ describe("getCategoryIcon", () => {
   });
 });
 
-describe("getCategoryLabel", () => {
-  it("maps known category", () => {
-    expect(getCategoryLabel("action")).toBe("行动");
-  });
-
-  it("returns raw category for unknown", () => {
-    expect(getCategoryLabel("custom_tag" as any)).toBe("custom_tag");
-  });
-});
-
 describe("getCategoryStyle", () => {
   it("maps known category", () => {
     const s = getCategoryStyle("action");
@@ -186,5 +177,56 @@ describe("getCategoryStyle", () => {
   it("returns fallback for unknown", () => {
     const s = getCategoryStyle("unknown" as any);
     expect(s.bg).toBeDefined();
+  });
+});
+
+describe("TICK_WIDTH", () => {
+  it("is 100", () => {
+    expect(TICK_WIDTH).toBe(100);
+  });
+});
+
+describe("stackEventsAtTick", () => {
+  it("returns empty for empty events", () => {
+    expect(stackEventsAtTick([], 100)).toEqual([]);
+  });
+
+  it("assigns positions for events at different ticks", () => {
+    const events = [
+      mkEvent({ id: "e1", tick: 99 }),
+      mkEvent({ id: "e2", tick: 98 }),
+    ];
+    const stacked = stackEventsAtTick(events, 100);
+    expect(stacked).toHaveLength(2);
+    expect(stacked[0]!.top).toBe(6);
+    expect(stacked[1]!.top).toBe(6);
+    expect(stacked[0]!.left).toBe(100);
+    expect(stacked[1]!.left).toBe(200);
+  });
+
+  it("stacks events at same tick vertically", () => {
+    const events = [
+      mkEvent({ id: "e1", tick: 99 }),
+      mkEvent({ id: "e2", tick: 99 }),
+    ];
+    const stacked = stackEventsAtTick(events, 100);
+    expect(stacked).toHaveLength(2);
+    expect(stacked[0]!.top).toBe(6);
+    expect(stacked[1]!.top).toBe(58);
+    expect(stacked[0]!.left).toBe(100);
+    expect(stacked[1]!.left).toBe(100);
+  });
+
+  it("handles triple stack", () => {
+    const events = [
+      mkEvent({ id: "e1", tick: 99 }),
+      mkEvent({ id: "e2", tick: 99 }),
+      mkEvent({ id: "e3", tick: 99 }),
+    ];
+    const stacked = stackEventsAtTick(events, 100);
+    expect(stacked).toHaveLength(3);
+    expect(stacked[0]!.top).toBe(6);
+    expect(stacked[1]!.top).toBe(58);
+    expect(stacked[2]!.top).toBe(110);
   });
 });

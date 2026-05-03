@@ -2,12 +2,11 @@
 "use client";
 
 import type { Character, WorldEvent } from "@/domain/types";
-import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
 import {
   TICK_WIDTH,
-  tickRangeDesc,
   groupEventsByTick,
   isSleepTick,
+  stackEventsAtTick,
 } from "../_lib/gantt-utils";
 import { GanttCard } from "./gantt-card";
 
@@ -28,100 +27,89 @@ export function GanttRow({
 }) {
   const charById = new Map(characters.map((c) => [c.id, c]));
   const grouped = groupEventsByTick(events, character.id, startTick, endTick);
-  const ticks = tickRangeDesc(startTick, endTick);
+  const allRowEvents: WorldEvent[] = [];
+  for (const evs of grouped.values()) {
+    allRowEvents.push(...evs);
+  }
+  const stacked = stackEventsAtTick(allRowEvents, endTick);
+
   const hasSleepWindow = character.sleepWindow != null;
+  const sleepTicks: number[] = [];
+  if (hasSleepWindow) {
+    for (let t = endTick; t >= startTick; t--) {
+      if (isSleepTick(t, character.sleepWindow!)) {
+        sleepTicks.push(t);
+      }
+    }
+  }
+
+  // Compute row height: max top + 54px card height + padding
+  const maxTop = stacked.length > 0
+    ? Math.max(...stacked.map((s) => s.top))
+    : 0;
+  const rowHeight = Math.max(60, maxTop + 54 + 12);
+
+  // Sleep bar: find contiguous sleep ranges
+  let sleepRanges: { left: number; width: number }[] = [];
+  if (sleepTicks.length > 0) {
+    sleepTicks.sort((a, b) => b - a); // descending
+    let rangeStart = sleepTicks[0]!;
+    let rangeEnd = sleepTicks[0]!;
+    for (let i = 1; i < sleepTicks.length; i++) {
+      if (sleepTicks[i] === rangeEnd - 1) {
+        rangeEnd = sleepTicks[i]!;
+      } else {
+        sleepRanges.push({
+          left: (endTick - rangeStart) * TICK_WIDTH,
+          width: (rangeStart - rangeEnd + 1) * TICK_WIDTH,
+        });
+        rangeStart = sleepTicks[i]!;
+        rangeEnd = sleepTicks[i]!;
+      }
+    }
+    sleepRanges.push({
+      left: (endTick - rangeStart) * TICK_WIDTH,
+      width: (rangeStart - rangeEnd + 1) * TICK_WIDTH,
+    });
+  }
 
   return (
-    <div className="gantt-row" style={{ display: "flex", alignItems: "stretch", gap: 0 }}>
-      {/* Row header: avatar + name */}
-      <div
-        className="gantt-row__header"
-        style={{
-          minWidth: 80,
-          maxWidth: 80,
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          padding: "4px 8px",
-          borderRight: "1px solid var(--border-amber)",
-          borderBottom: "1px solid rgba(184,138,74,0.15)",
-        }}
-      >
-        <span
+    <div
+      className="gantt-row"
+      style={{
+        position: "relative",
+        minHeight: rowHeight,
+        borderBottom: "1px solid rgba(184,138,74,0.1)",
+      }}
+    >
+      {stacked.map(({ event, left, top }) => (
+        <div key={event.id} style={{ position: "absolute", left, top }}>
+          <GanttCard
+            event={event}
+            charById={charById}
+            excludeId={character.id}
+            onClick={(rect) => onEventClick(event, rect)}
+          />
+        </div>
+      ))}
+
+      {/* Sleep window bars */}
+      {sleepRanges.map((r, i) => (
+        <div
+          key={i}
           style={{
-            width: 18,
-            height: 18,
-            borderRadius: "50%",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 12,
-            background: "var(--frame-2)",
-            flexShrink: 0,
+            position: "absolute",
+            left: r.left,
+            top: rowHeight - 12,
+            width: r.width,
+            height: 8,
+            background: "rgba(212,168,87,0.15)",
+            border: "1px dashed rgba(212,168,87,0.3)",
+            borderRadius: 1,
+            pointerEvents: "none",
           }}
-        >
-          {NPC_EMOJI[character.id] ?? NPC_FALLBACK_EMOJI}
-        </span>
-        <span
-          className="text-pixel-xs font-semibold text-(--text-on-frame)"
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {character.name}
-        </span>
-      </div>
-
-      {/* Tick slots */}
-      <div style={{ display: "flex", gap: 0, flex: 1 }}>
-        {ticks.map((t) => {
-          const cellEvents = grouped.get(t) ?? [];
-
-          // Sleep window indicator
-          const sleeping = hasSleepWindow && isSleepTick(t, character.sleepWindow!);
-
-          return (
-            <div
-              key={t}
-              style={{
-                width: TICK_WIDTH,
-                minWidth: TICK_WIDTH,
-                minHeight: 32,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "2px 1px",
-                borderRight: "1px solid rgba(184,138,74,0.1)",
-                borderBottom: "1px solid rgba(184,138,74,0.1)",
-                background: sleeping
-                  ? "rgba(212,168,87,0.06)"
-                  : undefined,
-              }}
-            >
-              {cellEvents.length > 0 ? (
-                cellEvents.map((ev) => (
-                  <GanttCard
-                    key={ev.id}
-                    event={ev}
-                    charById={charById}
-                    excludeId={character.id}
-                    onClick={(rect) => onEventClick(ev, rect)}
-                  />
-                ))
-              ) : sleeping ? (
-                <span
-                  className="text-pixel-2xs text-(--text-on-frame-faint)"
-                  style={{ opacity: 0.3 }}
-                >
-                  💤
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+        />
+      ))}
     </div>
   );
 }

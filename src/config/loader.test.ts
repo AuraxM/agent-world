@@ -46,6 +46,10 @@ const validMap = {
 const validChar = {
   id: "char-test",
   name: "测试君",
+  age: 25,
+  gender: "male" as const,
+  profession: "farmer" as const,
+  biography: "私はテストキャラクターです。",
   personality: { ei: 0, sn: 0, tf: 0, jp: 0 },
   abilities: [],
   relations: {},
@@ -131,22 +135,40 @@ describe("loadAllCharacters", () => {
     expect(() => loadAllCharacters()).toThrow(/personality\.ei/);
   });
 
-  it("homeNodeId 字段可选 + 可读取", () => {
-    // 缺失：仍能加载（向后兼容）
-    writeChar("no-home", validChar);
+  it("activityNodeId 和 restNodeId 字段可选", () => {
+    // 缺失：仍能加载
+    writeChar("no-loc", validChar);
     const a = loadAllCharacters();
-    expect(a[0].homeNodeId).toBeUndefined();
+    expect(a[0].activityNodeId).toBeUndefined();
+    expect(a[0].restNodeId).toBeUndefined();
 
     // 提供：正确解析
-    writeChar("with-home", { ...validChar, id: "char-h", homeNodeId: "node-home" });
+    writeChar("with-loc", {
+      ...validChar,
+      id: "char-l",
+      activityNodeId: "node-farm",
+      restNodeId: "node-home",
+    });
     const all = loadAllCharacters();
-    const withHome = all.find((c) => c.id === "char-h");
-    expect(withHome?.homeNodeId).toBe("node-home");
+    const withLoc = all.find((c) => c.id === "char-l");
+    expect(withLoc?.activityNodeId).toBe("node-farm");
+    expect(withLoc?.restNodeId).toBe("node-home");
   });
 
-  it("homeNodeId 空字符串被 zod 拒", () => {
-    writeChar("empty", { ...validChar, homeNodeId: "" });
-    expect(() => loadAllCharacters()).toThrow(/homeNodeId/);
+  it("缺少必填字段 biography 被拒", () => {
+    const { biography: _, ...noBio } = validChar;
+    writeChar("no-bio", noBio);
+    expect(() => loadAllCharacters()).toThrow(/biography/);
+  });
+
+  it("profession 不是枚举值被拒", () => {
+    writeChar("bad-prof", { ...validChar, profession: "astronaut" });
+    expect(() => loadAllCharacters()).toThrow(/profession/);
+  });
+
+  it("age 超出范围被拒", () => {
+    writeChar("bad-age", { ...validChar, age: 0 });
+    expect(() => loadAllCharacters()).toThrow(/age/);
   });
 });
 

@@ -26,14 +26,16 @@ export function GanttPopup({
   onFollow: (id: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     }
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
+        onCloseRef.current();
       }
     }
     // delay listener to avoid immediate close from the click that opened it
@@ -46,7 +48,7 @@ export function GanttPopup({
       window.removeEventListener("keydown", handleKey);
       window.removeEventListener("mousedown", handleClick);
     };
-  }, [onClose]);
+  }, []);
 
   const style = computePopupStyle(anchorRect);
 
@@ -94,16 +96,19 @@ function computePopupStyle(anchorRect: DOMRect | null): React.CSSProperties {
 
   const centerX = anchorRect.left + anchorRect.width / 2;
   let left = centerX - POPUP_WIDTH / 2;
+  const viewportW = typeof window === "undefined" ? 0 : window.innerWidth;
+  const viewportH = typeof window === "undefined" ? 0 : window.innerHeight;
+
   // keep within viewport
   if (left < 8) left = 8;
-  if (left + POPUP_WIDTH > window.innerWidth - 8) {
-    left = window.innerWidth - POPUP_WIDTH - 8;
+  if (left + POPUP_WIDTH > viewportW - 8) {
+    left = viewportW - POPUP_WIDTH - 8;
   }
 
   let top = anchorRect.bottom + 8;
   // if too close to bottom, show above
   const estimatedHeight = 300;
-  if (top + estimatedHeight > window.innerHeight - 8) {
+  if (top + estimatedHeight > viewportH - 8) {
     top = anchorRect.top - estimatedHeight - 8;
   }
   if (top < 8) top = 8;

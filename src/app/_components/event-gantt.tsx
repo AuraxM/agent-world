@@ -108,8 +108,8 @@ export function EventGantt({
         {/* LEFT: fixed character name column */}
         <div
           style={{
-            minWidth: 80,
-            maxWidth: 80,
+            minWidth: 100,
+            maxWidth: 100,
             background: "var(--frame)",
             borderRight: "2px solid var(--accent-strong)",
             flexShrink: 0,

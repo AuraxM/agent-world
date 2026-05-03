@@ -34,6 +34,7 @@ import {
   inSleepWindow,
   timeOfDay,
 } from "@/llm/prompt";
+import { actionRegistry } from "@/domain/action-system";
 import type { Action, Character, WorldEvent } from "@/domain/types";
 import type { DecideInput } from "./tick";
 
@@ -149,12 +150,10 @@ export async function decideForCharacter(
     activityNodeId,
     restNodeId,
   });
-  const ctx = buildActionContext(c, nodes, characters);
   const baseTime = timeOfDay(fromTick);
-  const opts = getAvailableActions(ctx, {
-    facts,
-    isSleepHour: inSleepWindow(baseTime.hour, sleepWindow),
-  });
+  const isSleepHour = inSleepWindow(baseTime.hour, sleepWindow);
+  const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, isSleepHour, facts);
+  const opts = getAvailableActions(ctx);
 
   // 3. 决策（强制 arrivalIntro）
   const language = loadManifest(world.mapId).language;
@@ -170,12 +169,15 @@ export async function decideForCharacter(
       if (!hasApiKey()) {
         action = fallbackWait(c, "没有激活的 LLM provider");
       } else {
+        const actionTypes = Array.from(actionRegistry.types());
         const {
           ACTION_TOOL_NAME,
-          ActionSchema,
-          ActionToolInputSchema,
+          buildActionSchema,
+          buildActionToolSchema,
         } = await import("@/domain/schemas");
         const OpenAI = (await import("openai")).default;
+        const ActionSchema = buildActionSchema(actionTypes);
+        const ActionToolInputSchema = buildActionToolSchema(actionTypes);
 
         const system = buildSystemPrompt({
           character: c,

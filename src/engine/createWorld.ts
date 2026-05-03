@@ -59,7 +59,17 @@ export function createWorldFromConfig(
     }
     seen.add(m.characterId);
     const tpl = loadCharacter(m.characterId);
-    const loc = m.locationId ?? defaultEntry;
+    let loc = m.locationId;
+    if (!loc) {
+      // Locals prefer their home node
+      if (tpl.origin === "local" && tpl.restNodeId && nodeIds.has(tpl.restNodeId)) {
+        loc = tpl.restNodeId;
+      }
+      // Visitors (or locals without restNodeId) fall back to entry
+      if (!loc) {
+        loc = defaultEntry;
+      }
+    }
     if (!nodeIds.has(loc)) {
       throw new Error(
         `cast member ${m.characterId} locationId not in map ${mapId}: ${loc}`,
@@ -118,8 +128,8 @@ export function createWorldFromConfig(
 
     for (const m of resolved) {
       const vitals: Vitals = {
-        hunger: m.vitals?.hunger ?? 0,
-        fatigue: m.vitals?.fatigue ?? 0,
+        hunger: m.vitals?.hunger ?? (m.tpl.origin === "visitor" ? 1 : 0),
+        fatigue: m.vitals?.fatigue ?? (m.tpl.origin === "visitor" ? 2 : 0),
         hygiene: m.vitals?.hygiene ?? 0,
       };
       const emotion: Emotion = {
@@ -137,6 +147,7 @@ export function createWorldFromConfig(
           gender: m.tpl.gender,
           profession: m.tpl.profession,
           biography: m.tpl.biography,
+          origin: m.tpl.origin,
           locationId: m.locationId,
           personalityJson: JSON.stringify(m.tpl.personality),
           vitalsJson: JSON.stringify(vitals),

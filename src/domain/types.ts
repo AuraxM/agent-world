@@ -1,5 +1,6 @@
 import type {
   ActionType,
+  CharacterOrigin,
   EventCategory,
   EventScope,
   EventSource,
@@ -158,6 +159,7 @@ export interface Character {
   worldId: string;
   name: string;
   avatar?: string;
+  origin: CharacterOrigin;
   age: number;
   gender: Gender;
   profession: Profession;

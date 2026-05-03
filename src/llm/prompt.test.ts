@@ -28,6 +28,7 @@ const baseCharacter: Character = {
   gender: "male",
   profession: "merchant",
   biography: "一个普通的测试角色。",
+  origin: "local" as const,
   locationId: "node-here",
   personality: { ei: 2, sn: 0, tf: 0, jp: 0 },
   vitals: { hunger: 0, fatigue: 0, hygiene: 0 },

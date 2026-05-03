@@ -10,6 +10,7 @@ export async function GET() {
       id: c.id,
       name: c.name,
       avatar: c.avatar ?? null,
+      origin: c.origin,
       personality: c.personality,
       relationCount: Object.keys(c.relations).length,
     }));

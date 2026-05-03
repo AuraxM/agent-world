@@ -296,36 +296,31 @@ describe("tick engine v0", () => {
     expect(total).toBeGreaterThan(0);
   });
 
-  it("用完免费移动配额后不再调用 LLM 第 6 次，且保留第 5 次的 reasoning", async () => {
+  it("每角色每次 tick 仅调一次 LLM（不再有 free-move 循环）", async () => {
     let callCount = 0;
     const decide = async ({
       character,
     }: {
-      character: { id: string; locationId: string };
+      character: { id: string };
     }) => {
       callCount++;
-      const target =
-        character.locationId === "node-root" ? "node-diner" : "node-root";
       return {
-        type: "move" as const,
+        type: "wait" as const,
         actorId: character.id,
-        targetNodeId: target,
-        reasoning: `第${callCount}次推理：我想去${target}。`,
-        selfImportance: 2 as const,
+        reasoning: "等。",
+        selfImportance: 1 as const,
       };
     };
 
     const r = await tickModule.tick("test-world", { decide });
 
-    // 两个角色各最多 5 次 LLM 调用（用完配额后直接合成 wait，不调第 6 次）
-    expect(callCount).toBe(10);
+    // 两个角色各调 1 次 LLM（不再有 free-move 循环）
+    expect(callCount).toBe(2);
 
-    // 每个角色的最终 action 应是 wait，并保留 LLM 第 5 次的真实 reasoning
+    // 每个角色的 action 由 LLM 直接返回
     expect(r.decisions).toHaveLength(2);
     for (const d of r.decisions) {
       expect(d.action.type).toBe("wait");
-      expect(d.action.reasoning).toMatch(/本小时已走 5 步停在/);
-      expect(d.action.reasoning).toMatch(/第\d+次推理/);
     }
   });
 

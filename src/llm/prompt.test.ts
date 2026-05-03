@@ -90,14 +90,14 @@ describe("qualifyVital", () => {
 describe("timeOfDay", () => {
   it.each([
     [0, 0, "深夜", true],
-    [5, 5, "凌晨", true],
-    [8, 8, "早晨", false],
-    [13, 13, "中午", false],
-    [19, 19, "傍晚", false],
-    [22, 22, "夜晚", true],
-    [23, 23, "夜晚", true],
-    [25, 1, "深夜", true],
-    [48, 0, "深夜", true],
+    [25, 5, "凌晨", true],
+    [40, 8, "早晨", false],
+    [65, 13, "中午", false],
+    [95, 19, "傍晚", false],
+    [110, 22, "夜晚", true],
+    [115, 23, "夜晚", true],
+    [5, 1, "深夜", true],
+    [240, 0, "深夜", true],
   ])(
     "tick %i → hour %i, period %s, sleepHour %s",
     (tick, hour, period, sleep) => {
@@ -108,8 +108,8 @@ describe("timeOfDay", () => {
     },
   );
 
-  it("tick=48 算第 2 日 0:00", () => {
-    const t = timeOfDay(48);
+  it("tick=240 算第 2 日 0:00", () => {
+    const t = timeOfDay(240);
     expect(t.day).toBe(2);
     expect(t.hour).toBe(0);
   });
@@ -244,7 +244,7 @@ describe("buildUserPrompt", () => {
       companions: [],
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
-      tick: 5,
+      tick: 25,
       facts: { ...emptyFacts, homeNodeId: "node-home", homeNodeName: "我的家" },
     });
     expect(out).toContain("第 0 日 05:00");

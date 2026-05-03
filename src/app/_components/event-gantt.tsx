@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { Character, MapNode, WorldEvent } from "@/domain/types";
 import { DEFAULT_TICK_WINDOW, getTickWindow, TICK_WIDTH } from "../_lib/gantt-utils";
+import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
 import { GanttTimeline } from "./gantt-timeline";
 import { GanttRow } from "./gantt-row";
 import { GanttPopup } from "./gantt-popup";
@@ -31,16 +32,8 @@ export function EventGantt({
     [events, tickCount],
   );
 
-  const canGoEarlier = startTick > 0;
-  const canGoNewer = tickCount > DEFAULT_TICK_WINDOW;
-
-  const handlePageEarlier = useCallback(() => {
-    setTickCount((n) => n + DEFAULT_TICK_WINDOW);
-  }, []);
-
-  const handlePageNewer = useCallback(() => {
-    setTickCount((n) => Math.max(DEFAULT_TICK_WINDOW, n - DEFAULT_TICK_WINDOW));
-  }, []);
+  const tickColumns = endTick - startTick + 1;
+  const contentWidth = tickColumns * TICK_WIDTH;
 
   const handleEventClick = useCallback((ev: WorldEvent, rect: DOMRect) => {
     setSelectedEvent(ev);
@@ -50,6 +43,27 @@ export function EventGantt({
   const handleClosePopup = useCallback(() => {
     setSelectedEvent(null);
     setPopupAnchor(null);
+  }, []);
+
+  // ---- wheel handler: deltaY -> scrollLeft ----
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    function handleWheel(e: WheelEvent) {
+      // Only hijack if the event target is within the scroll area (not the name column)
+      if (e.target instanceof HTMLElement && el!.contains(e.target)) {
+        // If Shift is held, let browser handle native horizontal scroll
+        if (e.shiftKey) return;
+        e.preventDefault();
+        el!.scrollLeft += e.deltaY;
+      }
+    }
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
   }, []);
 
   if (events.length === 0) {
@@ -67,53 +81,92 @@ export function EventGantt({
     );
   }
 
-  const tickColumns = endTick - startTick + 1;
-
   return (
     <div className="h-full flex flex-col bg-(--frame)">
-      {/* Toolbar */}
+      {/* Toolbar — no buttons */}
       <div className="flex items-center gap-3 px-6 py-2.5 bg-(--frame-2) border-b-2 border-(--border) shadow-[inset_0_-1px_0_var(--border-amber))]">
         <span className="text-pixel-sm text-(--accent-strong) tracking-[var(--letter-pixel)] uppercase">
           甘特图
         </span>
-
-        <div className="flex items-center gap-2 ml-auto">
-          <button
-            type="button"
-            onClick={handlePageEarlier}
-            disabled={!canGoEarlier}
-            className="text-pixel-xs px-2 py-0.5 border border-(--border-amber) bg-transparent text-(--text-on-frame-muted) cursor-pointer hover:bg-(--border-amber)/20 tracking-[var(--letter-pixel-tight)] disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            ← 更早
-          </button>
+        <div className="flex items-center gap-3 ml-auto">
           <span className="text-pixel-xs text-(--text-on-frame-muted) tracking-[var(--letter-pixel)]">
-            T={startTick} ～ T={endTick}
+            T={startTick} ~ T={endTick}
           </span>
-          <button
-            type="button"
-            onClick={handlePageNewer}
-            disabled={!canGoNewer}
-            className="text-pixel-xs px-2 py-0.5 border border-(--border-amber) bg-transparent text-(--text-on-frame-muted) cursor-pointer hover:bg-(--border-amber)/20 tracking-[var(--letter-pixel-tight)] disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            更新 →
-          </button>
           <span className="text-pixel-xs text-(--text-on-frame-faint)">
             {characters.length} 角色
           </span>
         </div>
       </div>
 
-      {/* Scrollable body */}
-      <div className="flex-1 overflow-auto pixel-scroll">
-        {/* Extra width = tickColumns * TICK_WIDTH + 80 (row header) + 8 padding */}
+      {/* Body: flex row — left fixed names + right scrollable */}
+      <div className="flex-1 flex" style={{ overflow: "hidden" }}>
+        {/* LEFT: fixed character name column */}
         <div
           style={{
-            minWidth: tickColumns * TICK_WIDTH + 80 + 8,
+            minWidth: 80,
+            maxWidth: 80,
+            background: "var(--frame)",
+            borderRight: "2px solid var(--accent-strong)",
+            flexShrink: 0,
+            zIndex: 3,
+            display: "flex",
+            flexDirection: "column",
+            overflowY: "auto",
           }}
+          className="pixel-scroll"
         >
-          <GanttTimeline startTick={startTick} endTick={endTick} />
+          {/* Spacer matching timeline header height */}
+          <div style={{ height: 42, borderBottom: "1px solid rgba(184,138,74,0.2)" }} />
+          {characters.map((c) => (
+            <div
+              key={c.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "4px 8px",
+                borderBottom: "1px solid rgba(184,138,74,0.1)",
+                minHeight: 60,
+              }}
+            >
+              <span
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 11,
+                  background: "var(--frame-2)",
+                  flexShrink: 0,
+                }}
+              >
+                {NPC_EMOJI[c.id] ?? NPC_FALLBACK_EMOJI}
+              </span>
+              <span
+                className="text-pixel-xs font-semibold text-(--text-on-frame)"
+                style={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {c.name}
+              </span>
+            </div>
+          ))}
+        </div>
 
-          <div>
+        {/* RIGHT: scrollable timeline + cards area */}
+        <div
+          ref={scrollRef}
+          className="pixel-scroll"
+          style={{ overflow: "auto", flex: 1 }}
+        >
+          <div style={{ width: contentWidth, display: "flex", flexDirection: "column" }}>
+            <GanttTimeline startTick={startTick} endTick={endTick} />
+
             {characters.map((c) => (
               <GanttRow
                 key={c.id}

@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { NODE_TAGS, OBJECTIVE_RELATION_KINDS, PROFESSIONS, GENDERS, CHARACTER_ORIGINS } from "@/domain/enums";
 import { PersonalitySchema, RelationSchema } from "@/domain/schemas";
-import type { Manifest, MapConfig, CharacterTemplate, MapNodeConfig } from "./types";
+import type { Manifest, MapConfig, CharacterTemplate, MapNodeConfig, EconomyConfig, SurvivalCosts, ProfessionIncomes, BalanceThresholds } from "./types";
 
 /** 节点（文件内格式）：相比运行时缺 `worldId`。 */
 export const MapNodeConfigSchema: z.ZodType<MapNodeConfig> = z.object({
@@ -28,6 +28,35 @@ export const MapNodeConfigSchema: z.ZodType<MapNodeConfig> = z.object({
   spriteKey: z.string().optional(),
 });
 
+const SurvivalCostsSchema: z.ZodType<SurvivalCosts> = z.object({
+  eat: z.number().int().min(0),
+  bathe: z.number().int().min(0),
+});
+
+const ProfessionIncomeRangeSchema = z.object({
+  min: z.number().int().min(0),
+  max: z.number().int().min(0),
+});
+
+const ProfessionIncomesSchema: z.ZodType<ProfessionIncomes> = z.object({
+  high: ProfessionIncomeRangeSchema,
+  medium: ProfessionIncomeRangeSchema,
+  low: ProfessionIncomeRangeSchema,
+  none: ProfessionIncomeRangeSchema,
+});
+
+const BalanceThresholdsSchema: z.ZodType<BalanceThresholds> = z.object({
+  positive: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  negative: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+});
+
+export const EconomyConfigSchema: z.ZodType<EconomyConfig> = z.object({
+  survivalCosts: SurvivalCostsSchema,
+  professionIncomes: ProfessionIncomesSchema,
+  wealthTiers: z.tuple([z.number(), z.number(), z.number()]),
+  balanceThresholds: BalanceThresholdsSchema,
+});
+
 /** 地图包 manifest —— 每个地图包目录下的 manifest.json。 */
 export const ManifestSchema: z.ZodType<Manifest> = z.object({
   id: z.string().min(1),
@@ -41,6 +70,7 @@ export const ManifestSchema: z.ZodType<Manifest> = z.object({
     })
     .optional(),
   actions: z.string().optional(),
+  economy: EconomyConfigSchema.optional(),
 });
 
 /** 一张地图。要求：≥1 个 isEntry 节点；节点 id 唯一；parentId 必须能在同文件中解析（除根）。 */
@@ -117,6 +147,9 @@ export const CharacterTemplateSchema: z.ZodType<CharacterTemplate> = z.object({
   personality: PersonalitySchema,
   abilities: z.array(AbilitySchema),
   relations: z.record(z.string(), RelationSchema),
+  initialMoney: z.number().int().min(0).optional(),
+  expenseExempt: z.boolean().optional(),
+  incomeMultiplier: z.number().min(0).optional(),
 });
 
 // 校验封闭枚举确实被引用（防止 enums.ts 改动后 schema 漏更新）。

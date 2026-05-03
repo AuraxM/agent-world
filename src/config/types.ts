@@ -48,7 +48,14 @@ export type CharacterTemplate = Omit<
   | "longMemory"
   | "currentAction"
   | "lastThought"
->;
+  | "money"
+  | "incomeLevel"
+  | "expenseExempt"
+> & {
+  initialMoney?: number;
+  incomeMultiplier?: number;
+  expenseExempt?: boolean;
+};
 
 export interface SurvivalCosts {
   eat: number;

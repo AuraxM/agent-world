@@ -1,25 +1,40 @@
-import type { ActionDefinition } from "@/domain/action-system";
+import type { ActionDefinition, StateChange } from "@/domain/action-system";
 import { TICKS_PER_HOUR } from "@/domain/enums";
+import { DEFAULT_ECONOMY_CONFIG } from "@/config/types";
+import { rollWorkIncome } from "./economy";
 
 export const eatAction: ActionDefinition = {
   type: "eat",
   duration: "instant",
   check(ctx) {
-    return ctx.here.tags.includes("dining");
+    if (!ctx.here.tags.includes("dining")) return false;
+    if (ctx.self.expenseExempt) return true;
+    return ctx.self.money >= DEFAULT_ECONOMY_CONFIG.survivalCosts.eat;
   },
   hint(ctx) {
     const h = ctx.self.vitals.hunger;
-    if (h >= 10) return `⭐ 进食（已 ${h} 小时未进食）`;
-    if (h >= 5) return "⭐ 进食";
-    if (h <= 0) return "进食（不饿，纯消遣）";
-    return "进食";
+    const costNote = ctx.self.expenseExempt
+      ? ""
+      : ` (-${DEFAULT_ECONOMY_CONFIG.survivalCosts.eat}💰)`;
+    if (h >= 10) return `⭐ 进食（已 ${h} 小时未进食）${costNote}`;
+    if (h >= 5) return `⭐ 进食${costNote}`;
+    if (h <= 0) return `进食（不饿，纯消遣）${costNote}`;
+    return `进食${costNote}`;
   },
   execute(ctx, input) {
     const desc = (input.free_text as string) || "吃了一顿饭";
+    const changes: StateChange[] = [{ kind: "resetVital", vital: "hunger" }];
+    if (!ctx.self.expenseExempt) {
+      changes.push({
+        kind: "adjustMoney",
+        amount: -DEFAULT_ECONOMY_CONFIG.survivalCosts.eat,
+        reason: "eat",
+      });
+    }
     return {
       memory: `我在 ${ctx.here.name} ${desc}。`,
       event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} ${desc}。`, intensity: 2 },
-      stateChanges: [{ kind: "resetVital", vital: "hunger" }],
+      stateChanges: changes,
     };
   },
 };
@@ -28,20 +43,33 @@ export const batheAction: ActionDefinition = {
   type: "bathe",
   duration: "instant",
   check(ctx) {
-    return ctx.here.tags.includes("bathing");
+    if (!ctx.here.tags.includes("bathing")) return false;
+    if (ctx.self.expenseExempt) return true;
+    return ctx.self.money >= DEFAULT_ECONOMY_CONFIG.survivalCosts.bathe;
   },
   hint(ctx) {
     const h = ctx.self.vitals.hygiene;
-    if (h >= 13) return `⭐ 洗浴（已 ${h} 小时未洗浴）`;
-    if (h >= 8) return "⭐ 洗浴";
-    return "洗浴";
+    const costNote = ctx.self.expenseExempt
+      ? ""
+      : ` (-${DEFAULT_ECONOMY_CONFIG.survivalCosts.bathe}💰)`;
+    if (h >= 13) return `⭐ 洗浴（已 ${h} 小时未洗浴）${costNote}`;
+    if (h >= 8) return `⭐ 洗浴${costNote}`;
+    return `洗浴${costNote}`;
   },
   execute(ctx, input) {
     const desc = (input.free_text as string) || "洗了个澡";
+    const changes: StateChange[] = [{ kind: "resetVital", vital: "hygiene" }];
+    if (!ctx.self.expenseExempt) {
+      changes.push({
+        kind: "adjustMoney",
+        amount: -DEFAULT_ECONOMY_CONFIG.survivalCosts.bathe,
+        reason: "bathe",
+      });
+    }
     return {
       memory: `我在 ${ctx.here.name} ${desc}。`,
       event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} ${desc}。`, intensity: 1 },
-      stateChanges: [{ kind: "resetVital", vital: "hygiene" }],
+      stateChanges: changes,
     };
   },
 };
@@ -69,18 +97,27 @@ export const workAction: ActionDefinition = {
   duration: "instant",
   check(ctx) {
     if (!ctx.facts.activityNodeId) return false;
-    if (ctx.self.profession === "unemployed") return false;
+    if (ctx.self.incomeLevel <= 0) return false;
+    if (ctx.self.age < 18) return false;
     return ctx.here.id === ctx.facts.activityNodeId;
   },
   hint(ctx) {
     const prof = ctx.self.profession;
-    return `工作（${prof === "student" ? "学习" : prof}）`;
+    const label = prof === "student" ? "学习" : prof;
+    return `工作（${label}）`;
   },
   execute(ctx, input) {
     const desc = (input.free_text as string) || "专注于手头的事情";
+    const multiplier = 1.0; // incomeMultiplier from config, default 1.0
+    const income = rollWorkIncome(ctx.self.incomeLevel, DEFAULT_ECONOMY_CONFIG, multiplier);
+    const changes: StateChange[] = [];
+    if (income > 0) {
+      changes.push({ kind: "adjustMoney", amount: income, reason: "work" });
+    }
     return {
       memory: `我在 ${ctx.here.name} 工作：${desc}。`,
       event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 工作。`, intensity: 1 },
+      stateChanges: changes,
     };
   },
 };
@@ -249,6 +286,64 @@ export const waitAction: ActionDefinition = {
   },
 };
 
+export const giveAction: ActionDefinition = {
+  type: "give",
+  duration: "instant",
+  check(ctx) {
+    if (ctx.self.money <= 0) return false;
+    if (ctx.companions.length === 0) return false;
+    // Check shortMemory for recent beg/help requests
+    const hasRequest = ctx.self.shortMemory.some(
+      (m) =>
+        m.content.includes("缺钱") ||
+        m.content.includes("借钱") ||
+        m.content.includes("求助") ||
+        m.content.includes("给点钱") ||
+        m.content.includes("帮帮忙") ||
+        m.content.includes("经济困难"),
+    );
+    return hasRequest;
+  },
+  hint(ctx) {
+    return ctx.companions.map((c) => {
+      const rel = ctx.self.relations[c.id];
+      const relLabel = rel ? rel.kinds.join("/") : "陌生人";
+      const affLabel = rel
+        ? `感情: ${rel.affection > 0 ? "+" : ""}${rel.affection}`
+        : "";
+      return {
+        hint: `give money to ${c.name} (${relLabel}, ${affLabel})`,
+        targetId: c.id,
+      };
+    });
+  },
+  execute(ctx, input) {
+    const targetId = input.target_id as string;
+    const target = ctx.companions.find((c) => c.id === targetId);
+    if (!target) {
+      return { memory: "我想给人钱但没找到对方。" };
+    }
+    const requested = typeof input.amount === "number" ? input.amount : ctx.self.money;
+    const actual = Math.min(Math.max(1, Math.floor(requested)), ctx.self.money);
+    return {
+      memory: `我给了 ${target.name} ${actual} 金钱。`,
+      event: {
+        category: "social",
+        description: `${ctx.self.name} 给了 ${target.name} 一些钱。`,
+        intensity: 2,
+      },
+      stateChanges: [
+        { kind: "adjustMoney", amount: -actual, reason: `give to ${target.id}` },
+      ],
+    };
+  },
+  extraParams: {
+    target_id: { type: "string", description: "给予对象角色 id。" },
+    amount: { type: "integer", description: "给予金额（默认全部余额）。" },
+  },
+  extraRequired: ["target_id"],
+};
+
 export const BUILTIN_ACTIONS: ActionDefinition[] = [
   eatAction,
   batheAction,
@@ -259,4 +354,5 @@ export const BUILTIN_ACTIONS: ActionDefinition[] = [
   sleepAction,
   moveAction,
   waitAction,
+  giveAction,
 ];

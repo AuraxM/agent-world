@@ -479,7 +479,7 @@ function worldRules(): string {
 // language instructions (system prompt 末段 + user prompt 末段共用)
 // ---------------------------------------------------------------------------
 
-function languageInstruction(lang: Language): string {
+export function languageInstruction(lang: Language): string {
   if (lang === "zh") {
     return `输出语言：
 - 你的 reasoning、free_text、emotion_tag 必须使用简体中文。

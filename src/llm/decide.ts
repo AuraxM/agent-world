@@ -29,6 +29,7 @@ import {
   buildSalvageContext,
   buildSystemPrompt,
   buildUserPrompt,
+  languageInstruction,
 } from "./prompt";
 
 const MAX_OUTPUT_TOKENS = 4096;
@@ -220,7 +221,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn>
         messages: [
           {
             role: "system",
-            content: `你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。请根据你的性格、当前情境和对话历史，自然地回应。`,
+            content: `你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。请根据你的性格、当前情境和对话历史，自然地回应。\n\n${languageInstruction(language)}`,
           },
           { role: "user", content: prompt },
         ],
@@ -300,7 +301,7 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<str
         messages: [
           {
             role: "system",
-            content: `你是一个摘要助手。请用 1-2 句话总结以下对话的核心内容与氛围。`,
+            content: `你是一个摘要助手。请用 1-2 句话总结以下对话的核心内容与氛围。\n\n${languageInstruction(language)}`,
           },
           { role: "user", content: prompt },
         ],
@@ -382,7 +383,7 @@ export async function llmAcceptDecide(
         messages: [
           {
             role: "system",
-            content: `你是一个角色扮演引擎中的 NPC。${input.character.name} 正在决定是否接受 ${input.requesterName} 的对话邀请。根据你的性格、当前状态和情境，做出自然的决定。`,
+            content: `你是一个角色扮演引擎中的 NPC。${input.character.name} 正在决定是否接受 ${input.requesterName} 的对话邀请。根据你的性格、当前状态和情境，做出自然的决定。\n\n${languageInstruction(language)}`,
           },
           { role: "user", content: prompt },
         ],

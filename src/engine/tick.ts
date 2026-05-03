@@ -220,7 +220,7 @@ export async function tick(
   // Load mod actions if defined
   if (manifest.actions) {
     try {
-      const { loadModActions } = await import("@/config/loader");
+      const { loadModActions } = await import("@/config/mod-loader");
       const modDefs = loadModActions(world.mapId);
       actionRegistry.registerAll(modDefs);
     } catch (err) {

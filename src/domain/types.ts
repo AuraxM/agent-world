@@ -162,6 +162,12 @@ export interface Character {
   age: number;
   gender: Gender;
   profession: Profession;
+  /** 当前持有金额（整数）。 */
+  money: number;
+  /** 职业收入等级 0-3（0=无收入）。运行时从 manifest + profession 解析。 */
+  incomeLevel: number;
+  /** 免生存开销（未成年人 age<18 / 纯旅游型外来者）。 */
+  expenseExempt: boolean;
   /** 第一人称生平简介，CoC 车卡风格。 */
   biography: string;
   locationId: string;
@@ -281,6 +287,27 @@ export interface DialogTurn {
   kind: "say" | "leave";
   line?: string;
   reasoning?: string;
+}
+
+/** 一笔金钱交易记录。 */
+export interface Transaction {
+  id: number;
+  worldId: string;
+  tick: number;
+  characterId: string;
+  amount: number;          // 正=收入, 负=支出
+  category: "expense" | "income" | "transfer_in" | "transfer_out";
+  description: string;
+  counterpartyId?: string;
+}
+
+/** 经济状况快照（每 24 game hours 更新）。 */
+export interface EconomicSnapshot {
+  balance: number;         // -4..+4
+  wealth: number;          // 0..3
+  weeklyIncome: number;
+  weeklyExpense: number;
+  updatedAtTick: number;
 }
 
 /** 世界元信息。 */

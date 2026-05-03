@@ -63,6 +63,7 @@ const STATEMENTS = [
     money INTEGER NOT NULL DEFAULT 0,
     income_level INTEGER NOT NULL DEFAULT 0,
     expense_exempt INTEGER NOT NULL DEFAULT 0,
+    income_multiplier REAL NOT NULL DEFAULT 1.0,
     biography TEXT NOT NULL DEFAULT '',
     origin TEXT NOT NULL DEFAULT 'local',
     location_id TEXT NOT NULL,
@@ -154,6 +155,7 @@ const CHARACTERS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
   { name: "money", ddl: "ALTER TABLE characters ADD COLUMN money INTEGER NOT NULL DEFAULT 0" },
   { name: "income_level", ddl: "ALTER TABLE characters ADD COLUMN income_level INTEGER NOT NULL DEFAULT 0" },
   { name: "expense_exempt", ddl: "ALTER TABLE characters ADD COLUMN expense_exempt INTEGER NOT NULL DEFAULT 0" },
+  { name: "income_multiplier", ddl: "ALTER TABLE characters ADD COLUMN income_multiplier REAL NOT NULL DEFAULT 1.0" },
 ];
 
 const WORLDS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [

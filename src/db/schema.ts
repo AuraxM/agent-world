@@ -77,6 +77,7 @@ export const characters = sqliteTable(
     money: integer("money").notNull().default(0),
     incomeLevel: integer("income_level").notNull().default(0),
     expenseExempt: integer("expense_exempt", { mode: "boolean" }).notNull().default(false),
+    incomeMultiplier: real("income_multiplier").notNull().default(1.0),
     biography: text("biography").notNull().default(""),
     origin: text("origin").notNull().default("local"),
     locationId: text("location_id").notNull(),

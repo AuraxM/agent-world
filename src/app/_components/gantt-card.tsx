@@ -1,7 +1,7 @@
 // src/app/_components/gantt-card.tsx
 "use client";
 
-import type { WorldEvent } from "@/domain/types";
+import type { MapNode, WorldEvent } from "@/domain/types";
 import {
   getCategoryIcon,
   getOtherParticipants,
@@ -11,17 +11,20 @@ import type { Character } from "@/domain/types";
 export function GanttCard({
   event,
   charById,
+  nodeById,
   excludeId,
   onClick,
 }: {
   event: WorldEvent;
   charById: Map<string, Character>;
+  nodeById: Map<string, MapNode>;
   excludeId: string;
   onClick: (rect: DOMRect) => void;
 }) {
   const icon = getCategoryIcon(event.category);
   const others = getOtherParticipants(event, charById, excludeId);
   const important = event.intensity >= 3;
+  const loc = event.nodeId ? nodeById.get(event.nodeId) : undefined;
 
   return (
     <button
@@ -56,9 +59,9 @@ export function GanttCard({
         </span>
       </div>
       <div style={{ display: "flex", gap: 3, alignItems: "center", minHeight: 16 }}>
-        {event.nodeId && (
+        {loc && (
           <span className="gantt-card__location">
-            📍 {event.nodeId}
+            📍 {loc.name}
           </span>
         )}
         {others.length > 0 && (

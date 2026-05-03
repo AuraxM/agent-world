@@ -1,7 +1,7 @@
 // src/app/_components/gantt-row.tsx
 "use client";
 
-import type { Character, WorldEvent } from "@/domain/types";
+import type { Character, MapNode, WorldEvent } from "@/domain/types";
 import {
   TICK_WIDTH,
   groupEventsByTick,
@@ -16,6 +16,7 @@ export function GanttRow({
   startTick,
   endTick,
   characters,
+  nodes,
   onEventClick,
 }: {
   character: Character;
@@ -23,9 +24,11 @@ export function GanttRow({
   startTick: number;
   endTick: number;
   characters: Character[];
+  nodes: MapNode[];
   onEventClick: (event: WorldEvent, rect: DOMRect) => void;
 }) {
   const charById = new Map(characters.map((c) => [c.id, c]));
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
   const grouped = groupEventsByTick(events, character.id, startTick, endTick);
   const allRowEvents: WorldEvent[] = [];
   for (const evs of grouped.values()) {
@@ -87,6 +90,7 @@ export function GanttRow({
           <GanttCard
             event={event}
             charById={charById}
+            nodeById={nodeById}
             excludeId={character.id}
             onClick={(rect) => onEventClick(event, rect)}
           />

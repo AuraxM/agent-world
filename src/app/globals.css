@@ -435,7 +435,6 @@ body {
  * ================================================================ */
 
 .gantt-card {
-  position: absolute;
   width: 200px;
   height: 48px;
   background: var(--panel);
@@ -452,7 +451,6 @@ body {
   flex-direction: column;
   justify-content: space-between;
   overflow: hidden;
-  z-index: 1;
 }
 
 .gantt-card:hover {
@@ -469,11 +467,13 @@ body {
 .gantt-card--important::before {
   content: "";
   position: absolute;
-  left: calc(-1 * var(--ring-2));
-  top: calc(-1 * var(--ring-2));
-  bottom: calc(-1 * var(--ring-2));
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: 4px;
   background: var(--danger);
+  z-index: 2;
+  pointer-events: none;
 }
 
 .gantt-card__badge {

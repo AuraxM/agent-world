@@ -175,6 +175,7 @@ export function EventGantt({
                 startTick={startTick}
                 endTick={endTick}
                 characters={characters}
+                nodes={nodes}
                 onEventClick={handleEventClick}
               />
             ))}

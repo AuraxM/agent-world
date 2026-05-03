@@ -121,8 +121,8 @@ export function addCharacterToWorld(
   // 5. 写入 + 抵达事件
   const now = new Date();
   const vitals: Vitals = {
-    hunger: input.vitals?.hunger ?? 0,
-    fatigue: input.vitals?.fatigue ?? 0,
+    hunger: input.vitals?.hunger ?? (tpl.origin === "visitor" ? 1 : 0),
+    fatigue: input.vitals?.fatigue ?? (tpl.origin === "visitor" ? 2 : 0),
     hygiene: input.vitals?.hygiene ?? 0,
   };
   const emotion: Emotion = {
@@ -155,6 +155,7 @@ export function addCharacterToWorld(
         gender: tpl.gender,
         profession: tpl.profession,
         biography: tpl.biography,
+        origin: tpl.origin,
         locationId: entryNodeId!,
         personalityJson: JSON.stringify(tpl.personality),
         vitalsJson: JSON.stringify(vitals),

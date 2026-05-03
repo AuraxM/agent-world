@@ -14,7 +14,18 @@ export function GanttTimeline({
   const ticks = tickRangeDesc(startTick, endTick);
 
   return (
-    <div className="gantt-timeline" style={{ display: "flex", paddingLeft: 80, gap: 0 }}>
+    <div
+      className="gantt-timeline"
+      style={{
+        display: "flex",
+        gap: 0,
+        position: "sticky",
+        top: 0,
+        zIndex: 3,
+        background: "var(--frame)",
+        borderBottom: "1px solid rgba(184,138,74,0.2)",
+      }}
+    >
       {ticks.map((t) => {
         const isNewest = t === endTick;
         return (
@@ -23,8 +34,11 @@ export function GanttTimeline({
             style={{
               width: TICK_WIDTH,
               minWidth: TICK_WIDTH,
+              maxWidth: TICK_WIDTH,
               textAlign: "center",
               padding: "4px 0 2px",
+              boxSizing: "border-box",
+              position: "relative",
             }}
           >
             <div

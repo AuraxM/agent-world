@@ -351,4 +351,97 @@ describe("tick engine v0", () => {
     expect(a.lastThought!.action.emotionTag).toBe("pensive");
     expect(a.lastThought!.success).toBe(true);
   });
+
+  it("sleep 持续中不写记忆（skipMemory），结束时写完成记忆", async () => {
+    // Reset world state by directly manipulating the test DB
+    const Database = (await import("better-sqlite3")).default;
+    const sqlite = new Database(process.env.DATABASE_URL!);
+    sqlite.pragma("journal_mode = WAL");
+    sqlite.pragma("foreign_keys = ON");
+    sqlite.exec("DELETE FROM characters");
+    sqlite.exec("DELETE FROM events_log");
+    sqlite.exec("DELETE FROM agent_thoughts");
+    sqlite.exec("UPDATE worlds SET current_tick = 0");
+
+    // Add char-a (normal NPC needed for tick to have companions)
+    sqlite.prepare(
+      `INSERT INTO characters (id, world_id, name, location_id, personality_json, vitals_json) VALUES (?, ?, ?, ?, ?, ?)`
+    ).run("char-a", "test-world", "甲", "node-root", JSON.stringify({ ei: 0, sn: 0, tf: 0, jp: 0 }), JSON.stringify({ hunger: 0, fatigue: 0, hygiene: 0 }));
+
+    // Add sleeper with active sleep: startedAt=0, endsAt=1 (completes after 1 tick)
+    sqlite.prepare(
+      `INSERT INTO characters (id, world_id, name, location_id, personality_json, vitals_json, current_action_json, short_memory_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "char-sleeper", "test-world", "睡者", "node-root",
+      JSON.stringify({ ei: 0, sn: 0, tf: 0, jp: 0 }),
+      JSON.stringify({ hunger: 5, fatigue: 10, hygiene: 5 }),
+      JSON.stringify({ type: "sleep", startedAt: 0, endsAt: 1, description: "在测试根睡觉", interruptThreshold: 4 }),
+      JSON.stringify([]),
+    );
+
+    sqlite.close();
+
+    // Tick 1: sleep is ongoing (fromTick=0 < endsAt=1) → auto-wait with skipMemory:true
+    const r1 = await tickModule.tick("test-world", { forceWait: true });
+    const w1 = storeModule.loadWorld("test-world");
+    const sleeper1 = w1.characters.find((c) => c.id === "char-sleeper")!;
+    // shortMemory should still be empty — skipMemory prevented the auto-wait memory
+    expect(sleeper1.shortMemory).toHaveLength(0);
+    // currentAction should still be active
+    expect(sleeper1.currentAction).toBeTruthy();
+    expect(sleeper1.currentAction!.type).toBe("sleep");
+
+    // Tick 2: sleep completes (fromTick=1 >= endsAt=1) → completion memory written
+    const r2 = await tickModule.tick("test-world", { forceWait: true });
+    const w2 = storeModule.loadWorld("test-world");
+    const sleeper2 = w2.characters.find((c) => c.id === "char-sleeper")!;
+    expect(sleeper2.currentAction).toBeUndefined();
+    expect(sleeper2.vitals.fatigue).toBe(0);
+    // Completion memory written
+    expect(sleeper2.shortMemory.length).toBeGreaterThan(0);
+    expect(sleeper2.shortMemory[0].content).toContain("一觉睡醒");
+  });
+
+  it("skipMemory 不影响普通 action 的记忆写入", async () => {
+    const { executeActions } = await import("./execute");
+    const char = {
+      id: "char-x",
+      worldId: "w",
+      name: "X",
+      age: 30,
+      gender: "male" as const,
+      profession: "farmer" as const,
+      biography: "",
+      locationId: "n1",
+      personality: { ei: 0, sn: 0, tf: 0, jp: 0 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+      emotion: { mood: 0, stress: 0, social_satiety: 0 },
+      abilities: [],
+      shortMemory: [],
+      longMemory: [],
+      relations: {},
+    };
+    const node = {
+      id: "n1", worldId: "w", parentId: null, name: "测试节点",
+      description: "", tags: ["public"], capacity: null, privacy: "public" as const,
+      visibleFromParent: true, shortcuts: [], isEntry: false,
+    };
+    const action = {
+      type: "wait" as const,
+      actorId: "char-x",
+      reasoning: "等等看。",
+      selfImportance: 2 as const,
+      // no skipMemory — defaults to undefined (falsy)
+    };
+    executeActions({
+      worldId: "w",
+      tick: 0,
+      characters: [char],
+      nodes: [node],
+      actions: [action],
+    });
+    // Regression: memory SHOULD be written when skipMemory is absent
+    expect(char.shortMemory.length).toBe(1);
+    expect(char.shortMemory[0].content).toContain("等等看");
+  });
 });

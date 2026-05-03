@@ -129,6 +129,11 @@ export const speakAction: ActionDefinition = {
       dialogRequest: { targetId, openingLine: line },
     };
   },
+  extraParams: {
+    target_id: { type: "string", description: "对话目标角色 id。" },
+    free_text: { type: "string", description: "开场白或说话内容。" },
+  },
+  extraRequired: ["target_id", "free_text"],
 };
 
 export const sleepAction: ActionDefinition = {
@@ -208,6 +213,23 @@ export const moveAction: ActionDefinition = {
       event: { category: "action", description: `${ctx.self.name} 到达了 ${ctx.here.name}。`, intensity: 1 },
     };
   },
+  extraParams: {
+    target_node_id: { type: "string", description: "目的地节点 id。" },
+    reason: { type: "string", description: "移动原因（如'去酒馆找田中喝酒'）。" },
+    free_text: { type: "string", description: "移动目的或想法（可选）。" },
+    arrival_action: {
+      type: "object",
+      description: "到达目的地后要自动执行的动作。",
+      properties: {
+        action_type: { type: "string", description: "到达后执行的动作类型。" },
+        free_text: { type: "string", description: "动作描述或说话内容。" },
+        target_id: { type: "string", description: "交互目标角色 id。" },
+        target_node_id: { type: "string", description: "交互目标节点 id。" },
+      },
+      required: ["action_type"],
+    },
+  },
+  extraRequired: ["target_node_id", "reason"],
 };
 
 export const waitAction: ActionDefinition = {

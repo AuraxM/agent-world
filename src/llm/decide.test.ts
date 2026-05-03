@@ -11,10 +11,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __setLLMClientForTest } from "./client";
 import { llmDecide } from "./decide";
 import * as providers from "./providers";
-import { ACTION_TOOL_NAME } from "@/domain/schemas";
+import { actionTypeFromToolName } from "@/domain/schemas";
 import { actionRegistry } from "@/domain/action-system";
 import { BUILTIN_ACTIONS } from "@/engine/actions-builtin";
 import type { DecideInput } from "@/engine/tick";
+import type { ActionContext } from "@/domain/action-system";
 
 vi.mock("./providers", () => ({
   getActiveProvider: vi.fn(),
@@ -30,7 +31,11 @@ const FAKE_PROVIDER: providers.LLMProvider = {
   createdAt: 0,
 };
 
-function makeFakeCompletion(toolArgs: unknown): ChatCompletion {
+/**
+ * Build a fake ChatCompletion with a multi-tool response.
+ * `toolName` should be the action_* tool name (e.g. "action_think").
+ */
+function makeFakeCompletion(toolName: string, toolArgs: unknown): ChatCompletion {
   return {
     id: "chatcmpl-test",
     object: "chat.completion",
@@ -48,7 +53,7 @@ function makeFakeCompletion(toolArgs: unknown): ChatCompletion {
               id: "call_test",
               type: "function",
               function: {
-                name: ACTION_TOOL_NAME,
+                name: toolName,
                 arguments: JSON.stringify(toolArgs),
               },
             },
@@ -74,8 +79,10 @@ function makeFakeClient(
   } as unknown as OpenAI;
 }
 
-const baseInput = (): DecideInput => ({
-  character: {
+const baseCtx: ActionContext = {
+  worldId: "w",
+  tick: 0,
+  self: {
     id: "char-test",
     worldId: "w",
     name: "测试角色",
@@ -93,21 +100,6 @@ const baseInput = (): DecideInput => ({
     longMemory: [],
     relations: {},
   },
-  nodes: [
-    {
-      id: "node-x",
-      worldId: "w",
-      parentId: null,
-      name: "测试地",
-      description: "",
-      tags: ["public"],
-      capacity: null,
-      privacy: "public",
-      visibleFromParent: true,
-      shortcuts: [],
-      isEntry: true,
-    },
-  ],
   here: {
     id: "node-x",
     worldId: "w",
@@ -123,10 +115,7 @@ const baseInput = (): DecideInput => ({
   },
   companions: [],
   reachable: [],
-  perceived: [],
-  options: [{ type: "wait", hint: "等" }],
-  worldName: "测试世界",
-  tick: 0,
+  isSleepHour: false,
   facts: {
     activityNodeId: null,
     activityNodeName: null,
@@ -135,7 +124,21 @@ const baseInput = (): DecideInput => ({
     hoursAtCurrentLocation: 0,
     todayActionCounts: {},
   },
+};
+
+const baseInput = (): DecideInput => ({
+  character: baseCtx.self,
+  nodes: [baseCtx.here],
+  here: baseCtx.here,
+  companions: [],
+  reachable: [],
+  perceived: [],
+  options: [{ type: "wait", hint: "等" }],
+  worldName: "测试世界",
+  tick: 0,
+  facts: baseCtx.facts,
   language: "zh",
+  ctx: baseCtx,
 });
 
 describe("llmDecide (OpenAI-compatible function calling)", () => {
@@ -150,8 +153,7 @@ describe("llmDecide (OpenAI-compatible function calling)", () => {
 
   it("正常 tool_call 转换为 Action", async () => {
     const fake = makeFakeClient(async () =>
-      makeFakeCompletion({
-        action_type: "think",
+      makeFakeCompletion("action_think", {
         reasoning: "我偏内向，倾向先沉思再行动。",
         self_importance: 2,
       }),
@@ -167,8 +169,7 @@ describe("llmDecide (OpenAI-compatible function calling)", () => {
 
   it("speak tool_call 携带 target_id", async () => {
     const fake = makeFakeClient(async () =>
-      makeFakeCompletion({
-        action_type: "speak",
+      makeFakeCompletion("action_speak", {
         target_id: "char-other",
         reasoning: "我有计划性，决定和对方谈谈。",
         self_importance: 3,
@@ -182,12 +183,11 @@ describe("llmDecide (OpenAI-compatible function calling)", () => {
     expect(action.selfImportance).toBe(3);
   });
 
-  it("tool_call 参数不符合 ActionSchema → wait fallback", async () => {
+  it("tool_call 参数不符合 schema → wait fallback", async () => {
     const fake = makeFakeClient(async () =>
-      makeFakeCompletion({
-        action_type: "INVALID_TYPE",
+      makeFakeCompletion("action_think", {
         reasoning: "x",
-        self_importance: 99,
+        self_importance: 99, // invalid: not in 1-5
       }),
     );
     __setLLMClientForTest(fake);

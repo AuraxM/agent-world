@@ -73,6 +73,8 @@ export interface DecideInput {
   tick: number;
   facts: AggregatedFacts;
   language: Language;
+  /** ActionContext，供 decide.ts 生成 per-action tools。 */
+  ctx: import("@/domain/action-system").ActionContext;
 }
 
 export type DecideFn = (input: DecideInput) => Promise<Action>;
@@ -483,6 +485,7 @@ export async function tick(
           tick: fromTick,
           facts,
           language,
+          ctx,
         });
       } catch (err) {
         action = fallbackWait(c);
@@ -644,6 +647,7 @@ export async function tick(
           worldName: world.name,
           tick: fromTick,
           facts,
+          ctx,
           rejectReason: input.rejectReason,
           language,
         });

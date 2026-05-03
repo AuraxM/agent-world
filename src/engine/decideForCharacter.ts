@@ -169,15 +169,14 @@ export async function decideForCharacter(
       if (!hasApiKey()) {
         action = fallbackWait(c, "没有激活的 LLM provider");
       } else {
-        const actionTypes = Array.from(actionRegistry.types());
         const {
-          ACTION_TOOL_NAME,
-          buildActionSchema,
-          buildActionToolSchema,
+          buildPerActionSchema,
+          buildActionTools,
+          actionTypeFromToolName,
         } = await import("@/domain/schemas");
         const OpenAI = (await import("openai")).default;
-        const ActionSchema = buildActionSchema(actionTypes);
-        const ActionToolInputSchema = buildActionToolSchema(actionTypes);
+        const PerActionSchema = buildPerActionSchema();
+        const tools = buildActionTools(ctx);
 
         const system = buildSystemPrompt({
           character: c,
@@ -208,32 +207,27 @@ export async function decideForCharacter(
               { role: "system", content: system },
               { role: "user", content: user },
             ],
-            tools: [
-              {
-                type: "function",
-                function: {
-                  name: ACTION_TOOL_NAME,
-                  description:
-                    "提交你这一 tick 的行动。type 必须是封闭枚举之一；reasoning 必须显式引用一项你自己的性格特征（用文字描述，不要写数值）。",
-                  parameters: ActionToolInputSchema,
-                },
-              },
-            ],
+            tools,
+            tool_choice: "required",
             ...extra,
           });
           const tc = resp.choices[0]?.message?.tool_calls?.find(
-            (x) => x.type === "function" && x.function.name === ACTION_TOOL_NAME,
+            (x) => x.type === "function" && x.function.name.startsWith("action_"),
           );
           if (!tc || tc.type !== "function") {
-            throw new Error("LLM 没有返回 submit_action tool_call");
+            throw new Error("LLM 没有返回 action_* tool_call");
           }
-          const parsed = ActionSchema.safeParse(JSON.parse(tc.function.arguments));
+          const actionType = actionTypeFromToolName(tc.function.name);
+          if (!actionType) {
+            throw new Error(`无法从 tool name "${tc.function.name}" 提取 action type`);
+          }
+          const parsed = PerActionSchema.safeParse(JSON.parse(tc.function.arguments));
           if (!parsed.success) {
-            throw new Error(`tool_call 参数不符合 ActionSchema：${parsed.error.message}`);
+            throw new Error(`tool_call 参数不符合 schema：${parsed.error.message}`);
           }
           const p = parsed.data;
           action = {
-            type: p.action_type,
+            type: actionType,
             actorId: c.id,
             targetId: p.target_id,
             targetNodeId: p.target_node_id,
@@ -276,6 +270,7 @@ export async function decideForCharacter(
         tick: fromTick,
         facts,
         language,
+        ctx,
       });
     }
   } catch (err) {

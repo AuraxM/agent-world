@@ -82,6 +82,14 @@ export interface ActionDefinition {
   onTick?(ctx: ActionContext): Outcome | null;
   onComplete?(ctx: ActionContext): Outcome;
   onInterrupt?(ctx: ActionContext, reason: string): Outcome;
+
+  /**
+   * 专属 tool 参数 JSON Schema properties（不含 reasoning/self_importance/emotion_tag 公共字段）。
+   * 不提供时 tool 只有公共参数。
+   */
+  extraParams?: Record<string, unknown>;
+  /** extraParams 中必填字段名列表。 */
+  extraRequired?: string[];
 }
 
 // ---- ActionRegistry ----

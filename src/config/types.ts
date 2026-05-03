@@ -29,6 +29,8 @@ export interface Manifest {
   name: string;
   description?: string;
   language: Language;
+  /** ISO 8601 datetime string, e.g. "2026-05-03T08:00:00". Sets the world's initial clock. */
+  startDate?: string;
 }
 
 /** 一份角色配置文件 = 不含位置/世界/运行期字段的纯模板。 */

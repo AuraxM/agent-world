@@ -3,7 +3,8 @@ import { TICKS_PER_HOUR } from "@/domain/enums";
 /** 1 tick = (60 / TICKS_PER_HOUR) game minutes, in milliseconds */
 const MS_PER_TICK = (60 / TICKS_PER_HOUR) * 60 * 1000;
 
-const GAME_EPOCH = new Date("2026-05-01T00:00:00");
+/** 游戏纪元起点。tick 0 对应此刻。 */
+export const GAME_EPOCH = new Date("2026-05-01T00:00:00");
 
 function tickToDate(tick: number): Date {
   return new Date(GAME_EPOCH.getTime() + tick * MS_PER_TICK);

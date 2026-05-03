@@ -5,6 +5,7 @@ export interface PackValidation {
   name: string;
   description?: string;
   language: Language;
+  startDate?: string;
   valid: boolean;
   characterCount: number;
   nodeCount: number;

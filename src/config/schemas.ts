@@ -34,6 +34,12 @@ export const ManifestSchema: z.ZodType<Manifest> = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   language: z.enum(["zh", "en", "ja"]),
+  startDate: z
+    .string()
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: "must be a valid ISO 8601 datetime string",
+    })
+    .optional(),
 });
 
 /** 一张地图。要求：≥1 个 isEntry 节点；节点 id 唯一；parentId 必须能在同文件中解析（除根）。 */

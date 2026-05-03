@@ -155,6 +155,7 @@ export function validateMapPack(packId: string): PackValidation {
     name: manifest?.name ?? packId,
     description: manifest?.description,
     language: manifest?.language ?? "zh",
+    startDate: manifest?.startDate,
     valid: errors.length === 0,
     characterCount,
     nodeCount,

@@ -10,9 +10,29 @@ import { db, schema } from "@/db/client";
 import {
   firstEntryNodeId,
   loadCharacter,
+  loadManifest,
   loadMap,
 } from "@/config/loader";
+import { GAME_EPOCH } from "@/app/_lib/format";
 import type { Emotion, Vitals } from "@/domain/types";
+
+/** 1 tick = 12 game minutes, in milliseconds */
+const MS_PER_TICK = 12 * 60 * 1000;
+
+/** Convert an ISO 8601 datetime string to tick offset from GAME_EPOCH. */
+function dateToTick(dateStr: string): number {
+  const target = new Date(dateStr);
+  if (isNaN(target.getTime())) {
+    throw new Error(`invalid startDate: ${dateStr}`);
+  }
+  const diffMs = target.getTime() - GAME_EPOCH.getTime();
+  if (diffMs < 0) {
+    throw new Error(
+      `startDate must be at or after game epoch (${GAME_EPOCH.toISOString()})`,
+    );
+  }
+  return Math.round(diffMs / MS_PER_TICK);
+}
 
 export interface CastMember {
   /** 必须能在 configs/characters 解析。 */
@@ -45,6 +65,10 @@ export function createWorldFromConfig(
   const { worldId, name, mapId, cast } = input;
   if (!worldId) throw new Error("worldId required");
   if (!name) throw new Error("name required");
+
+  // 0. 从 manifest 读取初始时间
+  const manifest = loadManifest(mapId);
+  const initialTick = manifest.startDate ? dateToTick(manifest.startDate) : 0;
 
   // 1. 加载并校验配置
   const map = loadMap(mapId);
@@ -96,7 +120,7 @@ export function createWorldFromConfig(
         id: worldId,
         name,
         mapId,
-        currentTick: 0,
+        currentTick: initialTick,
         createdAt: now,
         updatedAt: now,
       })

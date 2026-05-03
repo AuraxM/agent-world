@@ -345,8 +345,8 @@ describe("buildUserPrompt", () => {
     expect(out).toContain("已在 老王饭馆 连续 14 小时");
     expect(out).toContain("上一 tick 你的行动：邀请说话");
     expect(out).toContain("你好啊");
-    expect(out).toContain("距上次 rest/sleep：12 小时");
-    expect(out).toContain("距上次 eat：7 小时");
+    expect(out).toContain("距上次 rest/sleep：2 小时");
+    expect(out).toContain("距上次 eat：1 小时");
     expect(out).toContain("邀请说话 ×9");
   });
 

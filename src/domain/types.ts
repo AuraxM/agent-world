@@ -1,5 +1,4 @@
 import type {
-  ActionType,
   CharacterOrigin,
   EventCategory,
   EventScope,
@@ -78,7 +77,7 @@ export interface Relation {
 
 /** 持续行动（驱动多 tick 的行为，如 sleep / 远途 move）。 */
 export interface OngoingAction {
-  type: ActionType;
+  type: string;
   startedAt: Tick;
   endsAt: Tick;
   description: string;
@@ -238,7 +237,7 @@ export type RelationChangeType =
 
 /** 行动（LLM 输出 + 引擎执行体）。 */
 export interface Action {
-  type: ActionType;
+  type: string;
   actorId: string;
   targetId?: string;
   targetNodeId?: string;
@@ -253,7 +252,7 @@ export interface Action {
   reason?: string;
   /** move 专属：到达后自动执行的动作 */
   arrivalAction?: {
-    type: ActionType;
+    type: string;
     freeText?: string;
     targetId?: string;
     targetNodeId?: string;

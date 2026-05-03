@@ -12,7 +12,7 @@
  *
  * 不查库、不写库；纯函数便于单测。
  */
-import { TICKS_PER_HOUR, type ActionType } from "@/domain/enums";
+import { TICKS_PER_HOUR } from "@/domain/enums";
 import type {
   AgentThought,
   Character,
@@ -28,7 +28,7 @@ export interface AggregatedFacts {
   /** 自上次成功 move 起，已在当前节点停留的小时数；从未移动则等于 currentTick / TICKS_PER_HOUR。 */
   hoursAtCurrentLocation: number;
   lastAction?: {
-    type: ActionType;
+    type: string;
     freeText?: string;
     tick: Tick;
     success: boolean;
@@ -38,7 +38,7 @@ export interface AggregatedFacts {
   /** 最近一次成功 eat 的 tick；从未则 undefined。 */
   lastEatTick?: Tick;
   /** 最近一个游戏日（24h = TODAY_WINDOW ticks）内（不含本 tick）按 action type 计数。 */
-  todayActionCounts: Partial<Record<ActionType, number>>;
+  todayActionCounts: Partial<Record<string, number>>;
 }
 
 export interface DeriveFactsInput {
@@ -95,7 +95,7 @@ export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts 
   }
 
   // 今日累计：tick >= currentTick - TODAY_WINDOW
-  const todayActionCounts: Partial<Record<ActionType, number>> = {};
+  const todayActionCounts: Partial<Record<string, number>> = {};
   const cutoff = currentTick - TODAY_WINDOW;
   for (const t of recentThoughts) {
     if (t.tick < cutoff) break; // recentThoughts 已 DESC 排序，越往后越旧

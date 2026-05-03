@@ -10,7 +10,7 @@
  */
 import type { AggregatedFacts } from "./facts";
 import type { Character, MapNode } from "@/domain/types";
-import type { ActionType } from "@/domain/enums";
+import type { ActionType, Profession } from "@/domain/enums";
 import { BLOOD_RELATION_KINDS } from "@/domain/enums";
 
 export interface ActionOption {
@@ -79,7 +79,8 @@ export function getAvailableActions(
   const hygiene = self.vitals.hygiene;
   const stress = self.emotion.stress;
   const stayHours = facts?.hoursAtCurrentLocation ?? 0;
-  const homeNodeId = facts?.homeNodeId ?? null;
+  const restNodeId = facts?.restNodeId ?? null;
+  const activityNodeId = facts?.activityNodeId ?? null;
   const opts: ActionOption[] = [];
 
   // 12 起才算"必须休息"——10 那档（high "困倦"）只是文字提示，不上 ⭐。
@@ -101,7 +102,7 @@ export function getAvailableActions(
 
   // move：推荐目的地（高亮 home、dining、bathing）
   const highlighted = new Set<string>();
-  if (homeNodeId) highlighted.add(homeNodeId);
+  if (restNodeId) highlighted.add(restNodeId);
   for (const n of reachable) {
     if (n.tags.includes("dining") || n.tags.includes("bathing")) {
       highlighted.add(n.id);
@@ -111,10 +112,18 @@ export function getAvailableActions(
   for (const nId of highlighted) {
     const n = reachable.find((r) => r.id === nId);
     if (!n) continue;
-    const isHome = homeNodeId !== null && n.id === homeNodeId;
+    const isRest = restNodeId !== null && n.id === restNodeId;
+    const isActivity = activityNodeId !== null && n.id === activityNodeId;
     let hint = `前往 ${n.name}`;
-    if (isHome && (restNeeded || sleepStuckOutside)) {
-      hint = `⭐ ${hint}——你的家，可以休息`;
+    if (isRest && (restNeeded || sleepStuckOutside)) {
+      hint = `⭐ ${hint}——这是你的休息处，可以休息`;
+    } else if (isActivity && !restNeeded && !sleepStuckOutside) {
+      hint = `${hint}（你的活动处）`;
+    } else if (
+      stayHours >= 4 &&
+      (n.tags.includes("residence") || n.tags.includes("park"))
+    ) {
+      hint = `${hint}（你已在此地待 ${stayHours} 小时，换个环境是合理的）`;
     } else if (n.tags.includes("dining") && hunger >= 5) {
       hint = `⭐ ${hint}——可以用餐`;
     } else if (n.tags.includes("bathing") && hygiene >= HYGIENE_MEDIUM) {
@@ -209,9 +218,16 @@ export function getAvailableActions(
     opts.push({ type: "read", hint: "安静阅读。" });
   }
 
-  // 工作 / 学习：教育场所
-  if (here.tags.includes("education")) {
-    opts.push({ type: "work", hint: "学习/工作。" });
+  // 工作：在活动处且非学生/非无业时可用
+  const isAtActivity = activityNodeId !== null && here.id === activityNodeId;
+  const prof = self.profession as Profession;
+  if (isAtActivity && prof !== "student" && prof !== "unemployed") {
+    opts.push({ type: "work", hint: `工作（${prof}）。` });
+  }
+
+  // 学习：学生身份在活动处可用
+  if (isAtActivity && prof === "student") {
+    opts.push({ type: "study", hint: "学习。" });
   }
 
   // 与同节点其他角色互动——关系 / 好感已在 user prompt 的"同节点其他人物"段

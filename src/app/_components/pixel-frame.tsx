@@ -9,11 +9,14 @@ export function PixelFrame({
   title,
 }: {
   children: ReactNode;
-  tone?: "default" | "accent";
+  tone?: "default" | "accent" | "danger";
   className?: string;
   title?: string | ReactNode;
 }) {
-  const toneClass = tone === "accent" ? "pixel-frame--accent" : "";
+  const toneClass =
+    tone === "accent" ? "pixel-frame--accent"
+    : tone === "danger" ? "pixel-frame--danger"
+    : "";
   return (
     <section className={`pixel-frame ${toneClass} ${className}`}>
       {title && (

@@ -42,13 +42,7 @@ interface MapNodeConfig {
   children?: MapNodeConfig[];
 }
 
-interface WorldInfo {
-  id: string;
-  name: string;
-  currentTick: number;
-}
-
-type Tab = "providers" | "reset" | "maps";
+type Tab = "providers" | "worlds" | "maps";
 
 // ---- provider form ----
 
@@ -65,13 +59,13 @@ function providerFormData(form: HTMLFormElement) {
 
 const TAB_CLASSES: Record<Tab, string> = {
   providers: "px-4 py-2 text-game-base tracking-widest cursor-pointer border-b-2 transition-colors",
-  reset: "px-4 py-2 text-game-base tracking-widest cursor-pointer border-b-2 transition-colors",
+  worlds: "px-4 py-2 text-game-base tracking-widest cursor-pointer border-b-2 transition-colors",
   maps: "px-4 py-2 text-game-base tracking-widest cursor-pointer border-b-2 transition-colors",
 };
 
 const TAB_LABELS: Record<Tab, string> = {
   providers: "LLM Provider",
-  reset: "重置世界",
+  worlds: "世界管理",
   maps: "地图预览",
 };
 
@@ -267,7 +261,7 @@ function AdminContent() {
       {/* tab content */}
       <div className="flex-1 min-h-0 overflow-auto p-4">
         {tab === "providers" && <ProvidersTab />}
-        {tab === "reset" && <ResetTab />}
+        {tab === "worlds" && <WorldsTab />}
         {tab === "maps" && <MapsTab />}
       </div>
     </div>
@@ -531,53 +525,88 @@ function ProviderForm({
   );
 }
 
-// ---- reset tab ----
+// ---- worlds tab ----
 
-function ResetTab() {
-  const [world, setWorld] = useState<WorldInfo | null>(null);
+interface PackInfo {
+  id: string;
+  name: string;
+  description?: string;
+  language: string;
+  valid: boolean;
+  characterCount: number;
+  nodeCount: number;
+  errors: { file: string; message: string }[];
+}
+
+interface ActiveWorldInfo {
+  id: string;
+  mapId: string;
+  name: string;
+  currentTick: number;
+  characterCount: number;
+}
+
+function WorldsTab() {
+  const [packs, setPacks] = useState<PackInfo[]>([]);
+  const [activeWorld, setActiveWorld] = useState<ActiveWorldInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [resetting, setResetting] = useState(false);
+  const [loadingPack, setLoadingPack] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
 
-  useEffect(() => {
-    async function fetchWorld() {
-      try {
-        const res = await fetch("/api/worlds/world-yu-no-tani");
-        if (res.ok) {
-          const data = await res.json();
-          setWorld({ id: data.world.id, name: data.world.name, currentTick: data.world.currentTick });
-        }
-      } catch {
-        // world may not exist yet
-      } finally {
-        setLoading(false);
-      }
-    }
-    void fetchWorld();
-  }, []);
-
-  async function handleReset() {
-    if (!confirm("确定要重置游戏世界吗？所有存档数据将被清除并重新 seed。")) return;
-    setResetting(true);
+  const fetchPacks = useCallback(async () => {
+    setLoading(true);
     setError("");
-    setResult("");
     try {
-      const res = await fetch("/api/admin/reset", { method: "POST" });
+      const res = await fetch("/api/admin/map-packs");
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "reset failed");
-      setResult(`世界已重置。地图: ${data.world.mapId}，角色: ${data.world.characterIds.length} 个`);
-      setWorld({ id: data.world.id, name: "月ノ谷", currentTick: 0 });
+      if (!res.ok) throw new Error(data.error ?? "fetch failed");
+      setPacks(data.packs);
+      setActiveWorld(data.activeWorld);
     } catch (err) {
       setError(err instanceof Error ? err.message : "unknown error");
     } finally {
-      setResetting(false);
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchPacks();
+  }, [fetchPacks]);
+
+  async function handleLoadPack(mapId: string) {
+    if (!confirm(`将清空当前世界并加载「${mapId}」地图包。确定？`)) return;
+    setLoadingPack(mapId);
+    setError("");
+    setResult("");
+    try {
+      const res = await fetch("/api/admin/worlds/load", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mapId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "load failed");
+      setResult(`世界已加载：${data.world.mapId}，${data.world.characterIds.length} 名角色`);
+      await fetchPacks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "unknown error");
+    } finally {
+      setLoadingPack(null);
     }
   }
 
+  const LANGUAGE_LABELS: Record<string, string> = {
+    zh: "简体中文",
+    en: "English",
+    ja: "日本語",
+  };
+
   return (
-    <div className="max-w-lg space-y-4">
-      <h2 className="text-game-base tracking-widest text-(--color-pixel-muted)">重置游戏世界</h2>
+    <div className="max-w-3xl space-y-4">
+      <h2 className="text-game-base tracking-widest text-(--color-pixel-muted)">
+        世界管理
+      </h2>
 
       {error && (
         <div className="px-3 py-2 text-game-xs text-(--color-pixel-danger) border border-(--color-pixel-danger) bg-(--color-pixel-bg-2)">
@@ -590,40 +619,94 @@ function ResetTab() {
         </div>
       )}
 
-      <PixelFrame>
-        <div className="p-3 space-y-3">
+      {/* active world */}
+      <PixelFrame tone={activeWorld ? "accent" : "default"}>
+        <div className="p-3 space-y-2">
+          <div className="text-game-sm text-(--color-pixel-muted)">当前运行中的世界</div>
           {loading ? (
-            <div className="text-game-sm text-(--color-pixel-muted)">加载中…</div>
-          ) : world ? (
-            <div className="text-game-sm space-y-1">
+            <div className="text-game-xs text-(--color-pixel-muted)">加载中…</div>
+          ) : activeWorld ? (
+            <div className="text-game-xs space-y-1">
               <div>
-                <span className="text-(--color-pixel-muted)">世界：</span>
-                <span className="text-(--color-pixel-fg)">{world.name}</span>
-                <span className="text-(--color-pixel-muted) ml-1">({world.id})</span>
+                <span className="text-(--color-pixel-fg) font-bold">{activeWorld.name}</span>
+                <span className="text-(--color-pixel-muted) ml-2">({activeWorld.id})</span>
               </div>
-              <div>
-                <span className="text-(--color-pixel-muted)">当前 Tick：</span>
-                <span className="text-(--color-pixel-fg)">{world.currentTick}</span>
+              <div className="flex gap-4 text-(--color-pixel-muted)">
+                <span>地图包: <span className="text-(--color-pixel-fg)">{activeWorld.mapId}</span></span>
+                <span>Tick: <span className="text-(--color-pixel-fg)">{activeWorld.currentTick}</span></span>
+                <span>角色数: <span className="text-(--color-pixel-fg)">{activeWorld.characterCount}</span></span>
               </div>
             </div>
           ) : (
-            <div className="text-game-sm text-(--color-pixel-muted)">
-              尚未创建世界，点击下方按钮 seed。
+            <div className="text-game-xs text-(--color-pixel-muted)">
+              尚无运行中的世界
             </div>
           )}
-
-          <button
-            onClick={handleReset}
-            disabled={resetting}
-            className="px-4 py-2 text-game-xs border border-(--color-pixel-danger) text-(--color-pixel-danger) hover:bg-(--color-pixel-bg-2) transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {resetting ? "重置中…" : "🔄 重置世界"}
-          </button>
-          <p className="text-game-2xs text-(--color-pixel-muted)">
-            使用默认配置（moon-valley + 33 角色）重新 seed。此操作不可撤销。
-          </p>
         </div>
       </PixelFrame>
+
+      {/* map pack list */}
+      <div className="text-game-sm text-(--color-pixel-muted)">可用地图包</div>
+
+      {loading ? (
+        <div className="text-game-xs text-(--color-pixel-muted)">加载中…</div>
+      ) : packs.length === 0 ? (
+        <div className="text-game-xs text-(--color-pixel-muted)">
+          未找到任何地图包（检查 configs/maps/ 目录）
+        </div>
+      ) : (
+        packs.map((pack) => (
+          <PixelFrame
+            key={pack.id}
+            tone={pack.valid ? (activeWorld?.mapId === pack.id ? "accent" : "default") : "danger"}
+          >
+            <div className="p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-game-base text-(--color-pixel-fg) font-bold">
+                    {pack.name}
+                  </span>
+                  <span className="text-game-2xs text-(--color-pixel-muted)">({pack.id})</span>
+                  {pack.valid ? (
+                    <span className="text-game-2xs text-(--color-pixel-success)">✓</span>
+                  ) : (
+                    <span className="text-game-2xs text-(--color-pixel-danger)">✗</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleLoadPack(pack.id)}
+                  disabled={!pack.valid || loadingPack === pack.id}
+                  className="px-3 py-1 text-game-xs border border-(--color-pixel-accent) text-(--color-pixel-accent) hover:bg-(--color-pixel-bg-2) transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingPack === pack.id ? "加载中…" : "加载此包"}
+                </button>
+              </div>
+
+              {pack.description && (
+                <div className="text-game-xs text-(--color-pixel-muted) line-clamp-2">
+                  {pack.description}
+                </div>
+              )}
+
+              <div className="flex gap-4 text-game-2xs text-(--color-pixel-muted)">
+                <span>语言: <span className="text-(--color-pixel-fg)">{LANGUAGE_LABELS[pack.language] ?? pack.language}</span></span>
+                <span>节点: <span className="text-(--color-pixel-fg)">{pack.nodeCount}</span></span>
+                <span>角色: <span className="text-(--color-pixel-fg)">{pack.characterCount}</span></span>
+              </div>
+
+              {!pack.valid && pack.errors.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {pack.errors.map((e, i) => (
+                    <div key={i} className="text-game-2xs text-(--color-pixel-danger)">
+                      {e.file}: {e.message}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </PixelFrame>
+        ))
+      )}
     </div>
   );
 }

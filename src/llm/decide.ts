@@ -151,6 +151,15 @@ function payloadToAction(p: ActionPayload, actorId: string): Action {
     emotionTag: p.emotion_tag,
     selfImportance: p.self_importance,
     changeType: p.change_type,
+    reason: p.reason,
+    arrivalAction: p.arrival_action
+      ? {
+          type: p.arrival_action.action_type,
+          freeText: p.arrival_action.free_text,
+          targetId: p.arrival_action.target_id,
+          targetNodeId: p.arrival_action.target_node_id,
+        }
+      : undefined,
   };
 }
 
@@ -497,6 +506,15 @@ export async function llmSalvageDecide(
         emotionTag: result.data.emotion_tag,
         selfImportance: result.data.self_importance,
         changeType: result.data.change_type,
+        reason: result.data.reason,
+        arrivalAction: result.data.arrival_action
+          ? {
+              type: result.data.arrival_action.action_type as Action["type"],
+              freeText: result.data.arrival_action.free_text,
+              targetId: result.data.arrival_action.target_id,
+              targetNodeId: result.data.arrival_action.target_node_id,
+            }
+          : undefined,
       };
 
       // Double-check: no speak family

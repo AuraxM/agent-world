@@ -8,7 +8,7 @@ import type {
   Privacy,
 } from "./enums";
 
-/** 1 tick = 1 game hour. tick 0 是世界开始的整点。 */
+/** 1 tick = 1/5 游戏小时（5 ticks/hour）。tick 0 是世界开始的整点。 */
 export type Tick = number;
 
 /** MBTI 4 维性格，每维范围 [-4, 4]（整数）。 */
@@ -81,6 +81,14 @@ export interface OngoingAction {
   description: string;
   /** 感知到 intensity ≥ 此值的事件即提前唤醒/中止。 */
   interruptThreshold: 1 | 2 | 3 | 4 | 5;
+  /** move 专属：BFS 路径节点序列（含起点终点） */
+  path?: string[];
+  /** move 专属：当前已走到第几步 */
+  stepIndex?: number;
+  /** move 专属：到达后要执行的动作 */
+  arrivalAction?: Action["arrivalAction"];
+  /** move 专属：移动原因（中断时用于写记忆） */
+  reason?: string;
 }
 
 /** 地图节点。 */
@@ -231,6 +239,19 @@ export interface Action {
   selfImportance: 1 | 2 | 3 | 4 | 5;
   /** 仅在 type === "update_relation" 时使用 */
   changeType?: RelationChangeType;
+  /** move 专属：为何去那里 */
+  reason?: string;
+  /** move 专属：到达后自动执行的动作 */
+  arrivalAction?: {
+    type: ActionType;
+    freeText?: string;
+    targetId?: string;
+    targetNodeId?: string;
+  };
+  /** 引擎标记：此 action 是 move 到达后自动触发的，execute 据此写到达记忆 */
+  isArrivalAction?: boolean;
+  /** isArrivalAction 为 true 时的目的地节点名（写记忆用） */
+  arrivalNodeName?: string;
 }
 
 /** 世界全量快照。每 24 tick 持久化一次。 */

@@ -36,6 +36,13 @@ export const ActionSchema = z.object({
     z.literal(5),
   ]),
   change_type: z.enum(RELATION_CHANGE_TYPES).optional(),
+  reason: z.string().max(200).optional(),
+  arrival_action: z.object({
+    action_type: z.enum(ACTION_TYPES),
+    free_text: z.string().max(500).optional(),
+    target_id: z.string().optional(),
+    target_node_id: z.string().optional(),
+  }).optional(),
 });
 export type ActionPayload = z.infer<typeof ActionSchema>;
 
@@ -76,6 +83,24 @@ export const ActionToolInputSchema = {
       type: "string",
       enum: [...RELATION_CHANGE_TYPES],
       description: "仅在 action_type=update_relation 时使用。",
+    },
+    reason: {
+      type: "string",
+      description:
+        "仅 move：移动原因，例如'去酒馆找田中喝酒'。将被记入记忆。",
+    },
+    arrival_action: {
+      type: "object",
+      description:
+        "仅 move：到达目的地后要自动执行的动作。包含 action_type、可选的 free_text/target_id/target_node_id。",
+      properties: {
+        action_type: { type: "string", enum: [...ACTION_TYPES] },
+        free_text: { type: "string", description: "说话内容或行动描述。" },
+        target_id: { type: "string", description: "交互目标的 character id。" },
+        target_node_id: { type: "string", description: "交互目标的节点 id。" },
+      },
+      required: ["action_type"],
+      additionalProperties: false,
     },
   },
   required: ["action_type", "reasoning", "self_importance"],
@@ -269,6 +294,13 @@ export const SalvageActionSchema = z.object({
     z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5),
   ]),
   change_type: z.enum(RELATION_CHANGE_TYPES).optional(),
+  reason: z.string().max(200).optional(),
+  arrival_action: z.object({
+    action_type: z.enum(SALVAGE_ACTION_TYPES),
+    free_text: z.string().max(500).optional(),
+    target_id: z.string().optional(),
+    target_node_id: z.string().optional(),
+  }).optional(),
 });
 export type SalvageActionPayload = z.infer<typeof SalvageActionSchema>;
 
@@ -287,6 +319,24 @@ export const SalvageToolSchema = {
       type: "string",
       enum: [...RELATION_CHANGE_TYPES],
       description: "仅在 action_type=update_relation 时使用。",
+    },
+    reason: {
+      type: "string",
+      description:
+        "仅 move：移动原因，例如'去酒馆找田中喝酒'。将被记入记忆。",
+    },
+    arrival_action: {
+      type: "object",
+      description:
+        "仅 move：到达目的地后要自动执行的动作。包含 action_type、可选的 free_text/target_id/target_node_id。",
+      properties: {
+        action_type: { type: "string", enum: [...SALVAGE_ACTION_TYPES] },
+        free_text: { type: "string", description: "说话内容或行动描述。" },
+        target_id: { type: "string", description: "交互目标的 character id。" },
+        target_node_id: { type: "string", description: "交互目标的节点 id。" },
+      },
+      required: ["action_type"],
+      additionalProperties: false,
     },
   },
   required: ["action_type", "reasoning", "self_importance"],

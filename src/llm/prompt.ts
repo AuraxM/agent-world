@@ -11,7 +11,7 @@
  * - vitals + emotion 全部以定性文字呈现给 LLM；prompt 不暴露任何 [-4,4] 的内部数字。
  */
 import type { ActionType } from "@/domain/enums";
-import { BLOOD_RELATION_KINDS } from "@/domain/enums";
+import { BLOOD_RELATION_KINDS, TICKS_PER_HOUR } from "@/domain/enums";
 import type { AggregatedFacts } from "@/engine/facts";
 import type {
   Character,
@@ -29,10 +29,10 @@ import type { Language } from "@/engine/settings";
 
 const RECENT_MEMORY_LIMIT = 8;
 const MAX_PEERS_IN_PROMPT = 5;
-/** 14 游戏日 = 14 * 24 = 336 tick；与 tick.ts 保持同步。 */
-const ACQUAINTANCE_DECAY_TICKS = 336;
-/** acquaintance 距衰减还剩 ≤ 此 tick 数时，prompt 给出"濒临淡出"提示。 */
-const ACQUAINTANCE_WARN_TICKS = 48;
+/** 14 游戏日 = 14 * 24 = 336 小时；与 tick.ts 保持同步。 */
+const ACQUAINTANCE_DECAY_TICKS = 336 * TICKS_PER_HOUR;
+/** acquaintance 距衰减还剩 ≤ 此 小时 数时，prompt 给出"濒临淡出"提示。 */
+const ACQUAINTANCE_WARN_TICKS = 48 * TICKS_PER_HOUR;
 
 // ---------------------------------------------------------------------------
 // MBTI 9 档文字标签（无数值暴露）
@@ -167,7 +167,7 @@ function describeRelations(
         const decayIn =
           ACQUAINTANCE_DECAY_TICKS - (tick - r.lastInteractionTick);
         if (decayIn <= ACQUAINTANCE_WARN_TICKS && decayIn > 0) {
-          warn = `（再 ${decayIn} 小时未互动就会淡出）`;
+          warn = `（再 ${Math.floor(decayIn / TICKS_PER_HOUR)} 小时未互动就会淡出）`;
         }
       }
       return `- ${p.name}（${kinds}, ${aff}）${noteSuffix}${warn}`;
@@ -386,8 +386,9 @@ export function timeOfDay(
   period: DayPeriod;
   isSleepHour: boolean;
 } {
-  const day = Math.floor(tick / 24);
-  const hour = ((tick % 24) + 24) % 24;
+  const totalHours = Math.floor(tick / TICKS_PER_HOUR);
+  const day = Math.floor(totalHours / 24);
+  const hour = ((totalHours % 24) + 24) % 24;
   let period: DayPeriod;
   if (hour < 5) period = "深夜";
   else if (hour < 7) period = "凌晨";
@@ -457,7 +458,7 @@ function formatActionCounts(
 function worldRules(): string {
   return `你是 LLM-as-NPC 模拟世界中的一个角色。这是一个由"导演型玩家"在外部观察、并偶尔向某地点投放事件的虚拟小镇。
 
-游戏时间：1 tick = 1 个游戏小时。你不需要思考"玩家"——你只在你的角色身份下做出与你性格相符的决定。
+游戏时间：1 tick = 1/5 游戏小时（5 ticks = 1 游戏小时）。tick 是基本时间单位。你不需要思考"玩家"——你只在你的角色身份下做出与你性格相符的决定。
 
 行动机制：
 - 你**只能**通过调用 submit_action 工具来回复，禁止直接输出任何自然语言文本——直接吐文本视为本 tick 弃权。
@@ -467,7 +468,7 @@ function worldRules(): string {
 - self_importance 1-5，决定这件事是否进入你的长期记忆。
 - 不要做超出当前可选行动列表的事；如果列表里没合适的，选 wait 或 observe。
 
-移动机制：除标注 ⏱ 的远途节点外，move 不消耗时间——你可以本 tick 多次 move 后再做事，每次 move 后会重新感知新位置。但若你连续 5 次 move 仍未做事，会被强制停下。
+移动机制：1 tick = 1/5 游戏小时（5 ticks = 1 小时）。移动时你需要指定目的地（任意地图节点）、移动原因（如"去酒馆找田中喝酒"）和到达后要做的动作（arrival_action）。引擎会自动计算最短路径，每走一步消耗 1 tick。移动期间你无法主动决策（类似睡觉），但可被高强度事件打断。到达后自动执行你声明的到达动作。
 
 昼夜节律：
 - 1 日 = 24 tick。每个角色有自己的作息窗口（你本人的窗口与家见下方"自我认知"块）。
@@ -564,9 +565,7 @@ function describeMapGraph(nodes: MapNode[]): string {
     const indent = "  ".repeat(depth);
     // tags 内已包含 public/semi/private 同义词；privacy 字段不再单独渲染。
     const tagPart = n.tags.length > 0 ? n.tags.join("/") : n.privacy;
-    const cost =
-      n.travelCost && n.travelCost > 0 ? ` ⏱${n.travelCost}小时` : "";
-    treeLines.push(`${indent}- ${n.name} [${n.id}]（${tagPart}）${cost}`);
+    treeLines.push(`${indent}- ${n.name} [${n.id}]（${tagPart}）`);
     for (const kid of childrenOf.get(n.id) ?? []) render(kid, depth + 1);
   };
   for (const root of childrenOf.get(null) ?? []) render(root, 0);
@@ -598,7 +597,7 @@ function describeMapGraph(nodes: MapNode[]): string {
     }
   }
 
-  let out = `当前世界地图（缩进=父子；⏱N=进入需 N 小时；target_node_id 用方括号内的 id）：\n${treeLines.join("\n")}`;
+  let out = `当前世界地图（缩进=父子；target_node_id 用方括号内的 id）：\n${treeLines.join("\n")}`;
   if (shortcutLines.length > 0) {
     out += `\n\n特殊通道（shortcuts，cost=0）：\n${shortcutLines.join("\n")}`;
   }
@@ -902,7 +901,7 @@ export function buildUserPrompt(args: {
 
   // 1. 时间 + 作息引导
   lines.push(
-    `当前时间：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}${t.isSleepHour ? "，已是你的作息时段" : ""}）。`,
+    `当前时间：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}${t.isSleepHour ? "，已是你的作息时段" : ""}）。tick=${tick}`,
   );
   const winText = formatSleepWindow(sleepWindow);
   if (facts.homeNodeName) {

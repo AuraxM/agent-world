@@ -18,9 +18,11 @@
  *  10. 每 24 tick 写一次 snapshot
  */
 import { randomUUID } from "node:crypto";
+import { TICKS_PER_HOUR } from "@/domain/enums";
 import { buildActionContext, getAvailableActions } from "./actions";
 import { executeActions } from "./execute";
 import { deriveAggregatedFacts, type AggregatedFacts } from "./facts";
+import { findPath } from "./pathfinding";
 import { dispatchPerception } from "./perception";
 import { decayVitals, evolveEmotions } from "./vitals-emotion";
 import { DEFAULT_SLEEP_WINDOW, inSleepWindow, timeOfDay } from "@/llm/prompt";
@@ -51,10 +53,9 @@ import {
   llmSalvageDecide,
 } from "@/llm/decide";
 
-const FACTS_LOOKBACK_TICKS = 48;
-const MAX_FREE_MOVES = 5;
-/** 14 游戏日 = 14 * 24 = 336 tick */
-const ACQUAINTANCE_DECAY_TICKS = 336;
+const FACTS_LOOKBACK_TICKS = 48 * TICKS_PER_HOUR;
+/** 14 游戏日 = 14 * 24 = 336 小时 */
+const ACQUAINTANCE_DECAY_TICKS = 336 * TICKS_PER_HOUR;
 
 export interface DecideInput {
   character: Character;
@@ -125,6 +126,69 @@ function makeInnerEvent(args: {
     audienceCharacterId: args.charId,
     duration: 1,
   };
+}
+
+function handleOngoingMove(
+  c: Character,
+  fromTick: number,
+  worldId: string,
+  nodeById: Map<string, MapNode>,
+): { action: Action; arrived: boolean } {
+  const ca = c.currentAction!;
+  const path = ca.path!;
+  const currentStep = ca.stepIndex ?? 0;
+
+  const nextStep = currentStep + 1;
+  ca.stepIndex = nextStep;
+  c.locationId = path[nextStep];
+
+  if (nextStep >= path.length - 1) {
+    const destId = path[path.length - 1];
+    const destName = nodeById.get(destId)?.name ?? destId;
+    c.currentAction = undefined;
+    return {
+      action: {
+        type: ca.arrivalAction?.type ?? "wait",
+        actorId: c.id,
+        targetId: ca.arrivalAction?.targetId,
+        targetNodeId: ca.arrivalAction?.targetNodeId,
+        freeText: ca.arrivalAction?.freeText,
+        reasoning: `到达目的地 ${destName}，执行 ${ca.arrivalAction?.type ?? "wait"}。`,
+        selfImportance: 3,
+        isArrivalAction: true,
+        arrivalNodeName: destName,
+      },
+      arrived: true,
+    };
+  }
+
+  return {
+    action: {
+      type: "wait",
+      actorId: c.id,
+      reasoning: `正在前往目的地途中（第 ${nextStep}/${path.length - 1} 步）。`,
+      selfImportance: 1,
+    },
+    arrived: false,
+  };
+}
+
+function pushMoveInitMemory(
+  c: Character,
+  tick: number,
+  action: Action,
+  targetNodeName: string,
+): void {
+  const content = `${c.name} 前往 ${targetNodeName} ${action.reason ?? ""}`.trim();
+  c.shortMemory.push({
+    id: `mem-${randomUUID().slice(0, 8)}`,
+    tick,
+    importance: action.selfImportance,
+    content,
+  });
+  if (c.shortMemory.length > 50) {
+    c.shortMemory.splice(0, c.shortMemory.length - 50);
+  }
 }
 
 export async function tick(
@@ -200,18 +264,22 @@ export async function tick(
         const interrupt = perceived.find(
           (e) => e.intensity >= c.currentAction!.interruptThreshold,
         );
+
         if (interrupt) {
-          // 中断后按已完成时长抵扣 fatigue。
-          // sleep 1:1（之前是 /2，导致睡 4h 才回 2 点 → 仍 critical → 醒来又被 ⭐ 引去再睡 → 死循环）。
-          // nap 按完成比例 ×6/4=1.5/h，与"完整 4h = -6"对齐。
-          const hoursDone = fromTick - c.currentAction.startedAt;
-          if (c.currentAction.type === "sleep") {
-            c.vitals.fatigue = Math.max(0, c.vitals.fatigue - hoursDone);
-          } else if (c.currentAction.type === "nap") {
-            const reduction = Math.floor((hoursDone * 6) / 4);
-            c.vitals.fatigue = Math.max(0, c.vitals.fatigue - reduction);
+          // Handle interrupt for sleep/nap: partial recovery
+          if (c.currentAction.type === "sleep" || c.currentAction.type === "nap") {
+            const ticksDone = fromTick - c.currentAction.startedAt;
+            const hoursDone = Math.floor(ticksDone / TICKS_PER_HOUR);
+            if (c.currentAction.type === "sleep") {
+              c.vitals.fatigue = Math.max(0, c.vitals.fatigue - hoursDone);
+            } else if (c.currentAction.type === "nap") {
+              const reduction = Math.floor((hoursDone * 6) / 4);
+              c.vitals.fatigue = Math.max(0, c.vitals.fatigue - reduction);
+            }
+            if (c.vitals.fatigue < 16) c.vitals.fatigueCapTicks = 0;
           }
-          if (c.vitals.fatigue < 16) c.vitals.fatigueCapTicks = 0;
+          // For move: initiation memory already written, no arrival memory needed
+
           freeMoveEvents.push(
             makeInnerEvent({
               worldId,
@@ -222,8 +290,38 @@ export async function tick(
             }),
           );
           c.currentAction = undefined;
+          // Fall through to normal LLM decision below
+        } else if (c.currentAction.type === "move") {
+          // Auto-step along path
+          const result = handleOngoingMove(c, fromTick, worldId, nodeById);
+          if (result.arrived) {
+            options.onCharacterDecision?.({
+              characterId: c.id,
+              characterName: c.name,
+              action: result.action,
+            });
+            return {
+              characterId: c.id,
+              action: result.action,
+              freeMoveEvents,
+              finalLocationId: c.locationId,
+            };
+          }
+          // Still moving
+          options.onCharacterDecision?.({
+            characterId: c.id,
+            characterName: c.name,
+            action: result.action,
+          });
+          return {
+            characterId: c.id,
+            action: result.action,
+            freeMoveEvents,
+            finalLocationId: c.locationId,
+          };
         } else {
-          if (fromTick % 4 === 0) {
+          // sleep/nap: existing auto-wait logic
+          if (fromTick % (4 * TICKS_PER_HOUR) === 0) {
             freeMoveEvents.push(
               makeInnerEvent({
                 worldId,
@@ -267,112 +365,108 @@ export async function tick(
         c.currentAction = undefined;
       }
 
-      // 6c. free move 链（隔离：用局部 location 变量，不污染其他角色视图）
+      // 6c. Single LLM decision (no free-move loop)
       let currentLoc = locationSnapshot.get(c.id)!;
       const localLocationMap = new Map(locationSnapshot);
-      let freeMovesUsed = 0;
       let action: Action;
 
-      while (true) {
-        localLocationMap.set(c.id, currentLoc);
-        const ctx = buildActionContext(c, nodes, characters, localLocationMap);
-        const recentThoughts = loadRecentThoughts(worldId, c.id, sinceTick);
-        const homeNodeId = homeMap.get(c.id) ?? null;
-        c.homeNodeId = homeNodeId;
-        const sleepWindow = sleepWindowMap.get(c.id) ?? DEFAULT_SLEEP_WINDOW;
-        c.sleepWindow = sleepWindow;
-        const isSleepHour = inSleepWindow(baseTime.hour, sleepWindow);
-        const facts = deriveAggregatedFacts({
+      localLocationMap.set(c.id, currentLoc);
+      const ctx = buildActionContext(c, nodes, characters, localLocationMap);
+      const recentThoughts = loadRecentThoughts(worldId, c.id, sinceTick);
+      const homeNodeId = homeMap.get(c.id) ?? null;
+      c.homeNodeId = homeNodeId;
+      const sleepWindow = sleepWindowMap.get(c.id) ?? DEFAULT_SLEEP_WINDOW;
+      c.sleepWindow = sleepWindow;
+      const isSleepHour = inSleepWindow(baseTime.hour, sleepWindow);
+      const facts = deriveAggregatedFacts({
+        character: c,
+        nodes,
+        currentTick: fromTick,
+        recentThoughts,
+        homeNodeId,
+      });
+      const opts = getAvailableActions(ctx, {
+        facts,
+        isSleepHour,
+      });
+
+      try {
+        action = await decideFn({
           character: c,
           nodes,
-          currentTick: fromTick,
-          recentThoughts,
-          homeNodeId,
-        });
-        const opts = getAvailableActions(ctx, {
+          here: ctx.here,
+          companions: ctx.companions,
+          reachable: ctx.reachable,
+          perceived: perceptions.get(c.id) ?? [],
+          options: opts,
+          worldName: world.name,
+          tick: fromTick,
           facts,
-          isSleepHour,
         });
+      } catch (err) {
+        action = fallbackWait(c);
+        action.reasoning = `LLM 调用失败：${
+          err instanceof Error ? err.message : String(err)
+        }`;
+      }
 
-        try {
-          action = await decideFn({
-            character: c,
-            nodes,
-            here: ctx.here,
-            companions: ctx.companions,
-            reachable: ctx.reachable,
-            perceived: perceptions.get(c.id) ?? [],
-            options: opts,
-            worldName: world.name,
-            tick: fromTick,
-            facts,
-          });
-        } catch (err) {
-          action = fallbackWait(c);
-          action.reasoning = `LLM 调用失败：${
-            err instanceof Error ? err.message : String(err)
-          }`;
-        }
+      // If move with destination → compute path
+      if (action.type === "move" && action.targetNodeId && action.targetNodeId !== currentLoc) {
+        const path = findPath(currentLoc, action.targetNodeId, nodes);
+        if (!path) {
+          // Unreachable node → fallback to wait
+          action = {
+            type: "wait",
+            actorId: c.id,
+            reasoning: `想去 ${action.targetNodeId} 但不可达，原地等待。原因为：${action.reason ?? "无"}`,
+            selfImportance: action.selfImportance,
+          };
+        } else {
+          const targetNode = nodeById.get(action.targetNodeId);
+          // Write move initiation memory
+          pushMoveInitMemory(c, fromTick, action, targetNode?.name ?? action.targetNodeId);
 
-        if (action.type !== "move" || !action.targetNodeId) break;
-
-        const targetNode = nodeById.get(action.targetNodeId);
-        const isShortcut = ctx.here.shortcuts.includes(action.targetNodeId);
-        const cost = isShortcut ? 0 : (targetNode?.travelCost ?? 0);
-
-        if (cost > 0) {
+          // Setup ongoing action for path traversal
           c.currentAction = {
             type: "move",
             startedAt: fromTick,
-            endsAt: fromTick + cost,
+            endsAt: fromTick + path.length - 1,
             description: `前往 ${targetNode?.name ?? action.targetNodeId} 途中`,
-            interruptThreshold: 5,
+            interruptThreshold: 4,
+            path,
+            stepIndex: 0,
+            arrivalAction: action.arrivalAction,
+            reason: action.reason,
           };
-          action = {
-            type: "wait",
-            actorId: c.id,
-            reasoning: `开始前往 ${targetNode?.name ?? action.targetNodeId}，途中需 ${cost} 小时。`,
-            selfImportance: action.selfImportance,
-          };
-          break;
-        }
 
-        // 应用免费 move
-        const fromNode = ctx.here;
-        const stoppedAt = targetNode?.name ?? action.targetNodeId;
-        currentLoc = action.targetNodeId;
-        freeMovesUsed++;
-        freeMoveEvents.push({
-          id: `evt-${randomUUID().slice(0, 8)}`,
-          worldId,
-          tick: fromTick,
-          category: "action",
-          description: `${c.name} 从 ${fromNode.name} 来到 ${stoppedAt}。`,
-          participants: [c.id],
-          source: "actor",
-          intensity: 1,
-          scope: "node",
-          nodeId: currentLoc,
-          duration: 1,
-        });
+          // Take first step
+          c.locationId = path[1];
+          c.currentAction.stepIndex = 1;
 
-        // 用完配额：保留刚才那次 move 的 reasoning，不再调用 LLM 第 N+1 次。
-        if (freeMovesUsed >= MAX_FREE_MOVES) {
-          freeMoveEvents.push(
-            makeInnerEvent({
-              worldId,
-              tick: fromTick,
-              charId: c.id,
-              description: `走到 ${stoppedAt} 时本小时已尽，先停下喘口气。`,
-            }),
-          );
-          action = {
-            type: "wait",
-            actorId: c.id,
-            reasoning: `本小时已走 ${MAX_FREE_MOVES} 步停在 ${stoppedAt}。${action.reasoning}`,
-            selfImportance: action.selfImportance,
-          };
-          break;
+          if (path.length <= 2) {
+            // Single step → arrived immediately, execute arrivalAction
+            c.currentAction = undefined;
+            action = {
+              type: action.arrivalAction?.type ?? "wait",
+              actorId: c.id,
+              targetId: action.arrivalAction?.targetId,
+              targetNodeId: action.arrivalAction?.targetNodeId,
+              freeText: action.arrivalAction?.freeText,
+              reasoning: `已到达 ${targetNode?.name ?? action.targetNodeId}，执行到达动作。`,
+              selfImportance: action.selfImportance,
+              isArrivalAction: true,
+              arrivalNodeName: targetNode?.name ?? action.targetNodeId,
+            };
+          } else {
+            // Multi-step: this tick resolves as wait
+            action = {
+              type: "wait",
+              actorId: c.id,
+              reasoning: `开始前往 ${targetNode?.name ?? action.targetNodeId}，共需 ${path.length - 1} 步。原因为：${action.reason ?? "无"}`,
+              selfImportance: action.selfImportance,
+            };
+          }
+          currentLoc = c.locationId;
         }
       }
 
@@ -542,7 +636,7 @@ export async function tick(
     })),
   );
 
-  if (world.currentTick > 0 && world.currentTick % 24 === 0) {
+  if (world.currentTick > 0 && world.currentTick % (24 * TICKS_PER_HOUR) === 0) {
     persistSnapshot(loaded);
   }
 

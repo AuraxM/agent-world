@@ -1,4 +1,5 @@
 import type { OngoingAction } from "@/domain/types";
+import { TICKS_PER_HOUR } from "@/domain/enums";
 
 /** Stat-bar color tier. Caller passes the thresholds — intentionally not a max-derived helper because vitals (0..16) and stress (0..4) use different cutoffs. */
 export function vitalThreshold(
@@ -20,5 +21,10 @@ export function affectionTone(value: number): "pos" | "neg" | "zero" {
 
 /** "在 张默家 睡觉 (t12→t19)" — description comes from engine and is already user-readable. */
 export function formatActionWindow(action: OngoingAction): string {
+  if (action.type === "move" && action.path && action.stepIndex !== undefined) {
+    const step = action.stepIndex;
+    const total = action.path.length - 1;
+    return `${action.description} (${step}/${total}步, t${action.startedAt}→t${action.endsAt})`;
+  }
   return `${action.description} (t${action.startedAt}→t${action.endsAt})`;
 }

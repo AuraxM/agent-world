@@ -43,6 +43,7 @@ const baseCharacter: Character = {
   gender: "other",
   profession: "student",
   biography: "一个测试角色。",
+  origin: "local" as const,
   locationId: "node-here",
   personality: { ei: 0, sn: 0, tf: 0, jp: 0 },
   vitals: { hunger: 0, fatigue: 0, hygiene: 0 },

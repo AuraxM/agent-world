@@ -15,7 +15,7 @@ declare global {
 function read(): Settings {
   if (!globalThis.__agent_world_settings__) {
     globalThis.__agent_world_settings__ = {
-      thinkingEnabled: true,
+      thinkingEnabled: false,
     };
   }
   return globalThis.__agent_world_settings__;

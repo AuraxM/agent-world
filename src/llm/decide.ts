@@ -80,8 +80,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
       { role: "user", content: user },
     ],
     tools,
-    tool_choice: "required",
-    ...(extra as Record<string, unknown>),
+        ...(extra as Record<string, unknown>),
   });
 
   const message = response.choices[0]?.message;
@@ -209,8 +208,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn>
           { role: "user", content: prompt },
         ],
         tools: [tool],
-        tool_choice: "required",
-      });
+              });
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.find(
@@ -290,8 +288,7 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<str
           { role: "user", content: prompt },
         ],
         tools: [tool],
-        tool_choice: "required",
-      });
+              });
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.find(
@@ -373,8 +370,7 @@ export async function llmAcceptDecide(
           { role: "user", content: prompt },
         ],
         tools: [tool],
-        tool_choice: "required",
-      });
+              });
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.find(
@@ -454,8 +450,7 @@ export async function llmSalvageDecide(
           { role: "user", content: user + "\n\n" + salvageCtx },
         ],
         tools,
-        tool_choice: "required",
-      });
+              });
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.find(

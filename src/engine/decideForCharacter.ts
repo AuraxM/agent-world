@@ -208,7 +208,6 @@ export async function decideForCharacter(
               { role: "user", content: user },
             ],
             tools,
-            tool_choice: "required",
             ...extra,
           });
           const tc = resp.choices[0]?.message?.tool_calls?.find(

@@ -74,6 +74,7 @@ export const characters = sqliteTable(
     gender: text("gender").notNull().default("male"),
     profession: text("profession").notNull().default("farmer"),
     biography: text("biography").notNull().default(""),
+    origin: text("origin").notNull().default("local"),
     locationId: text("location_id").notNull(),
     personalityJson: text("personality_json").notNull(),
     vitalsJson: text("vitals_json")

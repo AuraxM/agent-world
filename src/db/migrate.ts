@@ -60,6 +60,7 @@ const STATEMENTS = [
     gender TEXT NOT NULL DEFAULT 'male',
     profession TEXT NOT NULL DEFAULT 'farmer',
     biography TEXT NOT NULL DEFAULT '',
+    origin TEXT NOT NULL DEFAULT 'local',
     location_id TEXT NOT NULL,
     personality_json TEXT NOT NULL,
     vitals_json TEXT NOT NULL DEFAULT '{"hunger":0,"fatigue":0,"hygiene":0}',
@@ -134,6 +135,7 @@ const CHARACTERS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
   { name: "gender", ddl: "ALTER TABLE characters ADD COLUMN gender TEXT NOT NULL DEFAULT 'male'" },
   { name: "profession", ddl: "ALTER TABLE characters ADD COLUMN profession TEXT NOT NULL DEFAULT 'farmer'" },
   { name: "biography", ddl: "ALTER TABLE characters ADD COLUMN biography TEXT NOT NULL DEFAULT ''" },
+  { name: "origin", ddl: "ALTER TABLE characters ADD COLUMN origin TEXT NOT NULL DEFAULT 'local'" },
 ];
 
 const tx = sqlite.transaction(() => {

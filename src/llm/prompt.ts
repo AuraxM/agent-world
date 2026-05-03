@@ -10,7 +10,7 @@
  * - reasoning 必须显式引用一项性格特征的**文字描述**，禁止数值。
  * - vitals + emotion 全部以定性文字呈现给 LLM；prompt 不暴露任何 [-4,4] 的内部数字。
  */
-import type { ActionType, Profession } from "@/domain/enums";
+import type { Profession } from "@/domain/enums";
 import { BLOOD_RELATION_KINDS, TICKS_PER_HOUR } from "@/domain/enums";
 import type { AggregatedFacts } from "@/engine/facts";
 import type {
@@ -26,6 +26,7 @@ import type {
 } from "@/domain/types";
 import type { ActionOption } from "@/engine/actions";
 import type { Language } from "@/config/types";
+import { actionRegistry } from "@/domain/action-system";
 
 const RECENT_MEMORY_LIMIT = 8;
 const MAX_PEERS_IN_PROMPT = 5;
@@ -405,46 +406,30 @@ export function timeOfDay(
 // action names (full 28-set)
 // ---------------------------------------------------------------------------
 
-const ACTION_NAMES: Record<ActionType, string> = {
-  move: "移动",
-  wait: "等待",
-  observe: "观察",
-  rest: "休息",
-  eat: "进食",
-  read: "阅读",
-  study: "学习",
-  work: "工作",
-  use_ability: "使用能力",
-  sleep: "睡觉",
-  nap: "小睡",
-  bathe: "洗浴",
-  exercise: "运动",
-  meditate: "冥想",
-  write: "书写",
-  groom: "整理仪容",
-  pace: "踱步",
-  speak: "邀请说话",
-  interact_object: "与物互动",
-  interact_person: "与人互动",
-  attack: "攻击",
-  flee: "逃避",
-  help: "帮助",
-  gift: "馈赠",
-  update_relation: "调整关系",
-  // 对话协议内部（仅 schema 约束，不暴露给 LLM）
-  accept_speak: "接受对话",
-  reject_speak: "拒绝对话",
-  leave_dialog: "离开对话",
-};
+let _cachedActionNames: Record<string, string> | null = null;
+function getActionNames(): Record<string, string> {
+  if (!_cachedActionNames) {
+    _cachedActionNames = {};
+    for (const type of actionRegistry.types()) {
+      _cachedActionNames[type] = type;
+    }
+  }
+  return _cachedActionNames;
+}
+
+/** Invalidate the action names cache after mod actions are registered. */
+export function invalidateActionNamesCache(): void {
+  _cachedActionNames = null;
+}
 
 function formatActionCounts(
-  counts: Partial<Record<ActionType, number>>,
+  counts: Partial<Record<string, number>>,
 ): string {
-  const entries = (Object.entries(counts) as Array<[ActionType, number]>)
+  const entries = (Object.entries(counts) as Array<[string, number]>)
     .filter(([, n]) => n && n > 0)
     .sort(([, a], [, b]) => b - a);
   if (entries.length === 0) return "（暂无）";
-  return entries.map(([k, v]) => `${ACTION_NAMES[k] ?? k} ×${v}`).join("、");
+  return entries.map(([k, v]) => `${getActionNames()[k] ?? k} ×${v}`).join("、");
 }
 
 // ---------------------------------------------------------------------------
@@ -862,7 +847,7 @@ function describeContinuity(
 
   if (facts.lastAction) {
     const { type, freeText, success } = facts.lastAction;
-    const verb = ACTION_NAMES[type] ?? type;
+    const verb = getActionNames()[type] ?? type;
     const ok = success ? "" : "（未成功）";
     const detail = freeText ? `："${freeText.slice(0, 40)}"` : "";
     lines.push(`- 上一 tick 你的行动：${verb}${ok}${detail}`);

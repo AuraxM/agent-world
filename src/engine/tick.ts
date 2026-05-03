@@ -290,6 +290,9 @@ export async function tick(
             importance: 4,
             content: `${desc}被「${interrupt.description}」打断。`,
           });
+          if (c.shortMemory.length > 50) {
+            c.shortMemory.splice(0, c.shortMemory.length - 50);
+          }
 
           freeMoveEvents.push(
             makeInnerEvent({
@@ -382,6 +385,9 @@ export async function tick(
             importance: 3,
             content: "小睡醒来，恢复了一些精神。",
           });
+        }
+        if (c.shortMemory.length > 50) {
+          c.shortMemory.splice(0, c.shortMemory.length - 50);
         }
 
         if (c.currentAction.type === "sleep") {

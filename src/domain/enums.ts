@@ -1,25 +1,3 @@
-/**
- * 封闭枚举：所有可被 LLM 选用的行动类型。
- * 28 种，分为默认（只动自己）和交互（动他人/物体/关系）两类。
- *
- * sleep vs nap：sleep 是 8 小时大行动，仅角色作息窗口内可推荐；
- * nap 是 4 小时小睡，作息窗口外白天补觉用，效果较弱。
- */
-export const ACTION_TYPES = [
-  // 默认（只动自己）—— 17 种
-  "move", "wait", "observe", "rest", "eat", "read", "study", "work", "use_ability",
-  "sleep", "nap", "bathe", "exercise", "meditate", "write", "groom", "pace",
-  // 交互（动他人/物体/关系）—— 8 种
-  "speak", "interact_object", "interact_person",
-  "attack", "flee", "help", "gift",
-  "update_relation",
-  // 对话协议内部（不在 getAvailableActions 中暴露，仅 dialog 专用 schema 约束产生）
-  "accept_speak",
-  "reject_speak",
-  "leave_dialog",
-] as const;
-export type ActionType = (typeof ACTION_TYPES)[number];
-
 /** 节点标签：用于地图节点的语义分类（影响可执行行动）。 */
 export const NODE_TAGS = [
   "public", "semi", "private",

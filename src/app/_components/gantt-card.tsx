@@ -12,16 +12,18 @@ import {
 export function GanttCard({
   event,
   charById,
+  excludeId,
   onClick,
 }: {
   event: WorldEvent;
   charById: Map<string, Character>;
+  excludeId: string;
   onClick: (rect: DOMRect) => void;
 }) {
   const style = getCategoryStyle(event.category);
   const icon = getCategoryIcon(event.category);
   const label = getCategoryLabel(event.category);
-  const others = getOtherParticipants(event, charById);
+  const others = getOtherParticipants(event, charById, excludeId);
   const important = event.intensity >= 3;
 
   return (

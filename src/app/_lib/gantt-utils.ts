@@ -88,13 +88,15 @@ export function groupEventsByTick(
   return map;
 }
 
-/** Get other participant characters (excluding the first/actor). */
+/** Get other participant characters (excluding the given character). */
 export function getOtherParticipants(
   event: WorldEvent,
   charById: Map<string, Character>,
+  excludeId: string,
 ): Character[] {
   return event.participants
-    .slice(1)
+    .filter((id) => id !== excludeId)
+    .slice(0, 5)
     .map((id) => charById.get(id))
     .filter((c): c is Character => c != null);
 }

@@ -86,10 +86,10 @@ describe("getOtherParticipants", () => {
   it("returns empty when only the actor", () => {
     const event = mkEvent({ participants: ["char-a"] });
     const charById = new Map();
-    expect(getOtherParticipants(event, charById)).toEqual([]);
+    expect(getOtherParticipants(event, charById, "char-a")).toEqual([]);
   });
 
-  it("returns characters after the first participant", () => {
+  it("returns characters excluding the given ID", () => {
     const event = mkEvent({
       participants: ["char-a", "char-b", "char-c"],
     });
@@ -97,9 +97,24 @@ describe("getOtherParticipants", () => {
       ["char-b", { id: "char-b", name: "Bob" } as any],
       ["char-c", { id: "char-c", name: "Cal" } as any],
     ]);
-    const others = getOtherParticipants(event, charById);
+    const others = getOtherParticipants(event, charById, "char-a");
     expect(others).toHaveLength(2);
     expect(others[0]!.name).toBe("Bob");
+  });
+
+  it("excludes given ID even when not first participant", () => {
+    const event = mkEvent({
+      participants: ["alice", "bob", "cal"],
+    });
+    const charById = new Map([
+      ["alice", { id: "alice", name: "Alice" } as any],
+      ["bob", { id: "bob", name: "Bob" } as any],
+      ["cal", { id: "cal", name: "Cal" } as any],
+    ]);
+    // Bob's row — should exclude Bob, show Alice + Cal
+    const others = getOtherParticipants(event, charById, "bob");
+    expect(others).toHaveLength(2);
+    expect(others.map((c) => c.id)).toEqual(["alice", "cal"]);
   });
 
   it("skips missing participants", () => {
@@ -109,7 +124,7 @@ describe("getOtherParticipants", () => {
     const charById = new Map([
       ["char-b", { id: "char-b", name: "Bob" } as any],
     ]);
-    const others = getOtherParticipants(event, charById);
+    const others = getOtherParticipants(event, charById, "char-a");
     expect(others).toHaveLength(1);
     expect(others[0]!.name).toBe("Bob");
   });

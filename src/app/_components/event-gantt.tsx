@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback } from "react";
 import type { Character, MapNode, WorldEvent } from "@/domain/types";
-import { DEFAULT_TICK_WINDOW, getTickWindow } from "../_lib/gantt-utils";
+import { DEFAULT_TICK_WINDOW, getTickWindow, TICK_WIDTH } from "../_lib/gantt-utils";
 import { GanttTimeline } from "./gantt-timeline";
 import { GanttRow } from "./gantt-row";
 import { GanttPopup } from "./gantt-popup";
@@ -108,7 +108,7 @@ export function EventGantt({
         {/* Extra width = tickColumns * TICK_WIDTH + 80 (row header) + 8 padding */}
         <div
           style={{
-            minWidth: tickColumns * 72 + 80 + 8,
+            minWidth: tickColumns * TICK_WIDTH + 80 + 8,
           }}
         >
           <GanttTimeline startTick={startTick} endTick={endTick} />

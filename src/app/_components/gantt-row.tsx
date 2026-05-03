@@ -106,6 +106,7 @@ export function GanttRow({
                     key={ev.id}
                     event={ev}
                     charById={charById}
+                    excludeId={character.id}
                     onClick={(rect) => onEventClick(ev, rect)}
                   />
                 ))

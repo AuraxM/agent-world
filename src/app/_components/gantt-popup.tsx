@@ -90,6 +90,8 @@ function computePopupStyle(anchorRect: DOMRect | null): React.CSSProperties {
       left: "50%",
       transform: "translate(-50%, -50%)",
       maxWidth: POPUP_WIDTH,
+      maxHeight: "calc(100vh - 16px)",
+      overflowY: "auto",
       zIndex: 100,
     };
   }
@@ -106,8 +108,7 @@ function computePopupStyle(anchorRect: DOMRect | null): React.CSSProperties {
   }
 
   let top = anchorRect.bottom + 8;
-  // if too close to bottom, show above
-  const estimatedHeight = 300;
+  const estimatedHeight = 400;
   if (top + estimatedHeight > viewportH - 8) {
     top = anchorRect.top - estimatedHeight - 8;
   }
@@ -119,6 +120,8 @@ function computePopupStyle(anchorRect: DOMRect | null): React.CSSProperties {
     left,
     maxWidth: POPUP_WIDTH,
     width: POPUP_WIDTH,
+    maxHeight: "calc(100vh - 16px)",
+    overflowY: "auto",
     zIndex: 100,
   };
 }

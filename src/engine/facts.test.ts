@@ -54,6 +54,9 @@ const baseCharacter: Character = {
   relations: {},
   activityNodeId: null,
   restNodeId: null,
+  money: 100,
+  incomeLevel: 0,
+  expenseExempt: false,
 };
 
 const baseNodes: MapNode[] = [

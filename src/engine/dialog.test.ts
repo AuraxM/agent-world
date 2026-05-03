@@ -32,6 +32,9 @@ function makeChar(id: string, loc: string, currentActionType?: string): Characte
     shortMemory: [],
     longMemory: [],
     relations: {},
+    money: 100,
+    incomeLevel: 0,
+    expenseExempt: false,
     currentAction: currentActionType
       ? { type: currentActionType as any, startedAt: 0, endsAt: 10, description: "", interruptThreshold: 3 }
       : undefined,
@@ -179,6 +182,9 @@ function makeCharFull(
     shortMemory: [],
     longMemory: [],
     relations: {},
+    money: 100,
+    incomeLevel: 0,
+    expenseExempt: false,
     currentAction: currentActionType
       ? {
           type: currentActionType as any,

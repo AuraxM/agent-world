@@ -62,6 +62,9 @@ beforeAll(async () => {
       biography TEXT NOT NULL DEFAULT '',
       origin TEXT NOT NULL DEFAULT 'local',
       location_id TEXT NOT NULL,
+      money INTEGER NOT NULL DEFAULT 0,
+      income_level INTEGER NOT NULL DEFAULT 0,
+      expense_exempt INTEGER NOT NULL DEFAULT 0,
       personality_json TEXT NOT NULL,
       vitals_json TEXT NOT NULL DEFAULT '{"hunger":0,"fatigue":0,"hygiene":0}',
       emotion_json TEXT NOT NULL DEFAULT '{"mood":0,"stress":0,"social_satiety":0}',
@@ -97,6 +100,17 @@ beforeAll(async () => {
       created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
       PRIMARY KEY (world_id, character_id, tick)
     )`,
+    `CREATE TABLE IF NOT EXISTS transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
+      tick INTEGER NOT NULL,
+      character_id TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      category TEXT NOT NULL CHECK(category IN ('expense','income','transfer_in','transfer_out')),
+      description TEXT NOT NULL DEFAULT '',
+      counterparty_id TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS transactions_world_char_tick_idx ON transactions(world_id, character_id, tick)`,
   ];
   for (const s of STATEMENTS) sqlite.exec(s);
 
@@ -148,13 +162,14 @@ beforeAll(async () => {
   ) => {
     sqlite
       .prepare(
-        `INSERT INTO characters (id, world_id, name, location_id, personality_json, vitals_json) VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO characters (id, world_id, name, location_id, money, personality_json, vitals_json) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
         WORLD_ID,
         name,
         locId,
+        200,
         JSON.stringify({ ei: 0, sn: 0, tf: 0, jp: 0 }),
         JSON.stringify(vitals),
       );
@@ -420,6 +435,9 @@ describe("tick engine v0", () => {
 
   it("skipMemory 不影响普通 action 的记忆写入", async () => {
     const { executeActions } = await import("./execute");
+    const { actionRegistry } = await import("@/domain/action-system");
+    const { BUILTIN_ACTIONS } = await import("./actions-builtin");
+    actionRegistry.registerAll(BUILTIN_ACTIONS);
     const char: any = {
       id: "char-x",
       worldId: "w",

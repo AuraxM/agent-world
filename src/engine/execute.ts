@@ -241,7 +241,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
     // Execute via definition
     let success = true;
     let reason: string | undefined;
-    let outcome: Outcome;
+    let outcome: Outcome | undefined;
     try {
       outcome = def.execute(ctx, actionInput);
 
@@ -292,7 +292,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
     // Handle give: credit recipient
     if (action.type === "give" && action.targetId) {
       const target = charById.get(action.targetId);
-      if (target && outcome.stateChanges) {
+      if (target && outcome?.stateChanges) {
         const givenAmount = outcome.stateChanges
           .filter((sc) => sc.kind === "adjustMoney" && sc.amount < 0)
           .reduce((sum, sc) => sum + (sc.kind === "adjustMoney" ? -sc.amount : 0), 0);

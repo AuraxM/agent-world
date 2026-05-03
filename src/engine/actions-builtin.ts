@@ -1,4 +1,5 @@
 import type { ActionDefinition } from "@/domain/action-system";
+import { TICKS_PER_HOUR } from "@/domain/enums";
 
 export const eatAction: ActionDefinition = {
   type: "eat",
@@ -54,7 +55,7 @@ export const restAction: ActionDefinition = {
   hint(ctx) {
     return ctx.self.vitals.fatigue >= 12 || ctx.isSleepHour ? "⭐ 休息" : "休息";
   },
-  execute(ctx, input) {
+  execute(ctx, _input) {
     return {
       memory: `我在 ${ctx.here.name} 休息了一会儿。`,
       event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 休息。`, intensity: 1 },
@@ -132,7 +133,7 @@ export const speakAction: ActionDefinition = {
 
 export const sleepAction: ActionDefinition = {
   type: "sleep",
-  duration: 40,
+  duration: 8 * TICKS_PER_HOUR,
   check(ctx) {
     if (!ctx.isSleepHour) return false;
     return ctx.here.tags.includes("residence") || ctx.here.privacy === "private";
@@ -140,7 +141,7 @@ export const sleepAction: ActionDefinition = {
   hint(ctx) {
     return "⭐ 睡觉（8 小时，intensity >= 4 可打断）";
   },
-  execute(ctx, input) {
+  execute(ctx, _input) {
     return {
       memory: `我在 ${ctx.here.name} 躺下准备睡觉。`,
       event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 躺下入睡。`, intensity: 1 },

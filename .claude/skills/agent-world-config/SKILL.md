@@ -16,7 +16,7 @@ The runtime engine reads them through `src/config/loader.ts` (Zod-validated). Ev
 
 1. **Clarify with the user first.** Don't draft anything until you know:
    - For a map: theme, scale (rough node count), tone, what kind of "entry" makes sense (公交车站 / 码头 / 传送阵 / 港口 / 城门 / 机场…), and what "bathing" facility fits the setting (公共浴池 / 家中浴室 / 河边温泉 …).
-   - For a character: name, role, MBTI archetype (E/I, N/S, F/T, P/J), target relations to existing characters.
+   - For a **character**: origin (local/visitor), name, age, gender, profession (from `PROFESSIONS` enum), MBTI archetype, `activityNodeId`, `restNodeId`, `sleepWindow`, and target relations to existing characters.
 2. **Read the current state** so you don't collide:
    - `configs/maps/` and `configs/characters/` for existing ids/names.
    - `src/domain/enums.ts` for the canonical closed vocabularies (the only source of truth).
@@ -50,6 +50,7 @@ The runtime engine reads them through `src/config/loader.ts` (Zod-validated). Ev
 - `relations[*].affection` must be an integer in `[-4, 4]`.
 - `relations[*].since` and `lastInteractionTick` must be non-negative integers (use 0 for fresh templates).
 - The template is **location-agnostic** — do NOT add `locationId`, `worldId`, `vitals`, `emotion`, `shortMemory`, `longMemory`, `currentAction`, or `lastThought`. Those are runtime concerns.
+- `origin`: `"local"` | `"visitor"` (from `CHARACTER_ORIGINS` enum). Determines spawn behavior, default vitals, and narrative framing. See design principles below.
 
 ## Style conventions
 
@@ -60,6 +61,26 @@ The runtime engine reads them through `src/config/loader.ts` (Zod-validated). Ev
 - Relations: only declare the asymmetric edge from this character. Don't try to keep everyone's relations symmetric — that's a design choice, not a hard rule.
 - Blood relations (`father / mother / son / daughter / older_brother / younger_brother / older_sister / younger_sister / other_relative`) cannot be ended by the engine or LLM. Use them deliberately.
 
+## Character design principles
+
+### Origin
+
+Start every character design by deciding their origin. This affects everything: biography tone, relation density, node assignments, and vitals.
+
+| Aspect | `"local"` | `"visitor"` |
+|--------|-----------|-------------|
+| Biography | Rooted in the place, multi-generational, "I've been here my whole life" tone | Arrived / moved / passing through, outside perspective, "I came here because..." narrative |
+| Relations | 3-6 deep connections, blood ties, long-standing bonds | 0-2 light connections, often one indirect contact |
+| `restNodeId` | Should point to their own residence | Optional; may point to inn or temporary lodging |
+| `activityNodeId` | Local workplace / usual spot | May be absent or point to transient locations |
+| Initial spawn | At `restNodeId` (home) | At entry node (bus stop etc.) |
+| Initial vitals | Fresh: hunger 0, fatigue 0 | Travel-worn: hunger 1, fatigue 2 |
+| Seed cast | All locals in CAST | 1-2 visitors placed as "recently arrived"; rest in candidate pool for mid-game placement |
+
 ## When the user asks for something that doesn't fit
 
 If the user's request can't be expressed in the current schema (e.g. "add a stamina stat", "characters should have inventories"), STOP and tell them. Don't invent fields that the validator will reject. Suggest extending `src/domain/types.ts` + `src/db/schema.ts` first.
+
+## Quick reference: CHARACTER_ORIGINS enum
+
+`"local"` | `"visitor"`

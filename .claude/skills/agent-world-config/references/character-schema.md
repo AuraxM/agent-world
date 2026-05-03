@@ -12,6 +12,7 @@ A character template is a **location-agnostic** identity definition. Where the c
   "age": 25,                   // 1-120
   "gender": "male",            // "male" | "female" | "other"
   "profession": "farmer",      // from PROFESSIONS enum (23 values)
+  "origin": "local",           // "local" | "visitor" from CHARACTER_ORIGINS enum
   "biography": "我是...",       // first-person bio, CoC-style; required
   "activityNodeId": "node-farm", // optional; work/study/daily activity location
   "restNodeId": "node-home",    // optional; sleep/private time location
@@ -98,6 +99,11 @@ Required. Must be one of the 23 `PROFESSIONS` enum values (see `src/domain/enums
 - 医疗与教育: `doctor`, `nurse`, `teacher`, `librarian`
 - 公共与其他: `priest`, `mailman`, `mayor`, `student`, `unemployed`
 
+### `origin`
+Required. One of `"local"` or `"visitor"` from the `CHARACTER_ORIGINS` enum.
+- `"local"`: Born/rooted in the world. Should have deep relations (3-6) and a fixed residence (`restNodeId`).
+- `"visitor"`: Newly arrived or transient. Light relations (0-2), may lack a permanent residence. Spawns at entry node with travel fatigue unless overridden.
+
 ### `biography`
 Required. First-person narrative (CoC character sheet style). Example:
 > 私は斉藤。この町で20年医者をやっている。父も医者だった。患者の笑顔が何よりの報酬だ。
@@ -117,3 +123,4 @@ Single-emoji `avatar` is the easiest — used by `src/app/_lib/sprite.ts` as a r
 - Single-kind `kinds: []` — must have ≥ 1 entry; use the closed enum.
 - Using removed shapes from earlier versions: 8 personality dims, `kind` (singular), `affinity`, or `statuses[]` — all gone.
 - Setting all 4 personality dims to extreme values — the character becomes noise to the LLM.
+- Forgetting `origin` — it's a required field; every character must declare `"local"` or `"visitor"`.

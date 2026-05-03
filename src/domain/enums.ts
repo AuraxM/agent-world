@@ -63,6 +63,9 @@ export type Profession = (typeof PROFESSIONS)[number];
 export const GENDERS = ["male", "female", "other"] as const;
 export type Gender = (typeof GENDERS)[number];
 
+export const CHARACTER_ORIGINS = ["local", "visitor"] as const;
+export type CharacterOrigin = (typeof CHARACTER_ORIGINS)[number];
+
 /** 血缘关系集合：这些 kind 永不可由 LLM 或引擎主动解除。 */
 export const BLOOD_RELATION_KINDS: ReadonlySet<ObjectiveRelationKind> = new Set([
   "father", "mother", "son", "daughter",

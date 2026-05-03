@@ -73,21 +73,19 @@ export async function compressSleepMemories(
         language,
       });
       weeklySummary = await llmMemoryCompress({ prompt, language });
+      const weeklyMemory: Memory = {
+        id: `wmem-${randomUUID().slice(0, 8)}`,
+        tick: currentTick,
+        importance: 4,
+        content: weeklySummary,
+      };
+      character.longMemory.push(weeklyMemory);
+
+      // 删除已被压缩的 7 条日记忆
+      character.dailyMemory.splice(character.dailyMemory.length - 7, 7);
     } catch {
-      // 周压缩失败：仍然进行日压缩的后续步骤
-      weeklySummary = "（周摘要生成失败）";
+      // 周压缩失败：保留 7 条日记忆，下次睡觉时重试
     }
-
-    const weeklyMemory: Memory = {
-      id: `wmem-${randomUUID().slice(0, 8)}`,
-      tick: currentTick,
-      importance: 4,
-      content: weeklySummary,
-    };
-    character.longMemory.push(weeklyMemory);
-
-    // 删除已被压缩的 7 条日记忆
-    character.dailyMemory.splice(character.dailyMemory.length - 7, 7);
   }
 
   // 清空短期记忆

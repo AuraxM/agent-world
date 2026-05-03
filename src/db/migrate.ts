@@ -60,6 +60,9 @@ const STATEMENTS = [
     age INTEGER NOT NULL DEFAULT 30,
     gender TEXT NOT NULL DEFAULT 'male',
     profession TEXT NOT NULL DEFAULT 'farmer',
+    money INTEGER NOT NULL DEFAULT 0,
+    income_level INTEGER NOT NULL DEFAULT 0,
+    expense_exempt INTEGER NOT NULL DEFAULT 0,
     biography TEXT NOT NULL DEFAULT '',
     origin TEXT NOT NULL DEFAULT 'local',
     location_id TEXT NOT NULL,
@@ -92,6 +95,17 @@ const STATEMENTS = [
     created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
   )`,
   `CREATE INDEX IF NOT EXISTS snapshots_world_tick_idx ON snapshots(world_id, tick)`,
+  `CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
+    tick INTEGER NOT NULL,
+    character_id TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    category TEXT NOT NULL CHECK(category IN ('expense','income','transfer_in','transfer_out')),
+    description TEXT NOT NULL DEFAULT '',
+    counterparty_id TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS transactions_world_char_tick_idx ON transactions(world_id, character_id, tick)`,
   `CREATE TABLE IF NOT EXISTS agent_thoughts (
     world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
     character_id TEXT NOT NULL,
@@ -137,6 +151,9 @@ const CHARACTERS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
   { name: "profession", ddl: "ALTER TABLE characters ADD COLUMN profession TEXT NOT NULL DEFAULT 'farmer'" },
   { name: "biography", ddl: "ALTER TABLE characters ADD COLUMN biography TEXT NOT NULL DEFAULT ''" },
   { name: "origin", ddl: "ALTER TABLE characters ADD COLUMN origin TEXT NOT NULL DEFAULT 'local'" },
+  { name: "money", ddl: "ALTER TABLE characters ADD COLUMN money INTEGER NOT NULL DEFAULT 0" },
+  { name: "income_level", ddl: "ALTER TABLE characters ADD COLUMN income_level INTEGER NOT NULL DEFAULT 0" },
+  { name: "expense_exempt", ddl: "ALTER TABLE characters ADD COLUMN expense_exempt INTEGER NOT NULL DEFAULT 0" },
 ];
 
 const WORLDS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [

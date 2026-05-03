@@ -4,7 +4,7 @@
  * 复用 `src/domain/enums.ts` 的封闭枚举，确保配置层和运行时层共享同一份词汇表。
  */
 import { z } from "zod";
-import { NODE_TAGS, OBJECTIVE_RELATION_KINDS, PROFESSIONS, GENDERS } from "@/domain/enums";
+import { NODE_TAGS, OBJECTIVE_RELATION_KINDS, PROFESSIONS, GENDERS, CHARACTER_ORIGINS } from "@/domain/enums";
 import { PersonalitySchema, RelationSchema } from "@/domain/schemas";
 import type { MapConfig, CharacterTemplate, MapNodeConfig } from "./types";
 
@@ -97,6 +97,7 @@ export const CharacterTemplateSchema: z.ZodType<CharacterTemplate> = z.object({
   gender: z.enum(GENDERS),
   profession: z.enum(PROFESSIONS),
   biography: z.string().min(1),
+  origin: z.enum(CHARACTER_ORIGINS),
   activityNodeId: z.string().min(1).nullable().optional(),
   restNodeId: z.string().min(1).nullable().optional(),
   sleepWindow: SleepWindowSchema.optional(),

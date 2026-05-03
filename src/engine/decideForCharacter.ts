@@ -54,11 +54,23 @@ function fallbackWait(c: Character, reason: string): Action {
   };
 }
 
-function buildHomeMap(): Map<string, string> {
+function buildActivityNodeMap(): Map<string, string> {
   const m = new Map<string, string>();
   try {
     for (const tpl of loadAllCharacters()) {
-      if (tpl.homeNodeId) m.set(tpl.id, tpl.homeNodeId);
+      if (tpl.activityNodeId) m.set(tpl.id, tpl.activityNodeId);
+    }
+  } catch {
+    /* configs 不可读时静默 */
+  }
+  return m;
+}
+
+function buildRestNodeMap(): Map<string, string> {
+  const m = new Map<string, string>();
+  try {
+    for (const tpl of loadAllCharacters()) {
+      if (tpl.restNodeId) m.set(tpl.id, tpl.restNodeId);
     }
   } catch {
     /* configs 不可读时静默 */
@@ -112,9 +124,12 @@ export async function decideForCharacter(
   if (!c) throw new Error(`character not in world: ${characterId}`);
 
   const fromTick = world.currentTick;
-  const homeMap = buildHomeMap();
-  const homeNodeId = homeMap.get(c.id) ?? null;
-  c.homeNodeId = homeNodeId;
+  const activityMap = buildActivityNodeMap();
+  const restMap = buildRestNodeMap();
+  const activityNodeId = activityMap.get(c.id) ?? null;
+  const restNodeId = restMap.get(c.id) ?? null;
+  c.activityNodeId = activityNodeId;
+  c.restNodeId = restNodeId;
   const sleepWindow = getSleepWindow(c.id);
   c.sleepWindow = sleepWindow;
 
@@ -131,7 +146,8 @@ export async function decideForCharacter(
     nodes,
     currentTick: fromTick,
     recentThoughts,
-    homeNodeId,
+    activityNodeId,
+    restNodeId,
   });
   const ctx = buildActionContext(c, nodes, characters);
   const baseTime = timeOfDay(fromTick);

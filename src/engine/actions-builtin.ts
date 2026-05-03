@@ -187,6 +187,16 @@ export const sleepAction: ActionDefinition = {
     return {
       memory: `我在 ${ctx.here.name} 躺下准备睡觉。`,
       event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 躺下入睡。`, intensity: 1 },
+      stateChanges: [{
+        kind: "setOngoingAction",
+        action: {
+          type: "sleep",
+          startedAt: ctx.tick,
+          endsAt: ctx.tick + (8 * TICKS_PER_HOUR),
+          description: `在 ${ctx.here.name} 睡觉`,
+          interruptThreshold: 4,
+        },
+      }],
     };
   },
   onComplete(ctx) {

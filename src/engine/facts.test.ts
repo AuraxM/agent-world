@@ -79,11 +79,11 @@ const baseNodes: MapNode[] = [
 ];
 
 describe("deriveAggregatedFacts", () => {
-  it("空历史：hours = currentTick；其它 undefined；counts 空", () => {
+  it("空历史：hours = floor(currentTick/5)；其它 undefined；counts 空", () => {
     const facts = deriveAggregatedFacts({
       character: baseCharacter,
       nodes: baseNodes,
-      currentTick: 8,
+      currentTick: 40,
       recentThoughts: [],
       homeNodeId: "node-home",
     });
@@ -109,12 +109,12 @@ describe("deriveAggregatedFacts", () => {
     const facts = deriveAggregatedFacts({
       character: baseCharacter,
       nodes: baseNodes,
-      currentTick: 11,
+      currentTick: 24,
       recentThoughts: thoughts,
       homeNodeId: null,
     });
 
-    // 最近一次成功 move 是 tick=8 → hours = 11 - 8 = 3
+    // 最近一次成功 move 是 tick=8 → hours = (24 - 8) / 5 = 3
     expect(facts.hoursAtCurrentLocation).toBe(3);
     expect(facts.lastEatTick).toBe(7);
   });
@@ -127,11 +127,11 @@ describe("deriveAggregatedFacts", () => {
     const facts = deriveAggregatedFacts({
       character: baseCharacter,
       nodes: baseNodes,
-      currentTick: 11,
+      currentTick: 24,
       recentThoughts: thoughts,
       homeNodeId: null,
     });
-    expect(facts.hoursAtCurrentLocation).toBe(11 - 8);
+    expect(facts.hoursAtCurrentLocation).toBe(3);
   });
 
   it("lastRestTick 取最近一次成功 rest", () => {
@@ -151,8 +151,8 @@ describe("deriveAggregatedFacts", () => {
     expect(facts.lastRestTick).toBe(8);
   });
 
-  it("todayActionCounts 只统计最近 24 tick", () => {
-    // currentTick = 30，window = [6, 30)
+  it("todayActionCounts 只统计最近 120 tick (= 24 游戏小时)", () => {
+    // currentTick = 126，window = [6, 126)
     const thoughts: AgentThought[] = [
       mkThought(29, mkAction("speak")),
       mkThought(28, mkAction("speak")),
@@ -163,7 +163,7 @@ describe("deriveAggregatedFacts", () => {
     const facts = deriveAggregatedFacts({
       character: baseCharacter,
       nodes: baseNodes,
-      currentTick: 30,
+      currentTick: 126,
       recentThoughts: thoughts,
       homeNodeId: null,
     });

@@ -402,7 +402,7 @@ export function timeOfDay(
 }
 
 // ---------------------------------------------------------------------------
-// action names (full 23-set)
+// action names (full 28-set)
 // ---------------------------------------------------------------------------
 
 const ACTION_NAMES: Record<ActionType, string> = {
@@ -412,7 +412,8 @@ const ACTION_NAMES: Record<ActionType, string> = {
   rest: "休息",
   eat: "进食",
   read: "阅读",
-  work: "工作/学习",
+  study: "学习",
+  work: "工作",
   use_ability: "使用能力",
   sleep: "睡觉",
   nap: "小睡",

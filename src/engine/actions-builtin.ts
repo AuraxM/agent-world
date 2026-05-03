@@ -210,6 +210,23 @@ export const moveAction: ActionDefinition = {
   },
 };
 
+export const waitAction: ActionDefinition = {
+  type: "wait",
+  duration: "instant",
+  check(_ctx) {
+    return true;
+  },
+  hint(ctx) {
+    const hour = Math.floor(ctx.tick / TICKS_PER_HOUR) % 24;
+    return `等待（当前 world time ${hour}:00，原地停留一 tick）`;
+  },
+  execute(ctx, _input) {
+    return {
+      memory: `我在 ${ctx.here.name} 等待了一会儿。`,
+    };
+  },
+};
+
 export const BUILTIN_ACTIONS: ActionDefinition[] = [
   eatAction,
   batheAction,
@@ -219,4 +236,5 @@ export const BUILTIN_ACTIONS: ActionDefinition[] = [
   speakAction,
   sleepAction,
   moveAction,
+  waitAction,
 ];

@@ -6,7 +6,6 @@ import {
   tickRangeDesc,
   isSleepTick,
   getCategoryIcon,
-  getCategoryLabel,
   getCategoryStyle,
   TICK_WIDTH,
   stackEventsAtTick,
@@ -165,16 +164,6 @@ describe("getCategoryIcon", () => {
 
   it("returns empty for unknown", () => {
     expect(getCategoryIcon("unknown" as any)).toBe("");
-  });
-});
-
-describe("getCategoryLabel", () => {
-  it("maps known category", () => {
-    expect(getCategoryLabel("action")).toBe("行动");
-  });
-
-  it("returns raw category for unknown", () => {
-    expect(getCategoryLabel("custom_tag" as any)).toBe("custom_tag");
   });
 });
 

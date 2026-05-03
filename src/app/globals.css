@@ -502,11 +502,6 @@ body {
   white-space: nowrap;
 }
 
-.gantt-row__header {
-  flex-shrink: 0;
-  border-right: var(--ring-1) solid var(--border-amber);
-}
-
 .gantt-popup {
   background: var(--panel);
   border: var(--ring-2) solid var(--border);

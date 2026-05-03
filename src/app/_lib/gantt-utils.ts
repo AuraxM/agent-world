@@ -14,17 +14,6 @@ export const CATEGORY_ICONS: Record<string, string> = {
   env: "🌦️",
 };
 
-export const CATEGORY_LABELS: Record<string, string> = {
-  action: "行动",
-  social: "社交",
-  burst: "突发",
-  quest: "任务",
-  inner: "独白",
-  system: "休眠",
-  time: "时间",
-  env: "环境",
-};
-
 export const CATEGORY_STYLES: Record<string, { bg: string; border: string }> = {
   action:  { bg: "rgba(92,156,230,0.25)", border: "rgba(92,156,230,0.45)" },
   social:  { bg: "rgba(108,191,108,0.25)", border: "rgba(108,191,108,0.45)" },
@@ -43,10 +32,6 @@ export const FALLBACK_STYLE = {
 
 export function getCategoryIcon(category: string): string {
   return CATEGORY_ICONS[category] ?? "";
-}
-
-export function getCategoryLabel(category: string): string {
-  return CATEGORY_LABELS[category] ?? category;
 }
 
 export function getCategoryStyle(category: string): { bg: string; border: string } {

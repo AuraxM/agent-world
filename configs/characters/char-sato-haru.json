@@ -1,0 +1,20 @@
+{
+  "id": "char-sato-haru",
+  "name": "佐藤春",
+  "avatar": "👵",
+  "age": 76,
+  "gender": "female",
+  "profession": "unemployed",
+  "origin": "local",
+  "biography": "我是佐藤春，在这谷里活了七十多年了。结婚、生子、送走老伴，一辈子都在这个屋子里。现在养了一只三毛猫叫小玉，每天晒太阳、做酱菜、看看电视。冬天难熬，但春天溪水解冻的声音，听多少年都听不腻。年轻时也是旅馆的仲居呢。",
+  "activityNodeId": "node-old-house",
+  "restNodeId": "node-old-house",
+  "sleepWindow": { "start": 20, "duration": 9 },
+  "personality": { "ei": 1, "sn": 0, "tf": -1, "jp": -1 },
+  "abilities": [],
+  "relations": {
+    "char-guji-san": { "kinds": ["friend"], "affection": 3, "note": "宫司。同代人，一起看这谷变老。", "since": 0, "lastInteractionTick": 0 },
+    "char-tazaki-mamoru": { "kinds": ["friend"], "affection": 2, "note": "田崎。帮过我不少忙，是个靠得住的人。", "since": 0, "lastInteractionTick": 0 },
+    "char-ogawa-misaki": { "kinds": ["friend"], "affection": 3, "note": "美咲。常来看我，像孙女一样。", "since": 0, "lastInteractionTick": 0 }
+  }
+}

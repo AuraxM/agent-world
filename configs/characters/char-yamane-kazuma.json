@@ -1,0 +1,20 @@
+{
+  "id": "char-yamane-kazuma",
+  "name": "山根一马",
+  "avatar": "🪓",
+  "age": 44,
+  "gender": "male",
+  "profession": "hunter",
+  "origin": "local",
+  "biography": "我是山根。打猎、伐木，一个人住在山道入口的小屋。每两周下一次山，卖毛皮和山菜，买烟买酒，去「围炉里」喝两杯。不需要太多人，也不需要太多话。冬天最难熬——但雪停之后的第一个早晨，从山顶看谷底，什么都值了。",
+  "activityNodeId": "node-hunter-hut",
+  "restNodeId": "node-hunter-hut",
+  "sleepWindow": { "start": 21, "duration": 8 },
+  "personality": { "ei": -3, "sn": -2, "tf": 2, "jp": 0 },
+  "abilities": [],
+  "relations": {
+    "char-yoshida-driver": { "kinds": ["friend"], "affection": 2, "note": "吉田。帮我运货下山，偶尔捎句话。", "since": 0, "lastInteractionTick": 0 },
+    "char-matsuoka-sayo": { "kinds": ["friend"], "affection": 2, "note": "「围炉里」女将。两周去喝一次，是下山最重要的一站。", "since": 0, "lastInteractionTick": 0 },
+    "char-tanimura-kinuyo": { "kinds": ["acquaintance"], "affection": 0, "note": "绢代。帮我收皮毛订单。", "since": 0, "lastInteractionTick": 0 }
+  }
+}

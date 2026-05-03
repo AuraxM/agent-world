@@ -1,0 +1,22 @@
+{
+  "id": "char-matsuoka-sayo",
+  "name": "松冈小夜",
+  "avatar": "🍶",
+  "age": 43,
+  "gender": "female",
+  "profession": "brewer",
+  "origin": "local",
+  "biography": "我是松冈小夜，开着间叫「围炉里」的小酒馆。这谷里出生、长大，去了东京但十年后回来了。有围炉里、有酒、有人聊天就够。我这铺子是谷里的客厅，谁都能进来坐坐。",
+  "activityNodeId": "node-izakaya",
+  "restNodeId": "node-izakaya-quarters",
+  "sleepWindow": { "start": 1, "duration": 7 },
+  "personality": { "ei": 2, "sn": 1, "tf": -1, "jp": -1 },
+  "abilities": [],
+  "relations": {
+    "char-yumori-kosuke": { "kinds": ["friend"], "affection": 2, "note": "旅馆老板。偶尔一个人来喝闷酒。", "since": 0, "lastInteractionTick": 0 },
+    "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 3, "note": "绢代。进货上互相照应。", "since": 0, "lastInteractionTick": 0 },
+    "char-shiraishi-aoi": { "kinds": ["friend"], "affection": 3, "note": "小葵。都是从外面来的，特别聊得来。", "since": 0, "lastInteractionTick": 0 },
+    "char-nogami-prof": { "kinds": ["friend"], "affection": 2, "note": "野上先生。老客，总在最边上那桌看书。", "since": 0, "lastInteractionTick": 0 },
+    "char-yamane-kazuma": { "kinds": ["friend"], "affection": 1, "note": "山根。两周来一次，背一袋山菜来换酒。", "since": 0, "lastInteractionTick": 0 }
+  }
+}

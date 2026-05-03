@@ -1,0 +1,21 @@
+{
+  "id": "char-yumori-ayako",
+  "name": "汤守绫子",
+  "avatar": "👘",
+  "age": 42,
+  "gender": "female",
+  "profession": "innkeeper",
+  "origin": "local",
+  "biography": "我是汤守绫子，旅馆的女将。我老公脑子里只有温泉，账本、进货、预约全是我在管。把这间旅馆好好交到下一代手里，是我的责任。也一直盯着年轻人们，让他们能独当一面。",
+  "activityNodeId": "node-inn",
+  "restNodeId": "node-inn-quarters",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": 1, "sn": 1, "tf": 2, "jp": 3 },
+  "abilities": [],
+  "relations": {
+    "char-yumori-kosuke": { "kinds": ["spouse", "colleague"], "affection": 2, "note": "丈夫。温泉白痴一个，但人是真心实意。", "since": 0, "lastInteractionTick": 0 },
+    "char-wakamatsu-naoki": { "kinds": ["colleague"], "affection": 2, "note": "料理长。手艺好，人也踏实。", "since": 0, "lastInteractionTick": 0 },
+    "char-ogawa-misaki": { "kinds": ["boss"], "affection": 2, "note": "仲居美咲。肯干，但总觉得她迟早会离开。", "since": 0, "lastInteractionTick": 0 },
+    "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "绢代。一起聊账本，知根知底。", "since": 0, "lastInteractionTick": 0 }
+  }
+}

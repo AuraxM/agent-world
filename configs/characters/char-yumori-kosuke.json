@@ -1,0 +1,23 @@
+{
+  "id": "char-yumori-kosuke",
+  "name": "汤守浩介",
+  "avatar": "♨️",
+  "age": 45,
+  "gender": "male",
+  "profession": "innkeeper",
+  "origin": "local",
+  "biography": "我是汤守浩介，旅馆「汤守」第三代当家。祖父在这谷里掘出温泉、盖了旅馆，到我手里已经四十年。每天就是管源泉、修老房子，一天就过去了。嘴笨不会说话，但对温泉的心思谁也不输。我老婆绫子是我斗不过的人。",
+  "activityNodeId": "node-inn",
+  "restNodeId": "node-inn-quarters",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": -1, "sn": -1, "tf": 2, "jp": 1 },
+  "abilities": [],
+  "relations": {
+    "char-yumori-ayako": { "kinds": ["spouse", "colleague"], "affection": 3, "note": "妻子兼女将。嘴上斗不过她，但心里全靠她。", "since": 0, "lastInteractionTick": 0 },
+    "char-wakamatsu-naoki": { "kinds": ["boss", "friend"], "affection": 2, "note": "我家料理长。年轻但手艺扎实。", "since": 0, "lastInteractionTick": 0 },
+    "char-ogawa-misaki": { "kinds": ["boss"], "affection": 1, "note": "仲居。干活勤快，总说想去东京。", "since": 0, "lastInteractionTick": 0 },
+    "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "杂货铺绢代。每天去取邮件，什么都聊两句。", "since": 0, "lastInteractionTick": 0 },
+    "char-matsuoka-sayo": { "kinds": ["friend"], "affection": 2, "note": "酒馆女将小夜。偶尔去喝一杯。", "since": 0, "lastInteractionTick": 0 },
+    "char-guji-san": { "kinds": ["friend"], "affection": 2, "note": "宫司。祭典的筹备总是找他商量。", "since": 0, "lastInteractionTick": 0 }
+  }
+}

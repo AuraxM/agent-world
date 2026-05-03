@@ -1,0 +1,20 @@
+{
+  "id": "char-yoshida-driver",
+  "name": "吉田司机",
+  "avatar": "🚌",
+  "age": 52,
+  "gender": "male",
+  "profession": "mailman",
+  "origin": "local",
+  "biography": "我是吉田，开巴士的。跑汤之谷这条线二十年了，每天三班，从町里翻山进来，风雨无阻。车里最多坐五六个人，更多时候是空车。但我这车，是谷里的生命线——带人进来、带人出去、带包裹、带口信。冬天封路前最后一班车开出时，全谷人都站在路边说再见。",
+  "activityNodeId": "node-bus-stop",
+  "restNodeId": "node-bus-stop",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": 1, "sn": 0, "tf": 1, "jp": 1 },
+  "abilities": [],
+  "relations": {
+    "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 3, "note": "绢代。每天交换邮件和八卦。", "since": 0, "lastInteractionTick": 0 },
+    "char-tazaki-mamoru": { "kinds": ["friend"], "affection": 2, "note": "田崎。早上路过浴场，互相点个头。", "since": 0, "lastInteractionTick": 0 },
+    "char-yamane-kazuma": { "kinds": ["friend"], "affection": 2, "note": "山根。偶尔托我带东西下山。", "since": 0, "lastInteractionTick": 0 }
+  }
+}

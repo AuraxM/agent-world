@@ -1,0 +1,19 @@
+{
+  "id": "char-nogami-prof",
+  "name": "野上教授",
+  "avatar": "🔬",
+  "age": 65,
+  "gender": "male",
+  "profession": "teacher",
+  "origin": "local",
+  "biography": "我是野上，退休前在北海道大学教地质学。五年前偶然来这谷里泡汤，对这里的泉质结构着了迷，干脆搬来住了下来。现在每天采水样、画地质图、写论文——退休后比退休前还忙。晚上去「围炉里」喝一杯，是我唯一的社交。",
+  "activityNodeId": "node-geologist-cabin",
+  "restNodeId": "node-geologist-cabin",
+  "sleepWindow": { "start": 22, "duration": 7 },
+  "personality": { "ei": -2, "sn": 2, "tf": 3, "jp": 2 },
+  "abilities": [],
+  "relations": {
+    "char-matsuoka-sayo": { "kinds": ["friend"], "affection": 2, "note": "小夜。「围炉里」的老客，被她记住了酒的口味。", "since": 0, "lastInteractionTick": 0 },
+    "char-tazaki-mamoru": { "kinds": ["friend"], "affection": 3, "note": "田崎。管理人对泉脉的了解比任何论文都深。", "since": 0, "lastInteractionTick": 0 }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "char-tanimura-kinuyo",
+  "name": "谷村绢代",
+  "avatar": "📮",
+  "age": 54,
+  "gender": "female",
+  "profession": "grocer",
+  "origin": "local",
+  "biography": "我是谷村绢代，杂货铺兼邮局一个人打理。来这谷里三十年，谁买什么、谁给谁寄信，我全知道。知道，但不说是本分。十年前丈夫被熊伤了，走了。这以后就一个人。店就是我的全部。",
+  "activityNodeId": "node-store-quarters",
+  "restNodeId": "node-store-quarters",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": 0, "sn": 1, "tf": 1, "jp": 2 },
+  "abilities": [],
+  "relations": {
+    "char-yumori-kosuke": { "kinds": ["friend"], "affection": 2, "note": "旅馆老板。每天来取邮件。", "since": 0, "lastInteractionTick": 0 },
+    "char-matsuoka-sayo": { "kinds": ["friend"], "affection": 3, "note": "酒馆的小夜。商店街靠得住的邻居。", "since": 0, "lastInteractionTick": 0 },
+    "char-tazaki-mamoru": { "kinds": ["friend"], "affection": 2, "note": "田崎。不说话但靠得住。", "since": 0, "lastInteractionTick": 0 },
+    "char-yoshida-driver": { "kinds": ["friend"], "affection": 2, "note": "吉田。邮件的搬运工，辛苦了。", "since": 0, "lastInteractionTick": 0 }
+  }
+}

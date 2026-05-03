@@ -177,11 +177,15 @@ export interface Character {
   abilities: Ability[];
   /** Stage 1: short memory FIFO 50 */
   shortMemory: Memory[];
-  /** Stage 1: 不使用 long memory，仅占位 */
+  /** 中期日记忆：睡觉时由 LLM 压缩清醒期 shortMemory 生成 */
+  dailyMemory: Memory[];
+  /** 复用为周记忆：每 7 条日记忆压缩为 1 条周记忆 */
   longMemory: Memory[];
   /** key 是 targetId */
   relations: Record<string, Relation>;
   currentAction?: OngoingAction;
+  /** 上次睡觉（压缩）的 tick；首次睡觉前为 0 */
+  lastSleepTick: Tick;
   /** API 注入：最近一轮的完整 Action（含 reasoning），DB 不存。 */
   lastThought?: AgentThought;
   /**

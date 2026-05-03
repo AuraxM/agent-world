@@ -91,9 +91,11 @@ export const characters = sqliteTable(
       .default('{"mood":0,"stress":0,"social_satiety":0}'),
     abilitiesJson: text("abilities_json").notNull().default("[]"),
     shortMemoryJson: text("short_memory_json").notNull().default("[]"),
+    dailyMemoryJson: text("daily_memory_json").notNull().default("[]"),
     longMemoryJson: text("long_memory_json").notNull().default("[]"),
     relationsJson: text("relations_json").notNull().default("{}"),
     currentActionJson: text("current_action_json"),
+    lastSleepTick: integer("last_sleep_tick").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),

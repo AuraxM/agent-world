@@ -91,11 +91,13 @@ export function loadWorld(worldId: string): LoadedWorld {
     emotion: JSON.parse(c.emotionJson),
     abilities: JSON.parse(c.abilitiesJson),
     shortMemory: JSON.parse(c.shortMemoryJson),
+    dailyMemory: JSON.parse(c.dailyMemoryJson),
     longMemory: JSON.parse(c.longMemoryJson),
     relations: JSON.parse(c.relationsJson),
     currentAction: c.currentActionJson
       ? JSON.parse(c.currentActionJson)
       : undefined,
+    lastSleepTick: c.lastSleepTick,
   }));
 
   if (characters.length > 0) {
@@ -136,11 +138,13 @@ export function saveWorld(loaded: LoadedWorld): void {
           vitalsJson: JSON.stringify(c.vitals),
           emotionJson: JSON.stringify(c.emotion),
           shortMemoryJson: JSON.stringify(c.shortMemory),
+          dailyMemoryJson: JSON.stringify(c.dailyMemory),
           longMemoryJson: JSON.stringify(c.longMemory),
           relationsJson: JSON.stringify(c.relations),
           currentActionJson: c.currentAction
             ? JSON.stringify(c.currentAction)
             : null,
+          lastSleepTick: c.lastSleepTick,
           updatedAt: now,
         })
         .where(eq(schema.characters.id, c.id))

@@ -72,9 +72,11 @@ const STATEMENTS = [
     emotion_json TEXT NOT NULL DEFAULT '{"mood":0,"stress":0,"social_satiety":0}',
     abilities_json TEXT NOT NULL DEFAULT '[]',
     short_memory_json TEXT NOT NULL DEFAULT '[]',
+    daily_memory_json TEXT NOT NULL DEFAULT '[]',
     long_memory_json TEXT NOT NULL DEFAULT '[]',
     relations_json TEXT NOT NULL DEFAULT '{}',
     current_action_json TEXT,
+    last_sleep_tick INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     PRIMARY KEY (world_id, id)
@@ -156,6 +158,8 @@ const CHARACTERS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
   { name: "income_level", ddl: "ALTER TABLE characters ADD COLUMN income_level INTEGER NOT NULL DEFAULT 0" },
   { name: "expense_exempt", ddl: "ALTER TABLE characters ADD COLUMN expense_exempt INTEGER NOT NULL DEFAULT 0" },
   { name: "income_multiplier", ddl: "ALTER TABLE characters ADD COLUMN income_multiplier REAL NOT NULL DEFAULT 1.0" },
+  { name: "daily_memory_json", ddl: "ALTER TABLE characters ADD COLUMN daily_memory_json TEXT NOT NULL DEFAULT '[]'" },
+  { name: "last_sleep_tick", ddl: "ALTER TABLE characters ADD COLUMN last_sleep_tick INTEGER NOT NULL DEFAULT 0" },
 ];
 
 const WORLDS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [

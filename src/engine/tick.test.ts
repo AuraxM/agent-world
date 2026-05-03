@@ -71,9 +71,11 @@ beforeAll(async () => {
       emotion_json TEXT NOT NULL DEFAULT '{"mood":0,"stress":0,"social_satiety":0}',
       abilities_json TEXT NOT NULL DEFAULT '[]',
       short_memory_json TEXT NOT NULL DEFAULT '[]',
+      daily_memory_json TEXT NOT NULL DEFAULT '[]',
       long_memory_json TEXT NOT NULL DEFAULT '[]',
       relations_json TEXT NOT NULL DEFAULT '{}',
       current_action_json TEXT,
+      last_sleep_tick INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
       updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
       PRIMARY KEY (world_id, id)
@@ -453,8 +455,10 @@ describe("tick engine v0", () => {
       emotion: { mood: 0, stress: 0, social_satiety: 0 },
       abilities: [],
       shortMemory: [],
+      dailyMemory: [],
       longMemory: [],
       relations: {},
+      lastSleepTick: 0,
     };
     const node: any = {
       id: "n1", worldId: "w", parentId: null, name: "测试节点",

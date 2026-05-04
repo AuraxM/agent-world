@@ -285,6 +285,7 @@ export const EndConversationToolSchema = {
 // Dialog summary
 export const DialogSummarySchema = z.object({
   summary: z.string().min(1).max(500),
+  memorize: z.array(z.object({ target_id: z.string().min(1), impression: z.string() })).optional(),
 });
 export type DialogSummaryPayload = z.infer<typeof DialogSummarySchema>;
 
@@ -293,6 +294,18 @@ export const DialogSummaryToolSchema = {
   type: "object" as const,
   properties: {
     summary: { type: "string", description: "1-2 句话总结这次对话的内容与氛围。" },
+    memorize: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          target_id: { type: "string", description: "要记录印象的角色 ID。" },
+          impression: { type: "string", description: "对该角色的新印象。留空代表忘记。" },
+        },
+        required: ["target_id", "impression"],
+      },
+      description: "可选，对话后需要更新的印象列表。",
+    },
   },
   required: ["summary"],
   additionalProperties: false,

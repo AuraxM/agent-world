@@ -583,11 +583,11 @@ export interface DialogSummaryInput {
 }
 
 /**
- * 对话摘要：返回 summary 字符串。
+ * 对话摘要：返回 summary 字符串和可选的印象更新。
  * 失败重试 1 次，仍失败返回占位摘要。
  */
-export async function llmDialogSummarize(input: DialogSummaryInput): Promise<string> {
-  if (!hasApiKey()) return `（摘要生成失败：双方聊了 ${input.transcript.length} 句）`;
+export async function llmDialogSummarize(input: DialogSummaryInput): Promise<{ summary: string; memorize?: Array<{ target_id: string; impression: string }> }> {
+  if (!hasApiKey()) return { summary: `（摘要生成失败：双方聊了 ${input.transcript.length} 句）` };
 
   const config = getEntryConfig("dialog_summarize");
   const client = getLLMClientForEntry("dialog_summarize");
@@ -644,17 +644,17 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<str
         throw new Error("LLM 没有返回 dialog_summary tool_call");
       }
 
-      const parsed = JSON.parse(toolCall.function.arguments);
+      const parsed = JSON.parse((toolCall as any).function.arguments);
       const result = DialogSummarySchema.safeParse(parsed);
       if (!result.success) {
         throw new Error(`DialogSummary 参数不符合 schema：${result.error.message}`);
       }
-      return result.data.summary;
+      return { summary: result.data.summary, memorize: result.data.memorize };
     } catch {
       if (attempt === 0) continue;
     }
   }
-  return `（摘要生成失败：双方聊了 ${input.transcript.length} 句）`;
+  return { summary: `（摘要生成失败：双方聊了 ${input.transcript.length} 句）` };
 }
 
 /**

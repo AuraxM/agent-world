@@ -849,10 +849,10 @@ export function buildDialogSummaryPrompt(args: {
 
   const instruction =
     language === "zh"
-      ? `以下是一段对话的完整记录。请用 1-2 句话总结这次对话的核心内容与氛围。调用 submit_dialog_summary 工具返回你的摘要。\n\n对话：\n${history}`
+      ? `以下是一段对话的完整记录。请用 1-2 句话总结这次对话的核心内容与氛围。如果对话让你对对方产生了新的印象，可以在 memorize 中更新。调用 submit_dialog_summary 工具返回你的摘要。\n\n对话：\n${history}`
       : language === "en"
-        ? `Below is the transcript of a conversation. Summarize its core content and atmosphere in 1-2 sentences. Call submit_dialog_summary to return your summary.\n\nConversation:\n${history}`
-        : `以下は会話の文字起こしです。この会話の核心的な内容と雰囲気を 1〜2 文で要約してください。submit_dialog_summary を呼び出して要約を返してください。\n\n会話：\n${history}`;
+        ? `Below is the transcript of a conversation. Summarize its core content and atmosphere in 1-2 sentences. If the conversation gave you new impressions of the other person, you may update them in memorize. Call submit_dialog_summary to return your summary.\n\nConversation:\n${history}`
+        : `以下は会話の文字起こしです。この会話の核心的な内容と雰囲気を 1〜2 文で要約してください。会話を通じて相手に対する新しい印象があれば、memorize で更新できます。submit_dialog_summary を呼び出して要約を返してください。\n\n会話：\n${history}`;
 
   return instruction;
 }

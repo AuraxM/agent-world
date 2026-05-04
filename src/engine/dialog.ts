@@ -101,7 +101,7 @@ export type SummaryDecideFn = (input: {
   responderId: string;
   transcript: DialogTurn[];
   language: Language;
-}) => Promise<string>;
+}) => Promise<{ summary: string; memorize?: Array<{ target_id: string; impression: string }> }>;
 
 export type SalvageDecideFn = (input: {
   character: Character;
@@ -605,17 +605,32 @@ export async function runDialogPhase(
 
     if (conv.status === "ended") {
       let summary: string;
+      let memorize: Array<{ target_id: string; impression: string }> | undefined;
       try {
-        summary = await retryOnce(() =>
+        const result = await retryOnce(() =>
           input.summaryDecide({
             openerName: opener.name, openerId: conv.initiatorId,
             responderName: responder.name, responderId: conv.acceptorId,
             transcript: conv.transcript, language: input.language,
           }),
         );
+        summary = result.summary;
+        memorize = result.memorize;
       } catch {
         summary = `（摘要生成失败：双方聊了 ${conv.transcript.length} 句）`;
       }
+
+      if (memorize) {
+        for (const m of memorize) {
+          if (m.target_id === conv.acceptorId) {
+            opener.impressionBook[m.target_id] = m.impression.trim();
+          }
+          if (m.target_id === conv.initiatorId) {
+            responder.impressionBook[m.target_id] = m.impression.trim();
+          }
+        }
+      }
+
       const maxImportance = clamp(
         Math.max(
           rawActions.find((a) => a.actorId === conv.initiatorId)?.selfImportance ?? 2,

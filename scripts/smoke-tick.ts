@@ -1,6 +1,6 @@
 import { tick } from "@/engine/tick";
 
-const DEFAULT_WORLD_ID = "world-morning-town";
+const DEFAULT_WORLD_ID = "world-yu-no-tani";
 
 async function main() {
   const worldId = process.argv[2] ?? DEFAULT_WORLD_ID;

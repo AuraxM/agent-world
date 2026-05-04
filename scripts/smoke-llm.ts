@@ -23,7 +23,7 @@ async function main() {
   console.log(`Base URL: ${active.baseUrl}`);
   console.log("---");
 
-  const worldId = process.argv[2] ?? "world-morning-town";
+  const worldId = process.argv[2] ?? "world-yu-no-tani";
   const t0 = Date.now();
   const r = await tick(worldId);
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);

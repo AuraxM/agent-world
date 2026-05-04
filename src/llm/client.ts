@@ -37,7 +37,7 @@ function buildClient(providerId: string): OpenAI {
   });
 }
 
-function resolveProviderId(entryName: string): string {
+export function resolveProviderId(entryName: string): string {
   const config = getEntryConfig(entryName);
   return config.providerId ?? getDefaultProviderId();
 }

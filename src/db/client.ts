@@ -23,12 +23,69 @@ declare global {
   var __agent_world_db__: ReturnType<typeof createDb> | undefined;
 }
 
+function ensureColumns(sqlite: Database.Database) {
+  const nodeCols = sqlite
+    .prepare(`PRAGMA table_info(nodes)`)
+    .all() as { name: string }[];
+  const haveNodeCols = new Set(nodeCols.map((c) => c.name));
+  for (const [name, ddl] of NODE_MIGRATIONS) {
+    if (!haveNodeCols.has(name)) sqlite.exec(ddl);
+  }
+  const charCols = sqlite
+    .prepare(`PRAGMA table_info(characters)`)
+    .all() as { name: string }[];
+  const haveCharCols = new Set(charCols.map((c) => c.name));
+  for (const [name, ddl] of CHAR_MIGRATIONS) {
+    if (!haveCharCols.has(name)) sqlite.exec(ddl);
+  }
+  const worldCols = sqlite
+    .prepare(`PRAGMA table_info(worlds)`)
+    .all() as { name: string }[];
+  const haveWorldCols = new Set(worldCols.map((c) => c.name));
+  for (const [name, ddl] of WORLD_MIGRATIONS) {
+    if (!haveWorldCols.has(name)) sqlite.exec(ddl);
+  }
+}
+
+/** Keep in sync with migrate.ts CHARACTERS_NEW_COLUMNS. */
+const CHAR_MIGRATIONS: Array<[string, string]> = [
+  ["emotion_json", `ALTER TABLE characters ADD COLUMN emotion_json TEXT NOT NULL DEFAULT '{"mood":0,"stress":0,"social_satiety":0}'`],
+  ["age", "ALTER TABLE characters ADD COLUMN age INTEGER NOT NULL DEFAULT 30"],
+  ["gender", "ALTER TABLE characters ADD COLUMN gender TEXT NOT NULL DEFAULT 'male'"],
+  ["profession", "ALTER TABLE characters ADD COLUMN profession TEXT NOT NULL DEFAULT 'farmer'"],
+  ["biography", "ALTER TABLE characters ADD COLUMN biography TEXT NOT NULL DEFAULT ''"],
+  ["origin", "ALTER TABLE characters ADD COLUMN origin TEXT NOT NULL DEFAULT 'local'"],
+  ["money", "ALTER TABLE characters ADD COLUMN money INTEGER NOT NULL DEFAULT 0"],
+  ["income_level", "ALTER TABLE characters ADD COLUMN income_level INTEGER NOT NULL DEFAULT 0"],
+  ["expense_exempt", "ALTER TABLE characters ADD COLUMN expense_exempt INTEGER NOT NULL DEFAULT 0"],
+  ["income_multiplier", "ALTER TABLE characters ADD COLUMN income_multiplier REAL NOT NULL DEFAULT 1.0"],
+  ["daily_memory_json", "ALTER TABLE characters ADD COLUMN daily_memory_json TEXT NOT NULL DEFAULT '[]'"],
+  ["last_sleep_tick", "ALTER TABLE characters ADD COLUMN last_sleep_tick INTEGER NOT NULL DEFAULT 0"],
+];
+
+/** Keep in sync with migrate.ts NODES_NEW_COLUMNS. */
+const NODE_MIGRATIONS: Array<[string, string]> = [
+  ["x", "ALTER TABLE nodes ADD COLUMN x INTEGER"],
+  ["y", "ALTER TABLE nodes ADD COLUMN y INTEGER"],
+  ["w", "ALTER TABLE nodes ADD COLUMN w INTEGER"],
+  ["h", "ALTER TABLE nodes ADD COLUMN h INTEGER"],
+  ["sprite_key", "ALTER TABLE nodes ADD COLUMN sprite_key TEXT"],
+  ["is_entry", "ALTER TABLE nodes ADD COLUMN is_entry INTEGER NOT NULL DEFAULT 0"],
+  ["travel_cost", "ALTER TABLE nodes ADD COLUMN travel_cost INTEGER"],
+];
+
+/** Keep in sync with migrate.ts WORLDS_NEW_COLUMNS. */
+const WORLD_MIGRATIONS: Array<[string, string]> = [
+  ["map_id", "ALTER TABLE worlds ADD COLUMN map_id TEXT NOT NULL DEFAULT ''"],
+];
+
 function createDb() {
   const url = process.env.DATABASE_URL ?? DEFAULT_DB_PATH;
   ensureDir(url);
   const sqlite = new Database(url);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
+  ensureColumns(sqlite);
   return drizzle(sqlite, { schema });
 }
 

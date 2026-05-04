@@ -1,0 +1,25 @@
+{
+  "id": "char-tachibana-yuka",
+  "name": "橘優花",
+  "avatar": "🌸",
+  "age": 24,
+  "gender": "female",
+  "profession": "teacher",
+  "origin": "local",
+  "biography": "我是橘優花，今年刚毕业的新人教师，高校一年级的班主任。国文です。第一周紧张到每天在黑板上写错字，学生偷偷叫我'もらい泣き先生'——因为讲到《山月记》时我比学生还先哭。野中先輩と五十嵐先輩にすごく助けてもらってます。'来年はもっとマシな担任になる'——そう書いて机に貼ってある。",
+  "activityNodeId": "node-hs-staff",
+  "restNodeId": "node-staff-quarters",
+  "sleepWindow": { "start": 23, "duration": 6 },
+  "personality": { "ei": -2, "sn": 2, "tf": 3, "jp": 1 },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 3,
+  "health": 3,
+  "speakingStyle": "说话温柔但紧张时结巴。很努力，学生其实很喜欢她——只是她自己还不知道。",
+  "relations": {
+    "char-nonaka-toshiki": { "kinds": ["colleague"], "affection": 2, "note": "野中先輩。教学のことでいつも相談に乗ってくれる——本当に感謝。", "since": 0, "lastInteractionTick": 0 },
+    "char-igarashi-mayumi": { "kinds": ["colleague"], "affection": 2, "note": "五十嵐先輩。彼女みたいに学生と自然に話せるようになりたい。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 800,
+  "expenseExempt": false
+}

@@ -1,0 +1,25 @@
+{
+  "id": "char-shinohara-kazuo",
+  "name": "篠原和男",
+  "avatar": "📚",
+  "age": 55,
+  "gender": "male",
+  "profession": "librarian",
+  "origin": "local",
+  "biography": "我是篠原和男，在图书馆工作了二十年。几乎不说话——但对每本书的位置一清二楚。柚月が何を書いているか知っている——彼女の机に置く本は全部、創作と孤独に関するものだ。藤村（书店）とは二十年の付き合いだが、交わした言葉は百にも満たない——'本があれば十分'。",
+  "activityNodeId": "node-library",
+  "restNodeId": "node-staff-quarters",
+  "sleepWindow": { "start": 22, "duration": 7 },
+  "personality": { "ei": -4, "sn": 3, "tf": 1, "jp": 3 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 4,
+  "health": 2,
+  "speakingStyle": "几乎不说话，但会把学生需要的书默默放到他们常坐的座位上。",
+  "relations": {
+    "char-shiraishi-yuzuki": { "kinds": ["teacher"], "affection": 2, "note": "柚月。彼女が書いている小説のテーマは——私の置いた本のリストを見ればわかる。", "since": 0, "lastInteractionTick": 0 },
+    "char-fujimura-fumiya": { "kinds": ["friend"], "affection": 2, "note": "藤村。二十年。言葉はいらない——本を一冊差し出せば十分。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 800,
+  "expenseExempt": false
+}

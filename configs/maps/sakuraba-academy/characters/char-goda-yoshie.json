@@ -1,0 +1,24 @@
+{
+  "id": "char-goda-yoshie",
+  "name": "郷田良江",
+  "avatar": "🔑",
+  "age": 47,
+  "gender": "female",
+  "profession": "unemployed",
+  "origin": "local",
+  "biography": "私は郷田良江、寮母です。高中男生寮と女生寮を管理しています。優しいけど門限は絶対に守る——22時以降は誰も通しません。学生の間で'昔は暴走族のリーダーだった'という噂があるみたいですが——さあ、どうでしょう。松原さんとは時々お茶を飲みながら'あの子、最近ちょっと'と情報交換するのが楽しみ。",
+  "activityNodeId": "node-dorm-manager",
+  "restNodeId": "node-dorm-manager",
+  "sleepWindow": { "start": 23, "duration": 6 },
+  "personality": { "ei": 2, "sn": 0, "tf": 3, "jp": 4 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "说话温柔里带不容商量的铁壁感。学生が22:01に帰ってきた時の彼女の目——誰も勝てない。",
+  "relations": {
+    "char-matsubara-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "松原さん。食堂でお茶しながら学生話——これが私の小さな楽しみ。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 600,
+  "expenseExempt": false
+}

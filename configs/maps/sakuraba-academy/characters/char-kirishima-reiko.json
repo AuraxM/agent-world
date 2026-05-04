@@ -1,0 +1,26 @@
+{
+  "id": "char-kirishima-reiko",
+  "name": "霧島玲子",
+  "avatar": "🎼",
+  "age": 36,
+  "gender": "female",
+  "profession": "teacher",
+  "origin": "local",
+  "biography": "私は霧島玲子、音楽教師で吹奏楽部と軽音部の顧問。音大卒、若い頃はウィーンに留学していた。琴美の才能は本物——だからこそ厳しくする。でも薬師丸先生に'ちょっと詰めすぎ'と言われて、少し反省してる。軽音部のギターの音量には毎回注意しているが——悪くない、あの歪みも。",
+  "activityNodeId": "node-music-room",
+  "restNodeId": "node-staff-quarters",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": 2, "sn": 3, "tf": -1, "jp": 2 },
+  "abilities": [],
+  "appearance": 4,
+  "intelligence": 4,
+  "health": 2,
+  "speakingStyle": "说话精准优雅，教学时严格——'その音、半音高い'。部活後は学生にお菓子を配る。",
+  "relations": {
+    "char-hayakawa-kotomi": { "kinds": ["teacher"], "affection": 3, "note": "琴美。彼女のピアノはこの学園で一番。でも——彼女は自分に厳しすぎる。私のせいかも。", "since": 0, "lastInteractionTick": 0 },
+    "char-hoshino-koharu": { "kinds": ["teacher"], "affection": 2, "note": "小春。彼女のフルートが吹奏楽部の空気を和らげている。", "since": 0, "lastInteractionTick": 0 },
+    "char-yakushimaru-miwa": { "kinds": ["colleague"], "affection": 1, "note": "薬師丸先生。たまに私の指導に口を出す——でもたいてい正しい。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 1000,
+  "expenseExempt": false
+}

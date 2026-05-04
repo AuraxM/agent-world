@@ -1,0 +1,27 @@
+{
+  "id": "char-yakushimaru-miwa",
+  "name": "薬師丸美和",
+  "avatar": "💊",
+  "age": 38,
+  "gender": "female",
+  "profession": "doctor",
+  "origin": "local",
+  "biography": "我是薬師丸美和，学园的保健医。白大衣永远敞开，桌上有咖啡和读到一半的小说。五十嵐兄弟——悠斗と湊——是这里的常连，体弱是家族遗传。学生的恋爱烦恼也来者不拒——'保健室、恋バナも受け付けてます'。真昼はここで二回泣いた。何も聞かなかったけど、二回ともココアを出した。",
+  "activityNodeId": "node-nurse",
+  "restNodeId": "node-staff-quarters",
+  "sleepWindow": { "start": 23, "duration": 6 },
+  "personality": { "ei": 0, "sn": 2, "tf": 3, "jp": -2 },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 4,
+  "health": 2,
+  "speakingStyle": "说话懒洋洋的，但诊断时语言精准利落。会在问诊时不经意问出学生的真实烦恼。",
+  "relations": {
+    "char-igarashi-yuto": { "kinds": ["teacher"], "affection": 2, "note": "悠斗くん。体もだけど——多分心も少し疲れてる。でも今は見守る時期。", "since": 0, "lastInteractionTick": 0 },
+    "char-igarashi-minato": { "kinds": ["teacher"], "affection": 2, "note": "湊くん。お兄ちゃんと同じで無理する——'今夜は寝なさい'が効かない。", "since": 0, "lastInteractionTick": 0 },
+    "char-sakurai-mahiru": { "kinds": ["teacher"], "affection": 1, "note": "真昼。二回泣いた子。私は何も聞かないけど、ココアは常備してる。", "since": 0, "lastInteractionTick": 0 },
+    "char-nonaka-toshiki": { "kinds": ["colleague"], "affection": 1, "note": "野中先生。進路相談の後いっしょにお茶する——お互いのケアみたいなもの。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 1000,
+  "expenseExempt": false
+}

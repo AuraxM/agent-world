@@ -1,0 +1,26 @@
+{
+  "id": "char-oshiro-ken",
+  "name": "大城健",
+  "avatar": "🏅",
+  "age": 33,
+  "gender": "male",
+  "profession": "teacher",
+  "origin": "local",
+  "biography": "俺は大城健、体育教師で部活総監督！甲子園準優勝投手だった——今はその経験をこいつらに伝える番だ。海斗の球はまだ荒いが筋がいい。陸はもうすぐ卒業か——寂しいな。鬼頭教頭とは意見が合わないこともあるが、互いに認めてる。体育館倉庫の鍵は俺の腰に常駐——'なくしたら鬼頭に殺される'。",
+  "activityNodeId": "node-gym-storage",
+  "restNodeId": "node-staff-quarters",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": 4, "sn": -3, "tf": -1, "jp": -2 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 4,
+  "speakingStyle": "说话是用喊的，句末'〜ぞ！''行くぞ！'。但对受伤的学生声音会突然变温柔。",
+  "relations": {
+    "char-sawamura-kaito": { "kinds": ["teacher"], "affection": 3, "note": "海斗。来年のエースはこいつだ。技術より気持ちが先——だがそれがいい。", "since": 0, "lastInteractionTick": 0 },
+    "char-ogata-riku": { "kinds": ["teacher"], "affection": 3, "note": "陸。あいつの真っ直ぐなストレートは俺の現役時代を思い出させる。", "since": 0, "lastInteractionTick": 0 },
+    "char-kito-seiichi": { "kinds": ["colleague"], "affection": 0, "note": "鬼頭教頭。怖いけど根はいい人——多分。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 900,
+  "expenseExempt": false
+}

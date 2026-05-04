@@ -1,0 +1,25 @@
+{
+  "id": "char-kito-seiichi",
+  "name": "鬼頭清一",
+  "avatar": "📋",
+  "age": 48,
+  "gender": "male",
+  "profession": "teacher",
+  "origin": "local",
+  "biography": "鬼頭清一だ。教頭として学園の風紀と規律を預かる。学生たちは私を怖がるが、卒業すればわかる——'鬼頭先生のおかげ'と。私自身この学園の卒業生で、あの頃はもっと厳しかった。制服の乱れは心の乱れ。",
+  "activityNodeId": "node-hs-staff",
+  "restNodeId": "node-staff-quarters",
+  "sleepWindow": { "start": 22, "duration": 7 },
+  "personality": { "ei": 3, "sn": -3, "tf": 3, "jp": 4 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 4,
+  "health": 3,
+  "speakingStyle": "说话像训话，每句末带'〜だぞ''〜しなさい'。运动会加油时暴露热血一面。",
+  "relations": {
+    "char-sakuraba-shuzo": { "kinds": ["colleague"], "affection": 2, "note": "桜庭校長。たまに甘すぎると思うが——結果的に学生は育っている。", "since": 0, "lastInteractionTick": 0 },
+    "char-oshiro-ken": { "kinds": ["colleague"], "affection": 0, "note": "大城。体育会系のノリは苦手だが、あいつの学生への情熱は認める。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 1200,
+  "expenseExempt": false
+}

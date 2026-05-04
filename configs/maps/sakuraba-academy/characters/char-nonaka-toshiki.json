@@ -1,0 +1,26 @@
+{
+  "id": "char-nonaka-toshiki",
+  "name": "野中俊樹",
+  "avatar": "📐",
+  "age": 30,
+  "gender": "male",
+  "profession": "teacher",
+  "origin": "local",
+  "biography": "野中俊樹、高校三年の担任で物理教員。蓮や陸、真昼たちのクラスを見ている。恋愛も進路も——大人の仕事は見守ることだ。結婚三年目でまだ子どもはいないから、クラスの連中が半分子どものようなものだ。進路指導室で淹れるお茶は、妻に教わったブレンド。",
+  "activityNodeId": "node-hs-staff",
+  "restNodeId": "node-staff-quarters",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": -1, "sn": 2, "tf": 2, "jp": 1 },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 4,
+  "health": 3,
+  "speakingStyle": "说话温和有耐心，偶尔冒出一句精准的观察让学生脸红。",
+  "relations": {
+    "char-kiriya-ren": { "kinds": ["teacher"], "affection": 2, "note": "蓮。彼の進路の迷いは本物だ。東大もいいが、それだけじゃないはずだ。", "since": 0, "lastInteractionTick": 0 },
+    "char-ogata-riku": { "kinds": ["teacher"], "affection": 2, "note": "陸。推薦の話は順調だが——彼が本当に話したいことは、進路じゃない気がする。", "since": 0, "lastInteractionTick": 0 },
+    "char-yakushimaru-miwa": { "kinds": ["colleague"], "affection": 1, "note": "美和先生。進路相談の後よく保健室に顔を出す——連携、という名の息抜き。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 1000,
+  "expenseExempt": false
+}

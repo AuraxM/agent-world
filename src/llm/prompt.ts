@@ -1226,3 +1226,58 @@ export function injectTimeMessage(args: {
   const dur = elapsedHours > 0 ? `${elapsedHours} 時間 ${elapsedMinutes} 分` : `${elapsedMinutes} 分`;
   return `もう ${timeStr} です、${dur}（${totalMinutes} 分）話し続けています。`;
 }
+
+// ---------------------------------------------------------------------------
+// Pre-sleep reflection prompt
+// ---------------------------------------------------------------------------
+
+export function buildReflectionPrompt(args: { character: Character; language?: Language }): string {
+  const { character } = args;
+  const language = args.language ?? "zh";
+
+  const shortMemories = character.shortMemory
+    .filter(m => !m.content.includes("[heuristic]"))
+    .map(m => `- ${m.content}`).join("\n");
+  const dailyMemories = character.dailyMemory.slice(-7)
+    .map(m => `- ${m.content}`).join("\n");
+  const longMemories = character.longMemory.slice(-14)
+    .map(m => `- ${m.content}`).join("\n");
+  const impressions = Object.entries(character.impressionBook)
+    .filter(([, v]) => v && v.length > 0)
+    .map(([id, text]) => `- ${id}: ${text}`).join("\n");
+  const goalsText = [
+    character.shortTermGoal ? `短期目标：${character.shortTermGoal.goal}` : null,
+    character.longTermGoal ? `长期目标：${character.longTermGoal.goal}` : null,
+  ].filter(Boolean).join("\n");
+
+  const likedText = character.liked || "（暂无）";
+  const dislikedText = character.disliked || "（暂无）";
+
+  return `你是${character.name}，现在是睡前反思时间。回顾今天和过去的经历，反思以下方面：
+
+## 短期记忆（今天）
+${shortMemories || "（无）"}
+
+## 日常记忆
+${dailyMemories || "（无）"}
+
+## 长期记忆
+${longMemories || "（无）"}
+
+## 你对其他人的印象
+${impressions || "（暂无任何印象）"}
+
+## 当前目标
+${goalsText || "（暂无目标）"}
+
+## 当前喜好
+最喜欢：${likedText}
+最讨厌：${dislikedText}
+
+请调用 submit_reflection 工具输出你的反思结果。以下各项都是可选的，只填你确实想改变的：
+- memorize: 更新你对某些人的印象（空 impression 代表忘记）
+- liked: 更新你最喜欢的人或事
+- disliked: 更新你最讨厌的人或事
+- short_term_goal: 更新短期目标（距离上次更新需 ≥1 天）
+- long_term_goal: 更新长期目标（距离上次更新需 ≥7 天）`;
+}

@@ -25,35 +25,36 @@
   "health": 2,
   "relations": {
     "char-yumori-kosuke": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "湯守の当家。たまに一人で来て熱燗を一杯だけ。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-tazaki-mamoru": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "田崎さん。仕事終わりにいつも同じ席。焼酎お湯割り。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-takahashi-ema": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "エマさん。閉店後に時々お互いの店を行き来してる。同業者のよしみ。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-yamane-kazuma": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "山根さん。たまに山菜やジビエを持ってきてくれる。囲炉裏で焼くと絶品。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 300,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

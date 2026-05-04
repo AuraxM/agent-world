@@ -149,8 +149,6 @@ export const SicknessSchema = z.object({
 /** 单向关系。 */
 export const RelationSchema = z.object({
   kinds: z.array(z.enum(OBJECTIVE_RELATION_KINDS)).min(1),
-  affection: z.number().int().min(-4).max(4),
-  note: z.string().optional(),
   since: z.number().int().nonnegative(),
   lastInteractionTick: z.number().int().nonnegative(),
 });
@@ -287,6 +285,7 @@ export const EndConversationToolSchema = {
 // Dialog summary
 export const DialogSummarySchema = z.object({
   summary: z.string().min(1).max(500),
+  memorize: z.array(z.object({ target_id: z.string().min(1), impression: z.string() })).optional(),
 });
 export type DialogSummaryPayload = z.infer<typeof DialogSummarySchema>;
 
@@ -295,6 +294,18 @@ export const DialogSummaryToolSchema = {
   type: "object" as const,
   properties: {
     summary: { type: "string", description: "1-2 句话总结这次对话的内容与氛围。" },
+    memorize: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          target_id: { type: "string", description: "要记录印象的角色 ID。" },
+          impression: { type: "string", description: "对该角色的新印象。留空代表忘记。" },
+        },
+        required: ["target_id", "impression"],
+      },
+      description: "可选，对话后需要更新的印象列表。",
+    },
   },
   required: ["summary"],
   additionalProperties: false,
@@ -324,3 +335,185 @@ export const EndConversationSchema = z.object({
   reasoning: z.string().min(1).max(400),
   closing_line: z.string().max(800).optional(),
 });
+
+// ---------------------------------------------------------------------------
+// Unified action decision tool (replaces per-action tools)
+// ---------------------------------------------------------------------------
+
+export const DECIDE_ACTION_TOOL_NAME = "decide_action";
+
+export const DecideActionSchema = z.object({
+  action_type: z.string().min(1),
+  target_id: z.string().optional(),
+  target_node_id: z.string().optional(),
+  free_text: z.string().max(500).optional(),
+  amount: z.number().int().positive().optional(),
+  reasoning: z.string().min(1).max(800),
+  emotion_tag: z.string().max(40).optional(),
+  self_importance: z.union([
+    z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5),
+  ]),
+  change_type: z.enum(RELATION_CHANGE_TYPES).optional(),
+  reason: z.string().max(200).optional(),
+  arrival_action: z.object({
+    action_type: z.string(),
+    free_text: z.string().max(500).optional(),
+    target_id: z.string().optional(),
+    target_node_id: z.string().optional(),
+  }).optional(),
+});
+
+export const DecideActionToolSchema = {
+  type: "object" as const,
+  properties: {
+    action_type: {
+      type: "string",
+      description: "行动类型。可选值由引擎动态生成并注入 description。",
+    },
+    target_id: { type: "string", description: "目标角色 ID 或节点 ID（speak/move/give 需要）。" },
+    target_node_id: { type: "string", description: "目标节点 ID（move 需要）。" },
+    free_text: { type: "string", description: "对话内容（speak）或思考内容（think）。" },
+    amount: { type: "integer", description: "金额（give 需要）。" },
+    reasoning: { type: "string", description: "内心独白。必须显式引用一项你的性格特征（用文字描述，不要写数值）。" },
+    self_importance: { type: "integer", enum: [1, 2, 3, 4, 5], description: "1-5 自评要不要长期记住。" },
+    emotion_tag: { type: "string", description: "短情绪标签，例如 紧张 / 好奇 / 烦躁。" },
+    change_type: { type: "string", enum: RELATION_CHANGE_TYPES, description: "关系变更类型（仅 update_relation 需要）。" },
+    reason: { type: "string", description: "移动原因（move 需要）。" },
+    arrival_action: {
+      type: "object",
+      properties: {
+        action_type: { type: "string" },
+        free_text: { type: "string" },
+        target_id: { type: "string" },
+        target_node_id: { type: "string" },
+      },
+      description: "到达后自动执行的动作（move 可选）。",
+    },
+  },
+  required: ["action_type", "reasoning", "self_importance"],
+  additionalProperties: false,
+};
+
+// ---------------------------------------------------------------------------
+// Impression notebook tools
+// ---------------------------------------------------------------------------
+
+export const RECALL_TOOL_NAME = "recall";
+export const RecallSchema = z.object({
+  target_ids: z.array(z.string().min(1)).min(1).max(20),
+});
+export const RecallToolSchema = {
+  type: "object" as const,
+  properties: {
+    target_ids: {
+      type: "array",
+      items: { type: "string" },
+      description: "要查询的角色 ID 列表，可以一次查多个。",
+    },
+  },
+  required: ["target_ids"],
+  additionalProperties: false,
+};
+
+export const MEMORIZE_TOOL_NAME = "memorize";
+export const MemorizeSchema = z.object({
+  target_id: z.string().min(1),
+  impression: z.string().max(1000),
+});
+export const MemorizeToolSchema = {
+  type: "object" as const,
+  properties: {
+    target_id: { type: "string", description: "要记录印象的角色 ID。" },
+    impression: { type: "string", description: "对此人的印象。留空代表忘记此人（删除印象）。" },
+  },
+  required: ["target_id", "impression"],
+  additionalProperties: false,
+};
+
+// ---------------------------------------------------------------------------
+// Pre-sleep reflection tool
+// ---------------------------------------------------------------------------
+
+export const REFLECTION_TOOL_NAME = "submit_reflection";
+export const ReflectionSchema = z.object({
+  memorize: z.array(z.object({
+    target_id: z.string().min(1),
+    impression: z.string(),
+  })).optional(),
+  liked: z.string().max(500).optional(),
+  disliked: z.string().max(500).optional(),
+  short_term_goal: z.string().max(300).optional(),
+  long_term_goal: z.string().max(300).optional(),
+});
+export const ReflectionToolSchema = {
+  type: "object" as const,
+  properties: {
+    memorize: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          target_id: { type: "string", description: "角色 ID。" },
+          impression: { type: "string", description: "新的印象文本。空字符串代表忘记此人。" },
+        },
+        required: ["target_id", "impression"],
+      },
+      description: "本次反思中需要更新的印象列表（可选）。",
+    },
+    liked: { type: "string", description: "更新你最喜欢的人或事（可选）。" },
+    disliked: { type: "string", description: "更新你最讨厌的人或事（可选）。" },
+    short_term_goal: { type: "string", description: "更新你的短期目标（可选，每日最多一次）。" },
+    long_term_goal: { type: "string", description: "更新你的长期目标（可选，每周最多一次）。" },
+  },
+  required: [],
+  additionalProperties: false,
+};
+
+// ---------------------------------------------------------------------------
+// Goal helper schema
+// ---------------------------------------------------------------------------
+
+export const GoalSchema = z.object({
+  goal: z.string(),
+  updatedAt: z.number().int().nonnegative(),
+}).nullable();
+
+// ---------------------------------------------------------------------------
+// Tool builder for unified decide_action
+// ---------------------------------------------------------------------------
+
+import type { ChatCompletionTool } from "openai/resources/chat/completions";
+
+export function buildDecideActionTool(ctx: ActionContext): ChatCompletionTool {
+  const actionTypes: string[] = [];
+  for (const type of actionRegistry.types()) {
+    const def = actionRegistry.get(type);
+    if (def && def.check(ctx)) actionTypes.push(type);
+  }
+
+  const typeDesc = actionTypes.map((t) => {
+    const def = actionRegistry.get(t)!;
+    const hint = def.hint(ctx);
+    const hintText = Array.isArray(hint) ? hint.map((h: { hint: string }) => h.hint).join("；") : hint;
+    return `- ${t}: ${hintText}`;
+  }).join("\n");
+
+  return {
+    type: "function",
+    function: {
+      name: DECIDE_ACTION_TOOL_NAME,
+      description: `提交你的行动决定。可用的 action_type：\n${typeDesc}`,
+      parameters: {
+        ...DecideActionToolSchema,
+        properties: {
+          ...DecideActionToolSchema.properties,
+          action_type: {
+            type: "string",
+            enum: actionTypes,
+            description: "你要执行的行动类型。",
+          },
+        },
+      },
+    },
+  };
+}

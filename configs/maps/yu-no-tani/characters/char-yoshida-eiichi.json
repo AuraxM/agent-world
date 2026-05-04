@@ -9,18 +9,45 @@
   "biography": "我是吉田栄一、バス運転手二十年。毎日三便、県道をぐねぐね登って湯之谷へ。朝便は郵便と新聞、昼便は観光客、夕方便は帰りの客と仕入れ品。このバスは谷のライフライン——冬の最終便を出す時は、谷中が道端で手を振る。それがこの仕事の一番いいところだ。",
   "activityNodeId": "node-bus-stop",
   "restNodeId": "node-bus-stop",
-  "sleepWindow": { "start": 22, "duration": 8 },
-  "personality": { "ei": 1, "sn": 0, "tf": 1, "jp": 1 },
+  "sleepWindow": {
+    "start": 22,
+    "duration": 8
+  },
+  "personality": {
+    "ei": 1,
+    "sn": 0,
+    "tf": 1,
+    "jp": 1
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 2,
   "health": 2,
   "relations": {
-    "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 3, "note": "谷村さん。毎朝郵便物を渡すのが日課。谷一番の情報通との朝の立ち話。", "since": 0, "lastInteractionTick": 0 },
-    "char-yamane-kazuma": { "kinds": ["friend"], "affection": 2, "note": "山根さん。毛皮や山菜を麓まで運ぶのを頼まれる。冬前のやりとりが多い。", "since": 0, "lastInteractionTick": 0 },
-    "char-suzuki-kazuo": { "kinds": ["friend"], "affection": 1, "note": "鈴木さん。下山のついでに土産店の仕入れを頼まれることも。", "since": 0, "lastInteractionTick": 0 }
+    "char-tanimura-kinuyo": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-yamane-kazuma": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-suzuki-kazuo": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
   "initialMoney": 300,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

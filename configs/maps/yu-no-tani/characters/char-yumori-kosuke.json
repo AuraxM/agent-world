@@ -9,57 +9,69 @@
   "biography": "我是汤守浩介，旅馆「汤守」三代目当家。祖父掘出温泉盖了旅馆，到我手里四十年。每天管源泉、修老房子、看温泉街的人来人往。嘴笨不会说话，但对温泉的心思谁也不输。观光客多了也好、少了也罢，汤の温度は変わらん。",
   "activityNodeId": "node-ryokan",
   "restNodeId": "node-ryokan-quarters",
-  "sleepWindow": { "start": 23, "duration": 7 },
-  "personality": { "ei": -1, "sn": -1, "tf": 2, "jp": 1 },
+  "sleepWindow": {
+    "start": 23,
+    "duration": 7
+  },
+  "personality": {
+    "ei": -1,
+    "sn": -1,
+    "tf": 2,
+    "jp": 1
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 2,
   "health": 2,
   "relations": {
     "char-ogawa-saori": {
-      "kinds": ["boss", "friend"],
-      "affection": 2,
-      "note": "仲居。看板娘，谷の笑顔。頼りにしてる。",
+      "kinds": [
+        "boss",
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-wakamatsu-ren": {
-      "kinds": ["boss", "friend"],
-      "affection": 2,
-      "note": "料理長。若いが腕は確か。京都で修業した料理に毎晩感心してる。",
+      "kinds": [
+        "boss",
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-nakamura-yuto": {
-      "kinds": ["boss"],
-      "affection": 1,
-      "note": "バイトの大学生。観光学部らしく、たまに妙なアイデアを持ち込む。",
+      "kinds": [
+        "boss"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-matsuoka-sayo": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "酒馆「いろり」の女将。たまに飲みに行く。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-tanimura-kinuyo": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "杂货铺绢代。每天去取邮件，何でも知ってる谷の情報屋。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-yamada-takafumi": {
-      "kinds": ["colleague", "friend"],
-      "affection": 2,
-      "note": "宮大工修業の腕で旅館の老朽箇所を直してくれる。なくてはならない存在。",
+      "kinds": [
+        "colleague",
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 800,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

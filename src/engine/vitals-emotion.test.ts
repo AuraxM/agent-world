@@ -47,6 +47,11 @@ function mkChar(
     incomeLevel: 0,
     expenseExempt: false,
     activeConversationIds: [],
+    impressionBook: {},
+    shortTermGoal: null,
+    longTermGoal: null,
+    liked: "",
+    disliked: "",
   };
 }
 

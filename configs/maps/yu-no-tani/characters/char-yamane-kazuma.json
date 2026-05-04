@@ -25,21 +25,22 @@
   "health": 2,
   "relations": {
     "char-yoshida-eiichi": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "吉田さん。毛皮や乾物をバスで運んでもらう。冬場は特に世話になる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-matsuoka-sayo": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "「いろり」の小夜さん。獲れたての山菜やジビエを持ち込む。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 200,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

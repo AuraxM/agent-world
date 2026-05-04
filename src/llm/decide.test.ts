@@ -112,6 +112,11 @@ const baseCtx: ActionContext = {
     incomeLevel: 0,
     expenseExempt: false,
     activeConversationIds: [],
+    impressionBook: {},
+    shortTermGoal: null,
+    longTermGoal: null,
+    liked: "",
+    disliked: "",
   },
   here: {
     id: "node-x",

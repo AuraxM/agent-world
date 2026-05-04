@@ -9,18 +9,46 @@
   "biography": "我是三浦健太，放送部部员。每天午休在放送室播报校内广播。陸说我的声音全校都认识但本人没啥存在感，我说这正是我要的效果。吐槽陆是我的日常爱好，帮他打听真昼的情报是副业。虽然我觉得蓮更适合真昼——但这话不能说出来。",
   "activityNodeId": "node-broadcast-room",
   "restNodeId": "node-hs-boys-dorm",
-  "sleepWindow": { "start": 23, "duration": 7 },
-  "personality": { "ei": 2, "sn": 0, "tf": -2, "jp": 1 },
+  "sleepWindow": {
+    "start": 23,
+    "duration": 7
+  },
+  "personality": {
+    "ei": 2,
+    "sn": 0,
+    "tf": -2,
+    "jp": 1
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 3,
   "health": 2,
   "speakingStyle": "说话很快，爱插嘴，自带弹幕体质。吐槽从不留余地但内心其实很细腻。",
   "relations": {
-    "char-ogata-riku": { "kinds": ["classmate", "friend"], "affection": 3, "note": "最好的死党。吐槽他是我的乐趣，但谁要是真欺负他我第一个不答应。", "since": 0, "lastInteractionTick": 0 },
-    "char-kiriya-ren": { "kinds": ["classmate"], "affection": 2, "note": "蓮会长。和陸完全相反的人。", "since": 0, "lastInteractionTick": 0 },
-    "char-miura-yui": { "kinds": ["older_brother"], "affection": 3, "note": "我妹妹。她吐槽我的频率比我还高——家族遗传吧。她做的饼干很好吃。", "since": 0, "lastInteractionTick": 0 }
+    "char-ogata-riku": {
+      "kinds": [
+        "classmate",
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-kiriya-ren": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-miura-yui": {
+      "kinds": [
+        "older_brother"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
   "initialMoney": 400,
-  "expenseExempt": false
+  "expenseExempt": false,
+  "impressionBook": {}
 }

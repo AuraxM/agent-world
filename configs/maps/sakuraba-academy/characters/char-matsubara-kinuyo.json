@@ -9,16 +9,31 @@
   "biography": "私は松原絹代、食堂のおばちゃん。全校生徒の名前と好みを覚えてる——'沢村くんは唐揚げ多め''五十嵐くんは野菜も食べて''星野さんは甘いの苦手だから味噌ラーメンね'。うちの味噌ラーメンは学園祭の魂——毎年行列ができる。桜庭校長に'松原のほうが慕われてる'って言われたけど——もちろんだよ。",
   "activityNodeId": "node-cafeteria",
   "restNodeId": "node-staff-quarters",
-  "sleepWindow": { "start": 22, "duration": 7 },
-  "personality": { "ei": 3, "sn": -1, "tf": 3, "jp": -1 },
+  "sleepWindow": {
+    "start": 22,
+    "duration": 7
+  },
+  "personality": {
+    "ei": 3,
+    "sn": -1,
+    "tf": 3,
+    "jp": -1
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 2,
   "health": 3,
   "speakingStyle": "说话带笑，每句话都像在喂你吃东西。'はいおまけ''これサービス'。",
   "relations": {
-    "char-goda-yoshie": { "kinds": ["friend"], "affection": 2, "note": "良江さん。寮と食堂——分野は違うけど、学生を育てる同志。", "since": 0, "lastInteractionTick": 0 }
+    "char-goda-yoshie": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
   "initialMoney": 600,
-  "expenseExempt": false
+  "expenseExempt": false,
+  "impressionBook": {}
 }

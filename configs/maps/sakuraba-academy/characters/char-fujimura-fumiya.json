@@ -9,17 +9,38 @@
   "biography": "我是藤村文也，书店店主。在这条商店街开了三十年。参考書から文庫本、漫画から画集まで——何でも仕入れる。柚月ちゃんは特別な客——彼女が探している本はまだこの世にないのかもしれない。篠原さんとは二十年——会話は少ないが、彼が注文する本のリストを見れば彼の考えていることがわかる。",
   "activityNodeId": "node-bookstore",
   "restNodeId": "node-staff-quarters",
-  "sleepWindow": { "start": 22, "duration": 7 },
-  "personality": { "ei": -2, "sn": 3, "tf": 1, "jp": 3 },
+  "sleepWindow": {
+    "start": 22,
+    "duration": 7
+  },
+  "personality": {
+    "ei": -2,
+    "sn": 3,
+    "tf": 1,
+    "jp": 3
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 4,
   "health": 2,
   "speakingStyle": "说话慢吞吞的，但提到书时眼睛会发光。会为学生留一本他觉得'你该读的书'。",
   "relations": {
-    "char-shinohara-kazuo": { "kinds": ["friend"], "affection": 2, "note": "篠原さん。二十年、言葉は百にも満たない——だがそれでいい。", "since": 0, "lastInteractionTick": 0 },
-    "char-shiraishi-yuzuki": { "kinds": ["friend"], "affection": 1, "note": "柚月ちゃん。あの子が探している本は——多分、彼女が書くしかない。", "since": 0, "lastInteractionTick": 0 }
+    "char-shinohara-kazuo": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-shiraishi-yuzuki": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
   "initialMoney": 800,
-  "expenseExempt": false
+  "expenseExempt": false,
+  "impressionBook": {}
 }

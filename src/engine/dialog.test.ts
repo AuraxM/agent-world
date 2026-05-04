@@ -44,6 +44,11 @@ function makeChar(id: string, loc: string, currentActionType?: string): Characte
     currentAction: currentActionType
       ? { type: currentActionType as any, startedAt: 0, endsAt: 10, description: "", interruptThreshold: 3 }
       : undefined,
+    impressionBook: {},
+    shortTermGoal: null,
+    longTermGoal: null,
+    liked: "",
+    disliked: "",
   };
 }
 
@@ -207,6 +212,11 @@ function makeCharFull(
           interruptThreshold: 3,
         }
       : undefined,
+    impressionBook: {},
+    shortTermGoal: null,
+    longTermGoal: null,
+    liked: "",
+    disliked: "",
   };
 }
 
@@ -231,7 +241,7 @@ function mockAccept(result: "accept_speak" | "reject_speak"): AcceptDecideFn {
 }
 
 function mockSummary(text: string): SummaryDecideFn {
-  return async () => text;
+  return async () => ({ summary: text });
 }
 
 function mockSalvage(actionType = "observe"): SalvageDecideFn {
@@ -519,7 +529,7 @@ describe("multi-tick conversation", () => {
       perceptions: new Map(), tick: 0, worldName: "test", language: "zh",
       acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
       turnDecide: turnDecide as any,
-      summaryDecide: async () => "摘要",
+      summaryDecide: async () => ({ summary: "摘要" }),
       salvageDecide: async () => ({ type: "wait", actorId: "x", reasoning: "", selfImportance: 1 }),
       ongoingConversations: [],
     });
@@ -556,7 +566,7 @@ describe("multi-tick conversation", () => {
       perceptions: new Map(), tick: 5, worldName: "test", language: "zh",
       acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
       turnDecide: turnDecide as any,
-      summaryDecide: async () => "ok",
+      summaryDecide: async () => ({ summary: "ok" }),
       salvageDecide: async () => ({ type: "wait", actorId: "x", reasoning: "", selfImportance: 1 }),
       ongoingConversations: [conv],
     });
@@ -574,7 +584,7 @@ describe("multi-tick conversation", () => {
       perceptions: new Map(), tick: 1, worldName: "test", language: "zh",
       acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
       turnDecide: async () => mockTurn("a", "hi"),
-      summaryDecide: async () => "summary",
+      summaryDecide: async () => ({ summary: "summary" }),
       salvageDecide: async () => ({ type: "wait", actorId: "x", reasoning: "", selfImportance: 1 }),
       ongoingConversations: [conv],
     });

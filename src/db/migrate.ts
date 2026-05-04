@@ -177,6 +177,11 @@ const CHARACTERS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
   { name: "daily_memory_json", ddl: "ALTER TABLE characters ADD COLUMN daily_memory_json TEXT NOT NULL DEFAULT '[]'" },
   { name: "last_sleep_tick", ddl: "ALTER TABLE characters ADD COLUMN last_sleep_tick INTEGER NOT NULL DEFAULT 0" },
   { name: "active_conversation_ids_json", ddl: "ALTER TABLE characters ADD COLUMN active_conversation_ids_json TEXT NOT NULL DEFAULT '[]'" },
+  { name: "impression_book_json", ddl: "ALTER TABLE characters ADD COLUMN impression_book_json TEXT NOT NULL DEFAULT '{}'" },
+  { name: "short_term_goal_json", ddl: "ALTER TABLE characters ADD COLUMN short_term_goal_json TEXT" },
+  { name: "long_term_goal_json", ddl: "ALTER TABLE characters ADD COLUMN long_term_goal_json TEXT" },
+  { name: "liked", ddl: "ALTER TABLE characters ADD COLUMN liked TEXT NOT NULL DEFAULT ''" },
+  { name: "disliked", ddl: "ALTER TABLE characters ADD COLUMN disliked TEXT NOT NULL DEFAULT ''" },
 ];
 
 const WORLDS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [

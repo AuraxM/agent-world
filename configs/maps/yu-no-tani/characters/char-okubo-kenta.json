@@ -25,35 +25,37 @@
   "health": 2,
   "relations": {
     "char-okubo-miwa": {
-      "kinds": ["spouse", "colleague"],
-      "affection": 4,
-      "note": "妻で相棒。直売所と経理は全部任せてる。頭が上がらない。",
+      "kinds": [
+        "spouse",
+        "colleague"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-wakamatsu-ren": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "若松料理長。毎朝の納品で料理の話を聞くのが楽しみ。うちの野菜を一番うまく使ってくれる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-takahashi-ema": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "エマさん。果物やハーブを卸してる。ジャムの新作を試食するのが楽しみ。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-tazaki-mamoru": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "田崎さん。畑の脇の水源配管を見てもらってる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 300,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

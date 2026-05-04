@@ -38,9 +38,9 @@ export function buildGraphData(characters: Character[]): GraphData {
       links.push({
         source: c.id,
         target: targetId,
-        affection: rel.affection,
+        affection: 0,
         kinds: rel.kinds,
-        note: rel.note,
+        note: c.impressionBook[targetId],
       });
     }
   }

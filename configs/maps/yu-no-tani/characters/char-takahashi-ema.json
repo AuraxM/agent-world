@@ -25,35 +25,36 @@
   "health": 2,
   "relations": {
     "char-matsuoka-sayo": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "小夜さん。同業者として刺激し合える存在。お互いの店を行き来してる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-okubo-kenta": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "健太さん。パンに使う野菜や果物を分けてもらってる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-okubo-miwa": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "美和さん。ジャムのレシピを一緒に考えたり。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-nakamura-yuto": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "優斗くん。いつも窓際でレポート書いてる。谷の未来を考えてる姿が眩しい。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 200,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

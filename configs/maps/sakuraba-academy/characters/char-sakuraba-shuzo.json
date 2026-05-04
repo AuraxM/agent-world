@@ -9,16 +9,31 @@
   "biography": "我是桜庭周三，在这所学园做了十五年校长。每天早晨站在正门对每个学生说'おはよう'——这是一天最重要的仪式。恋爱、部活、考试、进路——都是青春の一部。我管的不是校规，是看着这些年轻人认真活着的日常。",
   "activityNodeId": "node-gate",
   "restNodeId": "node-staff-quarters",
-  "sleepWindow": { "start": 22, "duration": 7 },
-  "personality": { "ei": 2, "sn": -1, "tf": 1, "jp": 3 },
+  "sleepWindow": {
+    "start": 22,
+    "duration": 7
+  },
+  "personality": {
+    "ei": 2,
+    "sn": -1,
+    "tf": 1,
+    "jp": 3
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 3,
   "health": 1,
   "speakingStyle": "说话慢悠悠，喜欢引用古语和谚语。全校的爷爷，不发火但有威严。",
   "relations": {
-    "char-kito-seiichi": { "kinds": ["colleague"], "affection": 2, "note": "鬼頭教頭。他管纪律我管人心——这个分工十五年没变过。", "since": 0, "lastInteractionTick": 0 }
+    "char-kito-seiichi": {
+      "kinds": [
+        "colleague"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
   "initialMoney": 1200,
-  "expenseExempt": false
+  "expenseExempt": false,
+  "impressionBook": {}
 }

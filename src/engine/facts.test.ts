@@ -63,6 +63,11 @@ const baseCharacter: Character = {
   incomeLevel: 0,
   expenseExempt: false,
   activeConversationIds: [],
+  impressionBook: {},
+  shortTermGoal: null,
+  longTermGoal: null,
+  liked: "",
+  disliked: "",
 };
 
 const baseNodes: MapNode[] = [

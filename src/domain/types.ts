@@ -65,13 +65,9 @@ export interface Memory {
 export interface Relation {
   /** 客观关系标签集合，至少 1 项。 */
   kinds: ObjectiveRelationKind[];
-  /** 主观好感度，[-4..+4] 整数。 -4 极厌恶 → +4 极喜爱。 */
-  affection: number;
-  /** 自然语言备注，例如"小时候欺负过我" */
-  note?: string;
   /** 关系建立的 tick。 */
   since: Tick;
-  /** 最近一次互动的 tick；用于 acquaintance 衰减判定。 */
+  /** 最近一次互动的 tick。 */
   lastInteractionTick: Tick;
 }
 
@@ -217,6 +213,16 @@ export interface Character {
    */
   restNodeId?: string | null;
   sleepWindow?: SleepWindow;
+  /** 人物印象记录本：targetCharId → 自由文本印象 */
+  impressionBook: Record<string, string>;
+  /** 短期目标（≥1 天更新间隔） */
+  shortTermGoal: { goal: string; updatedAt: Tick } | null;
+  /** 长期目标（≥7 天更新间隔） */
+  longTermGoal: { goal: string; updatedAt: Tick } | null;
+  /** 最喜欢的人或事（自由文本） */
+  liked: string;
+  /** 最讨厌的人或事（自由文本） */
+  disliked: string;
 }
 
 /** 角色在某 tick 完成的一次决策快照（含完整 reasoning）。 */
@@ -270,6 +276,8 @@ export interface Action {
   targetId?: string;
   targetNodeId?: string;
   freeText?: string;
+  /** give 行动金额 */
+  amount?: number;
   reasoning: string;
   emotionTag?: string;
   /** 自评重要度 1–5，决定是否进入长期记忆 */

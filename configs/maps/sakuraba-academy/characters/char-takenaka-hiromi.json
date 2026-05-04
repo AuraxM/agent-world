@@ -9,8 +9,16 @@
   "biography": "我是竹中博美，便利店店长。两个孩子在中学部上学。店内の商品は学生のために選んでる——炒めパン、アイス、文房具、漫画。田辺くんが結衣ちゃんのパンを取るのを何度か見た——'今度は二個買いなさいね'。学生の小さな悪戯には目をつぶる——青春だもの。",
   "activityNodeId": "node-convenience",
   "restNodeId": "node-staff-quarters",
-  "sleepWindow": { "start": 22, "duration": 7 },
-  "personality": { "ei": 3, "sn": -2, "tf": -1, "jp": 1 },
+  "sleepWindow": {
+    "start": 22,
+    "duration": 7
+  },
+  "personality": {
+    "ei": 3,
+    "sn": -2,
+    "tf": -1,
+    "jp": 1
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 2,
@@ -18,5 +26,6 @@
   "speakingStyle": "说话爽快像邻居阿姨。对学生的恶作剧睁一只眼闭一只眼——'青春だもの'。",
   "relations": {},
   "initialMoney": 700,
-  "expenseExempt": false
+  "expenseExempt": false,
+  "impressionBook": {}
 }

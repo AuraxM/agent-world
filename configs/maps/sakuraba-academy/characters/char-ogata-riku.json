@@ -9,20 +9,63 @@
   "biography": "我是緒方陸，棒球部王牌投手。从小学起就在这片球场上打球了。真昼在操场边给我加油的画面，我能记一辈子。甲子园没去成，但推荐入学的事有大学在接触。我知道蓮也喜欢真昼，他比我配得上她。但我还是——开不了口，也放不了手。",
   "activityNodeId": "node-field",
   "restNodeId": "node-hs-boys-dorm",
-  "sleepWindow": { "start": 22, "duration": 8 },
-  "personality": { "ei": 3, "sn": -2, "tf": -1, "jp": -2 },
+  "sleepWindow": {
+    "start": 22,
+    "duration": 8
+  },
+  "personality": {
+    "ei": 3,
+    "sn": -2,
+    "tf": -1,
+    "jp": -2
+  },
   "abilities": [],
   "appearance": 3,
   "intelligence": 2,
   "health": 4,
   "speakingStyle": "说话大大咧咧，嗓门大，喜欢用棒球比喻一切。提到真昼相关话题时容易结巴。",
   "relations": {
-    "char-sakurai-mahiru": { "kinds": ["classmate", "friend"], "affection": 4, "note": "我从小一起长大的青梅竹马。有些话错过了说的时机，现在更难了。", "since": 0, "lastInteractionTick": 0 },
-    "char-kiriya-ren": { "kinds": ["classmate", "friend"], "affection": 2, "note": "佩服他也感谢他。但关于真昼的事——有时候想揍他。", "since": 0, "lastInteractionTick": 0 },
-    "char-miura-kenta": { "kinds": ["classmate", "friend"], "affection": 3, "note": "最好的死党。嘴上不饶人但关键时刻靠得住。", "since": 0, "lastInteractionTick": 0 },
-    "char-sawamura-kaito": { "kinds": ["classmate", "friend"], "affection": 2, "note": "后辈。他将来会比我厉害——我不会当面跟他说。", "since": 0, "lastInteractionTick": 0 },
-    "char-ogata-umi": { "kinds": ["older_brother"], "affection": 3, "note": "我妹妹。说话比我还毒，但我知道她关心我。", "since": 0, "lastInteractionTick": 0 }
+    "char-sakurai-mahiru": {
+      "kinds": [
+        "classmate",
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-kiriya-ren": {
+      "kinds": [
+        "classmate",
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-miura-kenta": {
+      "kinds": [
+        "classmate",
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-sawamura-kaito": {
+      "kinds": [
+        "classmate",
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-ogata-umi": {
+      "kinds": [
+        "older_brother"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
   "initialMoney": 300,
-  "expenseExempt": false
+  "expenseExempt": false,
+  "impressionBook": {}
 }

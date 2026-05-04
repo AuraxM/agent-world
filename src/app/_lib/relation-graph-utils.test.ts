@@ -29,6 +29,11 @@ function mkChar(overrides: Partial<Character> & { id: string; name: string }): C
     incomeLevel: 2,
     expenseExempt: false,
     relations: {},
+    impressionBook: {},
+    shortTermGoal: null,
+    longTermGoal: null,
+    liked: "",
+    disliked: "",
     ...overrides,
   } as Character;
 }
@@ -36,7 +41,6 @@ function mkChar(overrides: Partial<Character> & { id: string; name: string }): C
 function mkRelation(overrides: Partial<Relation> = {}): Relation {
   return {
     kinds: ["friend" as ObjectiveRelationKind],
-    affection: 0,
     since: 0,
     lastInteractionTick: 0,
     ...overrides,
@@ -84,13 +88,13 @@ describe("buildGraphData", () => {
     expect(result.nodes[0].avatar).toBe("");
   });
 
-  it("builds links from relations with correct source/target/affection/kinds", () => {
+  it("builds links from relations with correct source/target/kinds", () => {
     const chars = [
       mkChar({
         id: "a",
         name: "Alice",
         relations: {
-          b: mkRelation({ affection: 3, kinds: ["friend" as ObjectiveRelationKind] }),
+          b: mkRelation({ kinds: ["friend" as ObjectiveRelationKind] }),
         },
       }),
       mkChar({ id: "b", name: "Bob" }),
@@ -100,7 +104,6 @@ describe("buildGraphData", () => {
     expect(result.links[0]).toMatchObject({
       source: "a",
       target: "b",
-      affection: 3,
       kinds: ["friend"],
     });
   });
@@ -111,8 +114,8 @@ describe("buildGraphData", () => {
         id: "a",
         name: "Alice",
         relations: {
-          ghost: mkRelation({ affection: 1 }),
-          b: mkRelation({ affection: 2 }),
+          ghost: mkRelation(),
+          b: mkRelation(),
         },
       }),
       mkChar({ id: "b", name: "Bob" }),
@@ -122,14 +125,13 @@ describe("buildGraphData", () => {
     expect(result.links[0].target).toBe("b");
   });
 
-  it("preserves note field on links", () => {
+  it("populates note from impressionBook on links", () => {
     const chars = [
       mkChar({
         id: "a",
         name: "Alice",
-        relations: {
-          b: mkRelation({ note: "小时候欺负过我" }),
-        },
+        relations: { b: mkRelation() },
+        impressionBook: { b: "小时候欺负过我" },
       }),
       mkChar({ id: "b", name: "Bob" }),
     ];
@@ -137,7 +139,7 @@ describe("buildGraphData", () => {
     expect(result.links[0].note).toBe("小时候欺负过我");
   });
 
-  it("sets note to undefined when not provided", () => {
+  it("sets note to undefined when impressionBook has no entry", () => {
     const chars = [
       mkChar({
         id: "a",
@@ -166,8 +168,8 @@ describe("buildGraphData", () => {
         id: "a",
         name: "Alice",
         relations: {
-          b: mkRelation({ affection: 2, kinds: ["friend" as ObjectiveRelationKind] }),
-          c: mkRelation({ affection: -1, kinds: ["colleague" as ObjectiveRelationKind] }),
+          b: mkRelation({ kinds: ["friend" as ObjectiveRelationKind] }),
+          c: mkRelation({ kinds: ["colleague" as ObjectiveRelationKind] }),
         },
       }),
       mkChar({ id: "b", name: "Bob", relations: {} }),

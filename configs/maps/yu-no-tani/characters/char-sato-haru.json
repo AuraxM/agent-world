@@ -9,19 +9,52 @@
   "biography": "我是佐藤春、この谷で七十余年。結婚、出産、伴侶を見送り……人生の全てがこの家にある。今は三毛猫の小玉と二人暮らし。冬は難儀だけど、春に谷川の氷が解ける音を聞くたびに、もう一年生きようと思う。若い時は旅館の仲居だったんだよ。",
   "activityNodeId": "node-old-house",
   "restNodeId": "node-old-house",
-  "sleepWindow": { "start": 20, "duration": 9 },
-  "personality": { "ei": 1, "sn": 0, "tf": -1, "jp": -1 },
+  "sleepWindow": {
+    "start": 20,
+    "duration": 9
+  },
+  "personality": {
+    "ei": 1,
+    "sn": 0,
+    "tf": -1,
+    "jp": -1
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 2,
   "health": 2,
   "relations": {
-    "char-guji-masayuki": { "kinds": ["friend"], "affection": 3, "note": "宮司さん。同世代、一緒にこの谷の変わりようを見てきた。", "since": 0, "lastInteractionTick": 0 },
-    "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "绢代さん。配達ついでに長話。いつも気にかけてくれてありがたい。", "since": 0, "lastInteractionTick": 0 },
-    "char-ogawa-saori": { "kinds": ["friend"], "affection": 3, "note": "沙織ちゃん。子どもの頃から知ってる。まるで孫娘みたい。", "since": 0, "lastInteractionTick": 0 },
-    "char-kishita-michiko": { "kinds": ["friend"], "affection": 2, "note": "木下先生。月一の往診で世話になってる。よく話を聞いてくれるいい医者。", "since": 0, "lastInteractionTick": 0 }
+    "char-guji-masayuki": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-tanimura-kinuyo": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-ogawa-saori": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-kishita-michiko": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
   "initialMoney": 100,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

@@ -81,6 +81,9 @@ export interface ActionDefinition {
 
   execute(ctx: ActionContext, input: ActionInput): Outcome;
 
+  /** 校验 LLM 提供的参数。返回 null 表示合法，否则返回错误信息字符串（会反馈给 LLM 重试）。 */
+  validateParams?(input: ActionInput, ctx: ActionContext): string | null;
+
   onTick?(ctx: ActionContext): Outcome | null;
   onComplete?(ctx: ActionContext): Outcome;
   onInterrupt?(ctx: ActionContext, reason: string): Outcome;

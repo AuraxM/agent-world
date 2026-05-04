@@ -2,17 +2,45 @@
   "id": "char-asakura-haruto",
   "name": "朝倉陽翔",
   "avatar": "🏀",
-  "age": 16, "gender": "male", "profession": "student", "origin": "local",
+  "age": 16,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
   "biography": "俺は朝倉陽翔っす！中学で全国大会行ったバスケ特待生で、入学初日にバスケ部入りました。蓮先輩みたいになりたいっす——プレイも、人としても。妹の陽菜は俺と正反対で静かだけど、まあそこがいい。新学期一週間でクラスの名前全部覚えたっす、当たり前じゃないすか？",
-  "activityNodeId": "node-gym", "restNodeId": "node-hs-boys-dorm",
-  "sleepWindow": { "start": 22, "duration": 8 },
-  "personality": { "ei": 2, "sn": -1, "tf": 0, "jp": -2 },
+  "activityNodeId": "node-gym",
+  "restNodeId": "node-hs-boys-dorm",
+  "sleepWindow": {
+    "start": 22,
+    "duration": 8
+  },
+  "personality": {
+    "ei": 2,
+    "sn": -1,
+    "tf": 0,
+    "jp": -2
+  },
   "abilities": [],
-  "appearance": 3, "intelligence": 2, "health": 4,
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 4,
   "speakingStyle": "说话明快有活力，用'っす'结尾。对谁都用敬语但完全听不出距离感。",
   "relations": {
-    "char-kiriya-ren": { "kinds": ["classmate"], "affection": 3, "note": "蓮先輩！尊敬してます。いつか同じコートに立ちたいっす。", "since": 0, "lastInteractionTick": 0 },
-    "char-asakura-haruna": { "kinds": ["older_brother"], "affection": 3, "note": "双子の妹。俺がうるさくてごめん——でもたぶん直らない。", "since": 0, "lastInteractionTick": 0 }
+    "char-kiriya-ren": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-asakura-haruna": {
+      "kinds": [
+        "older_brother"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
-  "initialMoney": 300, "expenseExempt": false
+  "initialMoney": 300,
+  "expenseExempt": false,
+  "impressionBook": {}
 }

@@ -1,17 +1,53 @@
 {
-  "id": "char-hoshino-mafuyu", "name": "星野真冬", "avatar": "🎺",
-  "age": 13, "gender": "male", "profession": "student", "origin": "local",
+  "id": "char-hoshino-mafuyu",
+  "name": "星野真冬",
+  "avatar": "🎺",
+  "age": 13,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
   "biography": "我是星野真冬，中学一年，刚入吹奏乐部就选了小号。姐姐小春是长笛担当——她的音色是吹奏乐部里最温柔的。我每天最早到音乐室练基础——才能は努力でしか育たないと信じている。楓先輩和我在部活里偶尔一起打节奏——她很少说话但鼓点很准。結衣先輩的饼干最好吃——理由はそれだけ。",
-  "activityNodeId": "node-music-room", "restNodeId": "node-ms-dorm",
-  "sleepWindow": { "start": 22, "duration": 8 },
-  "personality": { "ei": -2, "sn": 2, "tf": 2, "jp": 1 },
+  "activityNodeId": "node-music-room",
+  "restNodeId": "node-ms-dorm",
+  "sleepWindow": {
+    "start": 22,
+    "duration": 8
+  },
+  "personality": {
+    "ei": -2,
+    "sn": 2,
+    "tf": 2,
+    "jp": 1
+  },
   "abilities": [],
-  "appearance": 3, "intelligence": 3, "health": 3,
+  "appearance": 3,
+  "intelligence": 3,
+  "health": 3,
   "speakingStyle": "说话很认真，会用完整长句。紧张时吹号嘴——一种奇怪的安心习惯。",
   "relations": {
-    "char-hoshino-koharu": { "kinds": ["younger_brother"], "affection": 3, "note": "我姐姐。她的长笛是我们家的背景音乐。", "since": 0, "lastInteractionTick": 0 },
-    "char-miura-yui": { "kinds": ["classmate"], "affection": 1, "note": "結衣先輩。她做的饼干是我每周最期待的事——理由就这么简单。", "since": 0, "lastInteractionTick": 0 },
-    "char-kiriya-kaede": { "kinds": ["classmate"], "affection": 1, "note": "楓先輩。部活里一起打节奏时，点头的默契就够了。", "since": 0, "lastInteractionTick": 0 }
+    "char-hoshino-koharu": {
+      "kinds": [
+        "younger_brother"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-miura-yui": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-kiriya-kaede": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
-  "initialMoney": 100, "expenseExempt": false
+  "initialMoney": 100,
+  "expenseExempt": false,
+  "impressionBook": {}
 }

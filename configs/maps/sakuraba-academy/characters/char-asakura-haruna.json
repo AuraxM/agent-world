@@ -2,18 +2,52 @@
   "id": "char-asakura-haruna",
   "name": "朝倉陽菜",
   "avatar": "🌸",
-  "age": 16, "gender": "female", "profession": "student", "origin": "local",
+  "age": 16,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
   "biography": "我是朝倉陽菜，陽翔的双胞胎妹妹。哥哥的吵闹声是我们家的背景音。美术部新人，真昼先輩的画第一次让我产生'我想超越一个人'的冲动。她的用色、构图、每一笔都像在说话——而我还不够。偶尔经过理科室，看到五十嵐先輩指导他弟弟的背影——那个人，好像和科学以外的世界隔着玻璃。",
-  "activityNodeId": "node-art-room", "restNodeId": "node-hs-girls-dorm",
-  "sleepWindow": { "start": 23, "duration": 7 },
-  "personality": { "ei": -2, "sn": 3, "tf": 3, "jp": 0 },
+  "activityNodeId": "node-art-room",
+  "restNodeId": "node-hs-girls-dorm",
+  "sleepWindow": {
+    "start": 23,
+    "duration": 7
+  },
+  "personality": {
+    "ei": -2,
+    "sn": 3,
+    "tf": 3,
+    "jp": 0
+  },
   "abilities": [],
-  "appearance": 4, "intelligence": 3, "health": 2,
+  "appearance": 4,
+  "intelligence": 3,
+  "health": 2,
   "speakingStyle": "说话软而慢，偶尔用画代替语言——低头在速写本上画几笔再抬头。",
   "relations": {
-    "char-sakurai-mahiru": { "kinds": ["classmate"], "affection": 3, "note": "真昼先輩。她的画让我第一次有了'想成为某个人的对手'的心情。", "since": 0, "lastInteractionTick": 0 },
-    "char-igarashi-yuto": { "kinds": ["classmate"], "affection": 2, "note": "五十嵐先輩。隔着理科室的窗看他指导弟弟——总觉得他和人之间隔着一层玻璃。", "since": 0, "lastInteractionTick": 0 },
-    "char-asakura-haruto": { "kinds": ["younger_sister"], "affection": 3, "note": "哥哥。他在身边时世界总是很吵——但不坏。", "since": 0, "lastInteractionTick": 0 }
+    "char-sakurai-mahiru": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-igarashi-yuto": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-asakura-haruto": {
+      "kinds": [
+        "younger_sister"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
-  "initialMoney": 300, "expenseExempt": false
+  "initialMoney": 300,
+  "expenseExempt": false,
+  "impressionBook": {}
 }

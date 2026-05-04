@@ -31,10 +31,6 @@ const SHORT_MEMORY_LIMIT = 4;
 const DAILY_MEMORY_LIMIT = 6;
 const WEEKLY_MEMORY_LIMIT = 6;
 const MAX_PEERS_IN_PROMPT = 5;
-/** 14 游戏日 = 14 * 24 = 336 小时；与 tick.ts 保持同步。 */
-const ACQUAINTANCE_DECAY_TICKS = 336 * TICKS_PER_HOUR;
-/** acquaintance 距衰减还剩 ≤ 此 小时 数时，prompt 给出"濒临淡出"提示。 */
-const ACQUAINTANCE_WARN_TICKS = 48 * TICKS_PER_HOUR;
 
 // ---------------------------------------------------------------------------
 // MBTI 9 档文字标签（无数值暴露）
@@ -105,22 +101,6 @@ function describePersonality(p: Personality): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// affection 文字
-// ---------------------------------------------------------------------------
-
-function describeAffection(v: number): string {
-  if (v <= -4) return "极厌恶";
-  if (v === -3) return "很讨厌";
-  if (v === -2) return "不喜欢";
-  if (v === -1) return "略反感";
-  if (v === 0) return "中性";
-  if (v === 1) return "略有好感";
-  if (v === 2) return "有好感";
-  if (v === 3) return "很喜欢";
-  return "非常喜爱";
-}
-
-// ---------------------------------------------------------------------------
 // directional relation labels
 // ---------------------------------------------------------------------------
 
@@ -162,12 +142,6 @@ function selectTopPeers(
           BLOOD_RELATION_KINDS.has(k),
       );
       if (hasStrong) score += 1000;
-      score += Math.abs(rel.affection) * 10;
-      const decayIn =
-        ACQUAINTANCE_DECAY_TICKS - (tick - rel.lastInteractionTick);
-      if (rel.kinds.includes("acquaintance") && decayIn <= ACQUAINTANCE_WARN_TICKS) {
-        score += 500;
-      }
     }
     return { peer: p, score };
   });
@@ -185,33 +159,12 @@ function describeRelations(
   tick: number,
 ): string {
   if (peers.length === 0) return "（同节点没有其他人）";
-  return peers
-    .map((p) => {
-      const r = c.relations[p.id];
-      if (!r) return `- ${p.name}（陌生人）`;
-      const directionalParts: string[] = [];
-      const otherKinds: string[] = [];
-      for (const k of r.kinds) {
-        if (DIRECTIONAL_KIND_LABELS[k]) {
-          directionalParts.push(DIRECTIONAL_KIND_LABELS[k]);
-        } else {
-          otherKinds.push(k);
-        }
-      }
-      const kindsDisplay = [...directionalParts, ...otherKinds].join("、");
-      const aff = describeAffection(r.affection);
-      const noteSuffix = r.note ? `——${r.note}` : "";
-      let warn = "";
-      if (r.kinds.includes("acquaintance")) {
-        const decayIn =
-          ACQUAINTANCE_DECAY_TICKS - (tick - r.lastInteractionTick);
-        if (decayIn <= ACQUAINTANCE_WARN_TICKS && decayIn > 0) {
-          warn = `（再 ${Math.floor(decayIn / TICKS_PER_HOUR)} 小时未互动就会淡出）`;
-        }
-      }
-      return `- ${p.name} —— ${buildImage(p)} —— ${kindsDisplay}，${aff}${noteSuffix}${warn}`;
-    })
-    .join("\n");
+  return peers.map(p => {
+    const r = c.relations[p.id];
+    if (!r) return `- ${p.name}（陌生人）`;
+    const kindsDisplay = r.kinds.join("、");
+    return `- ${p.name} — ${kindsDisplay}`;
+  }).join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -543,13 +496,13 @@ function worldRules(): string {
 游戏时间：1 tick = 1/5 游戏小时（5 ticks = 1 游戏小时）。tick 是基本时间单位。你不需要思考"玩家"——你只在你的角色身份下做出与你性格相符的决定。
 
 行动机制：
-- 你**只能**调用一个 action_* 工具来回复，禁止直接输出任何自然语言文本——直接吐文本视为本 tick 弃权。
-- 每次只调用一个工具（并联工具调用已禁用），不要在一次回复中调用多个 action 工具。
-- 每个 action_* 工具对应一种行动，工具名即行动类型。请根据当前情境选择合适的工具调用。
-- 你可以在 free_text 中加入说话内容或行动具体描述。
+- 你**只能**调用 decide_action 工具来提交行动决定，禁止直接输出任何自然语言文本——直接吐文本视为本 tick 弃权。
+- decide_action 的 action_type 参数选择你要执行的行动类型，可选值会在 prompt 末尾"可选行动"中列出。
+- 根据你选择的 action_type，填写对应的 target_id / target_node_id / free_text / amount 等参数。
+- you may write spoken content or action details in free_text。
 - reasoning 是你的内心独白，必须在其中显式引用一项你的性格特征（用文字描述，不要写数值）。这是硬性规则。
 - self_importance 1-5，决定这件事是否进入你的长期记忆。
-- 不要做超出当前可选工具范围的事；如果没有合适的工具，选 action_wait。
+- 不要做超出当前可选行动范围的事；如果没有合适的，选 action_type="wait"。
 
 移动机制：1 tick = 1/5 游戏小时（5 ticks = 1 小时）。移动时你需要指定目的地（任意地图节点）、移动原因（如"去酒馆找田中喝酒"）和到达后要做的动作（arrival_action）。引擎会自动计算最短路径，每走一步消耗 1 tick。移动期间你无法主动决策（类似睡觉），但可被高强度事件打断。到达后自动执行你声明的到达动作。
 
@@ -568,7 +521,7 @@ function worldRules(): string {
 - 超过 14 游戏日没和某熟人接触，对方将从你的关系中淡出（acquaintance 标签被移除）。如果你想维持某段关系，应主动联络。
 
 反循环：
-- 若你过去几个 tick 已多次做同一类行动且情境无新变化（例如连续 4 个 tick 都在 speak），应主动切换行为。
+- 若你过去几个 tick 已多次做同一类行动且情境无新变化（例如连续 4 个 tick 都在做同一类行动），应主动切换行为。
 - 若你已在同一节点超过 8 小时，且这里不是你的家、工作场所或庆典现场，应认真考虑 move 去别处。`;
 }
 
@@ -616,12 +569,12 @@ function arrivalIntroBlock(lang: Language): string {
 
 function submitActionInstruction(lang: Language): string {
   if (lang === "zh") {
-    return "请**调用对应的 action_* 工具**返回你的决定（不要输出自然语言文本）。务必在 reasoning 中显式引用一项你的性格特征的文字描述。";
+    return "请**调用 decide_action 工具**返回你的决定（不要输出自然语言文本）。务必在 reasoning 中显式引用一项你的性格特征的文字描述。";
   }
   if (lang === "en") {
-    return "Please **call the appropriate action_* tool** to return your decision (do not output any free-form natural-language text). You must explicitly cite one textual personality trait of yours in reasoning.";
+    return "Please **call the decide_action tool** to return your decision (do not output any free-form natural-language text). You must explicitly cite one textual personality trait of yours in reasoning.";
   }
-  return "対応する action_* ツールを必ず呼び出して回答してください（自由形式の自然言語テキストは出力しないでください）。reasoning では自分の性格特徴の文字記述を 1 つ明示的に引用してください。";
+  return "decide_action ツールを必ず呼び出して回答してください（自由形式の自然言語テキストは出力しないでください）。reasoning では自分の性格特徴の文字記述を 1 つ明示的に引用してください。";
 }
 
 /**
@@ -751,6 +704,8 @@ export function buildCharacterStaticBlock(
       ? `- 能力：${character.abilities.map((a) => `${a.kind}(tier ${a.tier})`).join("、")}`
       : "- 能力：（无值得一提的特殊能力）",
   );
+  if (character.liked) lines.push(`- 你最喜欢：${character.liked}`);
+  if (character.disliked) lines.push(`- 你最讨厌：${character.disliked}`);
   return lines.join("\n");
 }
 
@@ -894,10 +849,10 @@ export function buildDialogSummaryPrompt(args: {
 
   const instruction =
     language === "zh"
-      ? `以下是一段对话的完整记录。请用 1-2 句话总结这次对话的核心内容与氛围。调用 submit_dialog_summary 工具返回你的摘要。\n\n对话：\n${history}`
+      ? `以下是一段对话的完整记录。请用 1-2 句话总结这次对话的核心内容与氛围。如果对话让你对对方产生了新的印象，可以在 memorize 中更新。调用 submit_dialog_summary 工具返回你的摘要。\n\n对话：\n${history}`
       : language === "en"
-        ? `Below is the transcript of a conversation. Summarize its core content and atmosphere in 1-2 sentences. Call submit_dialog_summary to return your summary.\n\nConversation:\n${history}`
-        : `以下は会話の文字起こしです。この会話の核心的な内容と雰囲気を 1〜2 文で要約してください。submit_dialog_summary を呼び出して要約を返してください。\n\n会話：\n${history}`;
+        ? `Below is the transcript of a conversation. Summarize its core content and atmosphere in 1-2 sentences. If the conversation gave you new impressions of the other person, you may update them in memorize. Call submit_dialog_summary to return your summary.\n\nConversation:\n${history}`
+        : `以下は会話の文字起こしです。この会話の核心的な内容と雰囲気を 1〜2 文で要約してください。会話を通じて相手に対する新しい印象があれば、memorize で更新できます。submit_dialog_summary を呼び出して要約を返してください。\n\n会話：\n${history}`;
 
   return instruction;
 }
@@ -1030,6 +985,14 @@ export function buildUserPrompt(args: {
   lines.push(buildCharacterStaticBlock(character, nodes, sleepWindow));
   lines.push("");
 
+  // 0.6. 角色目标
+  if (character.shortTermGoal || character.longTermGoal) {
+    lines.push("## 你的目标");
+    if (character.shortTermGoal) lines.push(`短期目标：${character.shortTermGoal.goal}`);
+    if (character.longTermGoal) lines.push(`长期目标：${character.longTermGoal.goal}`);
+    lines.push("");
+  }
+
   // 1. 你的连续行为
   lines.push("你的连续行为：");
   lines.push(describeContinuity(facts, here.name, tick));
@@ -1100,13 +1063,9 @@ export function buildUserPrompt(args: {
 
   // 4. 同节点其他人物（最多 5）—— 0 人时整段省略
   if (companions.length > 0) {
-    const topPeers = selectTopPeers(character, companions, tick);
-    lines.push(
-      companions.length > MAX_PEERS_IN_PROMPT
-        ? `同节点其他人物（共 ${companions.length} 人，仅展示与你最相关的 ${topPeers.length}）：`
-        : "同节点其他人物：",
-    );
-    lines.push(describeRelations(character, topPeers, tick));
+    const names = companions.map(c => `${c.name}[${c.id}]`).join("、");
+    lines.push(`同节点其他人物（共 ${companions.length} 人）：${names}`);
+    lines.push("如果你需要了解其中某人的信息，请调用 recall 工具查询。");
     lines.push("");
   }
 
@@ -1271,4 +1230,59 @@ export function injectTimeMessage(args: {
   }
   const dur = elapsedHours > 0 ? `${elapsedHours} 時間 ${elapsedMinutes} 分` : `${elapsedMinutes} 分`;
   return `もう ${timeStr} です、${dur}（${totalMinutes} 分）話し続けています。${endHint}`;
+}
+
+// ---------------------------------------------------------------------------
+// Pre-sleep reflection prompt
+// ---------------------------------------------------------------------------
+
+export function buildReflectionPrompt(args: { character: Character; language?: Language }): string {
+  const { character } = args;
+  const language = args.language ?? "zh";
+
+  const shortMemories = character.shortMemory
+    .filter(m => !m.content.includes("[heuristic]"))
+    .map(m => `- ${m.content}`).join("\n");
+  const dailyMemories = character.dailyMemory.slice(-7)
+    .map(m => `- ${m.content}`).join("\n");
+  const longMemories = character.longMemory.slice(-14)
+    .map(m => `- ${m.content}`).join("\n");
+  const impressions = Object.entries(character.impressionBook)
+    .filter(([, v]) => v && v.length > 0)
+    .map(([id, text]) => `- ${id}: ${text}`).join("\n");
+  const goalsText = [
+    character.shortTermGoal ? `短期目标：${character.shortTermGoal.goal}` : null,
+    character.longTermGoal ? `长期目标：${character.longTermGoal.goal}` : null,
+  ].filter(Boolean).join("\n");
+
+  const likedText = character.liked || "（暂无）";
+  const dislikedText = character.disliked || "（暂无）";
+
+  return `你是${character.name}，现在是睡前反思时间。回顾今天和过去的经历，反思以下方面：
+
+## 短期记忆（今天）
+${shortMemories || "（无）"}
+
+## 日常记忆
+${dailyMemories || "（无）"}
+
+## 长期记忆
+${longMemories || "（无）"}
+
+## 你对其他人的印象
+${impressions || "（暂无任何印象）"}
+
+## 当前目标
+${goalsText || "（暂无目标）"}
+
+## 当前喜好
+最喜欢：${likedText}
+最讨厌：${dislikedText}
+
+请调用 submit_reflection 工具输出你的反思结果。以下各项都是可选的，只填你确实想改变的：
+- memorize: 更新你对某些人的印象（空 impression 代表忘记）
+- liked: 更新你最喜欢的人或事
+- disliked: 更新你最讨厌的人或事
+- short_term_goal: 更新短期目标（距离上次更新需 ≥1 天）
+- long_term_goal: 更新长期目标（距离上次更新需 ≥7 天）`;
 }

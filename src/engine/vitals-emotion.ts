@@ -460,3 +460,70 @@ export function reduceVital(
     character.vitals.fatigueCapTicks = 0;
   }
 }
+
+// ---- sickness ----
+
+export interface SicknessCheckInput {
+  characters: Character[];
+  worldId: string;
+  tick: number;
+}
+
+/**
+ * 每日一次（tick % 120 === 0）判定生病：
+ * - 基础概率由 health 决定：4→2%, 3→5%, 2→10%, 1→20%
+ * - vitals 越线修正：fatigue >= 12 && capTicks > 0 → ×1.5
+ *                     hunger >= 12 && capTicks > 0 → ×1.5
+ *                     hygiene >= 12 → ×1.3
+ * - 最终概率上限 50%
+ * - 命中后 mood -= 1，duration 随机 1-7 天（120-840 ticks）
+ * - 到期自动恢复：mood += 1
+ */
+export function checkSickness(input: SicknessCheckInput): WorldEvent[] {
+  const { characters, worldId, tick } = input;
+  const inner: WorldEvent[] = [];
+
+  for (const c of characters) {
+    // Recovery check
+    if (c.sickness && tick >= c.sickness.onsetTick + c.sickness.duration) {
+      c.sickness = undefined;
+      c.emotion.mood = clamp(c.emotion.mood + 1, -4, 4);
+      inner.push(makeInnerEvent({
+        worldId, tick, charId: c.id,
+        description: "病好了，身体恢复了。",
+        intensity: 1,
+      }));
+      continue;
+    }
+
+    // Already sick — no new sickness roll
+    if (c.sickness) continue;
+
+    // Base probability from health
+    const baseProb: Record<number, number> = { 1: 0.20, 2: 0.10, 3: 0.05, 4: 0.02 };
+    let prob = baseProb[c.health] ?? 0.10;
+
+    // Vital modifiers
+    if (c.vitals.fatigue >= 12 && (c.vitals.fatigueCapTicks ?? 0) > 0) prob *= 1.5;
+    if (c.vitals.hunger >= 12 && (c.vitals.hungerCapTicks ?? 0) > 0) prob *= 1.5;
+    if (c.vitals.hygiene >= 12) prob *= 1.3;
+
+    prob = Math.min(prob, 0.50);
+
+    if (Math.random() < prob) {
+      const days = 1 + Math.floor(Math.random() * 7); // 1-7
+      c.sickness = {
+        onsetTick: tick,
+        duration: days * 120,
+      };
+      c.emotion.mood = clamp(c.emotion.mood - 1, -4, 4);
+      inner.push(makeInnerEvent({
+        worldId, tick, charId: c.id,
+        description: "生病了，身体不适。",
+        intensity: 3,
+      }));
+    }
+  }
+
+  return inner;
+}

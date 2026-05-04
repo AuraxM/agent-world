@@ -114,6 +114,29 @@ function describeAffection(v: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// directional relation labels
+// ---------------------------------------------------------------------------
+
+const DIRECTIONAL_KIND_LABELS: Record<string, string> = {
+  boss: "你的老板",
+  subordinate: "你的下属",
+  colleague: "你的同事",
+  spouse: "你的配偶",
+  father: "你的父亲",
+  mother: "你的母亲",
+  son: "你的儿子",
+  daughter: "你的女儿",
+  older_brother: "你的哥哥",
+  younger_brother: "你的弟弟",
+  older_sister: "你的姐姐",
+  younger_sister: "你的妹妹",
+  parent: "你的父亲/母亲",
+  sibling: "你的手足",
+  partner: "你的伴侣",
+  ex_partner: "前伴侣",
+};
+
+// ---------------------------------------------------------------------------
 // 关系筛选：5 人上限 + 优先级
 // ---------------------------------------------------------------------------
 
@@ -161,7 +184,16 @@ function describeRelations(
     .map((p) => {
       const r = c.relations[p.id];
       if (!r) return `- ${p.name}（陌生人）`;
-      const kinds = r.kinds.join("/");
+      const directionalParts: string[] = [];
+      const otherKinds: string[] = [];
+      for (const k of r.kinds) {
+        if (DIRECTIONAL_KIND_LABELS[k]) {
+          directionalParts.push(DIRECTIONAL_KIND_LABELS[k]);
+        } else {
+          otherKinds.push(k);
+        }
+      }
+      const kindsDisplay = [...directionalParts, ...otherKinds].join("、");
       const aff = describeAffection(r.affection);
       const noteSuffix = r.note ? `——${r.note}` : "";
       let warn = "";
@@ -172,7 +204,7 @@ function describeRelations(
           warn = `（再 ${Math.floor(decayIn / TICKS_PER_HOUR)} 小时未互动就会淡出）`;
         }
       }
-      return `- ${p.name}（${kinds}, ${aff}）${noteSuffix}${warn}`;
+      return `- ${p.name} —— ${kindsDisplay}，${aff}${noteSuffix}${warn}`;
     })
     .join("\n");
 }

@@ -69,8 +69,6 @@ import {
 } from "@/llm/decide";
 
 const FACTS_LOOKBACK_TICKS = 48 * TICKS_PER_HOUR;
-/** 14 游戏日 = 14 * 24 = 336 小时 */
-const ACQUAINTANCE_DECAY_TICKS = 336 * TICKS_PER_HOUR;
 
 export interface DecideInput {
   character: Character;
@@ -960,21 +958,6 @@ function manageRelations(
     }
   }
 
-  // acquaintance 衰减：lastInteractionTick 距今 ≥ 336 tick → 移除 acquaintance
-  for (const c of characters) {
-    for (const otherId of Object.keys(c.relations)) {
-      const rel = c.relations[otherId];
-      if (
-        rel.kinds.includes("acquaintance") &&
-        tick - rel.lastInteractionTick >= ACQUAINTANCE_DECAY_TICKS
-      ) {
-        rel.kinds = rel.kinds.filter((k) => k !== "acquaintance");
-        if (rel.kinds.length === 0) {
-          delete c.relations[otherId];
-        }
-      }
-    }
-  }
 }
 
 function ensureAcquaintance(
@@ -986,7 +969,6 @@ function ensureAcquaintance(
   if (!rel || rel.kinds.length === 0) {
     const fresh: Relation = {
       kinds: ["acquaintance"],
-      affection: 0,
       since: tick,
       lastInteractionTick: tick,
     };

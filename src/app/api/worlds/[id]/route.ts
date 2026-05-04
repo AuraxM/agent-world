@@ -1,7 +1,12 @@
 /**
  * GET /api/worlds/:id
  * 返回当前世界的完整快照：world meta + nodes + characters。
+ *
+ * DELETE /api/worlds/:id
+ * 删除一个世界及其所有关联数据。
  */
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db/client";
 import { loadWorld } from "@/engine/store";
 
 export async function GET(
@@ -23,4 +28,28 @@ export async function GET(
     }
     return Response.json({ error: message }, { status: 500 });
   }
+}
+
+export async function DELETE(
+  _request: Request,
+  ctx: RouteContext<"/api/worlds/[id]">,
+) {
+  const { id } = await ctx.params;
+  const w = db
+    .select({ id: schema.worlds.id })
+    .from(schema.worlds)
+    .where(eq(schema.worlds.id, id))
+    .get();
+  if (!w) {
+    return Response.json({ error: `world not found: ${id}` }, { status: 404 });
+  }
+
+  db.delete(schema.eventsLog).where(eq(schema.eventsLog.worldId, id)).run();
+  db.delete(schema.agentThoughts).where(eq(schema.agentThoughts.worldId, id)).run();
+  db.delete(schema.snapshots).where(eq(schema.snapshots.worldId, id)).run();
+  db.delete(schema.characters).where(eq(schema.characters.worldId, id)).run();
+  db.delete(schema.nodes).where(eq(schema.nodes.worldId, id)).run();
+  db.delete(schema.worlds).where(eq(schema.worlds.id, id)).run();
+
+  return Response.json({ ok: true, deleted: id });
 }

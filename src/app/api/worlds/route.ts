@@ -7,7 +7,9 @@
  *   cast: [{ characterId, locationId?, vitals? }]
  * }
  */
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { db, schema } from "@/db/client";
 import { createWorldFromConfig } from "@/engine/createWorld";
 
 const VitalsOverride = z
@@ -22,6 +24,31 @@ const CastMemberSchema = z.object({
   locationId: z.string().min(1).optional(),
   vitals: VitalsOverride,
 });
+
+export async function GET() {
+  const rows = db
+    .select({
+      id: schema.worlds.id,
+      name: schema.worlds.name,
+      mapId: schema.worlds.mapId,
+      currentTick: schema.worlds.currentTick,
+      updatedAt: schema.worlds.updatedAt,
+    })
+    .from(schema.worlds)
+    .orderBy(desc(schema.worlds.updatedAt))
+    .all();
+
+  const worlds = rows.map((w) => {
+    const charCount = db
+      .select()
+      .from(schema.characters)
+      .where(eq(schema.characters.worldId, w.id))
+      .all().length;
+    return { ...w, characterCount: charCount };
+  });
+
+  return Response.json({ worlds });
+}
 
 const BodySchema = z.object({
   worldId: z.string().min(1),

@@ -451,6 +451,15 @@ interface PackInfo {
   errors: { file: string; message: string }[];
 }
 
+interface ExistingWorld {
+  id: string;
+  name: string;
+  mapId: string;
+  currentTick: number;
+  characterCount: number;
+  updatedAt: number;
+}
+
 interface ActiveWorldInfo {
   id: string;
   mapId: string;
@@ -461,9 +470,11 @@ interface ActiveWorldInfo {
 
 function WorldsTab() {
   const [packs, setPacks] = useState<PackInfo[]>([]);
+  const [existingWorlds, setExistingWorlds] = useState<ExistingWorld[]>([]);
   const [activeWorld, setActiveWorld] = useState<ActiveWorldInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingPack, setLoadingPack] = useState<string | null>(null);
+  const [deletingWorld, setDeletingWorld] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
 
@@ -471,11 +482,17 @@ function WorldsTab() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/map-packs");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "fetch failed");
-      setPacks(data.packs);
-      setActiveWorld(data.activeWorld);
+      const [packsRes, worldsRes] = await Promise.all([
+        fetch("/api/admin/map-packs"),
+        fetch("/api/worlds"),
+      ]);
+      const packsData = await packsRes.json();
+      const worldsData = await worldsRes.json();
+      if (!packsRes.ok) throw new Error(packsData.error ?? "fetch packs failed");
+      if (!worldsRes.ok) throw new Error(worldsData.error ?? "fetch worlds failed");
+      setPacks(packsData.packs);
+      setExistingWorlds(worldsData.worlds ?? []);
+      setActiveWorld(packsData.activeWorld);
     } catch (err) {
       setError(err instanceof Error ? err.message : "unknown error");
     } finally {
@@ -506,6 +523,24 @@ function WorldsTab() {
       setError(err instanceof Error ? err.message : "unknown error");
     } finally {
       setLoadingPack(null);
+    }
+  }
+
+  async function handleDeleteWorld(worldId: string) {
+    if (!confirm(`确定要删除世界「${worldId}」及其所有数据？此操作不可撤销。`)) return;
+    setDeletingWorld(worldId);
+    setError("");
+    setResult("");
+    try {
+      const res = await fetch(`/api/worlds/${worldId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "delete failed");
+      setResult(`世界已删除：${data.deleted}`);
+      await fetchPacks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "unknown error");
+    } finally {
+      setDeletingWorld(null);
     }
   }
 
@@ -557,6 +592,58 @@ function WorldsTab() {
           )}
         </div>
       </PixelFrame>
+
+      {/* existing worlds */}
+      <div className="text-game-sm text-(--color-pixel-muted)">已有世界</div>
+
+      {existingWorlds.length === 0 ? (
+        <div className="text-game-xs text-(--color-pixel-muted)">
+          数据库中没有世界（加载一个地图包来创建）
+        </div>
+      ) : (
+        existingWorlds.map((w) => {
+          const isActive = activeWorld?.id === w.id;
+          return (
+            <PixelFrame key={w.id} tone={isActive ? "accent" : "default"}>
+              <div className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-game-base text-(--color-pixel-fg) font-bold">
+                      {w.name}
+                    </span>
+                    <span className="text-game-2xs text-(--color-pixel-muted)">({w.id})</span>
+                    {isActive && (
+                      <span className="text-game-2xs px-1 bg-(--color-pixel-accent) text-(--color-pixel-border-dark)">当前</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`/?world=${w.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-1 text-game-xs border border-(--color-pixel-border-dark) text-(--color-pixel-fg) hover:bg-(--color-pixel-bg-2) transition-colors no-underline"
+                    >
+                      打开 ↗
+                    </a>
+                    <button
+                      onClick={() => handleDeleteWorld(w.id)}
+                      disabled={deletingWorld === w.id}
+                      className="px-2 py-1 text-game-xs border border-(--color-pixel-danger) text-(--color-pixel-danger) hover:bg-(--color-pixel-bg-2) transition-colors disabled:opacity-50"
+                    >
+                      {deletingWorld === w.id ? "删除中…" : "删除"}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-4 text-game-2xs text-(--color-pixel-muted)">
+                  <span>地图包: <span className="text-(--color-pixel-fg)">{w.mapId}</span></span>
+                  <span>Tick: <span className="text-(--color-pixel-fg)">{w.currentTick}</span></span>
+                  <span>角色: <span className="text-(--color-pixel-fg)">{w.characterCount}</span></span>
+                </div>
+              </div>
+            </PixelFrame>
+          );
+        })
+      )}
 
       {/* map pack list */}
       <div className="text-game-sm text-(--color-pixel-muted)">可用地图包</div>

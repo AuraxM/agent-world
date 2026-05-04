@@ -88,6 +88,13 @@ const JP_LABELS: Record<number, string> = {
   [4]: "极度有计划，无规划即焦虑",
 };
 
+const INTELLIGENCE_LABELS: Record<number, string> = {
+  1: "你不太会转弯，遇事总是走最熟悉的路，很少冒出新的念头。",
+  2: "你思维比较直，习惯按部就班。",
+  3: "你做事会动脑筋，不是死板的人。",
+  4: "你头脑灵活，遇事容易想到不同的做法，做决定时会在 reasoning 中设想多种可能。",
+};
+
 function describePersonality(p: Personality): string[] {
   return [
     `内外向(E/I)：${EI_LABELS[p.ei] ?? String(p.ei)}`,
@@ -202,7 +209,7 @@ function describeRelations(
           warn = `（再 ${Math.floor(decayIn / TICKS_PER_HOUR)} 小时未互动就会淡出）`;
         }
       }
-      return `- ${p.name} —— ${kindsDisplay}，${aff}${noteSuffix}${warn}`;
+      return `- ${p.name} —— ${buildImage(p)} —— ${kindsDisplay}，${aff}${noteSuffix}${warn}`;
     })
     .join("\n");
 }
@@ -393,6 +400,36 @@ const SOCIAL_WORDS: Record<number, string> = {
   [3]: "很充实",
   [4]: "社交过度",
 };
+
+// ---------------------------------------------------------------------------
+// image description (形象)
+// ---------------------------------------------------------------------------
+
+const APPEARANCE_BASE: Record<number, string> = {
+  1: "面容平凡",
+  2: "长相普通",
+  3: "相貌端正",
+  4: "面容出众",
+};
+
+export function buildImage(c: Character): string {
+  const parts: string[] = [];
+
+  // Base appearance
+  parts.push(APPEARANCE_BASE[c.appearance] ?? "长相普通");
+
+  // Physical overlays (vitals)
+  if (c.vitals.hygiene >= 10) parts.push("邋遢不洁");
+  if (c.vitals.fatigue >= 10) parts.push("两眼无神");
+  if (c.vitals.hunger >= 10) parts.push("面有菜色");
+
+  // Psychological overlays (emotion)
+  if (c.emotion.mood >= 3) parts.push("神采奕奕");
+  if (c.emotion.mood <= -3) parts.push("面色阴郁");
+  if (c.emotion.stress >= 3) parts.push("神情紧绷");
+
+  return parts.join("，");
+}
 
 export function describeEmotion(emotion: Emotion): string[] {
   return [
@@ -697,6 +734,15 @@ export function buildCharacterStaticBlock(
   lines.push("- 性格特征（用文字描述，**禁止在 reasoning 里写数值**）：");
   for (const s of describePersonality(character.personality)) {
     lines.push(`  · ${s}`);
+  }
+  lines.push(
+    `- 思维特点：${INTELLIGENCE_LABELS[character.intelligence] ?? INTELLIGENCE_LABELS[2]}`,
+  );
+  if (character.speakingStyle) {
+    lines.push(`- 说话风格：${character.speakingStyle}`);
+  }
+  if (character.sickness) {
+    lines.push("- ⚠ 你正在生病，身体不适。");
   }
   lines.push(
     character.abilities.length > 0

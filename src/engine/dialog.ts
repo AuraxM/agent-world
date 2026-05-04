@@ -300,15 +300,27 @@ async function runOneTickDialog(
   const acceptor = chars.get(conv.acceptorId)!;
   const transcript: DialogTurn[] = [...conv.transcript];
 
-  // Who speaks first this tick (alternate from last speaker)
-  const lastSpeakerId =
-    transcript.length > 0
-      ? transcript[transcript.length - 1].speakerId
-      : conv.initiatorId;
-  const firstSpeakerId =
-    lastSpeakerId === conv.initiatorId ? conv.acceptorId : conv.initiatorId;
+  // Find the last real speaker (skip __system__ time messages)
+  let lastRealSpeakerId = conv.initiatorId;
+  for (let i = transcript.length - 1; i >= 0; i--) {
+    if (transcript[i].speakerId !== "__system__") {
+      lastRealSpeakerId = transcript[i].speakerId;
+      break;
+    }
+  }
 
-  for (let round = 0; round < TURNS_PER_TICK * 2; round++) {
+  // Who speaks first this tick (alternate from last real speaker)
+  const firstSpeakerId =
+    lastRealSpeakerId === conv.initiatorId ? conv.acceptorId : conv.initiatorId;
+
+  // First tick of a new conversation: if opening line already present,
+  // it counts as 1 turn — generate only 5 more to reach 6 total (3 per person)
+  const hasExistingTurns = transcript.some((t) => t.speakerId !== "__system__");
+  const maxRounds =
+    TURNS_PER_TICK * 2 - (conv.currentTickRounds === 0 && hasExistingTurns ? 1 : 0);
+  const sixthSentenceIndex = maxRounds - 1;
+
+  for (let round = 0; round < maxRounds; round++) {
     const speakerId =
       round % 2 === 0
         ? firstSpeakerId
@@ -321,12 +333,20 @@ async function runOneTickDialog(
     let result;
     try {
       result = await turnDecide({ self: speaker, peer, transcript, language });
-    } catch {
+    } catch (err) {
+      log.error("turnDecide 异常，对话被迫终止", {
+        speaker: speaker.name,
+        peer: peer.name,
+        transcriptLen: transcript.length,
+        convId: conv.id,
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack?.slice(0, 500) : undefined,
+      });
       return { transcript, ended: true };
     }
 
     if (result.kind === "end") {
-      const isSixthSentence = round === TURNS_PER_TICK * 2 - 1;
+      const isSixthSentence = round === sixthSentenceIndex;
       if (result.payload.closingLine) {
         transcript.push({
           speakerId,
@@ -565,45 +585,57 @@ export async function runDialogPhase(
   // ── Part 4: Salvage decisions ──
   const salvageResults = await Promise.all(salvageTasks.map((t) => t()));
 
-  // ── Part 5: Summarize ended conversations ──
+  // ── Part 5: Generate dialog events + summarize ended conversations ──
   for (const conv of updatedConversations) {
-    if (conv.status !== "ended") continue;
     const opener = charById.get(conv.initiatorId)!;
     const responder = charById.get(conv.acceptorId)!;
-    let summary: string;
-    try {
-      summary = await retryOnce(() =>
-        input.summaryDecide({
-          openerName: opener.name, openerId: conv.initiatorId,
-          responderName: responder.name, responderId: conv.acceptorId,
-          transcript: conv.transcript, language: input.language,
-        }),
+
+    if (conv.status === "ended") {
+      let summary: string;
+      try {
+        summary = await retryOnce(() =>
+          input.summaryDecide({
+            openerName: opener.name, openerId: conv.initiatorId,
+            responderName: responder.name, responderId: conv.acceptorId,
+            transcript: conv.transcript, language: input.language,
+          }),
+        );
+      } catch {
+        summary = `（摘要生成失败：双方聊了 ${conv.transcript.length} 句）`;
+      }
+      const maxImportance = clamp(
+        Math.max(
+          rawActions.find((a) => a.actorId === conv.initiatorId)?.selfImportance ?? 2,
+          rawActions.find((a) => a.actorId === conv.acceptorId)?.selfImportance ?? 2,
+        ),
+        2, 4,
       );
-    } catch {
-      summary = `（摘要生成失败：双方聊了 ${conv.transcript.length} 句）`;
+      memoryWrites.push(makeMemory(conv.initiatorId, tick, maxImportance, `和 ${responder.name} 聊了：${summary}`));
+      memoryWrites.push(makeMemory(conv.acceptorId, tick, maxImportance, `和 ${opener.name} 聊了：${summary}`));
+      dialogEvents.push({
+        id: `evt-conv-${conv.id}`,
+        worldId: opener.worldId, tick, category: "social", description: summary,
+        participants: [conv.initiatorId, conv.acceptorId], source: "actor", intensity: 2,
+        scope: "node", nodeId: opener.locationId, duration: 1,
+        dialogTranscript: conv.transcript,
+        dialogEndedBy: conv.endedBy === "passive" ? "passive" : (conv.endedBy ? "end_tool" : "natural"),
+      });
+      // Release from conversation
+      const initiator = charById.get(conv.initiatorId);
+      if (initiator) initiator.activeConversationIds = initiator.activeConversationIds.filter((id) => id !== conv.id);
+      const acceptor = charById.get(conv.acceptorId);
+      if (acceptor) acceptor.activeConversationIds = acceptor.activeConversationIds.filter((id) => id !== conv.id);
+    } else {
+      // Active conversation: push event with current transcript so frontend sees it immediately
+      dialogEvents.push({
+        id: `evt-conv-${conv.id}`,
+        worldId: opener.worldId, tick, category: "social",
+        description: `${opener.name} 和 ${responder.name} 正在对话`,
+        participants: [conv.initiatorId, conv.acceptorId], source: "actor", intensity: 2,
+        scope: "node", nodeId: opener.locationId, duration: 1,
+        dialogTranscript: conv.transcript,
+      });
     }
-    const maxImportance = clamp(
-      Math.max(
-        rawActions.find((a) => a.actorId === conv.initiatorId)?.selfImportance ?? 2,
-        rawActions.find((a) => a.actorId === conv.acceptorId)?.selfImportance ?? 2,
-      ),
-      2, 4,
-    );
-    memoryWrites.push(makeMemory(conv.initiatorId, tick, maxImportance, `和 ${responder.name} 聊了：${summary}`));
-    memoryWrites.push(makeMemory(conv.acceptorId, tick, maxImportance, `和 ${opener.name} 聊了：${summary}`));
-    dialogEvents.push({
-      id: `evt-${randomUUID().slice(0, 8)}`,
-      worldId: opener.worldId, tick, category: "social", description: summary,
-      participants: [conv.initiatorId, conv.acceptorId], source: "actor", intensity: 2,
-      scope: "node", nodeId: opener.locationId, duration: 1,
-      dialogTranscript: conv.transcript,
-      dialogEndedBy: conv.endedBy === "passive" ? "passive" : (conv.endedBy ? "end_tool" : "natural"),
-    });
-    // Release from conversation
-    const initiator = charById.get(conv.initiatorId);
-    if (initiator) initiator.activeConversationIds = initiator.activeConversationIds.filter((id) => id !== conv.id);
-    const acceptor = charById.get(conv.acceptorId);
-    if (acceptor) acceptor.activeConversationIds = acceptor.activeConversationIds.filter((id) => id !== conv.id);
   }
 
   const activeConversations = updatedConversations.filter((c) => c.status !== "ended");

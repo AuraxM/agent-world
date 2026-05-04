@@ -172,6 +172,7 @@ export function appendEventsLog(
   events: WorldEvent[],
 ): void {
   if (events.length === 0) return;
+  const now = new Date();
   db.transaction((tx) => {
     for (const ev of events) {
       tx
@@ -181,6 +182,14 @@ export function appendEventsLog(
           worldId,
           tick: ev.tick,
           payloadJson: JSON.stringify(ev),
+          createdAt: now,
+        })
+        .onConflictDoUpdate({
+          target: schema.eventsLog.id,
+          set: {
+            tick: ev.tick,
+            payloadJson: JSON.stringify(ev),
+          },
         })
         .run();
     }

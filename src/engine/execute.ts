@@ -235,7 +235,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
     const here = nodeById.get(actor.locationId)!;
     const ctx = {
       worldId, tick, self: actor, here,
-      companions: [],  // execution doesn't need companions
+      companions: characters.filter((c) => c.id !== actor.id && c.locationId === actor.locationId),
       reachable: nodes.filter((n) => n.id !== actor.locationId),
       isSleepHour: false,
       facts: {} as any,  // execution doesn't need facts

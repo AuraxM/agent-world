@@ -26,6 +26,9 @@ export function EventCard({
 
   const important = event.intensity >= 3;
   const hasTranscript = event.dialogTranscript && event.dialogTranscript.length > 0;
+  const transcriptMsgCount = hasTranscript
+    ? event.dialogTranscript!.filter((t) => t.speakerId !== "__system__").length
+    : 0;
   const actor = event.participants.length > 0
     ? charById.get(event.participants[0])
     : undefined;
@@ -96,11 +99,24 @@ export function EventCard({
             onClick={() => setExpanded(!expanded)}
             className="text-pixel-xs text-(--accent-strong) mt-2 hover:underline cursor-pointer tracking-[var(--letter-pixel-tight)]"
           >
-            {expanded ? "收起对话 ▲" : "展开对话 ▼"}
+            {expanded
+              ? `收起对话 ▲（${transcriptMsgCount} 条）`
+              : `展开对话 ▼（${transcriptMsgCount} 条）${event.dialogEndedBy ? "" : " · 进行中"}`}
           </button>
           {expanded && (
             <div className="mt-2 p-3 bg-(--panel) border border-(--border-amber) rounded space-y-1">
               {event.dialogTranscript!.map((turn, i) => {
+                if (turn.speakerId === "__system__") {
+                  return (
+                    <div key={i} className="flex items-center gap-2 my-2">
+                      <div className="flex-1 h-px bg-(--border-amber)/30" />
+                      <span className="text-pixel-2xs text-(--text-faint) whitespace-nowrap">
+                        {turn.line ?? ""}
+                      </span>
+                      <div className="flex-1 h-px bg-(--border-amber)/30" />
+                    </div>
+                  );
+                }
                 const speakerName =
                   charById.get(turn.speakerId)?.name ?? turn.speakerId;
                 return (

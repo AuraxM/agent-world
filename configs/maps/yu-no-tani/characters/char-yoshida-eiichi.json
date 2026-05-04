@@ -12,6 +12,9 @@
   "sleepWindow": { "start": 22, "duration": 8 },
   "personality": { "ei": 1, "sn": 0, "tf": 1, "jp": 1 },
   "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
   "relations": {
     "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 3, "note": "谷村さん。毎朝郵便物を渡すのが日課。谷一番の情報通との朝の立ち話。", "since": 0, "lastInteractionTick": 0 },
     "char-yamane-kazuma": { "kinds": ["friend"], "affection": 2, "note": "山根さん。毛皮や山菜を麓まで運ぶのを頼まれる。冬前のやりとりが多い。", "since": 0, "lastInteractionTick": 0 },

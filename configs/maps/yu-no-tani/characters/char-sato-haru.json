@@ -12,6 +12,9 @@
   "sleepWindow": { "start": 20, "duration": 9 },
   "personality": { "ei": 1, "sn": 0, "tf": -1, "jp": -1 },
   "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
   "relations": {
     "char-guji-masayuki": { "kinds": ["friend"], "affection": 3, "note": "宮司さん。同世代、一緒にこの谷の変わりようを見てきた。", "since": 0, "lastInteractionTick": 0 },
     "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "绢代さん。配達ついでに長話。いつも気にかけてくれてありがたい。", "since": 0, "lastInteractionTick": 0 },

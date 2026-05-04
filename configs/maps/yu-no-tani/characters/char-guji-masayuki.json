@@ -12,6 +12,9 @@
   "sleepWindow": { "start": 21, "duration": 8 },
   "personality": { "ei": -1, "sn": 1, "tf": 1, "jp": 1 },
   "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
   "relations": {
     "char-sato-haru": { "kinds": ["friend"], "affection": 3, "note": "佐藤さん。共にこの谷の移り変わりを見てきた数少ない同世代。", "since": 0, "lastInteractionTick": 0 },
     "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "谷村さん。祭典の準備や案内でいつも助けてもらってる。", "since": 0, "lastInteractionTick": 0 },

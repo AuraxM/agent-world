@@ -12,6 +12,9 @@
   "sleepWindow": { "start": 0, "duration": 7 },
   "personality": { "ei": 2, "sn": 0, "tf": -1, "jp": -1 },
   "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
   "relations": {
     "char-yumori-kosuke": {
       "kinds": ["subordinate", "friend"],

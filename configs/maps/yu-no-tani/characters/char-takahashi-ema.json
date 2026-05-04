@@ -20,6 +20,9 @@
     "jp": -1
   },
   "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
   "relations": {
     "char-matsuoka-sayo": {
       "kinds": ["friend"],

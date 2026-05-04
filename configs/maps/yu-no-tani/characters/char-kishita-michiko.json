@@ -12,6 +12,9 @@
   "sleepWindow": { "start": 23, "duration": 7 },
   "personality": { "ei": 0, "sn": 1, "tf": -1, "jp": 1 },
   "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
   "relations": {
     "char-sato-haru": { "kinds": ["friend"], "affection": 2, "note": "佐藤さん。月一の往診でいつも小玉の写真を見せてくれる。", "since": 0, "lastInteractionTick": 0 },
     "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "谷村さん。診療所に来る患者さんの様子をいつも教えてくれる。谷のアンテナ。", "since": 0, "lastInteractionTick": 0 },

@@ -37,17 +37,19 @@ export function recordTransaction(
   }
 }
 
-/** Roll random work income based on profession tier and multiplier. */
+import { getTierDailyIncome, characterBME } from "./bme";
+
+/** Roll work income based on character's BME and income tier. */
 export function rollWorkIncome(
-  incomeLevel: number,
+  character: Character,
   economyConfig: EconomyConfig,
-  incomeMultiplier: number,
 ): number {
-  const tierKey = (["none", "low", "medium", "high"] as const)[incomeLevel] ?? "none";
-  const range = economyConfig.professionIncomes[tierKey];
-  if (!range || range.max <= 0) return 0;
-  const raw = range.min + Math.floor(Math.random() * (range.max - range.min + 1));
-  return Math.floor(raw * incomeMultiplier);
+  const tier = character.incomeLevel ?? 0;
+  const bme = characterBME(character);
+  const mdc = economyConfig.mdc ?? 20;
+  const dailyIncome = getTierDailyIncome(bme, tier, mdc);
+  // Default 2 work sessions per day, multiplier fixed at 1.0
+  return Math.round(dailyIncome / 2);
 }
 
 /** Compute balance tier [-4..+4] from weekly totals. */

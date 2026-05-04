@@ -607,7 +607,7 @@ export async function tick(
             startedAt: fromTick,
             endsAt: fromTick + path.length - 1,
             description: `前往 ${targetNode?.name ?? action.targetNodeId} 途中`,
-            interruptThreshold: 4,
+            interruptThreshold: 3,
             path,
             stepIndex: 0,
             arrivalAction: action.arrivalAction,

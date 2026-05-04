@@ -185,5 +185,5 @@ export function loadEconomyConfig(mapId: string): EconomyConfig {
 
 /** Resolve a profession string to its income tier (0-3). */
 export function resolveIncomeLevel(profession: string): number {
-  return (PROFESSION_INCOME_TIERS as Record<string, number>)[profession] ?? 0;
+  return PROFESSION_INCOME_TIERS[profession] ?? 0;
 }

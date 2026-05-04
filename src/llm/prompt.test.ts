@@ -47,6 +47,7 @@ const baseCharacter: Character = {
   money: 100,
   incomeLevel: 0,
   expenseExempt: false,
+  activeConversationIds: [],
 };
 
 const restaurant: MapNode = {
@@ -653,35 +654,11 @@ describe("buildDialogTurnPrompt", () => {
       self: { ...baseCharacter, id: "b", name: "乙" },
       peer: { ...baseCharacter, id: "a", name: "甲" },
       transcript,
-      isSoftLimit: false,
-      turnCount: 3,
     });
     expect(result).toContain("甲");
     expect(result).toContain("乙");
     expect(result).toContain("今天天气真好");
     expect(result).toContain("submit_dialog_turn");
-  });
-
-  it("adds soft limit warning when isSoftLimit=true", () => {
-    const result = buildDialogTurnPrompt({
-      self: { ...baseCharacter, id: "b", name: "乙" },
-      peer: { ...baseCharacter, id: "a", name: "甲" },
-      transcript,
-      isSoftLimit: true,
-      turnCount: 8,
-    });
-    expect(result).toContain("收尾");
-  });
-
-  it("no soft limit warning when isSoftLimit=false", () => {
-    const result = buildDialogTurnPrompt({
-      self: { ...baseCharacter, id: "b", name: "乙" },
-      peer: { ...baseCharacter, id: "a", name: "甲" },
-      transcript,
-      isSoftLimit: false,
-      turnCount: 5,
-    });
-    expect(result).not.toContain("收尾");
   });
 });
 

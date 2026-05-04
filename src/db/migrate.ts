@@ -109,6 +109,15 @@ const STATEMENTS = [
     counterparty_id TEXT
   )`,
   `CREATE INDEX IF NOT EXISTS transactions_world_char_tick_idx ON transactions(world_id, character_id, tick)`,
+  `CREATE TABLE IF NOT EXISTS conversations (
+    id TEXT NOT NULL,
+    world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
+    payload_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    PRIMARY KEY (world_id, id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS conversations_world_idx ON conversations(world_id)`,
   `CREATE TABLE IF NOT EXISTS agent_thoughts (
     world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
     character_id TEXT NOT NULL,
@@ -167,6 +176,7 @@ const CHARACTERS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
   { name: "income_multiplier", ddl: "ALTER TABLE characters ADD COLUMN income_multiplier REAL NOT NULL DEFAULT 1.0" },
   { name: "daily_memory_json", ddl: "ALTER TABLE characters ADD COLUMN daily_memory_json TEXT NOT NULL DEFAULT '[]'" },
   { name: "last_sleep_tick", ddl: "ALTER TABLE characters ADD COLUMN last_sleep_tick INTEGER NOT NULL DEFAULT 0" },
+  { name: "active_conversation_ids_json", ddl: "ALTER TABLE characters ADD COLUMN active_conversation_ids_json TEXT NOT NULL DEFAULT '[]'" },
 ];
 
 const WORLDS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [

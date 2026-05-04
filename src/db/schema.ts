@@ -83,6 +83,7 @@ export const characters = sqliteTable(
     intelligence: integer("intelligence").notNull().default(2),
     health: integer("health").notNull().default(2),
     sicknessJson: text("sickness_json"),
+    activeConversationIdsJson: text("active_conversation_ids_json").notNull().default("[]"),
     speakingStyle: text("speaking_style"),
     biography: text("biography").notNull().default(""),
     origin: text("origin").notNull().default("local"),
@@ -215,5 +216,26 @@ export const transactions = sqliteTable(
   },
   (t) => [
     index("transactions_world_char_tick_idx").on(t.worldId, t.characterId, t.tick),
+  ],
+);
+
+export const conversations = sqliteTable(
+  "conversations",
+  {
+    id: text("id").notNull(),
+    worldId: text("world_id")
+      .notNull()
+      .references(() => worlds.id, { onDelete: "cascade" }),
+    payloadJson: text("payload_json").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.worldId, t.id] }),
+    index("conversations_world_idx").on(t.worldId),
   ],
 );

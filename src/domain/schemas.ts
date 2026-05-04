@@ -253,10 +253,10 @@ export const AcceptToolSchema = {
   additionalProperties: false,
 };
 
-// Dialog turn: kind=say|leave
+// Dialog turn: kind=say only
 export const DialogTurnSchema = z.object({
-  kind: z.enum(["say", "leave"]),
-  line: z.string().min(1).max(800).optional(),
+  kind: z.literal("say"),
+  line: z.string().min(1).max(800),
   reasoning: z.string().min(1).max(300).optional(),
 });
 export type DialogTurnPayload = z.infer<typeof DialogTurnSchema>;
@@ -265,11 +265,22 @@ export const DIALOG_TURN_TOOL_NAME = "submit_dialog_turn";
 export const DialogTurnToolSchema = {
   type: "object" as const,
   properties: {
-    kind: { type: "string", enum: ["say", "leave"], description: "say=说一句话；leave=结束对话离开。" },
-    line: { type: "string", description: "说的话（kind=say 时必填）。" },
+    kind: { type: "string", enum: ["say"], description: "说一句话。" },
+    line: { type: "string", description: "说的话。" },
     reasoning: { type: "string", description: "简短内心独白（可选）。" },
   },
-  required: ["kind"],
+  required: ["kind", "line"],
+  additionalProperties: false,
+};
+
+export const END_CONVERSATION_TOOL_NAME = "end_conversation";
+export const EndConversationToolSchema = {
+  type: "object" as const,
+  properties: {
+    reasoning: { type: "string", description: "结束对话的理由（内心独白）。" },
+    closing_line: { type: "string", description: "结束语（可选）。" },
+  },
+  required: ["reasoning"],
   additionalProperties: false,
 };
 
@@ -304,3 +315,12 @@ export const MemorySummaryToolSchema = {
   required: ["summary"],
   additionalProperties: false,
 } as const;
+
+// ---------------------------------------------------------------------------
+// End conversation
+// ---------------------------------------------------------------------------
+
+export const EndConversationSchema = z.object({
+  reasoning: z.string().min(1).max(400),
+  closing_line: z.string().max(800).optional(),
+});

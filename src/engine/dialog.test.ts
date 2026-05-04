@@ -29,6 +29,7 @@ function makeChar(id: string, loc: string, currentActionType?: string): Characte
     vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
     emotion: { mood: 0, stress: 0, social_satiety: 0 },
     abilities: [],
+    activeConversationIds: [],
     appearance: 2,
     intelligence: 2,
     health: 2,
@@ -185,6 +186,7 @@ function makeCharFull(
     vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
     emotion: { mood: 0, stress: 0, social_satiety: 0 },
     abilities: [],
+    activeConversationIds: [],
     appearance: 2,
     intelligence: 2,
     health: 2,
@@ -210,9 +212,12 @@ function makeCharFull(
 
 function mockTurn(sayLine: string): TurnDecideFn {
   return async ({ self }) => ({
-    speakerId: self.id,
-    kind: "say",
-    line: sayLine,
+    kind: "turn" as const,
+    turn: {
+      speakerId: self.id,
+      kind: "say" as const,
+      line: sayLine,
+    },
   });
 }
 
@@ -257,7 +262,7 @@ function baseNode(overrides?: Partial<{ id: string; name: string }>): any {
 const emptyPerceptions = new Map<string, WorldEvent[]>();
 
 describe("runDialogPhase", () => {
-  it("mutual pair + one-way accepted → 2 dialog events, 4 wait placeholders", async () => {
+  it("mutual pair + one-way accepted → produces 2 ongoing conversations", async () => {
     const a = makeCharFull("a", "甲", "n1");
     const b = makeCharFull("b", "乙", "n1");
     const c = makeCharFull("c", "丙", "n1");
@@ -303,25 +308,19 @@ describe("runDialogPhase", () => {
       turnDecide: mockTurn("嗯嗯"),
       summaryDecide: mockSummary("一段愉快的闲聊"),
       salvageDecide: mockSalvage("observe"),
+      ongoingConversations: [],
     });
 
     expect(result.finalActions).toHaveLength(4);
-    expect(result.dialogEvents).toHaveLength(2);
+    // 2 ongoing conversations (mutual pair + one-way), not ended yet
+    expect(result.updatedConversations).toHaveLength(2);
+    // No events/memories until conversations end
+    expect(result.dialogEvents).toHaveLength(0);
+    expect(result.memoryWrites).toHaveLength(0);
 
-    // mutual pair (a, b): both wait
-    const aAction = result.finalActions.find((a) => a.actorId === "a")!;
-    const bAction = result.finalActions.find((a) => a.actorId === "b")!;
-    expect(aAction.type).toBe("wait");
-    expect(bAction.type).toBe("wait");
-
-    // accepted c→d: both engaged in dialog, both wait
-    const cAction = result.finalActions.find((a) => a.actorId === "c")!;
-    const dAction = result.finalActions.find((a) => a.actorId === "d")!;
-    expect(cAction.type).toBe("wait");
-    expect(dAction.type).toBe("wait");
-
-    // 4 memory entries (a, b, c, d)
-    expect(result.memoryWrites).toHaveLength(4);
+    // Wait action count: mutual pair initiator + one-way initiator = 2 wait
+    const waitActions = result.finalActions.filter((a) => a.type === "wait");
+    expect(waitActions.length).toBe(2);
   });
 
   it("one-way rejected → requester gets salvage action, both get reject memories", async () => {
@@ -352,6 +351,7 @@ describe("runDialogPhase", () => {
       turnDecide: mockTurn("x"),
       summaryDecide: mockSummary("x"),
       salvageDecide: mockSalvage("observe"),
+      ongoingConversations: [],
     });
 
     expect(result.dialogEvents).toHaveLength(0);
@@ -392,6 +392,7 @@ describe("runDialogPhase", () => {
       turnDecide: mockTurn("x"),
       summaryDecide: mockSummary("x"),
       salvageDecide: mockSalvage("observe"),
+      ongoingConversations: [],
     });
 
     // Speak request reaches the sleeping target; target rejects (mockAccept).
@@ -435,6 +436,7 @@ describe("runDialogPhase", () => {
       turnDecide: mockTurn("x"),
       summaryDecide: mockSummary("x"),
       salvageDecide: mockSalvage("observe"),
+      ongoingConversations: [],
     });
 
     const aAction = result.finalActions.find((a) => a.actorId === "a")!;
@@ -481,9 +483,98 @@ describe("runDialogPhase", () => {
       turnDecide: mockTurn("嗯"),
       summaryDecide: mockSummary("聊得不错"),
       salvageDecide: mockSalvage("wait"),
+      ongoingConversations: [],
     });
 
-    expect(result.dialogEvents).toHaveLength(2);
-    expect(result.memoryWrites).toHaveLength(4);
+    expect(result.finalActions).toHaveLength(4);
+    // 2 ongoing conversations, not ended yet
+    expect(result.updatedConversations).toHaveLength(2);
+    expect(result.dialogEvents).toHaveLength(0);
+    expect(result.memoryWrites).toHaveLength(0);
+    // 2 initiators get wait actions
+    const waitActions = result.finalActions.filter((a) => a.type === "wait");
+    expect(waitActions.length).toBe(2);
+  });
+});
+
+describe("multi-tick conversation", () => {
+  const mockTurn = (speakerId: string, line: string) => ({
+    kind: "turn" as const,
+    turn: { speakerId, kind: "say" as const, line },
+  });
+
+  function makeNode(id: string): any {
+    return { id, worldId: "w", parentId: null, name: id, description: "", tags: [], capacity: null, privacy: "public", visibleFromParent: true, shortcuts: [], isEntry: false };
+  }
+
+  it("tick 1 generates 6 sentences + time message", async () => {
+    const chars = [makeChar("a", "n1"), makeChar("b", "n1")];
+    const actions = [speakAction("a", "b", "嗨")];
+    let turnCount = 0;
+    const turnDecide = async () => {
+      turnCount++;
+      return mockTurn(turnCount % 2 === 1 ? "a" : "b", `第${turnCount}句`);
+    };
+    const result = await runDialogPhase({
+      rawActions: actions, characters: chars, nodes: [makeNode("n1")],
+      perceptions: new Map(), tick: 0, worldName: "test", language: "zh",
+      acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
+      turnDecide: turnDecide as any,
+      summaryDecide: async () => "摘要",
+      salvageDecide: async () => ({ type: "wait", actorId: "x", reasoning: "", selfImportance: 1 }),
+      ongoingConversations: [],
+    });
+    expect(turnCount).toBe(6);
+    const conv = result.updatedConversations[0];
+    expect(conv).toBeDefined();
+    const lastTurn = conv.transcript[conv.transcript.length - 1];
+    expect(lastTurn.speakerId).toBe("__system__");
+    expect(lastTurn.line).toContain("当前时间");
+  });
+
+  it("3+4 rule: end at 6th sentence gives extra round", async () => {
+    const chars = [makeChar("a", "n1"), makeChar("b", "n1")];
+    const conv: any = {
+      id: "conv-1", worldId: "w", initiatorId: "a", acceptorId: "b",
+      transcript: [], tickStarted: 0, currentTickRounds: 0, status: "active",
+    };
+    let callCount = 0;
+    const turnDecide = async () => {
+      callCount++;
+      if (callCount === 6) {
+        return { kind: "end", payload: { reasoning: "该走了", closingLine: "再见" } };
+      }
+      return mockTurn(callCount % 2 === 1 ? "a" : "b", `第${callCount}句`);
+    };
+    const result = await runDialogPhase({
+      rawActions: [], characters: chars, nodes: [makeNode("n1")],
+      perceptions: new Map(), tick: 0, worldName: "test", language: "zh",
+      acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
+      turnDecide: turnDecide as any,
+      summaryDecide: async () => "ok",
+      salvageDecide: async () => ({ type: "wait", actorId: "x", reasoning: "", selfImportance: 1 }),
+      ongoingConversations: [conv],
+    });
+    expect(callCount).toBe(7);
+  });
+
+  it("passive end when acceptor leaves node", async () => {
+    const chars = [makeChar("a", "n1"), makeChar("b", "n2")];
+    const conv: any = {
+      id: "conv-1", worldId: "w", initiatorId: "a", acceptorId: "b",
+      transcript: [], tickStarted: 0, currentTickRounds: 0, status: "active",
+    };
+    const result = await runDialogPhase({
+      rawActions: [], characters: chars, nodes: [makeNode("n1"), makeNode("n2")],
+      perceptions: new Map(), tick: 1, worldName: "test", language: "zh",
+      acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
+      turnDecide: async () => mockTurn("a", "hi"),
+      summaryDecide: async () => "summary",
+      salvageDecide: async () => ({ type: "wait", actorId: "x", reasoning: "", selfImportance: 1 }),
+      ongoingConversations: [conv],
+    });
+    expect(result.updatedConversations).toHaveLength(1); // ended conversations now included for tick.ts cleanup
+    expect(result.updatedConversations[0].status).toBe("ended");
+    expect(result.memoryWrites.length).toBeGreaterThan(0); // memories written
   });
 });

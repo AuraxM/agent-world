@@ -14,10 +14,11 @@ import {
   ACCEPT_TOOL_NAME, AcceptDecisionSchema, AcceptToolSchema,
   DIALOG_TURN_TOOL_NAME, DialogTurnSchema, DialogTurnToolSchema,
   DIALOG_SUMMARY_TOOL_NAME, DialogSummarySchema, DialogSummaryToolSchema,
+  END_CONVERSATION_TOOL_NAME, EndConversationToolSchema, EndConversationSchema,
   MEMORY_SUMMARY_TOOL_NAME, MemorySummarySchema, MemorySummaryToolSchema,
   type AcceptDecisionPayload, type DialogTurnPayload, type DialogSummaryPayload, type MemorySummaryPayload,
 } from "@/domain/schemas";
-import type { Action, Character, DialogTurn, MapNode, WorldEvent } from "@/domain/types";
+import type { Action, Character, DialogTurn, EndConversationPayload, MapNode, WorldEvent } from "@/domain/types";
 import type { Language } from "@/config/types";
 import type { DecideFn, DecideInput } from "@/engine/tick";
 import { getLLMClientForEntry, getModelNameForEntry, hasApiKey } from "./client";
@@ -226,20 +227,17 @@ function errorMessage(err: unknown): string {
 // Dialog protocol LLM entry points
 // ---------------------------------------------------------------------------
 
-export interface DialogTurnInput {
+interface DialogTurnInput {
   self: Character;
   peer: Character;
   transcript: DialogTurn[];
-  isSoftLimit: boolean;
-  turnCount: number;
   language?: Language;
 }
 
-/**
- * 对话单轮：返回 { speakerId, kind: "say"|"leave", line?, reasoning? }
- * 失败重试 1 次，仍失败抛异常让调用方截断对话。
- */
-export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn> {
+export async function llmDialogTurn(input: DialogTurnInput): Promise<
+  | { kind: "turn"; turn: DialogTurn }
+  | { kind: "end"; payload: EndConversationPayload }
+> {
   if (!hasApiKey()) throw new Error("没有激活的 LLM provider");
 
   const config = getEntryConfig("dialog_turn");
@@ -250,19 +248,27 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn>
     self: input.self,
     peer: input.peer,
     transcript: input.transcript,
-    isSoftLimit: input.isSoftLimit,
-    turnCount: input.turnCount,
     language,
   });
 
-  const tool: ChatCompletionTool = {
-    type: "function",
-    function: {
-      name: DIALOG_TURN_TOOL_NAME,
-      description: "输出你这一轮说的话，或决定离开对话。",
-      parameters: DialogTurnToolSchema,
+  const tools: ChatCompletionTool[] = [
+    {
+      type: "function",
+      function: {
+        name: DIALOG_TURN_TOOL_NAME,
+        description: "说一句话。",
+        parameters: DialogTurnToolSchema,
+      },
     },
-  };
+    {
+      type: "function",
+      function: {
+        name: END_CONVERSATION_TOOL_NAME,
+        description: "结束当前对话。",
+        parameters: EndConversationToolSchema,
+      },
+    },
+  ];
 
   const extra: Record<string, unknown> = {};
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
@@ -285,30 +291,49 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn>
           },
           { role: "user", content: prompt },
         ],
-        tools: [tool],
+        tools,
         ...extra,
       });
 
       const message = response.choices[0]?.message;
-      const toolCall = message?.tool_calls?.find(
-        (c) => c.type === "function" && c.function.name === DIALOG_TURN_TOOL_NAME,
+      const toolCall = ((message?.tool_calls ?? []) as any[]).find(
+        (c: any) => c.type === "function",
       );
-      if (!toolCall || toolCall.type !== "function") {
-        throw new Error("LLM 没有返回 dialog_turn tool_call");
+      if (!toolCall) {
+        throw new Error("LLM 没有返回 tool_call");
       }
 
-      const parsed = JSON.parse(toolCall.function.arguments);
-      const result = DialogTurnSchema.safeParse(parsed);
-      if (!result.success) {
-        throw new Error(`DialogTurn 参数不符合 schema：${result.error.message}`);
-      }
+      const args = JSON.parse(toolCall.function.arguments);
 
-      return {
-        speakerId: input.self.id,
-        kind: result.data.kind,
-        line: result.data.line,
-        reasoning: result.data.reasoning,
-      };
+      if (toolCall.function.name === DIALOG_TURN_TOOL_NAME) {
+        const result = DialogTurnSchema.safeParse(args);
+        if (!result.success) {
+          throw new Error(`DialogTurn 参数不符合 schema：${result.error.message}`);
+        }
+        return {
+          kind: "turn",
+          turn: {
+            speakerId: input.self.id,
+            kind: result.data.kind,
+            line: result.data.line,
+            reasoning: result.data.reasoning,
+          },
+        };
+      } else if (toolCall.function.name === END_CONVERSATION_TOOL_NAME) {
+        const result = EndConversationSchema.safeParse(args);
+        if (!result.success) {
+          throw new Error(`EndConversation 参数不符合 schema：${result.error.message}`);
+        }
+        return {
+          kind: "end",
+          payload: {
+            reasoning: result.data.reasoning,
+            closingLine: result.data.closing_line,
+          },
+        };
+      } else {
+        throw new Error(`未知 tool_call: ${toolCall.function.name}`);
+      }
     } catch (err) {
       lastError = err;
       if (attempt === 0) continue;

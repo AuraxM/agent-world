@@ -356,7 +356,7 @@ export function RelationGraph({
       {/* ── Radial focus banner ─────────────────────────────────────── */}
       {focusId != null && focusName != null && (
         <div className="absolute left-1/2 top-2 z-10 -translate-x-1/2 border border-(--border) bg-(--panel) px-3 py-1 text-pixel-xs text-(--text-on-frame)">
-          {focusName} 的关系圈 · 双击空白退出
+          {focusName} 的关系圈 · 点击空白处退出
         </div>
       )}
 

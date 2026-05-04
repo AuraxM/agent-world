@@ -68,6 +68,11 @@ const CHAR_MIGRATIONS: Array<[string, string]> = [
   ["income_multiplier", "ALTER TABLE characters ADD COLUMN income_multiplier REAL NOT NULL DEFAULT 1.0"],
   ["daily_memory_json", "ALTER TABLE characters ADD COLUMN daily_memory_json TEXT NOT NULL DEFAULT '[]'"],
   ["last_sleep_tick", "ALTER TABLE characters ADD COLUMN last_sleep_tick INTEGER NOT NULL DEFAULT 0"],
+  ["appearance", "ALTER TABLE characters ADD COLUMN appearance INTEGER NOT NULL DEFAULT 2"],
+  ["intelligence", "ALTER TABLE characters ADD COLUMN intelligence INTEGER NOT NULL DEFAULT 2"],
+  ["health", "ALTER TABLE characters ADD COLUMN health INTEGER NOT NULL DEFAULT 2"],
+  ["sickness_json", "ALTER TABLE characters ADD COLUMN sickness_json TEXT"],
+  ["speaking_style", "ALTER TABLE characters ADD COLUMN speaking_style TEXT"],
 ];
 
 /** Keep in sync with migrate.ts NODES_NEW_COLUMNS. */

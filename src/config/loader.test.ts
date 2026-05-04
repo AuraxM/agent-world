@@ -62,6 +62,9 @@ const validChar = {
   biography: "私はテストキャラクターです。",
   personality: { ei: 0, sn: 0, tf: 0, jp: 0 },
   abilities: [],
+  appearance: 2,
+  intelligence: 2,
+  health: 2,
   relations: {},
 };
 

@@ -1,3 +1,7 @@
+/**
+ * relation-graph-utils.ts 单元测试。
+ * 测试 buildGraphData, affectionColor, nodeRadius, hasBidirectional, computeRadialPositions 五个纯函数。
+ */
 import { describe, expect, it } from "vitest";
 import {
   affectionColor,

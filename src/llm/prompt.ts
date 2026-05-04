@@ -704,6 +704,8 @@ export function buildCharacterStaticBlock(
       ? `- 能力：${character.abilities.map((a) => `${a.kind}(tier ${a.tier})`).join("、")}`
       : "- 能力：（无值得一提的特殊能力）",
   );
+  if (character.liked) lines.push(`- 你最喜欢：${character.liked}`);
+  if (character.disliked) lines.push(`- 你最讨厌：${character.disliked}`);
   return lines.join("\n");
 }
 
@@ -982,6 +984,14 @@ export function buildUserPrompt(args: {
   // 0.5. 角色静态认知（原 system prompt characterBlock）
   lines.push(buildCharacterStaticBlock(character, nodes, sleepWindow));
   lines.push("");
+
+  // 0.6. 角色目标
+  if (character.shortTermGoal || character.longTermGoal) {
+    lines.push("## 你的目标");
+    if (character.shortTermGoal) lines.push(`短期目标：${character.shortTermGoal.goal}`);
+    if (character.longTermGoal) lines.push(`长期目标：${character.longTermGoal.goal}`);
+    lines.push("");
+  }
 
   // 1. 你的连续行为
   lines.push("你的连续行为：");

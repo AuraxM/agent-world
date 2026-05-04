@@ -69,11 +69,11 @@ export function affectionColor(affection: number): string {
 
 /** 节点半径（面积 ∝ relationCount），返回半径像素值（最小 14 = 28px 直径，最大 28 = 56px 直径）。 */
 export function nodeRadius(relationCount: number, maxCount: number): number {
-  const MIN = 14;
-  const MAX = 28;
-  if (maxCount <= 0) return MIN;
+  const MIN_AREA = 196; // 14²
+  const MAX_AREA = 784; // 28²
+  if (maxCount <= 0) return 14;
   const t = relationCount / maxCount;
-  return MIN + t * (MAX - MIN);
+  return Math.sqrt(MIN_AREA + (MAX_AREA - MIN_AREA) * t);
 }
 
 /** 检查给定 link 是否存在反向关系（target→source 也有入口）。 */

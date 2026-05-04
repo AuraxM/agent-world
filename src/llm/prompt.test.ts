@@ -36,6 +36,9 @@ const baseCharacter: Character = {
   vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
   emotion: { mood: 0, stress: 0, social_satiety: 0 },
   abilities: [],
+  appearance: 2,
+  intelligence: 2,
+  health: 2,
   shortMemory: [],
   dailyMemory: [],
   longMemory: [],
@@ -483,6 +486,7 @@ describe("language", () => {
       tick: 5,
       facts: emptyFacts,
       language: "en",
+      nodes: [restaurant],
     });
     expect(sys).toMatch(/MUST be written in English/);
     // user prompt 不再重复 languageInstruction（已在 system 提供）
@@ -506,6 +510,7 @@ describe("language", () => {
       tick: 5,
       facts: emptyFacts,
       language: "ja",
+      nodes: [restaurant],
     });
     expect(sys).toContain("日本語で書いてください");
     expect(user).not.toContain("日本語で書いてください");
@@ -532,6 +537,7 @@ describe("arrivalIntro", () => {
       tick: 5,
       facts: emptyFacts,
       arrivalIntro: true,
+      nodes: [restaurant],
     });
     expect(out).toContain("刚抵达此地");
     expect(out).toMatch(/编造.*来到这里.*理由/);
@@ -563,6 +569,7 @@ describe("arrivalIntro", () => {
       facts: emptyFacts,
       language: "en",
       arrivalIntro: true,
+      nodes: [restaurant],
     });
     expect(out).toMatch(/just arrived/i);
     expect(out).toMatch(/why you came/i);
@@ -579,6 +586,7 @@ describe("arrivalIntro", () => {
       facts: emptyFacts,
       language: "ja",
       arrivalIntro: true,
+      nodes: [restaurant],
     });
     expect(out).toContain("到着したばかり");
     expect(out).toContain("理由");

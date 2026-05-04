@@ -57,11 +57,11 @@ export function buildGraphData(characters: Character[]): GraphData {
  */
 export function affectionColor(affection: number): string {
   if (affection > 0) {
-    const alpha = 0.4 + (affection / 4) * 0.6;
+    const alpha = 0.2 + (affection / 4) * 0.8;
     return `rgba(34,197,94,${alpha.toFixed(2)})`;
   }
   if (affection < 0) {
-    const alpha = 0.4 + (Math.abs(affection) / 4) * 0.6;
+    const alpha = 0.2 + (Math.abs(affection) / 4) * 0.8;
     return `rgba(239,68,68,${alpha.toFixed(2)})`;
   }
   return "rgba(156,163,175,0.5)";

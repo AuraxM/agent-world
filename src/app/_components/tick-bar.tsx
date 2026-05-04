@@ -1,6 +1,6 @@
 "use client";
 
-import { formatGameTime } from "../_lib/format";
+import { DEFAULT_EPOCH_MS, formatGameTime } from "../_lib/format";
 
 export function TickBar({
   tick,
@@ -40,7 +40,7 @@ export function TickBar({
       {/* Group 2: Clock */}
       <div className="pr-3 border-r border-(--border)">
         <span className="text-pixel-md text-(--accent-strong) tracking-[var(--letter-pixel-tight)]">
-          {formatGameTime(tick)}
+          {formatGameTime(DEFAULT_EPOCH_MS, tick)}
         </span>
       </div>
 

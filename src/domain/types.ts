@@ -152,6 +152,12 @@ export interface Emotion {
   social_satiety: number;
 }
 
+/** 疾病状态（运行时）。 */
+export interface Sickness {
+  onsetTick: Tick;
+  duration: number; // ticks, 120–840 (1–7 game days)
+}
+
 /** 角色。 */
 export interface Character {
   id: string;
@@ -175,6 +181,16 @@ export interface Character {
   vitals: Vitals;
   emotion: Emotion;
   abilities: Ability[];
+  /** 外貌 1-4 */
+  appearance: number;
+  /** 思维活跃度 1-4 */
+  intelligence: number;
+  /** 健康/体质 1-4 */
+  health: number;
+  /** 当前疾病状态（可选） */
+  sickness?: Sickness;
+  /** 说话口吻描述（可选，覆盖自动生成） */
+  speakingStyle?: string;
   /** Stage 1: short memory FIFO 50 */
   shortMemory: Memory[];
   /** 中期日记忆：睡觉时由 LLM 压缩清醒期 shortMemory 生成 */

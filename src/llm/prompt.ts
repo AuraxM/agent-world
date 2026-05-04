@@ -824,23 +824,20 @@ export function buildAcceptDecisionPrompt(args: {
 }
 
 /**
- * 对话单轮 prompt。speaker 基于 transcript 历史输出下一句话或 leave。
+ * 对话单轮 prompt。speaker 基于 transcript 历史输出下一句话或结束对话。
  */
 export function buildDialogTurnPrompt(args: {
   self: Character;
   peer: Character;
   transcript: DialogTurn[];
-  isSoftLimit: boolean;
-  turnCount: number;
   language?: Language;
 }): string {
-  const { self, peer, transcript, isSoftLimit, turnCount } = args;
+  const { self, peer, transcript } = args;
   const language = args.language ?? "zh";
 
   const history = transcript
     .map((t) => {
       const name = t.speakerId === self.id ? self.name : peer.name;
-      if (t.kind === "leave") return `${name}：…先离开了。`;
       return `${name}：${t.line ?? ""}`;
     })
     .join("\n");
@@ -859,24 +856,13 @@ export function buildDialogTurnPrompt(args: {
   lines.push(history);
   lines.push("");
 
-  if (isSoftLimit) {
-    if (language === "zh") {
-      lines.push(`⚠ 对话已进行 ${turnCount} 句，请考虑自然收尾——最好在 1-2 句内结束这次交谈。`);
-    } else if (language === "en") {
-      lines.push(`⚠ This conversation has reached ${turnCount} exchanges. Please wrap it up naturally — ideally within 1-2 more turns.`);
-    } else {
-      lines.push(`⚠ この会話は ${turnCount} 回のやり取りに達しました。自然に締めくくってください——できればあと 1〜2 回で終わらせてください。`);
-    }
-    lines.push("");
-  }
-
-  const sayOrLeave =
+  const sayPrompt =
     language === "zh"
-      ? `现在轮到你说话。请调用 submit_dialog_turn 工具：kind="say" 并填写 line（你说的内容），或 kind="leave" 结束对话离开。`
+      ? `现在轮到你说话。调用 submit_dialog_turn 回复：kind="say" 并填写 line。如果想结束对话，请调用 end_conversation。`
       : language === "en"
-        ? `It's your turn. Call submit_dialog_turn: kind="say" with line (what you say), or kind="leave" to end the conversation and walk away.`
-        : `あなたの番です。submit_dialog_turn を呼び出してください：kind="say" で line に発言内容を、または kind="leave" で会話を終了します。`;
-  lines.push(sayOrLeave);
+        ? `It's your turn. Call submit_dialog_turn with kind="say" and line. If you want to end the conversation, call end_conversation.`
+        : `あなたの番です。submit_dialog_turn で kind="say" を呼び出し line を入力してください。会話を終了する場合は end_conversation を呼び出してください。`;
+  lines.push(sayPrompt);
 
   return lines.join("\n");
 }
@@ -1249,4 +1235,33 @@ Summarize the key life changes, important events, and emotional shifts of this w
 ${lines}
 
 この一週間の主な生活の変化、重要な出来事、感情の起伏を日本語の第一人称で2〜4文にまとめてください。submit_memory_summary を呼び出して要約を返してください。`;
+}
+
+/**
+ * 对话中注入时间信息。让 LLM 感知当前时间和对话持续时长。
+ */
+export function injectTimeMessage(args: {
+  tick: number;
+  tickStarted: number;
+  language?: Language;
+}): string {
+  const { tick, tickStarted } = args;
+  const language = args.language ?? "zh";
+  const t = timeOfDay(tick);
+  const elapsedTicks = tick - tickStarted;
+  const elapsedHours = Math.floor(elapsedTicks / TICKS_PER_HOUR);
+  const elapsedMinutes = Math.floor((elapsedTicks % TICKS_PER_HOUR) * (60 / TICKS_PER_HOUR));
+
+  const durationStr =
+    elapsedHours > 0
+      ? `${elapsedHours} 小时 ${elapsedMinutes} 分钟`
+      : `${elapsedMinutes} 分钟`;
+
+  if (language === "zh") {
+    return `[当前时间：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}），对话已持续 ${durationStr}]`;
+  }
+  if (language === "en") {
+    return `[Current time: Day ${t.day} ${String(t.hour).padStart(2, "0")}:00 (${t.period}), conversation has lasted ${durationStr}]`;
+  }
+  return `[現在の時間：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}）、会話は ${durationStr} 続いています]`;
 }

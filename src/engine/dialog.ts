@@ -13,6 +13,8 @@ import { randomUUID } from "node:crypto";
 import type { Language } from "@/config/types";
 import type { Action, Character, MapNode, Memory, WorldEvent } from "@/domain/types";
 import type { DialogTurn } from "@/domain/types";
+import { createLogger } from "@/util/logger";
+const log = createLogger("dialog");
 
 // ---------------------------------------------------------------------------
 // Types (exported for testing and tick.ts)
@@ -433,6 +435,12 @@ export async function runDialogPhase(
       // Rejected
       const requester = charById.get(pa.requester)!;
       const targetName = charById.get(pa.target)!.name;
+
+      log.info("对话被拒", {
+        A: requester.name,
+        B: targetName,
+      });
+
       memoryWrites.push(
         makeMemory(pa.requester, tick, 2, `我邀请 ${targetName} 说话被拒了`),
       );
@@ -488,6 +496,12 @@ export async function runDialogPhase(
     const o = dio.outcome;
     const opener = charById.get(dio.requesterId)!;
     const responder = charById.get(dio.responderId)!;
+
+    log.info("对话开始", {
+      A: opener.name,
+      B: responder.name,
+    });
+
     const maxImportance = clamp(
       Math.max(
         rawActions.find((a) => a.actorId === dio.requesterId)?.selfImportance ?? 2,
@@ -528,6 +542,13 @@ export async function runDialogPhase(
       duration: 1,
       dialogTranscript: o.transcript,
       dialogEndedBy: o.endedBy,
+    });
+
+    log.info("对话结束", {
+      轮数: o.transcript.length,
+      A: opener.name,
+      B: responder.name,
+      endBy: o.endedBy,
     });
   }
 

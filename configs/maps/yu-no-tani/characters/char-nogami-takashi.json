@@ -25,28 +25,29 @@
   "health": 2,
   "relations": {
     "char-guji-masayuki": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "宮司さん。囲碁友達。神社の古文書に書かれた温泉記述を一緒に読んだ。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-shiraishi-aoi": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "白石さん。同じ移住者。彼女の釉薬の原料になる土の成分分析を手伝った。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-kishita-michiko": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "木下先生。膝の診察のついでに温泉療法の話をいつもこぼしてしまう。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 200,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

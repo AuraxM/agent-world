@@ -9,16 +9,31 @@
   "biography": "古賀博、中学部の数学教員。三学年全部の数学を一人で見てる。板書は印刷したみたいに綺麗だと生徒に言われる——数学教師としてそれが一番の褒め言葉。妻には出て行かれたが、それはそれでいい写真が一枚だけ机にある。田辺翔は問題児だが——'あれはあれでいい子だ'。",
   "activityNodeId": "node-ms-staff",
   "restNodeId": "node-staff-quarters",
-  "sleepWindow": { "start": 23, "duration": 7 },
-  "personality": { "ei": 1, "sn": -1, "tf": 3, "jp": 2 },
+  "sleepWindow": {
+    "start": 23,
+    "duration": 7
+  },
+  "personality": {
+    "ei": 1,
+    "sn": -1,
+    "tf": 3,
+    "jp": 2
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 3,
   "health": 2,
   "speakingStyle": "说话比看起来温柔。偶尔在黑板上画函数图时会莫名感慨人生。",
   "relations": {
-    "char-tanabe-sho": { "kinds": ["teacher"], "affection": 2, "note": "田辺翔。問題児扱いされるが——方程式の解き方を教えたら意外と食いついてきた。", "since": 0, "lastInteractionTick": 0 }
+    "char-tanabe-sho": {
+      "kinds": [
+        "teacher"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
   "initialMoney": 900,
-  "expenseExempt": false
+  "expenseExempt": false,
+  "impressionBook": {}
 }

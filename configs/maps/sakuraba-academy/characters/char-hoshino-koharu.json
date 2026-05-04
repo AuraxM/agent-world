@@ -2,19 +2,59 @@
   "id": "char-hoshino-koharu",
   "name": "星野小春",
   "avatar": "🎵",
-  "age": 17, "gender": "female", "profession": "student", "origin": "local",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
   "biography": "我是星野小春，吹奏乐部长笛担当。在部活里是大家的缓冲材——琴美先輩太严厉的时候，我在后面用微笑圆场。悠斗每次发试卷都多传一份给他，因为他实验课后总是在睡。我喜欢图书馆靠窗的位置，偶尔和柚月先輩无言地共享同一张桌子——那种安静，比说话还安心。",
-  "activityNodeId": "node-music-room", "restNodeId": "node-hs-girls-dorm",
-  "sleepWindow": { "start": 23, "duration": 7 },
-  "personality": { "ei": -1, "sn": 2, "tf": 3, "jp": -1 },
+  "activityNodeId": "node-music-room",
+  "restNodeId": "node-hs-girls-dorm",
+  "sleepWindow": {
+    "start": 23,
+    "duration": 7
+  },
+  "personality": {
+    "ei": -1,
+    "sn": 2,
+    "tf": 3,
+    "jp": -1
+  },
   "abilities": [],
-  "appearance": 3, "intelligence": 3, "health": 2,
+  "appearance": 3,
+  "intelligence": 3,
+  "health": 2,
   "speakingStyle": "说话柔和有礼，句尾常常'〜ね''〜です'。不爱争，但关键时刻会坚定立场。",
   "relations": {
-    "char-hayakawa-kotomi": { "kinds": ["classmate"], "affection": 2, "note": "琴美先輩。她太严格了——但我懂。每次合练后递茶给她是我的习惯。", "since": 0, "lastInteractionTick": 0 },
-    "char-shiraishi-yuzuki": { "kinds": ["classmate"], "affection": 1, "note": "柚月先輩。图书馆靠窗的桌子——我们无言地共享那个角落。", "since": 0, "lastInteractionTick": 0 },
-    "char-igarashi-yuto": { "kinds": ["classmate"], "affection": 0, "note": "五十嵐くん。发试卷时多传一份给他是条件反射。", "since": 0, "lastInteractionTick": 0 },
-    "char-hoshino-mafuyu": { "kinds": ["older_sister"], "affection": 3, "note": "我弟弟真冬。他比我认真，每天最早到音乐室练号。有点骄傲。", "since": 0, "lastInteractionTick": 0 }
+    "char-hayakawa-kotomi": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-shiraishi-yuzuki": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-igarashi-yuto": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-hoshino-mafuyu": {
+      "kinds": [
+        "older_sister"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
-  "initialMoney": 300, "expenseExempt": false
+  "initialMoney": 300,
+  "expenseExempt": false,
+  "impressionBook": {}
 }

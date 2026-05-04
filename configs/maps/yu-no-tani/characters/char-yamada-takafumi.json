@@ -9,36 +9,46 @@
   "biography": "我是山田隆文、宫大工修業の大工だ。京都で十年修業して、故郷の谷に戻って二十年。この谷の木造建築——旅館も浴場も神社も——全部この手で守ってきた。口数は多くない。木と対話してたら一日なんてすぐだ。匠の技は静かに、だ。",
   "activityNodeId": "node-ryokan",
   "restNodeId": "node-carpenter-house",
-  "sleepWindow": { "start": 21, "duration": 8 },
-  "personality": { "ei": -2, "sn": 0, "tf": 1, "jp": 3 },
+  "sleepWindow": {
+    "start": 21,
+    "duration": 8
+  },
+  "personality": {
+    "ei": -2,
+    "sn": 0,
+    "tf": 1,
+    "jp": 3
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 2,
   "health": 2,
   "relations": {
     "char-yumori-kosuke": {
-      "kinds": ["colleague", "friend"],
-      "affection": 2,
-      "note": "当家。旅館の修繕はほぼ俺がやってる。信頼してくれている。",
+      "kinds": [
+        "colleague",
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-tazaki-mamoru": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "配管の田崎。建物と配管、切っても切れない関係だ。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-suzuki-kazuo": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "土产店の鈴木。仕事の合間に立ち寄っては世間話。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 300,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

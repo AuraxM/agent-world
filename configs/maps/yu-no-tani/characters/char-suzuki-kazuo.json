@@ -25,35 +25,36 @@
   "health": 2,
   "relations": {
     "char-shiraishi-aoi": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "白石葵。彼女の作品は店の看板。センスを信頼してる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-yoshida-eiichi": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "吉田さん。下山ついでに仕入れを頼むことも。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-yamada-takafumi": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "山田さん。店の什器を作ってもらった。木の質感が商品を引き立てる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-tanaka-yayoi": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "弥生さん。手ぬぐいのオリジナル柄を一緒に考えてる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 800,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

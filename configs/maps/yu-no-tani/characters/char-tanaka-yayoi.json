@@ -25,28 +25,29 @@
   "health": 2,
   "relations": {
     "char-tanimura-kinuyo": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "绢代さん。郵便ついでにいつも話し相手になってくれる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-okubo-miwa": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "大久保美和さん。農作業着の修繕をよく頼まれる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-suzuki-kazuo": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "鈴木さん。手ぬぐいの柄の相談に乗ってくれる。いいアイデアの出し合い。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 300,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

@@ -25,28 +25,30 @@
   "health": 2,
   "relations": {
     "char-okubo-kenta": {
-      "kinds": ["spouse", "colleague"],
-      "affection": 4,
-      "note": "夫で相棒。畑仕事は任せてるけど、経営のことは私の領分。",
+      "kinds": [
+        "spouse",
+        "colleague"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-takahashi-ema": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "エマさん。ジャムの共同開発が趣味のようになってる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-tanaka-yayoi": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "弥生さん。農作業着の補修をいつもありがとう。丈夫に仕上げてもらって助かる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 300,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

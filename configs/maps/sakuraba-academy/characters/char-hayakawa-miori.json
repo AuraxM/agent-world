@@ -1,16 +1,46 @@
 {
-  "id": "char-hayakawa-miori", "name": "早川美織", "avatar": "🌻",
-  "age": 13, "gender": "female", "profession": "student", "origin": "local",
+  "id": "char-hayakawa-miori",
+  "name": "早川美織",
+  "avatar": "🌻",
+  "age": 13,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
   "biography": "我是早川美織，中学一年，园艺委员会。中庭的花坛是我的领地——四季都有花开。姐姐琴美是全校最厉害的钢琴手——'お姉ちゃん、すごいんだよ'——虽然她说那只是练得比别人多。真冬くん是同班同学，他每天早上最早到音乐室练小号——那份认真，和我照顾花的认真是同一种。'中庭の薔薇がもうすぐ咲くよ'。",
-  "activityNodeId": "node-courtyard", "restNodeId": "node-ms-dorm",
-  "sleepWindow": { "start": 22, "duration": 8 },
-  "personality": { "ei": 2, "sn": 1, "tf": 3, "jp": -1 },
+  "activityNodeId": "node-courtyard",
+  "restNodeId": "node-ms-dorm",
+  "sleepWindow": {
+    "start": 22,
+    "duration": 8
+  },
+  "personality": {
+    "ei": 2,
+    "sn": 1,
+    "tf": 3,
+    "jp": -1
+  },
   "abilities": [],
-  "appearance": 3, "intelligence": 2, "health": 3,
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 3,
   "speakingStyle": "说话率直天真，嗓门不小。手上经常沾着泥——种花的人都是这样。",
   "relations": {
-    "char-hayakawa-kotomi": { "kinds": ["younger_sister"], "affection": 3, "note": "我姐姐。她的钢琴全校第一。我知道她压力很大——但不知道该怎么帮她。", "since": 0, "lastInteractionTick": 0 },
-    "char-hoshino-mafuyu": { "kinds": ["classmate"], "affection": 1, "note": "真冬くん。他练小号的样子很认真——那种认真我很熟悉。", "since": 0, "lastInteractionTick": 0 }
+    "char-hayakawa-kotomi": {
+      "kinds": [
+        "younger_sister"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-hoshino-mafuyu": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
-  "initialMoney": 100, "expenseExempt": false
+  "initialMoney": 100,
+  "expenseExempt": false,
+  "impressionBook": {}
 }

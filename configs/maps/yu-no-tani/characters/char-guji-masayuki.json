@@ -9,19 +9,52 @@
   "biography": "我是宫司正之、湯神社の宮司。この社は湯之谷の開湯伝説と共にある。杉木立の中で風鈴の音を聞きながら暮らす毎日。正月と秋祭りは谷中が集う——あの時ばかりは静かな谷も賑やかになる。最近、野上教授と囲碁を打つのが密かな愉しみでね。",
   "activityNodeId": "node-shrine",
   "restNodeId": "node-priest-house",
-  "sleepWindow": { "start": 21, "duration": 8 },
-  "personality": { "ei": -1, "sn": 1, "tf": 1, "jp": 1 },
+  "sleepWindow": {
+    "start": 21,
+    "duration": 8
+  },
+  "personality": {
+    "ei": -1,
+    "sn": 1,
+    "tf": 1,
+    "jp": 1
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 2,
   "health": 2,
   "relations": {
-    "char-sato-haru": { "kinds": ["friend"], "affection": 3, "note": "佐藤さん。共にこの谷の移り変わりを見てきた数少ない同世代。", "since": 0, "lastInteractionTick": 0 },
-    "char-tanimura-kinuyo": { "kinds": ["friend"], "affection": 2, "note": "谷村さん。祭典の準備や案内でいつも助けてもらってる。", "since": 0, "lastInteractionTick": 0 },
-    "char-nogami-takashi": { "kinds": ["friend"], "affection": 2, "note": "野上教授。囲碁友達。神社の古文書に書かれた温泉記述の解読を手伝ってもらった。", "since": 0, "lastInteractionTick": 0 },
-    "char-kishita-michiko": { "kinds": ["friend"], "affection": 1, "note": "木下先生。神社の階段で転んだ参拝者の応急処置をいつも頼んでる。", "since": 0, "lastInteractionTick": 0 }
+    "char-sato-haru": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-tanimura-kinuyo": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-nogami-takashi": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-kishita-michiko": {
+      "kinds": [
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
   "initialMoney": 300,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

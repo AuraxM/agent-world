@@ -9,36 +9,45 @@
   "biography": "我是中村优斗、大学生。観光学部で地域おこしを勉強中。休みのたびに谷に帰ってきて、旅館でバイトしながらエマさんのカフェでレポート書いてる。温泉地の未来って面白い。でも東京の友達に'湯之谷'って言うと'どこそれ'って言われる——それがちょっと悔しい。",
   "activityNodeId": "node-cafe",
   "restNodeId": "node-cafe-quarters",
-  "sleepWindow": { "start": 1, "duration": 8 },
-  "personality": { "ei": 2, "sn": 2, "tf": -1, "jp": -2 },
+  "sleepWindow": {
+    "start": 1,
+    "duration": 8
+  },
+  "personality": {
+    "ei": 2,
+    "sn": 2,
+    "tf": -1,
+    "jp": -2
+  },
   "abilities": [],
   "appearance": 2,
   "intelligence": 2,
   "health": 2,
   "relations": {
     "char-yumori-kosuke": {
-      "kinds": ["subordinate"],
-      "affection": 1,
-      "note": "旅館のバイト先の老板。厳しいけどちゃんと見てくれてる。",
+      "kinds": [
+        "subordinate"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-takahashi-ema": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "カフェのエマさん。レポート書いてるとおまけのパンをくれる。憧れの大人。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-ogawa-saori": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "バイト仲間の沙織さん。温泉街のツアー企画を一緒に考えたりする。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 100,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

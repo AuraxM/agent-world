@@ -1,17 +1,53 @@
 {
-  "id": "char-miura-yui", "name": "三浦結衣", "avatar": "🍪",
-  "age": 15, "gender": "female", "profession": "student", "origin": "local",
+  "id": "char-miura-yui",
+  "name": "三浦結衣",
+  "avatar": "🍪",
+  "age": 15,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
   "biography": "我是三浦結衣，中学三年。喜欢做点心，经常会做好饼干放在哥哥健太桌上让他带给部活的朋友。健太说我的吐槽功力已经超过他了——家族遗传吧。田辺翔那个笨蛋每次都抢我的炒面面包，但上次被我抓到他又在便利店买了一个放回我桌上——'間違えただけだ'，骗谁呢。",
-  "activityNodeId": "node-courtyard", "restNodeId": "node-ms-dorm",
-  "sleepWindow": { "start": 22, "duration": 8 },
-  "personality": { "ei": 2, "sn": 1, "tf": 2, "jp": 0 },
+  "activityNodeId": "node-courtyard",
+  "restNodeId": "node-ms-dorm",
+  "sleepWindow": {
+    "start": 22,
+    "duration": 8
+  },
+  "personality": {
+    "ei": 2,
+    "sn": 1,
+    "tf": 2,
+    "jp": 0
+  },
   "abilities": [],
-  "appearance": 3, "intelligence": 3, "health": 3,
+  "appearance": 3,
+  "intelligence": 3,
+  "health": 3,
   "speakingStyle": "说话和哥哥健太一个频率，张口就能吐槽。笑声很有感染力。",
   "relations": {
-    "char-miura-kenta": { "kinds": ["younger_sister"], "affection": 3, "note": "哥哥。吐槽他是我的日常乐趣。但其实——他帮了很多人，只是那些人不一定知道。", "since": 0, "lastInteractionTick": 0 },
-    "char-tanabe-sho": { "kinds": ["classmate"], "affection": 1, "note": "田辺翔。每次都抢我的炒面面包——但偷偷放回来的是什么意思。", "since": 0, "lastInteractionTick": 0 },
-    "char-segawa-jin": { "kinds": ["classmate"], "affection": 1, "note": "瀬川迅先輩。他的吉他在天台飘下来，在走廊都能听见——是挺好听。", "since": 0, "lastInteractionTick": 0 }
+    "char-miura-kenta": {
+      "kinds": [
+        "younger_sister"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-tanabe-sho": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-segawa-jin": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    }
   },
-  "initialMoney": 200, "expenseExempt": false
+  "initialMoney": 200,
+  "expenseExempt": false,
+  "impressionBook": {}
 }

@@ -25,21 +25,22 @@
   "health": 2,
   "relations": {
     "char-suzuki-kazuo": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "鈴木さん。作品を「山の音」で扱ってくれてる。いい理解者。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-nogami-takashi": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "野上教授。同じ移住者同士、たまに源泉や土の話で盛り上がる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 3000,
   "expenseExempt": false,
-  "incomeMultiplier": 0
+  "incomeMultiplier": 0,
+  "impressionBook": {}
 }

@@ -25,49 +25,50 @@
   "health": 2,
   "relations": {
     "char-yumori-kosuke": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "湯守の当家。毎日郵便を取りに来る。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-yoshida-eiichi": {
-      "kinds": ["friend"],
-      "affection": 3,
-      "note": "バスの吉田さん。毎朝郵便物を運んでくれる。谷のライフライン。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-sato-haru": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "佐藤さん。配達ついでにいつも長話になる。小玉の写真が増える一方。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-guji-masayuki": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "宮司さん。祭典の案内状をいつも預かる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-kishita-michiko": {
-      "kinds": ["friend"],
-      "affection": 2,
-      "note": "木下先生。薬の問い合わせや患者さんの様子を聞いたり。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-tanaka-yayoi": {
-      "kinds": ["friend"],
-      "affection": 1,
-      "note": "弥生さん。仕立てた浴衣の評判をいつも教えてくれる。",
+      "kinds": [
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }
   },
   "initialMoney": 300,
   "expenseExempt": false,
-  "incomeMultiplier": 1.0
+  "incomeMultiplier": 1,
+  "impressionBook": {}
 }

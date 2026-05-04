@@ -1252,16 +1252,17 @@ export function injectTimeMessage(args: {
   const elapsedHours = Math.floor(elapsedTicks / TICKS_PER_HOUR);
   const elapsedMinutes = Math.floor((elapsedTicks % TICKS_PER_HOUR) * (60 / TICKS_PER_HOUR));
 
-  const durationStr =
-    elapsedHours > 0
-      ? `${elapsedHours} 小时 ${elapsedMinutes} 分钟`
-      : `${elapsedMinutes} 分钟`;
+  const hours = elapsedHours > 0 ? elapsedHours : 0;
+  const mins = elapsedMinutes;
 
   if (language === "zh") {
-    return `[当前时间：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}），对话已持续 ${durationStr}]`;
+    const dur = hours > 0 ? `${hours} 小时 ${mins} 分钟` : `${mins} 分钟`;
+    return `[当前时间：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}），对话已持续 ${dur}]`;
   }
   if (language === "en") {
-    return `[Current time: Day ${t.day} ${String(t.hour).padStart(2, "0")}:00 (${t.period}), conversation has lasted ${durationStr}]`;
+    const dur = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    return `[Current time: Day ${t.day} ${String(t.hour).padStart(2, "0")}:00 (${t.period}), conversation has lasted ${dur}]`;
   }
-  return `[現在の時間：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}）、会話は ${durationStr} 続いています]`;
+  const dur = hours > 0 ? `${hours} 時間 ${mins} 分` : `${mins} 分`;
+  return `[現在の時間：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}）、会話は ${dur} 続いています]`;
 }

@@ -24,7 +24,7 @@ import {
   loadWorld,
   saveWorld,
 } from "./store";
-import { getThinkingEnabled } from "./settings";
+import { getEntryConfig } from "@/llm/providers";
 import { db, schema } from "@/db/client";
 import { loadAllCharacters, loadManifest } from "@/config/loader";
 import {
@@ -169,10 +169,9 @@ export async function decideForCharacter(
     // 本场景需要 arrivalIntro，因此**绕开 llmDecide**：复制其骨架但传 arrivalIntro=true。
     // 测试时通过 options.decide 注入 stub，跳过真实 LLM。
     if (!options.decide) {
-      const { hasApiKey, getLLMClient, getModelName } = await import(
+      const { hasApiKey, getLLMClientForEntry, getModelNameForEntry } = await import(
         "@/llm/client"
       );
-      const { getDefaultProviderId } = await import("@/llm/providers");
       if (!hasApiKey()) {
         action = fallbackWait(c, "没有激活的 LLM provider");
       } else {
@@ -204,11 +203,11 @@ export async function decideForCharacter(
         });
 
         try {
-          const providerId = getDefaultProviderId();
-          const client = getLLMClient(providerId);
+          const config = getEntryConfig("character_placement");
+          const client = getLLMClientForEntry("character_placement");
+          const model = getModelNameForEntry("character_placement");
           const extra: Record<string, unknown> = {};
-          if (getThinkingEnabled()) extra.thinking = { type: "enabled" };
-          const model = getModelName(providerId);
+          if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
           const messages: Array<Record<string, unknown>> = [
             { role: "system", content: system },

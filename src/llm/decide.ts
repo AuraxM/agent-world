@@ -20,9 +20,8 @@ import {
 import type { Action, Character, DialogTurn, MapNode, WorldEvent } from "@/domain/types";
 import type { Language } from "@/config/types";
 import type { DecideFn, DecideInput } from "@/engine/tick";
-import { getThinkingEnabled } from "@/engine/settings";
-import { getLLMClient, getModelName, hasApiKey } from "./client";
-import { getDefaultProviderId } from "./providers";
+import { getLLMClientForEntry, getModelNameForEntry, hasApiKey } from "./client";
+import { getEntryConfig } from "./providers";
 import {
   buildAcceptDecisionPrompt,
   buildDialogSummaryPrompt,
@@ -69,15 +68,16 @@ async function callLLMWithRetry(
   messages: Array<Record<string, unknown>>,
   tools: Array<{ type: "function"; function: { name: string; description: string; parameters: Record<string, unknown> } }>,
   fallbackLabel: string,
+  entryName: string,
 ): Promise<{ actionType: string; data: Record<string, any> }> {
-  const providerId = getDefaultProviderId();
-  const client = getLLMClient(providerId);
+  const config = getEntryConfig(entryName);
+  const client = getLLMClientForEntry(entryName);
   const extra: Record<string, unknown> = {};
-  if (getThinkingEnabled()) extra.thinking = { type: "enabled" };
+  if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
   for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
     const response = await client.chat.completions.create({
-      model: getModelName(providerId),
+      model: getModelNameForEntry(entryName),
       max_tokens: MAX_OUTPUT_TOKENS,
       messages: messages as any,
       tools,
@@ -145,7 +145,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     { role: "user", content: user },
   ];
 
-  const { actionType, data } = await callLLMWithRetry(messages, tools, "LLM");
+  const { actionType, data } = await callLLMWithRetry(messages, tools, "LLM", "decide");
   return payloadToAction(actionType, data, input.character.id);
 }
 
@@ -209,8 +209,8 @@ export interface DialogTurnInput {
 export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn> {
   if (!hasApiKey()) throw new Error("没有激活的 LLM provider");
 
-  const providerId = getDefaultProviderId();
-  const client = getLLMClient(providerId);
+  const config = getEntryConfig("dialog_turn");
+  const client = getLLMClientForEntry("dialog_turn");
   const language: Language = input.language ?? "zh";
 
   const prompt = buildDialogTurnPrompt({
@@ -231,11 +231,14 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn>
     },
   };
 
+  const extra: Record<string, unknown> = {};
+  if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
+
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
-        model: getModelName(providerId),
+        model: getModelNameForEntry("dialog_turn"),
         max_tokens: 1024,
         messages: [
           {
@@ -245,7 +248,8 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn>
           { role: "user", content: prompt },
         ],
         tools: [tool],
-              });
+        ...extra,
+      });
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.find(
@@ -291,8 +295,8 @@ export interface DialogSummaryInput {
 export async function llmDialogSummarize(input: DialogSummaryInput): Promise<string> {
   if (!hasApiKey()) return `（摘要生成失败：双方聊了 ${input.transcript.length} 句）`;
 
-  const providerId = getDefaultProviderId();
-  const client = getLLMClient(providerId);
+  const config = getEntryConfig("dialog_summarize");
+  const client = getLLMClientForEntry("dialog_summarize");
   const language: Language = input.language ?? "zh";
 
   const prompt = buildDialogSummaryPrompt({
@@ -313,10 +317,13 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<str
     },
   };
 
+  const extra: Record<string, unknown> = {};
+  if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
+
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
-        model: getModelName(providerId),
+        model: getModelNameForEntry("dialog_summarize"),
         max_tokens: 512,
         messages: [
           {
@@ -326,7 +333,8 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<str
           { role: "user", content: prompt },
         ],
         tools: [tool],
-              });
+        ...extra,
+      });
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.find(
@@ -359,8 +367,8 @@ export async function llmMemoryCompress(args: {
 }): Promise<string> {
   if (!hasApiKey()) return "（摘要生成失败：无可用的 LLM provider）";
 
-  const providerId = getDefaultProviderId();
-  const client = getLLMClient(providerId);
+  const config = getEntryConfig("memory_compress");
+  const client = getLLMClientForEntry("memory_compress");
   const language: Language = args.language ?? "zh";
 
   const tool: ChatCompletionTool = {
@@ -372,10 +380,13 @@ export async function llmMemoryCompress(args: {
     },
   };
 
+  const extra: Record<string, unknown> = {};
+  if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
+
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
-        model: getModelName(providerId),
+        model: getModelNameForEntry("memory_compress"),
         max_tokens: 512,
         messages: [
           {
@@ -385,6 +396,7 @@ export async function llmMemoryCompress(args: {
           { role: "user", content: args.prompt },
         ],
         tools: [tool],
+        ...extra,
       });
 
       const message = response.choices[0]?.message;
@@ -431,8 +443,8 @@ export async function llmAcceptDecide(
     return { type: "reject_speak", targetId: input.requesterId, reasoning: "决策失败默认拒绝", selfImportance: 1 };
   }
 
-  const providerId = getDefaultProviderId();
-  const client = getLLMClient(providerId);
+  const config = getEntryConfig("accept_decision");
+  const client = getLLMClientForEntry("accept_decision");
   const language: Language = input.language ?? "zh";
 
   const prompt = buildAcceptDecisionPrompt({
@@ -455,10 +467,13 @@ export async function llmAcceptDecide(
     },
   };
 
+  const extra: Record<string, unknown> = {};
+  if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
+
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
-        model: getModelName(providerId),
+        model: getModelNameForEntry("accept_decision"),
         max_tokens: 512,
         messages: [
           {
@@ -468,7 +483,8 @@ export async function llmAcceptDecide(
           { role: "user", content: prompt },
         ],
         tools: [tool],
-              });
+        ...extra,
+      });
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.find(
@@ -548,6 +564,7 @@ export async function llmSalvageDecide(
         messages.map((m) => ({ ...m })), // shallow copy per attempt
         tools,
         "Salvage",
+        "salvage",
       );
 
       // Double-check: no speak family

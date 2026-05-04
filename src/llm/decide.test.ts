@@ -20,6 +20,7 @@ import type { ActionContext } from "@/domain/action-system";
 vi.mock("./providers", () => ({
   getDefaultProviderId: vi.fn(),
   getProvider: vi.fn(),
+  getEntryConfig: vi.fn(() => ({ entryName: "test", providerId: null, thinkingEnabled: false })),
 }));
 
 const FAKE_PROVIDER_ID = "test-provider";

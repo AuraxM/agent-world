@@ -99,18 +99,6 @@ function memFromAction(tick: number, action: Action, prefix: string): Memory {
   };
 }
 
-function updateAffection(
-  actor: Character,
-  targetId: string,
-  delta: number,
-  tick: number,
-): void {
-  const rel = actor.relations[targetId];
-  if (!rel) return;
-  rel.affection = clamp(rel.affection + delta, -4, 4);
-  rel.lastInteractionTick = tick;
-}
-
 function applyStateChange(
   c: Character,
   sc: StateChange,
@@ -364,8 +352,6 @@ function applyRelationChange(
       }
       addKind(actor, target.id, "partner", tick);
       addKind(target, actor.id, "partner", tick);
-      updateAffection(actor, target.id, 1, tick);
-      updateAffection(target, actor.id, 1, tick);
       return { success: true };
     }
     case "end_partnership": {
@@ -396,8 +382,6 @@ function applyRelationChange(
       }
       removeKind(actor, target.id, "friend");
       removeKind(target, actor.id, "friend");
-      updateAffection(actor, target.id, -1, tick);
-      updateAffection(target, actor.id, -1, tick);
       return { success: true };
     }
     case "end_other_relative": {
@@ -423,7 +407,6 @@ function addKind(
   if (!rel) {
     const fresh: Relation = {
       kinds: [kind],
-      affection: 0,
       since: tick,
       lastInteractionTick: tick,
     };

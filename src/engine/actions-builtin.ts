@@ -1,6 +1,7 @@
 import type { ActionDefinition, StateChange } from "@/domain/action-system";
 import { TICKS_PER_HOUR } from "@/domain/enums";
 import { DEFAULT_ECONOMY_CONFIG } from "@/config/types";
+import { getEatCost, getBatheCost } from "./bme";
 import { rollWorkIncome } from "./economy";
 
 export const eatAction: ActionDefinition = {
@@ -9,13 +10,13 @@ export const eatAction: ActionDefinition = {
   check(ctx) {
     if (!ctx.here.tags.includes("dining")) return false;
     if (ctx.self.expenseExempt) return true;
-    return ctx.self.money >= DEFAULT_ECONOMY_CONFIG.survivalCosts.eat;
+    return ctx.self.money >= getEatCost();
   },
   hint(ctx) {
     const h = ctx.self.vitals.hunger;
     const costNote = ctx.self.expenseExempt
       ? ""
-      : ` (-${DEFAULT_ECONOMY_CONFIG.survivalCosts.eat}💰)`;
+      : ` (-${getEatCost()}💰)`;
     if (h >= 10) return `⭐ 进食（已 ${h} 小时未进食）${costNote}`;
     if (h >= 5) return `⭐ 进食${costNote}`;
     if (h <= 0) return `进食（不饿，纯消遣）${costNote}`;
@@ -27,7 +28,7 @@ export const eatAction: ActionDefinition = {
     if (!ctx.self.expenseExempt) {
       changes.push({
         kind: "adjustMoney",
-        amount: -DEFAULT_ECONOMY_CONFIG.survivalCosts.eat,
+        amount: -getEatCost(),
         reason: "eat",
       });
     }
@@ -45,13 +46,13 @@ export const batheAction: ActionDefinition = {
   check(ctx) {
     if (!ctx.here.tags.includes("bathing")) return false;
     if (ctx.self.expenseExempt) return true;
-    return ctx.self.money >= DEFAULT_ECONOMY_CONFIG.survivalCosts.bathe;
+    return ctx.self.money >= getBatheCost();
   },
   hint(ctx) {
     const h = ctx.self.vitals.hygiene;
     const costNote = ctx.self.expenseExempt
       ? ""
-      : ` (-${DEFAULT_ECONOMY_CONFIG.survivalCosts.bathe}💰)`;
+      : ` (-${getBatheCost()}💰)`;
     if (h >= 13) return `⭐ 洗浴（已 ${h} 小时未洗浴）${costNote}`;
     if (h >= 8) return `⭐ 洗浴${costNote}`;
     return `洗浴${costNote}`;
@@ -62,7 +63,7 @@ export const batheAction: ActionDefinition = {
     if (!ctx.self.expenseExempt) {
       changes.push({
         kind: "adjustMoney",
-        amount: -DEFAULT_ECONOMY_CONFIG.survivalCosts.bathe,
+        amount: -getBatheCost(),
         reason: "bathe",
       });
     }
@@ -94,7 +95,7 @@ export const restAction: ActionDefinition = {
           startedAt: ctx.tick,
           endsAt: ctx.tick + 5,
           description: `在 ${ctx.here.name} 休息`,
-          interruptThreshold: 3,
+          interruptThreshold: 2,
         },
       }],
     };
@@ -103,7 +104,7 @@ export const restAction: ActionDefinition = {
     return {
       memory: `我在 ${ctx.here.name} 休息好了。`,
       event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 休息完毕。`, intensity: 1 },
-      stateChanges: [{ kind: "adjustVital", vital: "fatigue", delta: -2 }],
+      stateChanges: [{ kind: "adjustVital", vital: "fatigue", delta: -(ctx.self.health) }],
     };
   },
   onInterrupt(ctx, reason) {
@@ -146,8 +147,7 @@ export const workAction: ActionDefinition = {
     };
   },
   onComplete(ctx) {
-    const multiplier = 1.0;
-    const income = rollWorkIncome(ctx.self.incomeLevel, DEFAULT_ECONOMY_CONFIG, multiplier);
+    const income = rollWorkIncome(ctx.self, DEFAULT_ECONOMY_CONFIG);
     const changes: StateChange[] = [];
     if (income > 0) {
       changes.push({ kind: "adjustMoney", amount: income, reason: "work" });
@@ -226,7 +226,7 @@ export const sleepAction: ActionDefinition = {
     return ctx.here.tags.includes("residence") || ctx.here.privacy === "private";
   },
   hint(ctx) {
-    return "⭐ 睡觉（8 小时，intensity >= 4 可打断）";
+    return "⭐ 睡觉（8 小时，intensity >= 3 可打断）";
   },
   execute(ctx, _input) {
     return {
@@ -239,7 +239,7 @@ export const sleepAction: ActionDefinition = {
           startedAt: ctx.tick,
           endsAt: ctx.tick + (8 * TICKS_PER_HOUR),
           description: `在 ${ctx.here.name} 睡觉`,
-          interruptThreshold: 4,
+          interruptThreshold: 3,
         },
       }],
     };

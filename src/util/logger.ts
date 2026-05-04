@@ -23,14 +23,27 @@ function readConfig() {
     logDir: process.env.LOG_DIR ?? "data/logs",
     fileEnabled: process.env.LOG_FILE_ENABLED !== "false",
     consoleEnabled: process.env.LOG_CONSOLE_ENABLED !== "false",
-    maxFileSizeBytes:
-      (parseInt(process.env.LOG_FILE_MAX_SIZE_MB ?? "10", 10) || 10) * 1024 * 1024,
-    retentionDays: parseInt(process.env.LOG_FILE_RETENTION_DAYS ?? "30", 10) || 30,
+    maxFileSizeBytes: (() => {
+      const v = parseInt(process.env.LOG_FILE_MAX_SIZE_MB ?? "", 10);
+      return (Number.isFinite(v) ? v : 10) * 1024 * 1024;
+    })(),
+    retentionDays: (() => {
+      const v = parseInt(process.env.LOG_FILE_RETENTION_DAYS ?? "", 10);
+      return Number.isFinite(v) ? v : 30;
+    })(),
     consoleTimestamp: process.env.LOG_TIMESTAMP_IN_CONSOLE !== "false",
   };
 }
 
-const config = readConfig();
+let _config: ReturnType<typeof readConfig> | null = null;
+function getConfig() {
+  if (!_config) _config = readConfig();
+  return _config;
+}
+
+export function __resetConfigForTest() {
+  _config = null;
+}
 
 // ---- file stream state ----
 
@@ -41,8 +54,8 @@ let _streamBytes = 0;
 let _streamPart = 0;
 
 function ensureDir() {
-  if (!fs.existsSync(config.logDir)) {
-    fs.mkdirSync(config.logDir, { recursive: true });
+  if (!fs.existsSync(getConfig().logDir)) {
+    fs.mkdirSync(getConfig().logDir, { recursive: true });
   }
 }
 
@@ -70,20 +83,24 @@ function openStream(day: string): void {
   ensureDir();
   _streamDay = day;
   _streamPart = 0;
-  _streamPath = path.join(config.logDir, `agent-world-${day}.log`);
+  _streamPath = path.join(getConfig().logDir, `agent-world-${day}.log`);
   _stream = fs.createWriteStream(_streamPath, { flags: "a" });
-  _streamBytes = fs.existsSync(_streamPath) ? fs.statSync(_streamPath).size : 0;
+  _stream.on("error", (err) => {
+    console.error(`[logger] WriteStream error:`, err.message);
+    _stream = null;
+  });
+  _streamBytes = 0;
 }
 
 function getStream(): fs.WriteStream | null {
-  if (!config.fileEnabled) return null;
+  if (!getConfig().fileEnabled) return null;
   const day = today();
   if (day !== _streamDay || !_stream) {
     openStream(day);
-  } else if (_streamBytes >= config.maxFileSizeBytes) {
+  } else if (_streamBytes >= getConfig().maxFileSizeBytes) {
     _streamPart++;
     _streamPath = path.join(
-      config.logDir,
+      getConfig().logDir,
       `agent-world-${day}-${_streamPart + 1}.log`,
     );
     _stream.end();
@@ -94,14 +111,14 @@ function getStream(): fs.WriteStream | null {
 }
 
 function cleanupOldFiles(): void {
-  if (!config.fileEnabled) return;
+  if (!getConfig().fileEnabled) return;
   ensureDir();
-  const cutoff = Date.now() - config.retentionDays * 86400_000;
+  const cutoff = Date.now() - getConfig().retentionDays * 86400_000;
   let entries: string[];
-  try { entries = fs.readdirSync(config.logDir); } catch { return; }
+  try { entries = fs.readdirSync(getConfig().logDir); } catch { return; }
   for (const entry of entries) {
     if (!entry.startsWith("agent-world-") || !entry.endsWith(".log")) continue;
-    const fullPath = path.join(config.logDir, entry);
+    const fullPath = path.join(getConfig().logDir, entry);
     const stat = fs.statSync(fullPath);
     if (stat.mtimeMs < cutoff) {
       fs.unlinkSync(fullPath);
@@ -117,7 +134,9 @@ function formatContext(ctx?: Record<string, unknown>): string {
   if (!ctx || Object.keys(ctx).length === 0) return "";
   const parts: string[] = [];
   for (const [k, v] of Object.entries(ctx)) {
-    if (typeof v === "string") parts.push(`${k}="${v}"`);
+    if (v === null || v === undefined) parts.push(`${k}=null`);
+    else if (typeof v === "string") parts.push(`${k}="${v}"`);
+    else if (typeof v === "object") parts.push(`${k}=${JSON.stringify(v)}`);
     else parts.push(`${k}=${v}`);
   }
   return " " + parts.join(" ");
@@ -146,12 +165,12 @@ export interface Logger {
 
 export function createLogger(component: string): Logger {
   function log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
-    if (LEVEL_PRIORITY[level] < LEVEL_PRIORITY[config.level]) return;
+    if (LEVEL_PRIORITY[level] < LEVEL_PRIORITY[getConfig().level]) return;
 
     const ctxStr = formatContext(context);
 
-    if (config.consoleEnabled) {
-      const prefix = config.consoleTimestamp ? `${timeShort()} ` : "";
+    if (getConfig().consoleEnabled) {
+      const prefix = getConfig().consoleTimestamp ? `${timeShort()} ` : "";
       const levelTag = level.toUpperCase().padEnd(5);
       const line = `${prefix}${COLORS[level]}${BOLD}${levelTag}  [${component}]${RESET}  ${message}${ctxStr}`;
       if (level === "error") console.error(line);

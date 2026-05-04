@@ -77,16 +77,6 @@ export function EventsPane({
                     {ev.dialogTranscript!.map((turn: any, i: number) => {
                       const speakerName =
                         charById.get(turn.speakerId)?.name ?? turn.speakerId;
-                      if (turn.kind === "leave") {
-                        return (
-                          <div
-                            key={i}
-                            className="text-(--color-pixel-muted) italic"
-                          >
-                            {speakerName} 离开了对话。
-                          </div>
-                        );
-                      }
                       return (
                         <div key={i} className="mb-1">
                           <span className="font-semibold text-(--color-pixel-accent)">

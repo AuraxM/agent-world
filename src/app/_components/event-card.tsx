@@ -103,13 +103,6 @@ export function EventCard({
               {event.dialogTranscript!.map((turn, i) => {
                 const speakerName =
                   charById.get(turn.speakerId)?.name ?? turn.speakerId;
-                if (turn.kind === "leave") {
-                  return (
-                    <div key={i} className="text-pixel-xs text-(--text-faint) italic">
-                      {speakerName} 离开了对话。
-                    </div>
-                  );
-                }
                 return (
                   <div key={i}>
                     <span className="font-semibold text-(--accent-strong)">

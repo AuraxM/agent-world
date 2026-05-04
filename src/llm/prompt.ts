@@ -31,10 +31,6 @@ const SHORT_MEMORY_LIMIT = 4;
 const DAILY_MEMORY_LIMIT = 6;
 const WEEKLY_MEMORY_LIMIT = 6;
 const MAX_PEERS_IN_PROMPT = 5;
-/** 14 游戏日 = 14 * 24 = 336 小时；与 tick.ts 保持同步。 */
-const ACQUAINTANCE_DECAY_TICKS = 336 * TICKS_PER_HOUR;
-/** acquaintance 距衰减还剩 ≤ 此 小时 数时，prompt 给出"濒临淡出"提示。 */
-const ACQUAINTANCE_WARN_TICKS = 48 * TICKS_PER_HOUR;
 
 // ---------------------------------------------------------------------------
 // MBTI 9 档文字标签（无数值暴露）
@@ -105,22 +101,6 @@ function describePersonality(p: Personality): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// affection 文字
-// ---------------------------------------------------------------------------
-
-function describeAffection(v: number): string {
-  if (v <= -4) return "极厌恶";
-  if (v === -3) return "很讨厌";
-  if (v === -2) return "不喜欢";
-  if (v === -1) return "略反感";
-  if (v === 0) return "中性";
-  if (v === 1) return "略有好感";
-  if (v === 2) return "有好感";
-  if (v === 3) return "很喜欢";
-  return "非常喜爱";
-}
-
-// ---------------------------------------------------------------------------
 // directional relation labels
 // ---------------------------------------------------------------------------
 
@@ -162,12 +142,6 @@ function selectTopPeers(
           BLOOD_RELATION_KINDS.has(k),
       );
       if (hasStrong) score += 1000;
-      score += Math.abs(rel.affection) * 10;
-      const decayIn =
-        ACQUAINTANCE_DECAY_TICKS - (tick - rel.lastInteractionTick);
-      if (rel.kinds.includes("acquaintance") && decayIn <= ACQUAINTANCE_WARN_TICKS) {
-        score += 500;
-      }
     }
     return { peer: p, score };
   });
@@ -185,33 +159,12 @@ function describeRelations(
   tick: number,
 ): string {
   if (peers.length === 0) return "（同节点没有其他人）";
-  return peers
-    .map((p) => {
-      const r = c.relations[p.id];
-      if (!r) return `- ${p.name}（陌生人）`;
-      const directionalParts: string[] = [];
-      const otherKinds: string[] = [];
-      for (const k of r.kinds) {
-        if (DIRECTIONAL_KIND_LABELS[k]) {
-          directionalParts.push(DIRECTIONAL_KIND_LABELS[k]);
-        } else {
-          otherKinds.push(k);
-        }
-      }
-      const kindsDisplay = [...directionalParts, ...otherKinds].join("、");
-      const aff = describeAffection(r.affection);
-      const noteSuffix = r.note ? `——${r.note}` : "";
-      let warn = "";
-      if (r.kinds.includes("acquaintance")) {
-        const decayIn =
-          ACQUAINTANCE_DECAY_TICKS - (tick - r.lastInteractionTick);
-        if (decayIn <= ACQUAINTANCE_WARN_TICKS && decayIn > 0) {
-          warn = `（再 ${Math.floor(decayIn / TICKS_PER_HOUR)} 小时未互动就会淡出）`;
-        }
-      }
-      return `- ${p.name} —— ${buildImage(p)} —— ${kindsDisplay}，${aff}${noteSuffix}${warn}`;
-    })
-    .join("\n");
+  return peers.map(p => {
+    const r = c.relations[p.id];
+    if (!r) return `- ${p.name}（陌生人）`;
+    const kindsDisplay = r.kinds.join("、");
+    return `- ${p.name} — ${kindsDisplay}`;
+  }).join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -1100,13 +1053,9 @@ export function buildUserPrompt(args: {
 
   // 4. 同节点其他人物（最多 5）—— 0 人时整段省略
   if (companions.length > 0) {
-    const topPeers = selectTopPeers(character, companions, tick);
-    lines.push(
-      companions.length > MAX_PEERS_IN_PROMPT
-        ? `同节点其他人物（共 ${companions.length} 人，仅展示与你最相关的 ${topPeers.length}）：`
-        : "同节点其他人物：",
-    );
-    lines.push(describeRelations(character, topPeers, tick));
+    const names = companions.map(c => `${c.name}[${c.id}]`).join("、");
+    lines.push(`同节点其他人物（共 ${companions.length} 人）：${names}`);
+    lines.push("如果你需要了解其中某人的信息，请调用 recall 工具查询。");
     lines.push("");
   }
 

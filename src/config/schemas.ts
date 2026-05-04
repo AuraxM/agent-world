@@ -72,6 +72,7 @@ export const ManifestSchema: z.ZodType<Manifest> = z.object({
     })
     .optional(),
   actions: z.string().optional(),
+  events: z.string().optional(),
   economy: EconomyConfigSchema.optional(),
 });
 

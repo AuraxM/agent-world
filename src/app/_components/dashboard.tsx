@@ -156,7 +156,14 @@ export function Dashboard() {
                   onFollow={follow}
                 />
               )}
-              {centerTab === "relations" && <RelationGraph />}
+              {centerTab === "relations" && (
+                <RelationGraph
+                  characters={snapshot.characters}
+                  selectedCharacterId={view.selectedCharacterId}
+                  nodes={snapshot.nodes}
+                  onSelectCharacter={(id) => view.selectCharacter(id)}
+                />
+              )}
             </div>
           </div>
 

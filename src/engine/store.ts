@@ -100,6 +100,11 @@ export function loadWorld(worldId: string): LoadedWorld {
       ? JSON.parse(c.currentActionJson)
       : undefined,
     lastSleepTick: c.lastSleepTick,
+    appearance: c.appearance,
+    intelligence: c.intelligence,
+    health: c.health,
+    sickness: c.sicknessJson ? JSON.parse(c.sicknessJson) : undefined,
+    speakingStyle: c.speakingStyle ?? undefined,
   }));
 
   if (characters.length > 0) {
@@ -147,6 +152,7 @@ export function saveWorld(loaded: LoadedWorld): void {
             ? JSON.stringify(c.currentAction)
             : null,
           lastSleepTick: c.lastSleepTick,
+          sicknessJson: c.sickness ? JSON.stringify(c.sickness) : null,
           updatedAt: now,
         })
         .where(eq(schema.characters.id, c.id))

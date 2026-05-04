@@ -88,6 +88,10 @@ export interface EconomyConfig {
   professionIncomes: ProfessionIncomes;
   wealthTiers: [number, number, number];
   balanceThresholds: BalanceThresholds;
+  /** tier → daily income multiplier (0-4). 默认使用内置 TIER_MULTIPLIERS。mod 可覆写。 */
+  tierMultipliers?: Record<number, number>;
+  /** 每日最低生存成本基准。mod 可覆写以适配不同世界观。默认 20。 */
+  mdc?: number;
 }
 
 export const DEFAULT_ECONOMY_CONFIG: EconomyConfig = {
@@ -103,4 +107,6 @@ export const DEFAULT_ECONOMY_CONFIG: EconomyConfig = {
     positive: [10, 50, 150, 400],
     negative: [0.1, 0.3, 0.6, 1.0],
   },
+  tierMultipliers: undefined,
+  mdc: undefined,
 };

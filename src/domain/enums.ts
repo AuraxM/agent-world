@@ -38,8 +38,9 @@ export const PROFESSIONS = [
 ] as const;
 export type Profession = (typeof PROFESSIONS)[number];
 
-/** 职业 → 收入等级映射（0=none, 1=low, 2=medium, 3=high）。manifest 可覆盖。 */
-export const PROFESSION_INCOME_TIERS: Record<Profession, number> = {
+/** 职业 → 收入层级映射（0=none, 1=bare, 2=modest, 3=comfortable, 4=wealthy）。
+ *  mod 自定义职业默认为 tier 0（无收入），可被 manifest.economy 覆盖。 */
+export const PROFESSION_INCOME_TIERS: Record<string, number> = {
   doctor: 3, merchant: 3,
   farmer: 2, rancher: 2, fisherman: 2, lumberjack: 2, hunter: 2,
   chef: 2, baker: 2, brewer: 2,

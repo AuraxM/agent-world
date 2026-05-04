@@ -45,6 +45,13 @@ function ensureColumns(sqlite: Database.Database) {
   for (const [name, ddl] of WORLD_MIGRATIONS) {
     if (!haveWorldCols.has(name)) sqlite.exec(ddl);
   }
+  const entryTables = sqlite
+    .prepare(`SELECT name FROM sqlite_master WHERE type='table'`)
+    .all() as { name: string }[];
+  const haveEntryTables = new Set(entryTables.map((t) => t.name));
+  for (const [tableName, ddl] of ENTRY_CONFIG_MIGRATIONS) {
+    if (!haveEntryTables.has(tableName)) sqlite.exec(ddl);
+  }
 }
 
 /** Keep in sync with migrate.ts CHARACTERS_NEW_COLUMNS. */
@@ -77,6 +84,16 @@ const NODE_MIGRATIONS: Array<[string, string]> = [
 /** Keep in sync with migrate.ts WORLDS_NEW_COLUMNS. */
 const WORLD_MIGRATIONS: Array<[string, string]> = [
   ["map_id", "ALTER TABLE worlds ADD COLUMN map_id TEXT NOT NULL DEFAULT ''"],
+];
+
+const ENTRY_CONFIG_MIGRATIONS: Array<[string, string]> = [
+  ["llm_entry_configs", `CREATE TABLE IF NOT EXISTS llm_entry_configs (
+    id TEXT PRIMARY KEY,
+    provider_id TEXT REFERENCES llm_providers(id) ON DELETE SET NULL,
+    thinking_enabled INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+  )`],
 ];
 
 function createDb() {

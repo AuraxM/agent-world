@@ -128,6 +128,13 @@ const STATEMENTS = [
     is_active INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
   )`,
+  `CREATE TABLE IF NOT EXISTS llm_entry_configs (
+    id TEXT PRIMARY KEY,
+    provider_id TEXT REFERENCES llm_providers(id) ON DELETE SET NULL,
+    thinking_enabled INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+  )`,
 ];
 
 /** SQLite 不支持 ALTER ADD COLUMN IF NOT EXISTS；按 PRAGMA 自查后追加。 */

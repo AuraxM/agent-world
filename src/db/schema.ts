@@ -162,6 +162,21 @@ export const llmProviders = sqliteTable(
   },
 );
 
+export const llmEntryConfigs = sqliteTable(
+  "llm_entry_configs",
+  {
+    id: text("id").primaryKey(),
+    providerId: text("provider_id").references(() => llmProviders.id, { onDelete: "set null" }),
+    thinkingEnabled: integer("thinking_enabled", { mode: "boolean" }).notNull().default(false),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+);
+
 export const snapshots = sqliteTable(
   "snapshots",
   {

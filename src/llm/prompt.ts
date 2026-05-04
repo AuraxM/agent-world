@@ -1243,24 +1243,27 @@ export function injectTimeMessage(args: {
   const { tick, tickStarted } = args;
   const language = args.language ?? "zh";
   const t = timeOfDay(tick);
-  // Minimum 1 tick elapsed (12 min) — conversation has been active for at least this tick
-  const elapsedTicks = Math.max(1, tick - tickStarted);
+  const elapsedTicks = tick - tickStarted;
   const elapsedHours = Math.floor(elapsedTicks / TICKS_PER_HOUR);
   const elapsedMinutes = Math.floor((elapsedTicks % TICKS_PER_HOUR) * (60 / TICKS_PER_HOUR));
 
-  const hours = elapsedHours > 0 ? elapsedHours : 0;
-  const mins = elapsedMinutes;
+  const timeStr = `第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
 
-  const timeStr = `${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}`;
+  if (elapsedTicks === 0) {
+    if (language === "zh") return `当前时间：${timeStr}，对话刚刚开始。`;
+    if (language === "en") return `Current time: ${timeStr}, conversation just started.`;
+    return `現在の時間：${timeStr}、会話は始まったばかりです。`;
+  }
 
+  const totalMinutes = elapsedHours * 60 + elapsedMinutes;
   if (language === "zh") {
-    const dur = hours > 0 ? `${hours} 小时 ${mins} 分钟` : `${mins} 分钟`;
-    return `现在已经 ${timeStr} 了，你们已经聊了 ${dur}。`;
+    const dur = elapsedHours > 0 ? `${elapsedHours} 小时 ${elapsedMinutes} 分钟` : `${elapsedMinutes} 分钟`;
+    return `现在已经 ${timeStr} 了，你们已经聊了 ${dur}（${totalMinutes} 分钟）。`;
   }
   if (language === "en") {
-    const dur = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-    return `It's ${timeStr} now, you've been talking for ${dur}.`;
+    const dur = elapsedHours > 0 ? `${elapsedHours}h ${elapsedMinutes}m` : `${elapsedMinutes}m`;
+    return `It's now ${timeStr}, you've been talking for ${dur} (${totalMinutes} min).`;
   }
-  const dur = hours > 0 ? `${hours} 時間 ${mins} 分` : `${mins} 分`;
-  return `もう ${timeStr} です、${dur} 話し続けています。`;
+  const dur = elapsedHours > 0 ? `${elapsedHours} 時間 ${elapsedMinutes} 分` : `${elapsedMinutes} 分`;
+  return `もう ${timeStr} です、${dur}（${totalMinutes} 分）話し続けています。`;
 }

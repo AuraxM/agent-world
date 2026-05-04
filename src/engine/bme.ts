@@ -45,7 +45,7 @@ export function computeBME(age: number, health: number): number {
 
 /** 从 Character 计算 BME */
 export function characterBME(c: Character): number {
-  return computeBME(c.age, c.health ?? 2);
+  return computeBME(c.age, c.health);
 }
 
 /** 每日最低生存成本（mod 可覆写）。默认 20。 */

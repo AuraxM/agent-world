@@ -15,25 +15,19 @@ import {
   resolveIncomeLevel,
 } from "@/config/loader";
 import { getTierInitialMoney } from "./bme";
-import { GAME_EPOCH } from "@/app/_lib/format";
 import type { Emotion, Vitals } from "@/domain/types";
 
-/** 1 tick = 12 game minutes, in milliseconds */
-const MS_PER_TICK = 12 * 60 * 1000;
-
-/** Convert an ISO 8601 datetime string to tick offset from GAME_EPOCH. */
-function dateToTick(dateStr: string): number {
-  const target = new Date(dateStr);
-  if (isNaN(target.getTime())) {
-    throw new Error(`invalid startDate: ${dateStr}`);
+/** Compute epoch ms from ISO 8601 startDate, or default to 2026-05-01. */
+function computeEpoch(startDate?: string): number {
+  if (startDate) {
+    const d = new Date(startDate);
+    if (isNaN(d.getTime())) {
+      throw new Error(`invalid startDate: ${startDate}`);
+    }
+    return d.getTime();
   }
-  const diffMs = target.getTime() - GAME_EPOCH.getTime();
-  if (diffMs < 0) {
-    throw new Error(
-      `startDate must be at or after game epoch (${GAME_EPOCH.toISOString()})`,
-    );
-  }
-  return Math.round(diffMs / MS_PER_TICK);
+  // Default: 2026-05-01T00:00:00
+  return new Date("2026-05-01T00:00:00").getTime();
 }
 
 export interface CastMember {
@@ -68,9 +62,9 @@ export function createWorldFromConfig(
   if (!worldId) throw new Error("worldId required");
   if (!name) throw new Error("name required");
 
-  // 0. 从 manifest 读取初始时间
+  // 0. 从 manifest 读取 epoch 并计算初始时间
   const manifest = loadManifest(mapId);
-  const initialTick = manifest.startDate ? dateToTick(manifest.startDate) : 0;
+  const epoch = computeEpoch(manifest.startDate);
 
   // 1. 加载并校验配置
   const map = loadMap(mapId);
@@ -122,7 +116,8 @@ export function createWorldFromConfig(
         id: worldId,
         name,
         mapId,
-        currentTick: initialTick,
+        currentTick: 0,  // tick 0 = world start
+        epoch: new Date(epoch),
         createdAt: now,
         updatedAt: now,
       })

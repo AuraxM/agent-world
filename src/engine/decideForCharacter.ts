@@ -35,6 +35,7 @@ import {
   timeOfDay,
 } from "@/llm/prompt";
 import { actionRegistry } from "@/domain/action-system";
+import { actionTypeFromToolName } from "@/domain/schemas";
 import type { Action, Character, WorldEvent } from "@/domain/types";
 import type { DecideInput } from "./tick";
 
@@ -53,6 +54,11 @@ function fallbackWait(c: Character, reason: string): Action {
     reasoning: `LLM 调用失败：${reason}`,
     selfImportance: 1,
   };
+}
+
+function normalizeArrivalType(raw: string): string {
+  const stripped = actionTypeFromToolName(raw) ?? raw;
+  return actionRegistry.has(stripped) ? stripped : "think";
 }
 
 function buildActivityNodeMap(): Map<string, string> {
@@ -263,7 +269,7 @@ export async function decideForCharacter(
             reason: p.reason,
             arrivalAction: p.arrival_action
               ? {
-                  type: p.arrival_action.action_type,
+                  type: normalizeArrivalType(p.arrival_action.action_type),
                   freeText: p.arrival_action.free_text,
                   targetId: p.arrival_action.target_id,
                   targetNodeId: p.arrival_action.target_node_id,

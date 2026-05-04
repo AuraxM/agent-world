@@ -74,7 +74,14 @@ export async function POST(request: Request) {
 
     const worldId = `${WORLD_ID_PREFIX}-${mapId}`;
 
-    // Delete existing world with this mapId (cascade removes nodes/characters/events)
+    // Delete existing world + child rows explicitly.
+    // SQLite PRAGMA foreign_keys may not be active on all connections,
+    // so we clean up child tables manually instead of relying on ON DELETE CASCADE.
+    db.delete(schema.eventsLog).where(eq(schema.eventsLog.worldId, worldId)).run();
+    db.delete(schema.agentThoughts).where(eq(schema.agentThoughts.worldId, worldId)).run();
+    db.delete(schema.snapshots).where(eq(schema.snapshots.worldId, worldId)).run();
+    db.delete(schema.characters).where(eq(schema.characters.worldId, worldId)).run();
+    db.delete(schema.nodes).where(eq(schema.nodes.worldId, worldId)).run();
     db.delete(schema.worlds).where(eq(schema.worlds.id, worldId)).run();
 
     const result = createWorldFromConfig({

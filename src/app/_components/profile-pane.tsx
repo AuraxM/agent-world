@@ -2,7 +2,7 @@
 
 import { type ReactNode, useState } from "react";
 import type { Character, MapNode, Personality, WorldEvent } from "@/domain/types";
-import { affectionTone, formatActionWindow, vitalThreshold } from "../_lib/profile-format";
+import { formatActionWindow, vitalThreshold } from "../_lib/profile-format";
 import { characterEmoji } from "../_lib/sprite";
 import { indexNodes } from "../_lib/world";
 
@@ -212,7 +212,12 @@ export function ProfilePane({
   const totalLong = sortedLong.length;
   const visibleLong = longExpanded ? sortedLong : sortedLong.slice(0, 5);
   const sortedRelations = Object.entries(character.relations).sort(
-    (a, b) => Math.abs(b[1].affection) - Math.abs(a[1].affection),
+    (a, b) => {
+      const aImp = character.impressionBook[a[0]] ? 1 : 0;
+      const bImp = character.impressionBook[b[0]] ? 1 : 0;
+      if (aImp !== bImp) return bImp - aImp;
+      return b[1].since - a[1].since;
+    },
   );
   const totalRelations = sortedRelations.length;
   const visibleRelations = relationsExpanded ? sortedRelations : sortedRelations.slice(0, 5);
@@ -482,7 +487,14 @@ export function ProfilePane({
             ) : (
               <ul className="space-y-1">
                 {visibleRelations.map(([id, rel]) => {
-                  const tone = affectionTone(rel.affection);
+                  const imp = character.impressionBook[id];
+                  const impTone = imp
+                    ? /喜欢|欣赏|信任|尊敬|爱|友好|亲切|可靠|感激|温暖|帮助/.test(imp)
+                      ? "pos"
+                      : /讨厌|厌恶|恨|不信任|害怕|恐惧|嫌弃|虚伪|自私|冷漠|刻薄|狡猾/.test(imp)
+                        ? "neg"
+                        : "zero"
+                    : "zero";
                   return (
                     <li key={id} className="text-game-sm grid grid-cols-[18px_1fr_auto] gap-2 items-baseline">
                       <span className="text-base">
@@ -495,24 +507,23 @@ export function ProfilePane({
                           </span>
                           <span className="text-(--color-pixel-muted) text-game-xs"> · {rel.kinds.join("/")}</span>
                         </div>
-                        {rel.note && (
+                        {imp && (
                           <div className="text-game-xs text-(--color-pixel-muted) italic truncate">
-                            &ldquo;{rel.note}&rdquo;
+                            &ldquo;{imp}&rdquo;
                           </div>
                         )}
                       </div>
                       <span
                         style={{
                           color:
-                            tone === "pos"
+                            impTone === "pos"
                               ? "var(--color-pixel-success)"
-                              : tone === "neg"
+                              : impTone === "neg"
                                 ? "var(--color-pixel-danger)"
                                 : "var(--color-pixel-muted)",
                         }}
                       >
-                        {rel.affection > 0 ? "+" : ""}
-                        {rel.affection}
+                        {imp ? imp.slice(0, 8) + (imp.length > 8 ? "…" : "") : rel.kinds.join("/")}
                       </span>
                     </li>
                   );
@@ -659,24 +670,31 @@ export function ProfilePane({
             <ul className="space-y-2">
               {Object.entries(character.relations).map(([targetId, rel]) => {
                 const other = characters.find((c) => c.id === targetId);
-                const tone = affectionTone(rel.affection);
+                const imp = character.impressionBook[targetId];
+                const impTone = imp
+                  ? /喜欢|欣赏|信任|尊敬|爱|友好|亲切|可靠|感激|温暖|帮助/.test(imp)
+                    ? "pos"
+                    : /讨厌|厌恶|恨|不信任|害怕|恐惧|嫌弃|虚伪|自私|冷漠|刻薄|狡猾/.test(imp)
+                      ? "neg"
+                      : "zero"
+                  : "zero";
                 return (
                   <li key={targetId} className="text-body-sm text-(--text-on-frame) flex items-center gap-2">
-                    <span className="text-pixel-xs" style={{ color: tone === "pos" ? "var(--color-pixel-success)" : tone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)" }}>
+                    <span className="text-pixel-xs" style={{ color: impTone === "pos" ? "var(--color-pixel-success)" : impTone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)" }}>
                       {other?.name ?? targetId}
                     </span>
                     <span className="text-pixel-xs text-(--text-on-frame-muted)">
                       {rel.kinds.join("/")}
                     </span>
-                    {rel.note && (
+                    {imp && (
                       <span className="text-body-xs text-(--text-on-frame-faint) italic">
-                        — {rel.note}
+                        — {imp}
                       </span>
                     )}
                     <span className="ml-auto text-pixel-xs" style={{
-                      color: tone === "pos" ? "var(--color-pixel-success)" : tone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)",
+                      color: impTone === "pos" ? "var(--color-pixel-success)" : impTone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)",
                     }}>
-                      {rel.affection > 0 ? "+" : ""}{rel.affection}
+                      {imp ? imp.slice(0, 8) + (imp.length > 8 ? "..." : "") : rel.kinds.join("/")}
                     </span>
                   </li>
                 );

@@ -6,6 +6,8 @@ import { db, schema } from "@/db/client";
 declare global {
   // eslint-disable-next-line no-var
   var __agent_world_llm__: OpenAI | undefined;
+  // eslint-disable-next-line no-var
+  var __agent_world_llm_clients__: Record<string, OpenAI> | undefined;
 }
 
 export interface LLMProvider {
@@ -125,7 +127,7 @@ export function setActiveProvider(id: string): LLMProvider {
     .where(eq(schema.llmProviders.id, id))
     .run();
 
-  globalThis.__agent_world_llm__ = undefined;
+  globalThis.__agent_world_llm_clients__ = undefined;
 
   return getProvider(id)!;
 }

@@ -256,6 +256,24 @@ export async function decideForCharacter(
             throw new Error(`LLM ${MAX_ROUNDS} 轮均未返回 tool_call`);
           }
 
+          // 两段式 think：继续对话，让 LLM 产出具体的沉思内容
+          if (actionType === "think") {
+            try {
+              const thinkPrompt = "你决定沉思片刻。请用第一人称详细描述你此刻脑海中在想什么？（2-4句话，不要用工具调用，直接输出文本。）";
+              messages.push({ role: "user", content: thinkPrompt });
+              const thinkResp = await client.chat.completions.create({
+                model,
+                max_tokens: 512,
+                messages: messages as any,
+                ...extra,
+              });
+              const thinkContent = ((thinkResp.choices[0]?.message?.content as string) ?? "").trim();
+              if (thinkContent) p.free_text = thinkContent;
+            } catch {
+              // 思考内容生成失败，沿用 LLM 首轮填的 free_text（可能为空→execute 用默认值）
+            }
+          }
+
           action = {
             type: actionType,
             actorId: c.id,

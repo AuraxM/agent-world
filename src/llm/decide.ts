@@ -144,7 +144,46 @@ async function callLLM(input: DecideInput): Promise<Action> {
   ];
 
   const { actionType, data } = await callLLMWithRetry(messages, tools, "LLM");
+
+  if (actionType === "think") {
+    const thoughtContent = await generateThoughtContent(messages, input.language);
+    if (thoughtContent) data.free_text = thoughtContent;
+  }
+
   return payloadToAction(actionType, data, input.character.id);
+}
+
+async function generateThoughtContent(
+  messages: Array<Record<string, unknown>>,
+  language: Language,
+): Promise<string | null> {
+  try {
+    const lang = language ?? "zh";
+    const prompt =
+      lang === "zh"
+        ? "你决定沉思片刻。请用第一人称详细描述你此刻脑海中在想什么？（2-4句话，不要用工具调用，直接输出文本。）"
+        : "You decided to think for a moment. Describe in first person what's on your mind right now. (2-4 sentences, no tool calls, just output text directly.)";
+
+    messages.push({ role: "user", content: prompt });
+
+    const client = getLLMClient();
+    const extra: Record<string, unknown> = {};
+    if (getThinkingEnabled()) extra.thinking = { type: "enabled" };
+
+    const response = await client.chat.completions.create({
+      model: getModelName(),
+      max_tokens: 512,
+      messages: messages as any,
+      ...(extra as Record<string, unknown>),
+    });
+
+    const content = (response.choices[0]?.message?.content as string) ?? "";
+    // Keep the assistant response in messages for context (only if we want future rounds to see it)
+    // but don't push since we're done with this decision.
+    return content.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 function payloadToAction(actionType: string, p: Record<string, any>, actorId: string): Action {

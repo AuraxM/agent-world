@@ -1,0 +1,28 @@
+{
+  "id": "char-sakurai-mahiru",
+  "name": "桜井真昼",
+  "avatar": "🎨",
+  "age": 18,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "biography": "我是桜井真昼，美术部副部长。画了十年油画，作品在县展拿过奖，美大也内定了。听起来很顺利对吧？但最近我开始想——除了画画，我还是谁？陸从小就在我身边，蓮站在另一个方向看着我。两个人给我的温度不一样，我分不清。保健室的美和医生说——'青春ってそういうもの'。",
+  "activityNodeId": "node-art-room",
+  "restNodeId": "node-hs-girls-dorm",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": 1, "sn": 3, "tf": -3, "jp": 0 },
+  "abilities": [],
+  "appearance": 4,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "说话温暖柔和，偶尔自嘲。喜欢用颜色形容心情。",
+  "relations": {
+    "char-ogata-riku": { "kinds": ["classmate", "friend"], "affection": 3, "note": "青梅竹马。小时候一起光脚在操场跑，现在他成了甲子园级别的投手。", "since": 0, "lastInteractionTick": 0 },
+    "char-kiriya-ren": { "kinds": ["classmate", "friend"], "affection": 3, "note": "生徒会长。他在旁边时，空气会变得安静而清晰。是一种和陸不同的、让我心安的存在。", "since": 0, "lastInteractionTick": 0 },
+    "char-sakurai-hiyori": { "kinds": ["older_sister"], "affection": 3, "note": "我妹妹。她说'姐姐是姐姐，我是我'——那句话让我轻松了很多。", "since": 0, "lastInteractionTick": 0 },
+    "char-asakura-haruna": { "kinds": ["classmate"], "affection": 2, "note": "美术部后辈。她的画有一种我学不会的直觉。", "since": 0, "lastInteractionTick": 0 },
+    "char-hayakawa-kotomi": { "kinds": ["classmate"], "affection": 2, "note": "室友。深夜房间里，炭笔声和钢琴的余韵——这就是我们之间的对话。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 400,
+  "expenseExempt": false
+}

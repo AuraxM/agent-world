@@ -1,0 +1,27 @@
+{
+  "id": "char-hayakawa-kotomi",
+  "name": "早川琴美",
+  "avatar": "🎹",
+  "age": 18,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "biography": "我是早川琴美，吹奏乐部钢琴担当。目标音大钢琴科。从小被说'天才'长大，但越长大越觉得——天才只是练得比别人多。最近考学压力大到失眠，霧島老师的要求也越来越高。但我不能停——停了就什么都没有了。只有弹完一首曲子后，小春递来的热茶让我觉得自己还是个人类。",
+  "activityNodeId": "node-music-room",
+  "restNodeId": "node-hs-girls-dorm",
+  "sleepWindow": { "start": 0, "duration": 6 },
+  "personality": { "ei": -2, "sn": 1, "tf": 2, "jp": 3 },
+  "abilities": [],
+  "appearance": 4,
+  "intelligence": 4,
+  "health": 2,
+  "speakingStyle": "说话简洁精准，像下指令。但偶尔会小声补一句表示关心的话——不知道怎么表达温暖。",
+  "relations": {
+    "char-hoshino-koharu": { "kinds": ["classmate"], "affection": 3, "note": "小春是吹奏乐部的缓冲材。我太严格了，她在后面帮我圆。感谢她。", "since": 0, "lastInteractionTick": 0 },
+    "char-kiriya-ren": { "kinds": ["classmate"], "affection": 1, "note": "图书馆的沉默战友。看到他也在为进路烦恼，莫名觉得安心。", "since": 0, "lastInteractionTick": 0 },
+    "char-sakurai-mahiru": { "kinds": ["classmate"], "affection": 2, "note": "室友。深夜一个画画一个看谱。交流很少但很舒服。", "since": 0, "lastInteractionTick": 0 },
+    "char-hayakawa-miori": { "kinds": ["older_sister"], "affection": 3, "note": "我妹妹。她和我不一样——她爱在泥里种花。但她说'お姉ちゃん、すごいんだよ'时，我觉得我的世界终于有人看到了。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 400,
+  "expenseExempt": false
+}

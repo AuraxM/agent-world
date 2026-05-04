@@ -543,13 +543,13 @@ function worldRules(): string {
 游戏时间：1 tick = 1/5 游戏小时（5 ticks = 1 游戏小时）。tick 是基本时间单位。你不需要思考"玩家"——你只在你的角色身份下做出与你性格相符的决定。
 
 行动机制：
-- 你**只能**调用一个 action_* 工具来回复，禁止直接输出任何自然语言文本——直接吐文本视为本 tick 弃权。
-- 每次只调用一个工具（并联工具调用已禁用），不要在一次回复中调用多个 action 工具。
-- 每个 action_* 工具对应一种行动，工具名即行动类型。请根据当前情境选择合适的工具调用。
-- 你可以在 free_text 中加入说话内容或行动具体描述。
+- 你**只能**调用 decide_action 工具来提交行动决定，禁止直接输出任何自然语言文本——直接吐文本视为本 tick 弃权。
+- decide_action 的 action_type 参数选择你要执行的行动类型，可选值会在 prompt 末尾"可选行动"中列出。
+- 根据你选择的 action_type，填写对应的 target_id / target_node_id / free_text / amount 等参数。
+- you may write spoken content or action details in free_text。
 - reasoning 是你的内心独白，必须在其中显式引用一项你的性格特征（用文字描述，不要写数值）。这是硬性规则。
 - self_importance 1-5，决定这件事是否进入你的长期记忆。
-- 不要做超出当前可选工具范围的事；如果没有合适的工具，选 action_wait。
+- 不要做超出当前可选行动范围的事；如果没有合适的，选 action_type="wait"。
 
 移动机制：1 tick = 1/5 游戏小时（5 ticks = 1 小时）。移动时你需要指定目的地（任意地图节点）、移动原因（如"去酒馆找田中喝酒"）和到达后要做的动作（arrival_action）。引擎会自动计算最短路径，每走一步消耗 1 tick。移动期间你无法主动决策（类似睡觉），但可被高强度事件打断。到达后自动执行你声明的到达动作。
 
@@ -568,7 +568,7 @@ function worldRules(): string {
 - 超过 14 游戏日没和某熟人接触，对方将从你的关系中淡出（acquaintance 标签被移除）。如果你想维持某段关系，应主动联络。
 
 反循环：
-- 若你过去几个 tick 已多次做同一类行动且情境无新变化（例如连续 4 个 tick 都在 speak），应主动切换行为。
+- 若你过去几个 tick 已多次做同一类行动且情境无新变化（例如连续 4 个 tick 都在做同一类行动），应主动切换行为。
 - 若你已在同一节点超过 8 小时，且这里不是你的家、工作场所或庆典现场，应认真考虑 move 去别处。`;
 }
 
@@ -616,12 +616,12 @@ function arrivalIntroBlock(lang: Language): string {
 
 function submitActionInstruction(lang: Language): string {
   if (lang === "zh") {
-    return "请**调用对应的 action_* 工具**返回你的决定（不要输出自然语言文本）。务必在 reasoning 中显式引用一项你的性格特征的文字描述。";
+    return "请**调用 decide_action 工具**返回你的决定（不要输出自然语言文本）。务必在 reasoning 中显式引用一项你的性格特征的文字描述。";
   }
   if (lang === "en") {
-    return "Please **call the appropriate action_* tool** to return your decision (do not output any free-form natural-language text). You must explicitly cite one textual personality trait of yours in reasoning.";
+    return "Please **call the decide_action tool** to return your decision (do not output any free-form natural-language text). You must explicitly cite one textual personality trait of yours in reasoning.";
   }
-  return "対応する action_* ツールを必ず呼び出して回答してください（自由形式の自然言語テキストは出力しないでください）。reasoning では自分の性格特徴の文字記述を 1 つ明示的に引用してください。";
+  return "decide_action ツールを必ず呼び出して回答してください（自由形式の自然言語テキストは出力しないでください）。reasoning では自分の性格特徴の文字記述を 1 つ明示的に引用してください。";
 }
 
 /**

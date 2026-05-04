@@ -5,10 +5,11 @@
 import { randomUUID } from "node:crypto";
 import type { Tick, Character, Memory } from "@/domain/types";
 import type { Language } from "@/config/types";
-import { llmMemoryCompress } from "@/llm/decide";
+import { llmMemoryCompress, llmReflection } from "@/llm/decide";
 import {
   buildMemoryCompressionPrompt,
   buildWeeklyCompressionPrompt,
+  buildReflectionPrompt,
 } from "@/llm/prompt";
 
 /**
@@ -26,6 +27,41 @@ export async function compressSleepMemories(
   currentTick: Tick,
   language: Language,
 ): Promise<void> {
+  // ── Phase 0: Reflection ──
+  try {
+    const reflectionPrompt = buildReflectionPrompt({ character, language });
+    const reflection = await llmReflection({ prompt: reflectionPrompt, language });
+
+    if (reflection.memorize) {
+      for (const m of reflection.memorize) {
+        if (!m.impression || m.impression.trim().length === 0) {
+          delete character.impressionBook[m.target_id];
+        } else {
+          character.impressionBook[m.target_id] = m.impression.trim();
+        }
+      }
+    }
+    if (reflection.liked !== undefined) character.liked = reflection.liked;
+    if (reflection.disliked !== undefined) character.disliked = reflection.disliked;
+
+    const SHORT_GOAL_INTERVAL = 120;
+    const LONG_GOAL_INTERVAL = 840;
+    if (reflection.shortTermGoal !== undefined) {
+      const lastUpdate = character.shortTermGoal?.updatedAt ?? 0;
+      if (currentTick - lastUpdate >= SHORT_GOAL_INTERVAL) {
+        character.shortTermGoal = { goal: reflection.shortTermGoal, updatedAt: currentTick };
+      }
+    }
+    if (reflection.longTermGoal !== undefined) {
+      const lastUpdate = character.longTermGoal?.updatedAt ?? 0;
+      if (currentTick - lastUpdate >= LONG_GOAL_INTERVAL) {
+        character.longTermGoal = { goal: reflection.longTermGoal, updatedAt: currentTick };
+      }
+    }
+  } catch {
+    // Reflection failed — skip silently
+  }
+
   const sinceTick = character.lastSleepTick ?? 0;
 
   // 收集清醒期记忆（排除包含 [heuristic] 的引擎伪记忆）

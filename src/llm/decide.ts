@@ -304,6 +304,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     language: input.language,
     allCharacters: input.allCharacters,
     nodes: input.nodes,
+    activeEventDefs: input.activeEventDefs,
   });
 
   const tool = buildDecideActionTool(input.ctx);
@@ -902,6 +903,7 @@ export async function llmSalvageDecide(
     language,
     allCharacters: input.allCharacters,
     nodes: input.nodes,
+    activeEventDefs: input.activeEventDefs,
   });
   const salvageCtx = buildSalvageContext({ rejectReason: input.rejectReason });
 

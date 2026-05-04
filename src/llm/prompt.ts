@@ -945,8 +945,9 @@ export function buildUserPrompt(args: {
   arrivalIntro?: boolean;
   allCharacters?: Character[];
   nodes: MapNode[];
+  activeEventDefs?: import("@/domain/events").GlobalEventDef[];
 }): string {
-  const { character, here, companions, perceived, options, tick, facts, allCharacters, nodes } = args;
+  const { character, here, companions, perceived, options, tick, facts, allCharacters, nodes, activeEventDefs } = args;
   const language = args.language ?? "zh";
   const sleepWindow = character.sleepWindow ?? DEFAULT_SLEEP_WINDOW;
   const t = timeOfDay(tick, sleepWindow);
@@ -1102,6 +1103,18 @@ export function buildUserPrompt(args: {
   // 8. 当前时间（每 tick 变化，放在末尾以最大化 prompt cache 前缀命中）
   const timeLabel = `第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}${t.isSleepHour ? "，已是你的作息时段" : ""}）`;
   lines.push(`当前时间：${timeLabel}`, "");
+
+  // Active global events
+  if (activeEventDefs && activeEventDefs.length > 0) {
+    const eventLines = activeEventDefs.map((e) =>
+      `${e.name}：${e.description}`
+    );
+    lines.push("## ⚠️ 当前全局事件");
+    for (const line of eventLines) {
+      lines.push(line);
+    }
+    lines.push("");
+  }
 
   // 末尾仅保留提交指令；languageInstruction 已在 system 末尾提供，不再重复。
   lines.push(submitActionInstruction(language));

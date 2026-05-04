@@ -55,6 +55,8 @@ export const EconomyConfigSchema: z.ZodType<EconomyConfig> = z.object({
   professionIncomes: ProfessionIncomesSchema,
   wealthTiers: z.tuple([z.number(), z.number(), z.number()]),
   balanceThresholds: BalanceThresholdsSchema,
+  tierMultipliers: z.record(z.string(), z.number()).optional(),
+  mdc: z.number().int().min(1).optional(),
 });
 
 /** 地图包 manifest —— 每个地图包目录下的 manifest.json。 */

@@ -1,7 +1,7 @@
 /**
  * vitals-emotion.ts 单测：纯函数 + 直接 mutate characters。
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   applyEmotionEvent,
   clamp,
@@ -184,12 +184,13 @@ describe("decayVitals", () => {
 });
 
 describe("evolveEmotions", () => {
-  it("偶数整小时 mood 朝 0 走 1", () => {
+  it("偶数整小时 mood 朝 0 走 1 — 性格驱动概率回归，mock random 保证触发", () => {
     const c = mkChar(
       "a",
       { hunger: 0, fatigue: 0, hygiene: 0 },
       { mood: 3, stress: 0, social_satiety: 0 },
     );
+    const rand = vi.spyOn(Math, "random").mockReturnValue(0);
     evolveEmotions({
       characters: [c],
       worldId: "w",
@@ -197,6 +198,7 @@ describe("evolveEmotions", () => {
       hasCompanions: new Map([["a", false]]),
     });
     expect(c.emotion.mood).toBe(2);
+    rand.mockRestore();
   });
 
   it("奇数 tick mood 不变", () => {
@@ -229,19 +231,22 @@ describe("evolveEmotions", () => {
     expect(c.emotion.stress).toBe(3);
   });
 
-  it("有伴则 social_satiety 偶数整小时 +1", () => {
+  it("有伴则 social_satiety 偶数整小时 +gain（EI 驱动，mock random 防衰减）", () => {
     const c = mkChar(
       "a",
       { hunger: 0, fatigue: 0, hygiene: 0 },
       { mood: 0, stress: 0, social_satiety: 0 },
     );
+    const rand = vi.spyOn(Math, "random").mockReturnValue(1);
     evolveEmotions({
       characters: [c],
       worldId: "w",
       tick: 10,
       hasCompanions: new Map([["a", true]]),
     });
-    expect(c.emotion.social_satiety).toBe(1);
+    // getSocialGainPerInteraction(ei=0) = 1.2 - 0 = 1.2
+    expect(c.emotion.social_satiety).toBe(1.2);
+    rand.mockRestore();
   });
 
   it("独处则 social_satiety 偶数 tick -1（封底 -4）", () => {
@@ -260,12 +265,13 @@ describe("evolveEmotions", () => {
   });
 
   it("低 mood 周期性提醒（每 8 游戏小时）", () => {
-    // mood=-4 → 偶数整小时自然回归到 -3（仍 ≤-3，触发提醒）
+    // mood=-4 → 概率回归到 -3（仍 ≤-3，触发提醒），mock random 保证触发
     const c = mkChar(
       "a",
       { hunger: 0, fatigue: 0, hygiene: 0 },
       { mood: -4, stress: 0, social_satiety: 0 },
     );
+    const rand = vi.spyOn(Math, "random").mockReturnValue(0);
     const evs = evolveEmotions({
       characters: [c],
       worldId: "w",
@@ -274,6 +280,7 @@ describe("evolveEmotions", () => {
     });
     expect(c.emotion.mood).toBe(-3);
     expect(evs.some((e) => /低落|出口/.test(e.description))).toBe(true);
+    rand.mockRestore();
   });
 });
 

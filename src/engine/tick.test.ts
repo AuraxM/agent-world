@@ -444,7 +444,7 @@ describe("tick engine v0", () => {
     const w2 = storeModule.loadWorld("test-world");
     const sleeper2 = w2.characters.find((c) => c.id === "char-sleeper")!;
     expect(sleeper2.currentAction).toBeUndefined();
-    expect(sleeper2.vitals.fatigue).toBe(0);
+    expect(sleeper2.vitals.fatigue).toBe(3); // outside sleep window → 70% reduction (10 - round(10*0.7))
     // Completion memory written
     expect(sleeper2.shortMemory.length).toBeGreaterThan(0);
     expect(sleeper2.shortMemory[0].content).toContain("睡醒");

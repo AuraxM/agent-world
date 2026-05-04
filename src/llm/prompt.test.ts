@@ -155,24 +155,23 @@ describe("describeEmotion", () => {
 });
 
 describe("buildSystemPrompt", () => {
-  it("包含 MBTI 文字描述 / 昼夜节律 / 生理优先级 / 反循环 / 移动机制", () => {
+  it("只包含世界规则 / 地图 / 语言指令，不包含角色专属内容", () => {
     const sys = buildSystemPrompt({
-      character: baseCharacter,
       worldName: "测试世界",
       nodes: [restaurant],
     });
+    // world rules
     expect(sys).toContain("昼夜节律");
     expect(sys).toContain("生理优先级");
     expect(sys).toContain("反循环");
     expect(sys).toContain("移动机制");
-    expect(sys).toContain("性格特征");
-    // ei=2 应出现"偏外向"文字（MBTI 标签）
-    expect(sys).toContain("偏外向");
+    // character-specific content should NOT be in system prompt (moved to user prompt)
+    expect(sys).not.toContain("你的自我认知");
+    expect(sys).not.toContain("偏外向");
   });
 
   it("禁止数字提示出现在性格段", () => {
     const sys = buildSystemPrompt({
-      character: baseCharacter,
       worldName: "测试世界",
       nodes: [restaurant],
     });
@@ -181,7 +180,7 @@ describe("buildSystemPrompt", () => {
     expect(sys).not.toMatch(/外向性\s*=/);
   });
 
-  it("地图段渲染：节点带 [id]、父子缩进、★ 标注家、shortcut 单列", () => {
+  it("地图段渲染：节点带 [id]、父子缩进、shortcut 单列（无角色专属信息）", () => {
     const town: MapNode = {
       id: "node-town",
       worldId: "w",
@@ -222,31 +221,30 @@ describe("buildSystemPrompt", () => {
       isEntry: false,
     };
     const sys = buildSystemPrompt({
-      character: { ...baseCharacter, restNodeId: "node-grocery" },
       worldName: "测试世界",
       nodes: [town, tavern, grocery],
     });
     expect(sys).toContain("当前世界地图");
     expect(sys).toContain("镇中心 [node-town]");
     expect(sys).toContain("- 酒馆雪灯 [node-tavern]"); // 子节点
-    // home 标注从 map graph 挪到角色块（缓存友好：map 段对所有 NPC 字节一致）
-    expect(sys).toContain("你的休息处：杂货铺北之惠 [node-grocery]");
     expect(sys).not.toContain("★ 你的家");
     expect(sys).toContain("特殊通道");
     // tavern → grocery 是单向 shortcut（grocery 没有反向）
     expect(sys).toContain("酒馆雪灯 [node-tavern] → 杂货铺北之惠 [node-grocery]");
+    // 角色专属信息（休息处 / 自我认知）已移至 user prompt，不应出现在 system prompt
+    expect(sys).not.toContain("你的休息处");
+    expect(sys).not.toContain("你的自我认知");
   });
 
-  it("地图段在角色自我认知之前（缓存友好：世界静态在前，角色信息在后）", () => {
+  it("system prompt 不含角色专属块（已移至 user prompt，100% 跨角色共享以最大化 cache 命中）", () => {
     const sys = buildSystemPrompt({
-      character: baseCharacter,
       worldName: "测试世界",
       nodes: [restaurant],
     });
     const mapIdx = sys.indexOf("当前世界地图");
-    const selfIdx = sys.indexOf("你的自我认知");
     expect(mapIdx).toBeGreaterThan(0);
-    expect(selfIdx).toBeGreaterThan(mapIdx);
+    // 角色专属块已移至 user prompt，不应出现在 system prompt
+    expect(sys).not.toContain("你的自我认知");
   });
 });
 
@@ -260,6 +258,8 @@ describe("buildUserPrompt", () => {
       options: [{ type: "wait", hint: "等" }],
       tick: 25,
       facts: { ...emptyFacts, restNodeId: "node-home", restNodeName: "我的家" },
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
     });
     expect(out).toContain("第 0 日 05:00");
     expect(out).toContain("凌晨");
@@ -279,6 +279,8 @@ describe("buildUserPrompt", () => {
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
       facts: { ...emptyFacts, restNodeId: "node-home", restNodeName: "我的家" },
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
     });
     expect(out).toContain("⚠");
     expect(out).toContain("应优先 move 回 我的家");
@@ -303,6 +305,8 @@ describe("buildUserPrompt", () => {
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
       facts: { ...emptyFacts, restNodeId: "node-home", restNodeName: "我的家" },
+      nodes: [home],
+      allCharacters: [baseCharacter],
     });
     expect(out).not.toContain("⚠");
   });
@@ -319,6 +323,8 @@ describe("buildUserPrompt", () => {
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
       facts: emptyFacts,
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
     });
     expect(out).toContain("⚠");
     expect(out).toContain("澡堂");
@@ -348,6 +354,8 @@ describe("buildUserPrompt", () => {
         lastEatTick: 5,
         todayActionCounts: { speak: 9, observe: 2, wait: 1 },
       },
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
     });
     expect(out).toContain("已在 老王饭馆 连续 14 小时");
     expect(out).toContain("上一 tick 你的行动：speak");
@@ -369,6 +377,8 @@ describe("buildUserPrompt", () => {
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
       facts: emptyFacts,
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
     });
     expect(out).toContain("非常疲惫");
     expect(out).not.toContain("疲惫值：15");
@@ -386,6 +396,8 @@ describe("buildUserPrompt", () => {
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
       facts: emptyFacts,
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
     });
     expect(out).toContain("情绪状态");
     expect(out).toContain("很低落");
@@ -416,6 +428,8 @@ describe("buildUserPrompt", () => {
       options: [{ type: "wait", hint: "等" }],
       tick: 245,
       facts: emptyFacts,
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
     });
     expect(out).toContain("你的近期短期记忆");
     expect(out).toContain("我在饭馆吃了晚饭");
@@ -434,6 +448,8 @@ describe("buildUserPrompt", () => {
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
       facts: emptyFacts,
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
     });
     expect(out).toContain("你的近期短期记忆");
     expect(out).not.toContain("你的日记忆");
@@ -444,7 +460,6 @@ describe("buildUserPrompt", () => {
 describe("language", () => {
   it("zh 时 system prompt 含简体中文输出指令；不含跨语言记忆提示", () => {
     const sys = buildSystemPrompt({
-      character: baseCharacter,
       worldName: "测试世界",
       nodes: [restaurant],
       language: "zh",
@@ -455,7 +470,6 @@ describe("language", () => {
 
   it("en 时 system 含 English 指令；user 不再重复指令但保留跨语言提示", () => {
     const sys = buildSystemPrompt({
-      character: baseCharacter,
       worldName: "测试世界",
       nodes: [restaurant],
       language: "en",
@@ -479,7 +493,6 @@ describe("language", () => {
 
   it("ja 时 system 含日本語指令；user 不再重复指令但保留跨语言提示", () => {
     const sys = buildSystemPrompt({
-      character: baseCharacter,
       worldName: "测试世界",
       nodes: [restaurant],
       language: "ja",
@@ -501,7 +514,6 @@ describe("language", () => {
 
   it("language 缺省时按 zh 处理（向后兼容）", () => {
     const sys = buildSystemPrompt({
-      character: baseCharacter,
       worldName: "测试世界",
       nodes: [restaurant],
     });
@@ -534,6 +546,8 @@ describe("arrivalIntro", () => {
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
       facts: emptyFacts,
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
     });
     expect(out).not.toContain("刚抵达此地");
   });
@@ -710,6 +724,8 @@ describe("ACTION_NAMES speak label", () => {
         hoursAtCurrentLocation: 0,
         todayActionCounts: { speak: 1 },
       },
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
     });
     expect(out).toContain("speak ×1");
   });

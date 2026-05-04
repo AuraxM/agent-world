@@ -185,7 +185,6 @@ export async function decideForCharacter(
         const tools = buildActionTools(ctx);
 
         const system = buildSystemPrompt({
-          character: c,
           worldName: world.name,
           nodes,
           language,
@@ -200,6 +199,8 @@ export async function decideForCharacter(
           facts,
           language,
           arrivalIntro: true,
+          allCharacters: characters,
+          nodes,
         });
 
         try {
@@ -302,6 +303,7 @@ export async function decideForCharacter(
         facts,
         language,
         ctx,
+        allCharacters: characters,
       });
     }
   } catch (err) {

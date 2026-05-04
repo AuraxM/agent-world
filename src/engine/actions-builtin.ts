@@ -195,6 +195,7 @@ export const speakAction: ActionDefinition = {
     return ctx.companions.length > 0;
   },
   hint(ctx) {
+    if (ctx.companions.length === 0) return "（没有可以说话的人）";
     return ctx.companions.map((c) => ({
       hint: `和 ${c.name} 交谈`,
       targetId: c.id,
@@ -266,26 +267,31 @@ export const moveAction: ActionDefinition = {
   },
   hint(ctx) {
     const entries: Array<{ hint: string; targetNodeId?: string }> = [];
-    const highlighted = new Set<string>();
-    if (ctx.facts.restNodeId) highlighted.add(ctx.facts.restNodeId);
-    for (const n of ctx.reachable) {
-      if (n.tags.includes("dining") || n.tags.includes("bathing")) highlighted.add(n.id);
+    const fatigueUrgent = ctx.self.vitals.fatigue >= 12;
+    const hungerUrgent = ctx.self.vitals.hunger >= 10;
+    const hygieneUrgent = ctx.self.vitals.hygiene >= 13;
+
+    if (fatigueUrgent && ctx.facts.restNodeId) {
+      entries.push({ hint: "⭐ 回休息处休息", targetNodeId: ctx.facts.restNodeId });
     }
-    for (const nId of highlighted) {
-      const n = ctx.reachable.find((r) => r.id === nId);
-      if (!n) continue;
-      const isRest = ctx.facts.restNodeId !== null && n.id === ctx.facts.restNodeId;
-      let hint = `前往 ${n.name}`;
-      if (isRest && (ctx.self.vitals.fatigue >= 12 || ctx.isSleepHour)) {
-        hint = `⭐ ${hint}——休息处`;
-      } else if (n.tags.includes("dining") && ctx.self.vitals.hunger >= 5) {
-        hint = `⭐ ${hint}——可用餐`;
-      } else if (n.tags.includes("bathing") && ctx.self.vitals.hygiene >= 8) {
-        hint = `⭐ ${hint}——可洗浴`;
+    if (hungerUrgent) {
+      for (const n of ctx.reachable) {
+        if (n.tags.includes("dining")) {
+          entries.push({ hint: `⭐ 去 ${n.name} 用餐`, targetNodeId: n.id });
+          break;
+        }
       }
-      entries.push({ hint, targetNodeId: n.id });
     }
-    entries.push({ hint: "前往地图上任意地点（指定 target_node_id + reason）。" });
+    if (hygieneUrgent) {
+      for (const n of ctx.reachable) {
+        if (n.tags.includes("bathing")) {
+          entries.push({ hint: `⭐ 去 ${n.name} 洗浴`, targetNodeId: n.id });
+          break;
+        }
+      }
+    }
+
+    entries.push({ hint: "前往地图上任意地点（在 reasoning 中说清楚你为什么要去那里）" });
     return entries;
   },
   execute(ctx, input) {

@@ -27,7 +27,7 @@ import type { ActionOption } from "@/engine/actions";
 import type { Language } from "@/config/types";
 import { actionRegistry } from "@/domain/action-system";
 
-const SHORT_MEMORY_LIMIT = 6;
+const SHORT_MEMORY_LIMIT = 4;
 const DAILY_MEMORY_LIMIT = 6;
 const WEEKLY_MEMORY_LIMIT = 6;
 const MAX_PEERS_IN_PROMPT = 5;
@@ -114,6 +114,27 @@ function describeAffection(v: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// directional relation labels
+// ---------------------------------------------------------------------------
+
+const DIRECTIONAL_KIND_LABELS: Record<string, string> = {
+  boss: "你的老板",
+  subordinate: "你的下属",
+  colleague: "你的同事",
+  spouse: "你的配偶",
+  father: "你的父亲",
+  mother: "你的母亲",
+  son: "你的儿子",
+  daughter: "你的女儿",
+  older_brother: "你的哥哥",
+  younger_brother: "你的弟弟",
+  older_sister: "你的姐姐",
+  younger_sister: "你的妹妹",
+  partner: "你的伴侣",
+  ex_partner: "前伴侣",
+};
+
+// ---------------------------------------------------------------------------
 // 关系筛选：5 人上限 + 优先级
 // ---------------------------------------------------------------------------
 
@@ -161,7 +182,16 @@ function describeRelations(
     .map((p) => {
       const r = c.relations[p.id];
       if (!r) return `- ${p.name}（陌生人）`;
-      const kinds = r.kinds.join("/");
+      const directionalParts: string[] = [];
+      const otherKinds: string[] = [];
+      for (const k of r.kinds) {
+        if (DIRECTIONAL_KIND_LABELS[k]) {
+          directionalParts.push(DIRECTIONAL_KIND_LABELS[k]);
+        } else {
+          otherKinds.push(k);
+        }
+      }
+      const kindsDisplay = [...directionalParts, ...otherKinds].join("、");
       const aff = describeAffection(r.affection);
       const noteSuffix = r.note ? `——${r.note}` : "";
       let warn = "";
@@ -172,7 +202,7 @@ function describeRelations(
           warn = `（再 ${Math.floor(decayIn / TICKS_PER_HOUR)} 小时未互动就会淡出）`;
         }
       }
-      return `- ${p.name}（${kinds}, ${aff}）${noteSuffix}${warn}`;
+      return `- ${p.name} —— ${kindsDisplay}，${aff}${noteSuffix}${warn}`;
     })
     .join("\n");
 }
@@ -190,7 +220,13 @@ function describeMemoryTiers(
 
   // 短期记忆
   const filteredShort = short.filter((m) => !m.content.includes("[heuristic]"));
-  const recentShort = filteredShort.slice(-SHORT_MEMORY_LIMIT);
+  // Remove exact consecutive duplicates (common from auto-wait actions)
+  const deduped: Memory[] = [];
+  for (let i = 0; i < filteredShort.length; i++) {
+    if (i > 0 && filteredShort[i].content === filteredShort[i - 1].content) continue;
+    deduped.push(filteredShort[i]);
+  }
+  const recentShort = deduped.slice(-SHORT_MEMORY_LIMIT);
   lines.push("你的近期短期记忆：");
   if (recentShort.length === 0) {
     lines.push("（暂无）");
@@ -460,7 +496,7 @@ function formatActionCounts(
 /**
  * 通用世界规则——不嵌入任何角色专属信息（性格 / 作息窗口 / 家），
  * 让此段在所有 NPC 之间字节一致，最大化 prompt cache 命中。
- * 角色专属内容由 buildSystemPrompt 末尾的"自我认知"块单独承载。
+ * 角色专属内容由 buildUserPrompt 开头的身份锚点 + 角色静态认知块单独承载。
  */
 function worldRules(): string {
   return `你是 LLM-as-NPC 模拟世界中的一个角色。这是一个由"导演型玩家"在外部观察、并偶尔向某地点投放事件的虚拟小镇。
@@ -622,18 +658,17 @@ const PROFESSION_LABELS: Record<Profession, string> = {
 };
 
 /**
- * 角色专属"自我认知"块。放 system prompt 末尾，前面 worldRules + mapGraph +
- * languageInstruction 都在所有 NPC 之间字节一致 → prompt cache 在跨角色调用时
- * 仍能命中共享前缀。
+ * 角色静态认知块（原 system prompt characterBlock）。
+ * 移入 user prompt，使 system prompt 在所有 NPC 之间字节一致，最大化 prompt cache 命中。
+ * 名字已移至 user prompt 开头的身份锚点行，此处不再重复。
  */
-function characterBlock(
+export function buildCharacterStaticBlock(
   character: Character,
   nodes: MapNode[],
   sleepWindow: SleepWindow,
 ): string {
   const lines: string[] = [
     "你的自我认知：",
-    `- 名字：${character.name}`,
     `- 年龄：${character.age} 岁`,
     `- 性别：${character.gender === "male" ? "男" : character.gender === "female" ? "女" : "其他"}`,
     `- 身份：${PROFESSION_LABELS[character.profession] ?? character.profession}`,
@@ -843,22 +878,18 @@ export function buildSalvageContext(args: {
 }
 
 export function buildSystemPrompt(args: {
-  character: Character;
   worldName: string;
   nodes: MapNode[];
   language?: Language;
 }): string {
-  const { character, worldName, nodes } = args;
+  const { worldName, nodes } = args;
   const language = args.language ?? "zh";
-  const sleepWindow = character.sleepWindow ?? DEFAULT_SLEEP_WINDOW;
 
-  // 顺序刻意按"稳定 → 角色专属"排列，让 prompt cache 在跨角色调用时
-  // 仍能命中共享前缀（worldRules + mapGraph + languageInstruction 字节一致）。
+  // 仅包含所有 NPC 共享的世界规则 + 地图 + 语言指令，100% 字节一致 → 跨角色 prompt cache 完全命中。
   const lines: string[] = [worldRules(), "", `你身处的世界：${worldName}。`];
   const mapGraph = describeMapGraph(nodes);
   if (mapGraph) lines.push("", mapGraph);
   lines.push("", languageInstruction(language));
-  lines.push("", characterBlock(character, nodes, sleepWindow));
   return lines.join("\n");
 }
 
@@ -922,8 +953,10 @@ export function buildUserPrompt(args: {
   facts: AggregatedFacts;
   language?: Language;
   arrivalIntro?: boolean;
+  allCharacters?: Character[];
+  nodes: MapNode[];
 }): string {
-  const { character, here, companions, perceived, options, tick, facts } = args;
+  const { character, here, companions, perceived, options, tick, facts, allCharacters, nodes } = args;
   const language = args.language ?? "zh";
   const sleepWindow = character.sleepWindow ?? DEFAULT_SLEEP_WINDOW;
   const t = timeOfDay(tick, sleepWindow);
@@ -932,6 +965,35 @@ export function buildUserPrompt(args: {
   const hygiene = qualifyVital(character.vitals.hygiene, "hygiene");
 
   const lines: string[] = [];
+
+  // 0. 身份锚点 —— user prompt 的第一行
+  const profLabel = PROFESSION_LABELS[character.profession] ?? character.profession;
+
+  // Build name lookup map for workplace relation labels
+  const nameMap = new Map<string, string>();
+  if (allCharacters) {
+    for (const ac of allCharacters) nameMap.set(ac.id, ac.name);
+  }
+  for (const c of companions) nameMap.set(c.id, c.name);
+
+  // Extract workplace relationships from relations
+  const workplaceParts: string[] = [];
+  for (const [targetId, rel] of Object.entries(character.relations)) {
+    const targetName = nameMap.get(targetId) ?? targetId;
+    if (rel.kinds.includes("boss")) workplaceParts.push(`${targetName}是你的老板`);
+    if (rel.kinds.includes("subordinate")) workplaceParts.push(`${targetName}是你的下属`);
+    if (rel.kinds.includes("colleague")) workplaceParts.push(`${targetName}是你的同事`);
+  }
+
+  lines.push(`你是${character.name}，${character.age}岁的${profLabel}。`);
+  if (workplaceParts.length > 0) {
+    lines.push(workplaceParts.join("；") + "。");
+  }
+  lines.push("");
+
+  // 0.5. 角色静态认知（原 system prompt characterBlock）
+  lines.push(buildCharacterStaticBlock(character, nodes, sleepWindow));
+  lines.push("");
 
   // 1. 时间 + 作息引导
   lines.push(

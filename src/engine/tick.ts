@@ -77,6 +77,8 @@ export interface DecideInput {
   language: Language;
   /** ActionContext，供 decide.ts 生成 per-action tools。 */
   ctx: import("@/domain/action-system").ActionContext;
+  /** 全量角色列表，用于用户 prompt 身份锚点的 workplace 关系解析。 */
+  allCharacters: Character[];
 }
 
 export type DecideFn = (input: DecideInput) => Promise<Action>;
@@ -137,6 +139,12 @@ function makeInnerEvent(args: {
   };
 }
 
+/** Strip "action_" prefix if present (LLM sometimes returns tool names as action types). */
+function normalizeActionType(t: string): string {
+  if (t.startsWith("action_")) return t.slice("action_".length);
+  return t;
+}
+
 function handleOngoingMove(
   c: Character,
   fromTick: number,
@@ -155,7 +163,7 @@ function handleOngoingMove(
     const destId = path[path.length - 1];
     const destName = nodeById.get(destId)?.name ?? destId;
     c.currentAction = undefined;
-    const arrivalType = ca.arrivalAction?.type ?? "wait";
+    const arrivalType = normalizeActionType(ca.arrivalAction?.type ?? "wait");
     return {
       action: {
         type: arrivalType,
@@ -185,24 +193,6 @@ function handleOngoingMove(
     },
     arrived: false,
   };
-}
-
-function pushMoveInitMemory(
-  c: Character,
-  tick: number,
-  action: Action,
-  targetNodeName: string,
-): void {
-  const content = `${c.name} 前往 ${targetNodeName} ${action.reason ?? ""}`.trim();
-  c.shortMemory.push({
-    id: `mem-${randomUUID().slice(0, 8)}`,
-    tick,
-    importance: action.selfImportance,
-    content,
-  });
-  if (c.shortMemory.length > 50) {
-    c.shortMemory.splice(0, c.shortMemory.length - 50);
-  }
 }
 
 let _actionsInitialized = false;
@@ -512,6 +502,7 @@ export async function tick(
           facts,
           language,
           ctx,
+          allCharacters: loaded.characters,
         });
       } catch (err) {
         action = fallbackWait(c);
@@ -534,9 +525,6 @@ export async function tick(
           };
         } else {
           const targetNode = nodeById.get(action.targetNodeId);
-          // Write move initiation memory
-          pushMoveInitMemory(c, fromTick, action, targetNode?.name ?? action.targetNodeId);
-
           // Setup ongoing action for path traversal
           c.currentAction = {
             type: "move",
@@ -558,7 +546,7 @@ export async function tick(
             // Single step → arrived immediately, execute arrivalAction
             c.currentAction = undefined;
             action = {
-              type: action.arrivalAction?.type ?? "wait",
+              type: normalizeActionType(action.arrivalAction?.type ?? "wait"),
               actorId: c.id,
               targetId: action.arrivalAction?.targetId,
               targetNodeId: action.arrivalAction?.targetNodeId,
@@ -682,6 +670,7 @@ export async function tick(
           ctx,
           rejectReason: input.rejectReason,
           language,
+          allCharacters: characters,
         });
       } catch {
         return {

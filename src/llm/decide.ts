@@ -122,7 +122,6 @@ async function callLLMWithRetry(
 
 async function callLLM(input: DecideInput): Promise<Action> {
   const system = buildSystemPrompt({
-    character: input.character,
     worldName: input.worldName,
     nodes: input.nodes,
     language: input.language,
@@ -136,6 +135,8 @@ async function callLLM(input: DecideInput): Promise<Action> {
     tick: input.tick,
     facts: input.facts,
     language: input.language,
+    allCharacters: input.allCharacters,
+    nodes: input.nodes,
   });
 
   const tools = buildActionTools(input.ctx);
@@ -163,7 +164,9 @@ function payloadToAction(actionType: string, p: Record<string, any>, actorId: st
     reason: p.reason,
     arrivalAction: p.arrival_action
       ? {
-          type: p.arrival_action.action_type,
+          type: p.arrival_action.action_type?.startsWith("action_")
+            ? p.arrival_action.action_type.slice("action_".length)
+            : p.arrival_action.action_type,
           freeText: p.arrival_action.free_text,
           targetId: p.arrival_action.target_id,
           targetNodeId: p.arrival_action.target_node_id,
@@ -533,7 +536,6 @@ export async function llmSalvageDecide(
   const language = input.language;
 
   const system = buildSystemPrompt({
-    character: input.character,
     worldName: input.worldName,
     nodes: input.nodes,
     language,
@@ -547,6 +549,8 @@ export async function llmSalvageDecide(
     tick: input.tick,
     facts: input.facts,
     language,
+    allCharacters: input.allCharacters,
+    nodes: input.nodes,
   });
   const salvageCtx = buildSalvageContext({ rejectReason: input.rejectReason });
 
@@ -585,7 +589,9 @@ export async function llmSalvageDecide(
         reason: data.reason,
         arrivalAction: data.arrival_action
           ? {
-              type: data.arrival_action.action_type as Action["type"],
+              type: (data.arrival_action.action_type as string)?.startsWith("action_")
+                ? (data.arrival_action.action_type as string).slice("action_".length)
+                : data.arrival_action.action_type,
               freeText: data.arrival_action.free_text,
               targetId: data.arrival_action.target_id,
               targetNodeId: data.arrival_action.target_node_id,

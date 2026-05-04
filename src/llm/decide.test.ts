@@ -148,6 +148,7 @@ const baseInput = (): DecideInput => ({
   facts: baseCtx.facts,
   language: "zh",
   ctx: baseCtx,
+  allCharacters: [baseCtx.self],
 });
 
 describe("llmDecide (OpenAI-compatible function calling)", () => {

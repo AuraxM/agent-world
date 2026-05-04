@@ -95,6 +95,11 @@ export function loadWorld(worldId: string): LoadedWorld {
     shortMemory: JSON.parse(c.shortMemoryJson),
     dailyMemory: JSON.parse(c.dailyMemoryJson),
     longMemory: JSON.parse(c.longMemoryJson),
+    impressionBook: JSON.parse(c.impressionBookJson ?? "{}") as Record<string, string>,
+    shortTermGoal: c.shortTermGoalJson ? JSON.parse(c.shortTermGoalJson) : null,
+    longTermGoal: c.longTermGoalJson ? JSON.parse(c.longTermGoalJson) : null,
+    liked: c.liked ?? "",
+    disliked: c.disliked ?? "",
     relations: JSON.parse(c.relationsJson),
     currentAction: c.currentActionJson
       ? JSON.parse(c.currentActionJson)
@@ -148,6 +153,11 @@ export function saveWorld(loaded: LoadedWorld): void {
           shortMemoryJson: JSON.stringify(c.shortMemory),
           dailyMemoryJson: JSON.stringify(c.dailyMemory),
           longMemoryJson: JSON.stringify(c.longMemory),
+          impressionBookJson: JSON.stringify(c.impressionBook),
+          shortTermGoalJson: c.shortTermGoal ? JSON.stringify(c.shortTermGoal) : null,
+          longTermGoalJson: c.longTermGoal ? JSON.stringify(c.longTermGoal) : null,
+          liked: c.liked,
+          disliked: c.disliked,
           relationsJson: JSON.stringify(c.relations),
           activeConversationIdsJson: JSON.stringify(c.activeConversationIds),
           currentActionJson: c.currentAction

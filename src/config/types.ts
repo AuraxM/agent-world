@@ -55,6 +55,10 @@ export type CharacterTemplate = Omit<
   | "incomeLevel"
   | "expenseExempt"
   | "activeConversationIds"
+  | "shortTermGoal"
+  | "longTermGoal"
+  | "liked"
+  | "disliked"
 > & {
   initialMoney?: number;
   incomeMultiplier?: number;

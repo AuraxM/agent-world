@@ -105,6 +105,10 @@ function getStream(): fs.WriteStream | null {
     );
     _stream.end();
     _stream = fs.createWriteStream(_streamPath, { flags: "a" });
+    _stream.on("error", (err) => {
+      console.error(`[logger] WriteStream error:`, err.message);
+      _stream = null;
+    });
     _streamBytes = 0;
   }
   return _stream;

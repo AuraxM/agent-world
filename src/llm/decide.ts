@@ -12,6 +12,7 @@ import {
   DECIDE_ACTION_TOOL_NAME, DecideActionSchema, buildDecideActionTool,
   RECALL_TOOL_NAME, RecallSchema, RecallToolSchema,
   MEMORIZE_TOOL_NAME, MemorizeSchema, MemorizeToolSchema,
+  REFLECTION_TOOL_NAME, ReflectionSchema, ReflectionToolSchema,
   ACCEPT_TOOL_NAME, AcceptDecisionSchema, AcceptToolSchema,
   DIALOG_TURN_TOOL_NAME, DialogTurnSchema, DialogTurnToolSchema,
   DIALOG_SUMMARY_TOOL_NAME, DialogSummarySchema, DialogSummaryToolSchema,
@@ -920,4 +921,55 @@ export async function llmSalvageDecide(
     }
   }
   return lastAction!;
+}
+
+// ---------------------------------------------------------------------------
+// Pre-sleep reflection
+// ---------------------------------------------------------------------------
+
+export interface ReflectionResult {
+  memorize?: Array<{ target_id: string; impression: string }>;
+  liked?: string;
+  disliked?: string;
+  shortTermGoal?: string;
+  longTermGoal?: string;
+}
+
+export async function llmReflection(args: { prompt: string; language?: Language }): Promise<ReflectionResult> {
+  if (!hasApiKey()) return {};
+
+  const config = getEntryConfig("memory_compress");
+  const client = getLLMClientForEntry("memory_compress");
+  const language: Language = args.language ?? "zh";
+  const tool: ChatCompletionTool = {
+    type: "function",
+    function: { name: REFLECTION_TOOL_NAME, description: "提交睡前反思结果。所有字段可选。", parameters: ReflectionToolSchema },
+  };
+  const extra: Record<string, unknown> = {};
+  if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await client.chat.completions.create({
+        model: getModelNameForEntry("memory_compress"),
+        max_tokens: 1024,
+        messages: [
+          { role: "system", content: `你是一个角色反思助手。请基于提供的记忆和当前状态进行反思。\n\n${languageInstruction(language)}` },
+          { role: "user", content: args.prompt },
+        ],
+        tools: [tool],
+        ...extra,
+      });
+      const message = response.choices[0]?.message;
+      const tc = (message?.tool_calls ?? []).find(
+        (c: any) => c.type === "function" && c.function.name === REFLECTION_TOOL_NAME,
+      ) as any;
+      if (!tc) throw new Error("LLM 没有返回 reflection tool_call");
+      const parsed = JSON.parse(tc.function.arguments);
+      const result = ReflectionSchema.safeParse(parsed);
+      if (!result.success) throw new Error(`Reflection 参数不符合 schema：${result.error.message}`);
+      return result.data;
+    } catch { if (attempt === 0) continue; }
+  }
+  return {};
 }

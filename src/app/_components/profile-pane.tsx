@@ -22,6 +22,27 @@ const PROFESSION_LABELS: Record<string, string> = {
   priest: "神官", mailman: "邮递员", mayor: "镇长官", student: "学生", unemployed: "无业",
 };
 
+const APPEARANCE_LABELS: Record<number, string> = {
+  1: "面容平凡",
+  2: "长相普通",
+  3: "相貌端正",
+  4: "面容出众",
+};
+
+const INTELLIGENCE_LABELS: Record<number, string> = {
+  1: "迟钝",
+  2: "直率",
+  3: "机敏",
+  4: "聪慧",
+};
+
+const HEALTH_LABELS: Record<number, string> = {
+  1: "体弱",
+  2: "普通",
+  3: "健壮",
+  4: "强韧",
+};
+
 /** [-min..+max] 双向条；居中分隔线，负值左红、正值右绿。 */
 function BiBar({
   label,
@@ -257,6 +278,23 @@ export function ProfilePane({
                 {character.origin === "local" ? "本地" : "外来者"}
                 {" · "}
                 💰 {character.money}
+              </div>
+              <div className="text-game-sm text-(--color-pixel-muted)">
+                {APPEARANCE_LABELS[character.appearance] ?? "—"}
+                {" · "}
+                {INTELLIGENCE_LABELS[character.intelligence] ?? "—"}
+                {" · "}
+                {HEALTH_LABELS[character.health] ?? "—"}
+                {character.sickness && (
+                  <span className="text-(--color-pixel-danger)">
+                    {" · "}🤒 生病
+                  </span>
+                )}
+                {character.speakingStyle && (
+                  <span className="text-(--color-pixel-accent)">
+                    {" · "}{character.speakingStyle}
+                  </span>
+                )}
               </div>
               <div className="text-game-sm">
                 <button

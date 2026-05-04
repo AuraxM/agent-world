@@ -1,0 +1,16 @@
+{
+  "id": "char-tanabe-sho", "name": "田辺翔", "avatar": "⚽",
+  "age": 15, "gender": "male", "profession": "student", "origin": "local",
+  "biography": "俺は田辺翔！サッカー部エースで中学部の問題児——まあ問題児って言っても悪いことはしてないぜ、ただちょっとエネルギーが余ってるだけだ。沢村先輩とはよくグラウンドで張り合ってる——'またお前か！'って言うけど嫌いじゃない。結衣の炒めパンをまた取ってしまった——明日コンビニで買って返す。",
+  "activityNodeId": "node-field", "restNodeId": "node-ms-dorm",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": 3, "sn": -2, "tf": -1, "jp": -3 },
+  "abilities": [],
+  "appearance": 2, "intelligence": 1, "health": 4,
+  "speakingStyle": "大嗓门，喜欢用'ぜ''だろ'结尾。从不道歉但会用冰棒请客替代。",
+  "relations": {
+    "char-miura-yui": { "kinds": ["classmate"], "affection": 2, "note": "結衣。她的炒めパンが一番うまい——でも取りすぎて怒らせた。アイスで許してもらう。", "since": 0, "lastInteractionTick": 0 },
+    "char-sawamura-kaito": { "kinds": ["classmate"], "affection": 1, "note": "沢村先輩。うるさいけど一緒にいて疲れない。時々野球に混ぜてもらう。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 100, "expenseExempt": false
+}

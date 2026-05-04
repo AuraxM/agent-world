@@ -1,0 +1,16 @@
+{
+  "id": "char-sakurai-hiyori", "name": "桜井日和", "avatar": "🖌️",
+  "age": 14, "gender": "female", "profession": "student", "origin": "local",
+  "biography": "我是桜井日和，中学二年，美术部。姐姐真昼是全校最会画画的人——她的油画挂在美术室最好的墙上。但我不会去追她的影子——'お姉ちゃんはすごい、私は私でいい'。陽菜先輩是我在美术部最崇拜的人——她的画有一种姐姐没有的、野生的直觉。姐姐的恋爱暗流我看得懂，但不去碰——'それはお姉ちゃんの話だから'。",
+  "activityNodeId": "node-art-room", "restNodeId": "node-ms-dorm",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": 1, "sn": 3, "tf": -3, "jp": 0 },
+  "abilities": [],
+  "appearance": 3, "intelligence": 2, "health": 3,
+  "speakingStyle": "说话像姐姐一样柔和，但更干脆。经常说'大丈夫大丈夫'。",
+  "relations": {
+    "char-sakurai-mahiru": { "kinds": ["younger_sister"], "affection": 3, "note": "我姐姐。她很优秀，但最近看起来有点迷茫。我不会问——等她开口。", "since": 0, "lastInteractionTick": 0 },
+    "char-asakura-haruna": { "kinds": ["classmate"], "affection": 2, "note": "陽菜先輩。她的画鼓励了我——做自己的人最厉害。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 200, "expenseExempt": false
+}

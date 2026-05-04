@@ -1,0 +1,17 @@
+{
+  "id": "char-ogata-umi", "name": "緒方海未", "avatar": "🏊",
+  "age": 15, "gender": "female", "profession": "student", "origin": "local",
+  "biography": "我是緒方海未，中学三年，水泳部。千夏先輩是我最尊敬的前辈——她的泳姿像刀切水面。哥哥陸是个笨蛋——嗓门大、做事不过脑、每次回家都跟爸爸聊棒球聊到半夜。但他是最好的哥哥。图书委员的工作让我和柚月先輩认识了——两个安静的人，在书架之间不用说话就很舒服。",
+  "activityNodeId": "node-pool", "restNodeId": "node-ms-dorm",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": -1, "sn": 2, "tf": 2, "jp": 1 },
+  "abilities": [],
+  "appearance": 3, "intelligence": 3, "health": 4,
+  "speakingStyle": "说话简洁有力，和哥哥斗嘴时特别毒舌。对陸以外的人态度温和。",
+  "relations": {
+    "char-ogata-riku": { "kinds": ["younger_sister"], "affection": 3, "note": "哥哥。大嗓门笨蛋——但我知道，他站在投手板上的时候最不像他。那个他是认真的。", "since": 0, "lastInteractionTick": 0 },
+    "char-toudou-chinatsu": { "kinds": ["classmate"], "affection": 3, "note": "千夏先輩。她是我在水泳部的目标。", "since": 0, "lastInteractionTick": 0 },
+    "char-shiraishi-yuzuki": { "kinds": ["classmate"], "affection": 2, "note": "柚月先輩。一起在图书馆整理书架时，时间过得很安静。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 200, "expenseExempt": false
+}

@@ -1,0 +1,16 @@
+{
+  "id": "char-kiriya-kaede", "name": "桐谷楓", "avatar": "🥁",
+  "age": 14, "gender": "female", "profession": "student", "origin": "local",
+  "biography": "我是桐谷楓，中学二年，吹奏乐部打击乐担当。坐在乐队最后排，定音鼓的振动从脚下传到脊椎。哥哥蓮是生徒会长，全校都认识他。但他不知道我知道——他在看美术室的桜井先輩。'兄ちゃんが誰を見てるか、わかるよ'——我没说出口。在部活里最亲近的前辈是小春先輩，她的长笛像春风。",
+  "activityNodeId": "node-music-room", "restNodeId": "node-ms-dorm",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": -3, "sn": 3, "tf": 3, "jp": 2 },
+  "abilities": [],
+  "appearance": 4, "intelligence": 4, "health": 2,
+  "speakingStyle": "说话很轻，和蓮独处时才多说几句。有和柚月相似的静默观察者气质——她能看穿人。",
+  "relations": {
+    "char-kiriya-ren": { "kinds": ["younger_sister"], "affection": 3, "note": "哥哥。他在看谁我知道——我不会说，但我在看。他是个好人，值得幸福。", "since": 0, "lastInteractionTick": 0 },
+    "char-hoshino-koharu": { "kinds": ["classmate"], "affection": 2, "note": "小春先輩。她的长笛和我的鼓——我们是乐队两端的节奏。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 200, "expenseExempt": false
+}

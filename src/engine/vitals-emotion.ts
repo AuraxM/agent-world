@@ -18,7 +18,12 @@
 import { randomUUID } from "node:crypto";
 import { TICKS_PER_HOUR } from "@/domain/enums";
 import type { Character, Emotion, WorldEvent } from "@/domain/types";
-import { characterBME } from "./bme";
+import {
+  characterBME,
+  getMoodDecayRate,
+  getSocialDecayRate,
+  getSocialGainPerInteraction,
+} from "./bme";
 
 // ---- thresholds ----
 
@@ -352,9 +357,13 @@ export function evolveEmotions(input: EmotionEvolutionInput): WorldEvent[] {
   const totalHours = Math.floor(tick / TICKS_PER_HOUR);
 
   for (const c of characters) {
-    // mood: even hour → toward 0 by 1
+    // mood: personality-driven regression toward 0
     if (hourTick && evenHour && c.emotion.mood !== 0) {
-      c.emotion.mood += c.emotion.mood > 0 ? -1 : 1;
+      const moodDecay = getMoodDecayRate(c.personality.tf);
+      // Per even-hour (~every 2h), probability = daily rate / 12 (12 even hours per day)
+      if (Math.random() < moodDecay / 12) {
+        c.emotion.mood += c.emotion.mood > 0 ? -1 : 1;
+      }
     }
 
     // stress: every 24 hours → -1
@@ -362,13 +371,17 @@ export function evolveEmotions(input: EmotionEvolutionInput): WorldEvent[] {
       c.emotion.stress = Math.max(0, c.emotion.stress - 1);
     }
 
-    // social_satiety: even hour → +1 if companions, -1 if alone
+    // social_satiety: personality-driven decay + gain
     if (hourTick && evenHour) {
+      const decay = getSocialDecayRate(c.personality.ei);
       const hasPeer = hasCompanions.get(c.id) ?? false;
       if (hasPeer) {
-        c.emotion.social_satiety = Math.min(4, c.emotion.social_satiety + 1);
-      } else {
-        c.emotion.social_satiety = Math.max(-4, c.emotion.social_satiety - 1);
+        const gain = getSocialGainPerInteraction(c.personality.ei);
+        c.emotion.social_satiety = clamp(c.emotion.social_satiety + gain, -4, 4);
+      }
+      // Probabilistic decay: roughly 1/decay per day, distributed across even hours
+      if (Math.random() < decay / 12) {
+        c.emotion.social_satiety = clamp(c.emotion.social_satiety - 1, -4, 4);
       }
     }
 

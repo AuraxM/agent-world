@@ -278,29 +278,48 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
     peer: input.peer.name,
   });
 
+  const systemPrompt = `你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。请根据你的性格、当前情境和对话历史，自然地回应。\n\n${languageInstruction(language)}`;
+  const TOOL_NUDGE = `请调用 ${DIALOG_TURN_TOOL_NAME} 工具来说一句话，或调用 ${END_CONVERSATION_TOOL_NAME} 工具来结束对话。不要输出纯文本，必须调用工具。`;
+
+  const messages: Array<Record<string, unknown>> = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: prompt },
+  ];
+
   let lastError: unknown;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
     try {
       const response = await client.chat.completions.create({
         model: getModelNameForEntry("dialog_turn"),
         max_tokens: 1024,
-        messages: [
-          {
-            role: "system",
-            content: `你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。请根据你的性格、当前情境和对话历史，自然地回应。\n\n${languageInstruction(language)}`,
-          },
-          { role: "user", content: prompt },
-        ],
+        messages: messages as any,
         tools,
         ...extra,
       });
 
       const message = response.choices[0]?.message;
-      const toolCall = ((message?.tool_calls ?? []) as any[]).find(
+      if (!message) throw new Error("LLM 返回空 message");
+
+      // Preserve assistant message (including reasoning_content for DeepSeek)
+      const assistantMsg: Record<string, unknown> = { role: "assistant", content: message.content ?? "" };
+      if ((message as any).reasoning_content) assistantMsg.reasoning_content = (message as any).reasoning_content;
+      if (message.tool_calls) assistantMsg.tool_calls = message.tool_calls;
+      messages.push(assistantMsg);
+
+      const toolCall = (message.tool_calls ?? []).find(
         (c: any) => c.type === "function",
       );
       if (!toolCall) {
-        throw new Error("LLM 没有返回 tool_call");
+        dialogLog.warn("LLM dialog_turn 未返回 tool_call，推送引导", {
+          self: input.self.name,
+          round: round + 1,
+          hasContent: typeof message.content === "string" && message.content.trim().length > 0,
+        });
+        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+          messages.push({ role: "user", content: TOOL_NUDGE });
+          continue;
+        }
+        throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮均未返回 tool_call`);
       }
 
       const args = JSON.parse(toolCall.function.arguments);
@@ -336,7 +355,13 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
       }
     } catch (err) {
       lastError = err;
-      if (attempt === 0) continue;
+      dialogLog.warn("LLM dialog_turn 失败", {
+        attempt: round + 1,
+        self: input.self.name,
+        peer: input.peer.name,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      if (round < MAX_TOOL_CALL_ROUNDS - 1) continue;
     }
   }
   throw lastError;

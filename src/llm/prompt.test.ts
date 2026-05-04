@@ -268,7 +268,7 @@ describe("buildUserPrompt", () => {
     expect(out).toContain("第 0 日 05:00");
     expect(out).toContain("凌晨");
     expect(out).toContain("已是你的作息时段");
-    expect(out).toContain("22:00–06:00 在 我的家 休息");
+    expect(out).toContain("作息窗口：22:00–06:00");
   });
 
   it("fatigue 高 + 不在 residence → 触发 ⚠ 紧迫提醒", () => {

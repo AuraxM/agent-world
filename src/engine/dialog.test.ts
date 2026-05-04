@@ -314,8 +314,7 @@ describe("runDialogPhase", () => {
     expect(result.finalActions).toHaveLength(4);
     // 2 ongoing conversations (mutual pair + one-way), not ended yet
     expect(result.updatedConversations).toHaveLength(2);
-    // No events/memories until conversations end
-    expect(result.dialogEvents).toHaveLength(0);
+    expect(result.dialogEvents).toHaveLength(2);
     expect(result.memoryWrites).toHaveLength(0);
 
     // Wait action count: mutual pair initiator + one-way initiator = 2 wait
@@ -489,7 +488,7 @@ describe("runDialogPhase", () => {
     expect(result.finalActions).toHaveLength(4);
     // 2 ongoing conversations, not ended yet
     expect(result.updatedConversations).toHaveLength(2);
-    expect(result.dialogEvents).toHaveLength(0);
+    expect(result.dialogEvents).toHaveLength(2);
     expect(result.memoryWrites).toHaveLength(0);
     // 2 initiators get wait actions
     const waitActions = result.finalActions.filter((a) => a.type === "wait");
@@ -507,7 +506,7 @@ describe("multi-tick conversation", () => {
     return { id, worldId: "w", parentId: null, name: id, description: "", tags: [], capacity: null, privacy: "public", visibleFromParent: true, shortcuts: [], isEntry: false };
   }
 
-  it("tick 1 generates 6 sentences + time message", async () => {
+  it("tick 1 generates 5 turns + time message (opening line counts as 1st turn)", async () => {
     const chars = [makeChar("a", "n1"), makeChar("b", "n1")];
     const actions = [speakAction("a", "b", "嗨")];
     let turnCount = 0;
@@ -524,19 +523,25 @@ describe("multi-tick conversation", () => {
       salvageDecide: async () => ({ type: "wait", actorId: "x", reasoning: "", selfImportance: 1 }),
       ongoingConversations: [],
     });
-    expect(turnCount).toBe(6);
+    expect(turnCount).toBe(5);
     const conv = result.updatedConversations[0];
     expect(conv).toBeDefined();
     const lastTurn = conv.transcript[conv.transcript.length - 1];
     expect(lastTurn.speakerId).toBe("__system__");
-    expect(lastTurn.line).toContain("当前时间");
+    expect(lastTurn.line).toContain("你们已经聊了");
   });
 
   it("3+4 rule: end at 6th sentence gives extra round", async () => {
     const chars = [makeChar("a", "n1"), makeChar("b", "n1")];
+    // Resumed conversation: already ran 1 tick (currentTickRounds=3), has prior turns + __system__ message
     const conv: any = {
       id: "conv-1", worldId: "w", initiatorId: "a", acceptorId: "b",
-      transcript: [], tickStarted: 0, currentTickRounds: 0, status: "active",
+      transcript: [
+        { speakerId: "a", kind: "say", line: "嗨" },
+        { speakerId: "b", kind: "say", line: "你好" },
+        { speakerId: "__system__", kind: "say", line: "现在已经 00:00 了" },
+      ],
+      tickStarted: 0, currentTickRounds: 3, status: "ending",
     };
     let callCount = 0;
     const turnDecide = async () => {
@@ -548,7 +553,7 @@ describe("multi-tick conversation", () => {
     };
     const result = await runDialogPhase({
       rawActions: [], characters: chars, nodes: [makeNode("n1")],
-      perceptions: new Map(), tick: 0, worldName: "test", language: "zh",
+      perceptions: new Map(), tick: 5, worldName: "test", language: "zh",
       acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
       turnDecide: turnDecide as any,
       summaryDecide: async () => "ok",

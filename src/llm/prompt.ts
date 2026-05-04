@@ -477,6 +477,7 @@ export function timeOfDay(
   sleepWindow: SleepWindow = DEFAULT_SLEEP_WINDOW,
 ): {
   hour: number;
+  minute: number;
   day: number;
   period: DayPeriod;
   isSleepHour: boolean;
@@ -484,6 +485,7 @@ export function timeOfDay(
   const totalHours = Math.floor(tick / TICKS_PER_HOUR);
   const day = Math.floor(totalHours / 24);
   const hour = ((totalHours % 24) + 24) % 24;
+  const minute = (tick % TICKS_PER_HOUR) * (60 / TICKS_PER_HOUR);
   let period: DayPeriod;
   if (hour < 5) period = "深夜";
   else if (hour < 7) period = "凌晨";
@@ -493,7 +495,7 @@ export function timeOfDay(
   else if (hour < 17) period = "下午";
   else if (hour < 20) period = "傍晚";
   else period = "夜晚";
-  return { hour, day, period, isSleepHour: inSleepWindow(hour, sleepWindow) };
+  return { hour, minute, day, period, isSleepHour: inSleepWindow(hour, sleepWindow) };
 }
 
 // ---------------------------------------------------------------------------
@@ -782,7 +784,6 @@ export function buildAcceptDecisionPrompt(args: {
   lines.push(`${requesterName} 想和你说话："${freeText}"`);
   lines.push("");
   lines.push(`你当前的状态：`);
-  lines.push(`- 时间：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}）`);
   lines.push(`- 在 ${here.name}`);
   lines.push(`- 疲惫：${fatigue.phrase}`);
   lines.push(`- 饥饿：${hunger.phrase}`);
@@ -811,6 +812,9 @@ export function buildAcceptDecisionPrompt(args: {
     lines.push(describeRelations(self, topPeers, tick));
     lines.push("");
   }
+
+  const timeStr = `第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
+  lines.push(`当前时间：${timeStr}`, "");
 
   lines.push(
     language === "zh"
@@ -1026,43 +1030,31 @@ export function buildUserPrompt(args: {
   lines.push(buildCharacterStaticBlock(character, nodes, sleepWindow));
   lines.push("");
 
-  // 1. 时间 + 作息引导
-  lines.push(
-    `当前时间：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}${t.isSleepHour ? "，已是你的作息时段" : ""}）。tick=${tick}`,
-  );
-  const winText = formatSleepWindow(sleepWindow);
-  if (facts.restNodeName) {
-    lines.push(`你的常规作息：${winText} 在 ${facts.restNodeName} 休息。`);
-  } else {
-    lines.push(`你的常规作息：${winText}（未设定固定住所）。`);
-  }
-  lines.push("");
-
-  // 2. 你的连续行为
+  // 1. 你的连续行为
   lines.push("你的连续行为：");
   lines.push(describeContinuity(facts, here.name, tick));
   lines.push("");
 
-  // 3. 当前位置
+  // 2. 当前位置
   lines.push(
     `你现在的位置：${here.name}（${here.privacy}, ${here.tags.join("/") || "无标签"}）`,
   );
   lines.push(`位置描述：${here.description || "（无）"}`);
   lines.push("");
 
-  // 4. 生理状态（定性）
+  // 3. 生理状态（定性）
   lines.push("你当前的生理状态：");
   lines.push(`- 饥饿：${hunger.phrase}`);
   lines.push(`- 疲惫：${fatigue.phrase}`);
   lines.push(`- 卫生：${hygiene.phrase}`);
 
-  // 4.1 情绪状态
+  // 3.1 情绪状态
   lines.push("你当前的情绪状态：");
   for (const line of describeEmotion(character.emotion)) {
     lines.push(`- ${line}`);
   }
 
-  // 4.2 紧迫提醒
+  // 3.2 紧迫提醒
   const fatigueUrgent =
     fatigue.urgency === "high" ||
     fatigue.urgency === "critical" ||
@@ -1106,7 +1098,7 @@ export function buildUserPrompt(args: {
     lines.push("");
   }
 
-  // 5. 同节点其他人物（最多 5）—— 0 人时整段省略
+  // 4. 同节点其他人物（最多 5）—— 0 人时整段省略
   if (companions.length > 0) {
     const topPeers = selectTopPeers(character, companions, tick);
     lines.push(
@@ -1118,14 +1110,14 @@ export function buildUserPrompt(args: {
     lines.push("");
   }
 
-  // 6. 感知事件 —— 无事件时整段省略
+  // 5. 感知事件 —— 无事件时整段省略
   if (perceived.length > 0) {
     lines.push("你刚刚感知到的事件：");
     lines.push(describeEvents(perceived));
     lines.push("");
   }
 
-  // 7. 三层记忆（短期 / 日 / 周）
+  // 6. 三层记忆（短期 / 日 / 周）
   lines.push(describeMemoryTiers(
     character.shortMemory,
     character.dailyMemory,
@@ -1133,7 +1125,7 @@ export function buildUserPrompt(args: {
   ));
   lines.push("");
 
-  // 8. 可选行动
+  // 7. 可选行动
   lines.push("你现在可以选择的行动（每项已带类型与必要的 target id）：");
   lines.push(describeOptions(options));
   lines.push("");
@@ -1147,6 +1139,10 @@ export function buildUserPrompt(args: {
   if (args.arrivalIntro) {
     lines.push(arrivalIntroBlock(language), "");
   }
+
+  // 8. 当前时间（每 tick 变化，放在末尾以最大化 prompt cache 前缀命中）
+  const timeLabel = `第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}${t.isSleepHour ? "，已是你的作息时段" : ""}）`;
+  lines.push(`当前时间：${timeLabel}`, "");
 
   // 末尾仅保留提交指令；languageInstruction 已在 system 末尾提供，不再重复。
   lines.push(submitActionInstruction(language));
@@ -1247,21 +1243,24 @@ export function injectTimeMessage(args: {
   const { tick, tickStarted } = args;
   const language = args.language ?? "zh";
   const t = timeOfDay(tick);
-  const elapsedTicks = tick - tickStarted;
+  // Minimum 1 tick elapsed (12 min) — conversation has been active for at least this tick
+  const elapsedTicks = Math.max(1, tick - tickStarted);
   const elapsedHours = Math.floor(elapsedTicks / TICKS_PER_HOUR);
   const elapsedMinutes = Math.floor((elapsedTicks % TICKS_PER_HOUR) * (60 / TICKS_PER_HOUR));
 
   const hours = elapsedHours > 0 ? elapsedHours : 0;
   const mins = elapsedMinutes;
 
+  const timeStr = `${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}`;
+
   if (language === "zh") {
     const dur = hours > 0 ? `${hours} 小时 ${mins} 分钟` : `${mins} 分钟`;
-    return `[当前时间：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}），对话已持续 ${dur}]`;
+    return `现在已经 ${timeStr} 了，你们已经聊了 ${dur}。`;
   }
   if (language === "en") {
     const dur = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-    return `[Current time: Day ${t.day} ${String(t.hour).padStart(2, "0")}:00 (${t.period}), conversation has lasted ${dur}]`;
+    return `It's ${timeStr} now, you've been talking for ${dur}.`;
   }
   const dur = hours > 0 ? `${hours} 時間 ${mins} 分` : `${mins} 分`;
-  return `[現在の時間：第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:00（${t.period}）、会話は ${dur} 続いています]`;
+  return `もう ${timeStr} です、${dur} 話し続けています。`;
 }

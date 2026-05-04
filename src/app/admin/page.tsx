@@ -135,35 +135,6 @@ export default function AdminPage() {
 
 function AdminContent() {
   const [tab, setTab] = useState<Tab>("providers");
-  const [thinkingEnabled, setThinkingEnabled] = useState(true);
-  const [thinkingLoading, setThinkingLoading] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/admin/settings")
-      .then((r) => r.json())
-      .then((d) => {
-        setThinkingEnabled(d.thinkingEnabled);
-      })
-      .catch(() => { /* keep default */ });
-  }, []);
-
-  async function handleThinkingToggle() {
-    const next = !thinkingEnabled;
-    setThinkingLoading(true);
-    try {
-      const res = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ thinkingEnabled: next }),
-      });
-      const data = await res.json();
-      if (res.ok) setThinkingEnabled(data.thinkingEnabled);
-    } catch {
-      /* revert on error */
-    } finally {
-      setThinkingLoading(false);
-    }
-  }
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -172,32 +143,9 @@ function AdminContent() {
         <h1 className="text-game-lg tracking-widest text-(--color-pixel-accent)">
           ADMIN · 管理后台
         </h1>
-        <label className="flex items-center gap-2 ml-auto cursor-pointer select-none">
-          <span className="text-game-xs text-(--color-pixel-muted) whitespace-nowrap">
-            {thinkingEnabled ? "LLM Thinking ON" : "LLM Thinking OFF"}
-          </span>
-          <button
-            type="button"
-            onClick={handleThinkingToggle}
-            disabled={thinkingLoading}
-            className={
-              "w-10 h-5 rounded-full border transition-colors " +
-              (thinkingEnabled
-                ? "bg-(--color-pixel-accent) border-(--color-pixel-accent-dark)"
-                : "bg-(--color-pixel-border-dark) border-(--color-pixel-border-light)")
-            }
-          >
-            <span
-              className={
-                "block w-3.5 h-3.5 rounded-full bg-(--color-pixel-bg) transition-transform " +
-                (thinkingEnabled ? "translate-x-5" : "translate-x-0.5")
-              }
-            />
-          </button>
-        </label>
         <a
           href="/"
-          className="text-game-xs text-(--color-pixel-muted) hover:text-(--color-pixel-fg) transition-colors"
+          className="text-game-xs text-(--color-pixel-muted) hover:text-(--color-pixel-fg) transition-colors ml-auto"
         >
           ← 返回游戏
         </a>

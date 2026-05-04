@@ -44,6 +44,7 @@ export type CharacterTemplate = Omit<
   | "locationId"
   | "vitals"
   | "emotion"
+  | "sickness"
   | "shortMemory"
   | "dailyMemory"
   | "longMemory"

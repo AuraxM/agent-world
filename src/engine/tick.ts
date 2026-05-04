@@ -17,6 +17,10 @@
  *   9. currentTick++ → saveWorld
  *  10. 每 24 tick 写一次 snapshot
  */
+import { createLogger } from "@/util/logger";
+
+const log = createLogger("tick");
+
 import { randomUUID } from "node:crypto";
 import { TICKS_PER_HOUR } from "@/domain/enums";
 import { buildActionContext } from "./actions";
@@ -223,7 +227,7 @@ export async function tick(
       const modDefs = loadModActions(world.mapId);
       actionRegistry.registerAll(modDefs);
     } catch (err) {
-      console.warn(`Failed to load mod actions for ${world.mapId}:`, err);
+      log.warn("Failed to load mod actions", { mapId: world.mapId, error: String(err) });
     }
   }
 
@@ -234,8 +238,15 @@ export async function tick(
     success: boolean;
   }> = [];
 
+  const t0 = Date.now();
+  log.info(`tick #${fromTick} 开始`, {
+    角色数: characters.length,
+    节点数: nodes.length,
+  });
+
   // 1. vitals decay
   allEvents.push(...decayVitals({ characters, worldId, tick: fromTick }));
+  const tAfterVitals = Date.now();
 
   // 2. emotion evolution
   const hasCompanions = new Map<string, boolean>();
@@ -264,8 +275,23 @@ export async function tick(
         description: "经济困难，余额不足以支付基本生存开销，需要帮助。",
         intensity: 3,
       }));
+      log.warn("经济困难", { 角色: c.name, money: c.money, 生存成本: maxSurvivalCost });
     }
   }
+
+  for (const c of characters) {
+    if (c.emotion.mood <= -3 || c.emotion.mood >= 3) {
+      log.warn("情绪极端", { 角色: c.name, mood: c.emotion.mood, stress: c.emotion.stress });
+    }
+    if (c.vitals.hunger >= 12) {
+      log.warn("生理极值", { 角色: c.name, vital: "hunger", value: c.vitals.hunger });
+    } else if (c.vitals.fatigue >= 12) {
+      log.warn("生理极值", { 角色: c.name, vital: "fatigue", value: c.vitals.fatigue });
+    } else if (c.vitals.hygiene >= 12) {
+      log.warn("生理极值", { 角色: c.name, vital: "hygiene", value: c.vitals.hygiene });
+    }
+  }
+  const tAfterEmotion = Date.now();
 
   // 3. 占位：外部排队事件
   const scheduledEvents: WorldEvent[] = [];
@@ -505,6 +531,7 @@ export async function tick(
           allCharacters: loaded.characters,
         });
       } catch (err) {
+        log.warn("角色决策失败", { 角色: c.name, error: err instanceof Error ? err.message : String(err) });
         action = fallbackWait(c);
         action.reasoning = `LLM 调用失败：${
           err instanceof Error ? err.message : String(err)
@@ -609,6 +636,7 @@ export async function tick(
       const idx = settled.indexOf(result);
       const c = characters[idx];
       if (c) {
+        log.error("决策任务异常", { 角色: c?.name ?? "未知", error: errMsg });
         const waitAction = fallbackWait(c);
         waitAction.reasoning = `决策任务异常：${errMsg}`;
         actionsForExecution.push(waitAction);
@@ -620,6 +648,7 @@ export async function tick(
       }
     }
   }
+  const tAfterDecisions = Date.now();
 
   // ── Phase 4.5: Dialog protocol ──
   const dialogResult = await runDialogPhase({
@@ -697,6 +726,7 @@ export async function tick(
   // Replace actionsForExecution with dialog-adjusted actions
   actionsForExecution.length = 0;
   actionsForExecution.push(...dialogResult.finalActions);
+  const tAfterDialog = Date.now();
 
   // Re-sync allDecisions to match finalActions (for onCharacterDecision callbacks)
   for (const fa of dialogResult.finalActions) {
@@ -738,6 +768,7 @@ export async function tick(
       allDecisions[i].success = r.success;
     }
   }
+  const tAfterExecute = Date.now();
 
   // 8. 关系自动管理
   manageRelations(characters, fromTick, allEvents);
@@ -746,6 +777,7 @@ export async function tick(
   appendEventsLog(worldId, allEvents);
   world.currentTick = fromTick + 1;
   saveWorld(loaded);
+  const tAfterSave = Date.now();
   appendThoughts(
     worldId,
     execResult.resolvedActions.map((r) => ({
@@ -762,6 +794,24 @@ export async function tick(
     updateAllEconomicSnapshots(worldId, world.currentTick, characters, economyCfg);
     persistSnapshot(loaded);
   }
+
+  log.info(`tick #${fromTick} 阶段耗时`, {
+    vitalsMs: tAfterVitals - t0,
+    emotionMs: tAfterEmotion - tAfterVitals,
+    decisionMs: tAfterDecisions - tAfterEmotion,
+    dialogMs: tAfterDialog - tAfterDecisions,
+    executeMs: tAfterExecute - tAfterDialog,
+    saveMs: tAfterSave - tAfterExecute,
+    totalMs: tAfterSave - t0,
+  });
+
+  const successCount = allDecisions.filter((d) => d.success).length;
+  const failCount = allDecisions.filter((d) => !d.success).length;
+  log.info(`tick #${fromTick} 完成`, {
+    总耗时ms: tAfterSave - t0,
+    成功决策: successCount,
+    失败决策: failCount,
+  });
 
   return {
     worldId,

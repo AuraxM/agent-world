@@ -7,6 +7,8 @@ import { TICKS_PER_HOUR } from "@/domain/enums";
 import type { Character, EconomicSnapshot, Transaction } from "@/domain/types";
 import type { EconomyConfig } from "@/config/types";
 import { DEFAULT_ECONOMY_CONFIG } from "@/config/types";
+import { createLogger } from "@/util/logger";
+const log = createLogger("economy");
 
 const WEEK_TICKS = 7 * 24 * TICKS_PER_HOUR; // 840 ticks = 7 game days
 
@@ -28,6 +30,11 @@ export function recordTransaction(
   db.insert(schema.transactions)
     .values({ worldId, tick, characterId, amount, category, description, counterpartyId })
     .run();
+  if (category === "expense" || category === "transfer_out") {
+    log.info("支出", { 角色id: characterId, 类别: category, 金额: Math.abs(amount), 说明: description });
+  } else if (category === "income" || category === "transfer_in") {
+    log.info("收入", { 角色id: characterId, 类别: category, 金额: amount, 说明: description });
+  }
 }
 
 /** Roll random work income based on profession tier and multiplier. */
@@ -131,6 +138,10 @@ export function updateAllEconomicSnapshots(
   for (const c of characters) {
     out.set(c.id, updateEconomicSnapshot(worldId, tick, c, economyConfig));
   }
+  log.info("经济快照更新", {
+    tick,
+    角色数: characters.length,
+  });
   return out;
 }
 

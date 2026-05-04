@@ -31,6 +31,14 @@ import {
   buildUserPrompt,
   languageInstruction,
 } from "./prompt";
+import { createLogger } from "@/util/logger";
+
+const decideLog = createLogger("llm-decide");
+const dialogLog = createLogger("llm-dialog");
+const acceptLog = createLogger("llm-accept");
+const summaryLog = createLogger("llm-summary");
+const salvageLog = createLogger("llm-salvage");
+const memoryLog = createLogger("llm-memory");
 
 const MAX_OUTPUT_TOKENS = 4096;
 
@@ -42,6 +50,10 @@ export const llmDecide: DecideFn = async (input) => {
   try {
     return await callLLM(input);
   } catch (err) {
+    decideLog.error("LLM decide 失败", {
+      角色: input.character.name,
+      error: errorMessage(err),
+    });
     return waitFallback(input, errorMessage(err));
   }
 };
@@ -89,6 +101,11 @@ async function callLLMWithRetry(
 
     // 保留 reasoning_content，追加为 assistant 消息
     messages.push(captureAssistantMsg(msg));
+
+    const toolName = (msg.tool_calls as any)?.[0]?.function?.name ?? "none";
+    decideLog.info(`LLM round ${round + 1}/${MAX_TOOL_CALL_ROUNDS}`, {
+      tool_call: toolName,
+    });
 
     const toolCall = (msg.tool_calls ?? []).find(
       (c: any) => c.type === "function" && c.function.name.startsWith("action_"),
@@ -146,7 +163,20 @@ async function callLLM(input: DecideInput): Promise<Action> {
     { role: "user", content: user },
   ];
 
+  const startMs = Date.now();
+  decideLog.info("LLM decide 请求", {
+    角色: input.character.name,
+    model: getModelNameForEntry("decide"),
+  });
+
   const { actionType, data } = await callLLMWithRetry(messages, tools, "LLM", "decide");
+
+  decideLog.info("LLM decide 响应", {
+    角色: input.character.name,
+    action: actionType,
+    耗时ms: Date.now() - startMs,
+  });
+
   return payloadToAction(actionType, data, input.character.id);
 }
 
@@ -237,6 +267,11 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn>
   const extra: Record<string, unknown> = {};
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
+  dialogLog.info("LLM dialog_turn 请求", {
+    self: input.self.name,
+    peer: input.peer.name,
+  });
+
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -301,6 +336,12 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<str
   const config = getEntryConfig("dialog_summarize");
   const client = getLLMClientForEntry("dialog_summarize");
   const language: Language = input.language ?? "zh";
+
+  summaryLog.info("LLM dialog_summarize 请求", {
+    opener: input.openerName,
+    responder: input.responderName,
+    turns: input.transcript.length,
+  });
 
   const prompt = buildDialogSummaryPrompt({
     openerName: input.openerName,
@@ -385,6 +426,8 @@ export async function llmMemoryCompress(args: {
 
   const extra: Record<string, unknown> = {};
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
+
+  memoryLog.info("LLM memory_compress 请求");
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -473,6 +516,11 @@ export async function llmAcceptDecide(
   const extra: Record<string, unknown> = {};
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
+  acceptLog.info("LLM accept_decision 请求", {
+    self: input.character.name,
+    requester: input.requesterName,
+  });
+
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
@@ -532,6 +580,11 @@ export async function llmSalvageDecide(
     reasoning: `补救决策失败（无 provider）：${input.rejectReason}`,
     selfImportance: 1,
   };
+
+  salvageLog.warn("补救轮触发", {
+    角色: input.character.name,
+    reject_reason: input.rejectReason,
+  });
 
   const language = input.language;
 

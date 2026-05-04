@@ -19,6 +19,10 @@ A character template is a **location-agnostic** identity definition. Where the c
   "sleepWindow": { ... },      // optional; defaults to {start:22, duration:8}
   "personality": { ... },     // MBTI 4 dims, all required
   "abilities": [],            // v0 placeholder; usually empty
+  "appearance": 2,             // 1-4, 外貌
+  "intelligence": 2,           // 1-4, 思维活跃度
+  "health": 2,                 // 1-4, 健康/体质
+  "speakingStyle": "说话...",  // optional; generated from other attributes
   "relations": { ... }        // map of other character id → relation
 }
 ```
@@ -112,6 +116,36 @@ Required. First-person narrative (CoC character sheet style). Example:
 
 Single-emoji `avatar` is the easiest — used by `src/app/_lib/sprite.ts` as a render fallback. Pick an emoji that signals the character's energy at a glance.
 
+## Base attributes (`appearance`, `intelligence`, `health`)
+
+Three required integer attributes, range [1, 4]. 1 = low, 4 = high.
+
+| Attribute | Meaning | Notes |
+|-----------|---------|-------|
+| `appearance` | 外貌 | Age-appropriate descriptions; 1=平凡, 4=出众 |
+| `intelligence` | 思维活跃度 | NOT IQ — 1=木讷/按部就班, 4=头脑灵活/多想法 |
+| `health` | 健康/体质 | Affects daily sickness probability; 1=体弱多病, 4=强健 |
+
+### `speakingStyle`
+
+Optional. A single Chinese sentence describing how the character talks, e.g.:
+- `"说话慢悠悠，爱唠叨往事，语气温和。"`
+- `"话少句短，不绕弯，语气直接。"`
+
+If omitted, the agent-world-mod skill should generate it at creation time from:
+age + MBTI ei + MBTI tf + profession + intelligence.
+
+## Character creation order
+
+The agent-world-mod skill must follow this sequence:
+
+1. **Identity** — name, age, gender, profession, origin, biography
+2. **Numerical attributes** — personality (ei/sn/tf/jp), appearance, intelligence, health
+3. **Derived text** — speakingStyle (from steps 1-2)
+4. **Relations**
+5. **Locations** — activityNodeId, restNodeId
+6. **Other** — sleepWindow, initialMoney, expenseExempt
+
 ## Common mistakes
 
 - Including `locationId`, `vitals`, `emotion`, or `statuses` in the template — those are runtime state.
@@ -124,3 +158,4 @@ Single-emoji `avatar` is the easiest — used by `src/app/_lib/sprite.ts` as a r
 - Using removed shapes from earlier versions: 8 personality dims, `kind` (singular), `affinity`, or `statuses[]` — all gone.
 - Setting all 4 personality dims to extreme values — the character becomes noise to the LLM.
 - Forgetting `origin` — it's a required field; every character must declare `"local"` or `"visitor"`.
+- Forgetting `appearance`, `intelligence`, or `health` — all three are required (1-4).

@@ -332,7 +332,7 @@ async function runOneTickDialog(
 
     let result;
     try {
-      result = await turnDecide({ self: speaker, peer, transcript, language });
+      result = await retryOnce(() => turnDecide({ self: speaker, peer, transcript, language }));
     } catch (err) {
       log.error("turnDecide 异常，对话被迫终止", {
         speaker: speaker.name,
@@ -478,11 +478,23 @@ export async function runDialogPhase(
     }
 
     consumedActorIds.add(conv.initiatorId);
+    consumedActorIds.add(conv.acceptorId);
     updatedConversations.push(conv);
   }
 
   // ── Part 2: Process new speak actions ──
-  const pairing = pairSpeakRequests(rawActions, characters);
+  const rawPairing = pairSpeakRequests(rawActions, characters);
+
+  // Skip pairs where either party is already in an ongoing conversation
+  const pairing: SpeakPairing = {
+    mutualPairs: rawPairing.mutualPairs.filter(
+      (mp) => !consumedActorIds.has(mp.a) && !consumedActorIds.has(mp.b),
+    ),
+    pendingAcceptances: rawPairing.pendingAcceptances.filter(
+      (pa) => !consumedActorIds.has(pa.requester) && !consumedActorIds.has(pa.target),
+    ),
+    autoFails: rawPairing.autoFails,
+  };
   const salvageTasks: Array<() => Promise<{ actorId: string; action: Action }>> = [];
 
   for (const af of pairing.autoFails) {
@@ -576,6 +588,7 @@ export async function runDialogPhase(
     }
     updatedConversations.push(conv);
     consumedActorIds.add(conv.initiatorId);
+    consumedActorIds.add(conv.acceptorId);
     const initiatorChar = charById.get(conv.initiatorId);
     if (initiatorChar) initiatorChar.activeConversationIds.push(conv.id);
     const acceptorChar = charById.get(conv.acceptorId);
@@ -643,9 +656,15 @@ export async function runDialogPhase(
 
   // ── Part 6: Assign finalActions ──
   for (const conv of activeConversations) {
-    finalActionsMap.set(conv.initiatorId, {
+    const waitInit: Action = {
       type: "wait", actorId: conv.initiatorId,
       reasoning: `正在和 ${charById.get(conv.acceptorId)!.name} 对话`,
+      selfImportance: 2, skipExecution: true,
+    };
+    finalActionsMap.set(conv.initiatorId, waitInit);
+    finalActionsMap.set(conv.acceptorId, {
+      type: "wait", actorId: conv.acceptorId,
+      reasoning: `正在和 ${charById.get(conv.initiatorId)!.name} 对话`,
       selfImportance: 2, skipExecution: true,
     });
   }
@@ -653,6 +672,11 @@ export async function runDialogPhase(
     finalActionsMap.set(conv.initiatorId, {
       type: "wait", actorId: conv.initiatorId,
       reasoning: `刚和 ${charById.get(conv.acceptorId)!.name} 聊完`,
+      selfImportance: 2, skipExecution: true,
+    });
+    finalActionsMap.set(conv.acceptorId, {
+      type: "wait", actorId: conv.acceptorId,
+      reasoning: `刚和 ${charById.get(conv.initiatorId)!.name} 聊完`,
       selfImportance: 2, skipExecution: true,
     });
   }

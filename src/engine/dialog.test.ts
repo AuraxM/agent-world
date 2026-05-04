@@ -317,9 +317,9 @@ describe("runDialogPhase", () => {
     expect(result.dialogEvents).toHaveLength(2);
     expect(result.memoryWrites).toHaveLength(0);
 
-    // Wait action count: mutual pair initiator + one-way initiator = 2 wait
+    // Wait action count: 2 conversations × 2 participants each = 4 wait
     const waitActions = result.finalActions.filter((a) => a.type === "wait");
-    expect(waitActions.length).toBe(2);
+    expect(waitActions.length).toBe(4);
   });
 
   it("one-way rejected → requester gets salvage action, both get reject memories", async () => {
@@ -490,9 +490,9 @@ describe("runDialogPhase", () => {
     expect(result.updatedConversations).toHaveLength(2);
     expect(result.dialogEvents).toHaveLength(2);
     expect(result.memoryWrites).toHaveLength(0);
-    // 2 initiators get wait actions
+    // 2 conversations × 2 participants each = 4 wait
     const waitActions = result.finalActions.filter((a) => a.type === "wait");
-    expect(waitActions.length).toBe(2);
+    expect(waitActions.length).toBe(4);
   });
 });
 

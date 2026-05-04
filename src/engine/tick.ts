@@ -335,6 +335,7 @@ export async function tick(
   for (const conv of ongoingConversations) {
     if (conv.status !== "ended") {
       lockedCharacterIds.add(conv.initiatorId);
+      lockedCharacterIds.add(conv.acceptorId);
       const initiator = characters.find((c) => c.id === conv.initiatorId);
       if (initiator && !initiator.activeConversationIds.includes(conv.id)) {
         initiator.activeConversationIds.push(conv.id);

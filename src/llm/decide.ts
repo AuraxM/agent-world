@@ -279,7 +279,6 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
   });
 
   const systemPrompt = `你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。请根据你的性格、当前情境和对话历史，自然地回应。\n\n${languageInstruction(language)}`;
-  const TOOL_NUDGE = `请调用 ${DIALOG_TURN_TOOL_NAME} 工具来说一句话，或调用 ${END_CONVERSATION_TOOL_NAME} 工具来结束对话。不要输出纯文本，必须调用工具。`;
 
   const messages: Array<Record<string, unknown>> = [
     { role: "system", content: systemPrompt },
@@ -298,7 +297,17 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
       });
 
       const message = response.choices[0]?.message;
-      if (!message) throw new Error("LLM 返回空 message");
+      if (!message) {
+        const errMsg = "LLM 返回了空 message。请重试，调用相应的工具。";
+        dialogLog.warn("LLM dialog_turn 返回空 message", {
+          self: input.self.name, round: round + 1,
+        });
+        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+          messages.push({ role: "user", content: errMsg });
+          continue;
+        }
+        throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮均返回空 message`);
+      }
 
       // Preserve assistant message (including reasoning_content for DeepSeek)
       const assistantMsg: Record<string, unknown> = { role: "assistant", content: message.content ?? "" };
@@ -310,24 +319,51 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
         (c: any) => c.type === "function",
       );
       if (!toolCall) {
-        dialogLog.warn("LLM dialog_turn 未返回 tool_call，推送引导", {
+        const hasText = typeof message.content === "string" && message.content.trim().length > 0;
+        const feedback = hasText
+          ? `你输出了文本但没有调用工具。你的回复是：\n\n"""\n${message.content}\n"""\n\n这不符合要求。你必须调用 ${DIALOG_TURN_TOOL_NAME} 来说一句话，或调用 ${END_CONVERSATION_TOOL_NAME} 来结束对话。请重新以工具调用形式输出，不要输出纯文本。`
+          : `你未调用任何工具。必须调用 ${DIALOG_TURN_TOOL_NAME} 来说一句话，或调用 ${END_CONVERSATION_TOOL_NAME} 来结束对话。不要输出纯文本，必须调用工具。`;
+        dialogLog.warn("LLM dialog_turn 未返回 tool_call，推送错误反馈", {
           self: input.self.name,
           round: round + 1,
-          hasContent: typeof message.content === "string" && message.content.trim().length > 0,
+          hasContent: hasText,
         });
         if (round < MAX_TOOL_CALL_ROUNDS - 1) {
-          messages.push({ role: "user", content: TOOL_NUDGE });
+          messages.push({ role: "user", content: feedback });
           continue;
         }
         throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮均未返回 tool_call`);
       }
 
-      const args = JSON.parse(toolCall.function.arguments);
+      // Parse JSON with error feedback
+      let args: unknown;
+      try {
+        args = JSON.parse(toolCall.function.arguments);
+      } catch (e) {
+        const jsonErr = e instanceof Error ? e.message : String(e);
+        const feedback = `你调用了 ${toolCall.function.name}，但 arguments 不是合法 JSON：\n\n\`\`\`json\n${toolCall.function.arguments}\n\`\`\`\n\nJSON 解析错误：${jsonErr}\n\n请修正 JSON 格式后重试。`;
+        dialogLog.warn("LLM dialog_turn JSON 解析失败", {
+          self: input.self.name, round: round + 1, error: jsonErr,
+        });
+        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+          messages.push({ role: "user", content: feedback });
+          continue;
+        }
+        throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮 JSON 解析均失败`);
+      }
 
       if (toolCall.function.name === DIALOG_TURN_TOOL_NAME) {
         const result = DialogTurnSchema.safeParse(args);
         if (!result.success) {
-          throw new Error(`DialogTurn 参数不符合 schema：${result.error.message}`);
+          const feedback = `你调用了 submit_dialog_turn，但参数不符合要求：\n\n${result.error.message}\n\n请根据错误信息修正参数后重试。`;
+          dialogLog.warn("LLM dialog_turn schema 校验失败", {
+            self: input.self.name, round: round + 1, error: result.error.message,
+          });
+          if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+            messages.push({ role: "user", content: feedback });
+            continue;
+          }
+          throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮 schema 校验均失败`);
         }
         return {
           kind: "turn",
@@ -341,7 +377,15 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
       } else if (toolCall.function.name === END_CONVERSATION_TOOL_NAME) {
         const result = EndConversationSchema.safeParse(args);
         if (!result.success) {
-          throw new Error(`EndConversation 参数不符合 schema：${result.error.message}`);
+          const feedback = `你调用了 end_conversation，但参数不符合要求：\n\n${result.error.message}\n\n请根据错误信息修正参数后重试。`;
+          dialogLog.warn("LLM dialog_turn end_conversation schema 校验失败", {
+            self: input.self.name, round: round + 1, error: result.error.message,
+          });
+          if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+            messages.push({ role: "user", content: feedback });
+            continue;
+          }
+          throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮 end_conversation schema 校验均失败`);
         }
         return {
           kind: "end",
@@ -351,17 +395,29 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
           },
         };
       } else {
-        throw new Error(`未知 tool_call: ${toolCall.function.name}`);
+        const feedback = `你调用了未知工具 "${toolCall.function.name}"。当前对话中只能使用以下两个工具：\n\n1. ${DIALOG_TURN_TOOL_NAME} — 说一句话\n2. ${END_CONVERSATION_TOOL_NAME} — 结束对话\n\n请选择正确的工具重试。`;
+        dialogLog.warn("LLM dialog_turn 未知 tool", {
+          self: input.self.name, round: round + 1, tool: toolCall.function.name,
+        });
+        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+          messages.push({ role: "user", content: feedback });
+          continue;
+        }
+        throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮均使用了未知工具`);
       }
     } catch (err) {
       lastError = err;
-      dialogLog.warn("LLM dialog_turn 失败", {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      dialogLog.warn("LLM dialog_turn 调用异常", {
         attempt: round + 1,
         self: input.self.name,
         peer: input.peer.name,
-        error: err instanceof Error ? err.message : String(err),
+        error: errMsg,
       });
-      if (round < MAX_TOOL_CALL_ROUNDS - 1) continue;
+      if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+        messages.push({ role: "user", content: `调用失败：${errMsg}\n\n请重试。` });
+        continue;
+      }
     }
   }
   throw lastError;

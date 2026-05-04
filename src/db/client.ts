@@ -52,6 +52,9 @@ function ensureColumns(sqlite: Database.Database) {
   for (const [tableName, ddl] of ENTRY_CONFIG_MIGRATIONS) {
     if (!haveEntryTables.has(tableName)) sqlite.exec(ddl);
   }
+  for (const [tableName, ddl] of CONVERSATIONS_TABLE_MIGRATION) {
+    if (!haveEntryTables.has(tableName)) sqlite.exec(ddl);
+  }
 }
 
 /** Keep in sync with migrate.ts CHARACTERS_NEW_COLUMNS. */
@@ -73,6 +76,7 @@ const CHAR_MIGRATIONS: Array<[string, string]> = [
   ["health", "ALTER TABLE characters ADD COLUMN health INTEGER NOT NULL DEFAULT 2"],
   ["sickness_json", "ALTER TABLE characters ADD COLUMN sickness_json TEXT"],
   ["speaking_style", "ALTER TABLE characters ADD COLUMN speaking_style TEXT"],
+  ["active_conversation_ids_json", "ALTER TABLE characters ADD COLUMN active_conversation_ids_json TEXT NOT NULL DEFAULT '[]'"],
 ];
 
 /** Keep in sync with migrate.ts NODES_NEW_COLUMNS. */
@@ -99,6 +103,18 @@ const ENTRY_CONFIG_MIGRATIONS: Array<[string, string]> = [
     created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
   )`],
+];
+
+const CONVERSATIONS_TABLE_MIGRATION: Array<[string, string]> = [
+  ["conversations", `CREATE TABLE IF NOT EXISTS conversations (
+    id TEXT NOT NULL,
+    world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
+    payload_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    PRIMARY KEY(world_id, id)
+  )`,
+  ],
 ];
 
 function createDb() {

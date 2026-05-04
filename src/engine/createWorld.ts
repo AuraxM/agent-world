@@ -14,6 +14,7 @@ import {
   loadMap,
   resolveIncomeLevel,
 } from "@/config/loader";
+import { getTierInitialMoney } from "./bme";
 import { GAME_EPOCH } from "@/app/_lib/format";
 import type { Emotion, Vitals } from "@/domain/types";
 
@@ -163,13 +164,11 @@ export function createWorldFromConfig(
         stress: m.emotion?.stress ?? 0,
         social_satiety: m.emotion?.social_satiety ?? 0,
       };
-      const initialMoney = m.tpl.initialMoney ?? (
-        m.tpl.origin === "visitor" && m.tpl.profession === "unemployed" ? 3000 : 200
-      );
       const expenseExempt = m.tpl.expenseExempt ?? (m.tpl.age < 18);
       // Minors get 0 income level regardless of profession
       const rawIncomeLevel = resolveIncomeLevel(m.tpl.profession);
       const incomeLevel = (m.tpl.age < 18) ? 0 : rawIncomeLevel;
+      const initialMoney = m.tpl.initialMoney ?? getTierInitialMoney(incomeLevel);
       const incomeMultiplier = m.tpl.incomeMultiplier ?? 1.0;
 
       tx.insert(schema.characters)

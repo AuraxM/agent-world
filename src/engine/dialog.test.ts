@@ -573,7 +573,8 @@ describe("multi-tick conversation", () => {
       salvageDecide: async () => ({ type: "wait", actorId: "x", reasoning: "", selfImportance: 1 }),
       ongoingConversations: [conv],
     });
-    expect(result.updatedConversations).toHaveLength(0); // ended, not in active list
+    expect(result.updatedConversations).toHaveLength(1); // ended conversations now included for tick.ts cleanup
+    expect(result.updatedConversations[0].status).toBe("ended");
     expect(result.memoryWrites.length).toBeGreaterThan(0); // memories written
   });
 });

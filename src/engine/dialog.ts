@@ -337,7 +337,6 @@ async function runOneTickDialog(
       }
       if (isSixthSentence) {
         // 3+4 rule: other party gets one extra turn
-        conv.pendingExtraRound = true;
         const otherId =
           speakerId === conv.initiatorId ? conv.acceptorId : conv.initiatorId;
         const other = chars.get(otherId)!;
@@ -557,6 +556,10 @@ export async function runDialogPhase(
     }
     updatedConversations.push(conv);
     consumedActorIds.add(conv.initiatorId);
+    const initiatorChar = charById.get(conv.initiatorId);
+    if (initiatorChar) initiatorChar.activeConversationIds.push(conv.id);
+    const acceptorChar = charById.get(conv.acceptorId);
+    if (acceptorChar) acceptorChar.activeConversationIds.push(conv.id);
   }
 
   // ── Part 4: Salvage decisions ──
@@ -631,5 +634,5 @@ export async function runDialogPhase(
   }
   const finalActions = characters.map((c) => finalActionsMap.get(c.id)!);
 
-  return { finalActions, dialogEvents, memoryWrites, updatedConversations: activeConversations };
+  return { finalActions, dialogEvents, memoryWrites, updatedConversations };
 }

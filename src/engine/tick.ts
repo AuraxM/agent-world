@@ -786,16 +786,13 @@ export async function tick(
     }
   }
 
-  // Persist conversation changes
+  // Persist or delete conversation changes
   for (const conv of dialogResult.updatedConversations) {
-    saveConversation(conv);
-  }
-  // Remove ended conversations
-  const endedIds = ongoingConversations
-    .filter((c) => !dialogResult.updatedConversations.find((u) => u.id === c.id))
-    .map((c) => c.id);
-  for (const id of endedIds) {
-    deleteConversation(worldId, id);
+    if (conv.status === "ended") {
+      deleteConversation(worldId, conv.id);
+    } else {
+      saveConversation(conv);
+    }
   }
 
   // ── End Phase 4.5 ──

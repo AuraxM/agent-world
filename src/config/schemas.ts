@@ -153,7 +153,7 @@ export const CharacterTemplateSchema: z.ZodType<CharacterTemplate> = z.object({
   health: z.number().int().min(1).max(4),
   speakingStyle: z.string().optional(),
   relations: z.record(z.string(), RelationSchema),
-  impressionBook: z.record(z.string()).optional().default({}),
+  impressionBook: z.record(z.string(), z.string()).optional().default({}),
   initialMoney: z.number().int().min(0).optional(),
   expenseExempt: z.boolean().optional(),
   incomeMultiplier: z.number().min(0).optional(),

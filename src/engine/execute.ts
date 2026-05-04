@@ -246,6 +246,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
       target_id: action.targetId,
       target_node_id: action.targetNodeId,
       free_text: action.freeText,
+      amount: action.amount,
       reason: action.reason,
       arrival_action: action.arrivalAction ? {
         action_type: action.arrivalAction.type,

@@ -276,6 +276,8 @@ export interface Action {
   targetId?: string;
   targetNodeId?: string;
   freeText?: string;
+  /** give 行动金额 */
+  amount?: number;
   reasoning: string;
   emotionTag?: string;
   /** 自评重要度 1–5，决定是否进入长期记忆 */

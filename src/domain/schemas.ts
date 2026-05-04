@@ -350,8 +350,8 @@ export const DecideActionSchema = z.object({
   }).optional(),
 });
 
-export const DecideActionToolSchema: Record<string, unknown> = {
-  type: "object",
+export const DecideActionToolSchema = {
+  type: "object" as const,
   properties: {
     action_type: {
       type: "string",

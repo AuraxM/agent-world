@@ -9,8 +9,9 @@
 import OpenAI from "openai";
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import {
-  buildPerActionSchema, buildActionTools, buildSalvageActionTools,
-  actionTypeFromToolName,
+  DECIDE_ACTION_TOOL_NAME, DecideActionSchema, buildDecideActionTool,
+  RECALL_TOOL_NAME, RecallSchema, RecallToolSchema,
+  MEMORIZE_TOOL_NAME, MemorizeSchema, MemorizeToolSchema,
   ACCEPT_TOOL_NAME, AcceptDecisionSchema, AcceptToolSchema,
   DIALOG_TURN_TOOL_NAME, DialogTurnSchema, DialogTurnToolSchema,
   DIALOG_SUMMARY_TOOL_NAME, DialogSummarySchema, DialogSummaryToolSchema,
@@ -23,6 +24,8 @@ import type { Language } from "@/config/types";
 import type { DecideFn, DecideInput } from "@/engine/tick";
 import { getLLMClientForEntry, getModelNameForEntry, hasApiKey } from "./client";
 import { getEntryConfig } from "./providers";
+import { actionRegistry } from "@/domain/action-system";
+import type { ActionContext } from "@/engine/actions";
 import {
   buildAcceptDecisionPrompt,
   buildDialogSummaryPrompt,
@@ -69,24 +72,77 @@ function captureAssistantMsg(msg: any): Record<string, unknown> {
   return m;
 }
 
-const TOOL_CALL_NUDGE = "请调用对应的 action_* 工具提交你的行动决定。不要输出纯文本，必须调用工具。";
+const TOOL_CALL_NUDGE = "请调用 decide_action、recall 或 memorize 工具。不要输出纯文本，必须调用工具。";
+
+// ---------------------------------------------------------------------------
+// Recall / Memorize helpers
+// ---------------------------------------------------------------------------
+
+function handleRecall(targetIds: string[], self: Character, allCharacters: Character[]): string {
+  const nameMap = new Map(allCharacters.map(c => [c.id, c.name]));
+  const lines: string[] = [];
+  for (const tid of targetIds) {
+    const name = nameMap.get(tid) ?? tid;
+    const impression = self.impressionBook[tid];
+    const rel = self.relations[tid];
+
+    if (impression && impression.trim().length > 0) {
+      const relText = rel && rel.kinds.length > 0 ? ` 客观关系：${rel.kinds.join("、")}。` : "";
+      lines.push(`${name}: ${impression}${relText}`);
+    } else if (rel && rel.kinds.length > 0) {
+      lines.push(`${name}: (无个人印象) 客观关系：${rel.kinds.join("、")}。`);
+    } else {
+      lines.push(`${name}: 你对这个人没有印象。`);
+    }
+  }
+  return lines.join("\n");
+}
+
+function handleMemorize(targetId: string, impression: string, self: Character): void {
+  if (!impression || impression.trim().length === 0) {
+    delete self.impressionBook[targetId];
+  } else {
+    self.impressionBook[targetId] = impression.trim();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tool builders for recall / memorize
+// ---------------------------------------------------------------------------
+
+function buildRecallTool(): ChatCompletionTool {
+  return { type: "function", function: { name: RECALL_TOOL_NAME, description: "回想你对某（几）个角色的印象。可以一次查询多个角色。", parameters: RecallToolSchema } };
+}
+
+function buildMemorizeTool(): ChatCompletionTool {
+  return { type: "function", function: { name: MEMORIZE_TOOL_NAME, description: "记录或更新你对某个角色的印象。留空印象文本代表忘记此人。", parameters: MemorizeToolSchema } };
+}
+
+// ---------------------------------------------------------------------------
+// Decision loop
+// ---------------------------------------------------------------------------
 
 /**
  * 带 reasoning 续推循环的 LLM 调用：
  * - 最多 MAX_TOOL_CALL_ROUNDS 轮
  * - 每轮若 LLM 未调 tool，把 assistant 消息 + 催促 nudge 追加到 messages 继续
  * - 保证 reasoning_content 在每一轮都被回传（DeepSeek 要求）
+ * - 支持 recall / memorize 子循环（不计入决策轮数）
  */
 async function callLLMWithRetry(
   messages: Array<Record<string, unknown>>,
-  tools: Array<{ type: "function"; function: { name: string; description: string; parameters: Record<string, unknown> } }>,
+  tool: ChatCompletionTool,
   fallbackLabel: string,
   entryName: string,
+  ctx: ActionContext,
+  allCharacters: Character[] = [],
 ): Promise<{ actionType: string; data: Record<string, any> }> {
   const config = getEntryConfig(entryName);
   const client = getLLMClientForEntry(entryName);
   const extra: Record<string, unknown> = {};
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
+
+  const tools: ChatCompletionTool[] = [tool, buildRecallTool(), buildMemorizeTool()];
 
   for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
     const response = await client.chat.completions.create({
@@ -109,27 +165,119 @@ async function callLLMWithRetry(
     });
 
     const toolCall = (msg.tool_calls ?? []).find(
-      (c: any) => c.type === "function" && c.function.name.startsWith("action_"),
+      (c: any) => c.type === "function",
     );
-    if (toolCall && toolCall.type === "function") {
-      const actionType = actionTypeFromToolName(toolCall.function.name);
-      if (!actionType) throw new Error(`无法从 tool name "${toolCall.function.name}" 提取 action type`);
-
-      let parsedArgs: unknown;
-      try {
-        parsedArgs = JSON.parse(toolCall.function.arguments);
-      } catch (e) {
-        throw new Error(`tool_call.arguments 不是合法 JSON：${e instanceof Error ? e.message : String(e)}`);
+    if (!toolCall) {
+      // 未调 tool → 推进续推
+      if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+        messages.push({ role: "user", content: TOOL_CALL_NUDGE });
       }
-
-      const result = buildPerActionSchema().safeParse(parsedArgs);
-      if (!result.success) {
-        throw new Error(`tool_call 参数不符合 schema：${result.error.message}`);
-      }
-      return { actionType, data: result.data as Record<string, any> };
+      continue;
     }
 
-    // 未调 tool → 推进续推
+    const tc = toolCall as any;
+
+    // ── Handle recall ──
+    if (tc.function.name === RECALL_TOOL_NAME) {
+      let parsedArgs: unknown;
+      try { parsedArgs = JSON.parse(tc.function.arguments); } catch (e) {
+        messages.push({ role: "user", content: `recall JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
+        continue;
+      }
+      const parseResult = RecallSchema.safeParse(parsedArgs);
+      if (!parseResult.success) {
+        messages.push({ role: "user", content: `recall 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
+        continue;
+      }
+      const recallResult = handleRecall(parseResult.data.target_ids, ctx.self, allCharacters);
+      messages.push({ role: "tool", tool_call_id: tc.id, content: recallResult });
+      // recall continues loop, doesn't count as a decision round
+      round = Math.max(0, round - 1);
+      continue;
+    }
+
+    // ── Handle memorize ──
+    if (tc.function.name === MEMORIZE_TOOL_NAME) {
+      let parsedArgs: unknown;
+      try { parsedArgs = JSON.parse(tc.function.arguments); } catch (e) {
+        messages.push({ role: "user", content: `memorize JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
+        continue;
+      }
+      const parseResult = MemorizeSchema.safeParse(parsedArgs);
+      if (!parseResult.success) {
+        messages.push({ role: "user", content: `memorize 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
+        continue;
+      }
+      handleMemorize(parseResult.data.target_id, parseResult.data.impression, ctx.self);
+      messages.push({ role: "tool", tool_call_id: tc.id, content: "已记录。" });
+      // memorize continues loop, doesn't count as a decision round
+      round = Math.max(0, round - 1);
+      continue;
+    }
+
+    // ── Handle decide_action ──
+    if (tc.function.name === DECIDE_ACTION_TOOL_NAME) {
+      let parsedArgs: unknown;
+      try {
+        parsedArgs = JSON.parse(tc.function.arguments);
+      } catch (e) {
+        const err = `decide_action JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请修正 JSON 格式后重试。`;
+        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+          messages.push({ role: "user", content: err });
+        }
+        continue;
+      }
+
+      const schemaResult = DecideActionSchema.safeParse(parsedArgs);
+      if (!schemaResult.success) {
+        const err = `decide_action 参数不符合 schema：${schemaResult.error.message}。请修正后重试。`;
+        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+          messages.push({ role: "user", content: err });
+        }
+        continue;
+      }
+
+      const actionType = schemaResult.data.action_type;
+
+      // Check action_type exists and is available
+      const def = actionRegistry.get(actionType);
+      if (!def) {
+        const err = `action_type="${actionType}" 不存在。请修正后重试。`;
+        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+          messages.push({ role: "user", content: err });
+        }
+        continue;
+      }
+      if (!def.check(ctx)) {
+        const err = `action_type="${actionType}" 在当前情境下不可用。请选择其他行动。`;
+        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+          messages.push({ role: "user", content: err });
+        }
+        continue;
+      }
+
+      // Call action def's validateParams
+      if (def.validateParams) {
+        const validationErr = def.validateParams({
+          target_id: schemaResult.data.target_id,
+          target_node_id: schemaResult.data.target_node_id,
+          free_text: schemaResult.data.free_text,
+          amount: schemaResult.data.amount,
+          reason: schemaResult.data.reason,
+          arrival_action: schemaResult.data.arrival_action,
+        }, ctx);
+        if (validationErr) {
+          if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+            messages.push({ role: "user", content: `${actionType} 参数校验失败：${validationErr}。请修正后重试。` });
+          }
+          continue;
+        }
+      }
+
+      return { actionType, data: schemaResult.data as Record<string, any> };
+    }
+
+    // Unknown tool → nudge
     if (round < MAX_TOOL_CALL_ROUNDS - 1) {
       messages.push({ role: "user", content: TOOL_CALL_NUDGE });
     }
@@ -157,7 +305,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     nodes: input.nodes,
   });
 
-  const tools = buildActionTools(input.ctx);
+  const tool = buildDecideActionTool(input.ctx);
 
   const messages: Array<Record<string, unknown>> = [
     { role: "system", content: system },
@@ -170,7 +318,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     model: getModelNameForEntry("decide"),
   });
 
-  const { actionType, data } = await callLLMWithRetry(messages, tools, "LLM", "decide");
+  const { actionType, data } = await callLLMWithRetry(messages, tool, "LLM", "decide", input.ctx, input.allCharacters);
 
   decideLog.info("LLM decide 响应", {
     角色: input.character.name,
@@ -188,6 +336,7 @@ function payloadToAction(actionType: string, p: Record<string, any>, actorId: st
     targetId: p.target_id,
     targetNodeId: p.target_node_id,
     freeText: p.free_text,
+    amount: p.amount,
     reasoning: p.reasoning,
     emotionTag: p.emotion_tag,
     selfImportance: p.self_importance,
@@ -674,7 +823,7 @@ export async function llmAcceptDecide(
 }
 
 /**
- * 补救轮决策：使用 SalvageActionSchema（排除 speak 族）。
+ * 补救轮决策：使用统一的 decide_action + 排除 speak 族。
  * 违规（仍输出 speak）→ 重试 1 次 → 仍违规抛异常让调用方 fallback wait。
  */
 export async function llmSalvageDecide(
@@ -713,7 +862,7 @@ export async function llmSalvageDecide(
   });
   const salvageCtx = buildSalvageContext({ rejectReason: input.rejectReason });
 
-  const tools = buildSalvageActionTools(input.ctx);
+  const tool = buildDecideActionTool(input.ctx);
 
   const messages: Array<Record<string, unknown>> = [
     { role: "system", content: system },
@@ -725,9 +874,11 @@ export async function llmSalvageDecide(
     try {
       const { actionType, data } = await callLLMWithRetry(
         messages.map((m) => ({ ...m })), // shallow copy per attempt
-        tools,
+        tool,
         "Salvage",
         "salvage",
+        input.ctx,
+        input.allCharacters,
       );
 
       // Double-check: no speak family
@@ -741,6 +892,7 @@ export async function llmSalvageDecide(
         targetId: data.target_id,
         targetNodeId: data.target_node_id,
         freeText: data.free_text,
+        amount: data.amount,
         reasoning: data.reasoning,
         emotionTag: data.emotion_tag,
         selfImportance: data.self_importance,

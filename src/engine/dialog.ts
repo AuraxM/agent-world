@@ -440,47 +440,48 @@ export async function runDialogPhase(
   const consumedActorIds = new Set<string>();
   const updatedConversations: Conversation[] = [];
 
-  // ── Part 1: Resume ongoing conversations ──
-  for (const conv of ongoingConversations) {
-    if (conv.status === "ended") continue;
+  // ── Part 1: Resume ongoing conversations (concurrent) ──
+  await Promise.all(
+    ongoingConversations.map(async (conv) => {
+      if (conv.status === "ended") return;
 
-    const initiator = charById.get(conv.initiatorId);
-    const acceptor = charById.get(conv.acceptorId);
+      const initiator = charById.get(conv.initiatorId);
+      const acceptor = charById.get(conv.acceptorId);
 
-    if (!initiator || !acceptor) {
-      conv.status = "ended";
-      conv.endedBy = "passive";
+      if (!initiator || !acceptor) {
+        conv.status = "ended";
+        conv.endedBy = "passive";
+        updatedConversations.push(conv);
+        return;
+      }
+      if (initiator.locationId !== acceptor.locationId) {
+        conv.status = "ended";
+        conv.endedBy = "passive";
+        conv.transcript.push({
+          speakerId: "__system__",
+          kind: "say",
+          line: `${acceptor.name} 离开了当前场景，对话终止。`,
+        });
+        updatedConversations.push(conv);
+        return;
+      }
+
+      const tickResult = await runOneTickDialog(conv, charById, input.turnDecide, input.language, tick);
+      conv.transcript = tickResult.transcript;
+      conv.currentTickRounds = TURNS_PER_TICK;
+
+      if (tickResult.ended) {
+        conv.status = "ended";
+        conv.endedBy = tickResult.endedBy;
+      } else if (conv.status === "active") {
+        conv.status = "ending";
+      }
+
+      consumedActorIds.add(conv.initiatorId);
+      consumedActorIds.add(conv.acceptorId);
       updatedConversations.push(conv);
-      continue;
-    }
-    if (initiator.locationId !== acceptor.locationId) {
-      conv.status = "ended";
-      conv.endedBy = "passive";
-      const sysMsg: DialogTurn = {
-        speakerId: "__system__",
-        kind: "say",
-        line: `${acceptor.name} 离开了当前场景，对话终止。`,
-      };
-      conv.transcript.push(sysMsg);
-      updatedConversations.push(conv);
-      continue;
-    }
-
-    const tickResult = await runOneTickDialog(conv, charById, input.turnDecide, input.language, tick);
-    conv.transcript = tickResult.transcript;
-    conv.currentTickRounds = TURNS_PER_TICK;
-
-    if (tickResult.ended) {
-      conv.status = "ended";
-      conv.endedBy = tickResult.endedBy;
-    } else if (conv.status === "active") {
-      conv.status = "ending";
-    }
-
-    consumedActorIds.add(conv.initiatorId);
-    consumedActorIds.add(conv.acceptorId);
-    updatedConversations.push(conv);
-  }
+    }),
+  );
 
   // ── Part 2: Process new speak actions ──
   const rawPairing = pairSpeakRequests(rawActions, characters);
@@ -564,92 +565,95 @@ export async function runDialogPhase(
     });
   }
 
-  // ── Part 3: Create new conversations, run tick 1 ──
-  for (const dg of newDialogGroups) {
-    const worldId = charById.get(dg.requesterId)!.worldId;
-    const conv: Conversation = {
-      id: `conv-${randomUUID().slice(0, 8)}`,
-      worldId,
-      initiatorId: dg.requesterId,
-      acceptorId: dg.responderId,
-      transcript: [{ speakerId: dg.requesterId, kind: "say", line: dg.openingLine }],
-      tickStarted: tick,
-      currentTickRounds: 0,
-      status: "active",
-    };
-    const tickResult = await runOneTickDialog(conv, charById, input.turnDecide, input.language, tick);
-    conv.transcript = tickResult.transcript;
-    conv.currentTickRounds = TURNS_PER_TICK;
-    if (tickResult.ended) {
-      conv.status = "ended";
-      conv.endedBy = tickResult.endedBy;
-    } else {
-      conv.status = "ending";
-    }
-    updatedConversations.push(conv);
-    consumedActorIds.add(conv.initiatorId);
-    consumedActorIds.add(conv.acceptorId);
-    const initiatorChar = charById.get(conv.initiatorId);
-    if (initiatorChar) initiatorChar.activeConversationIds.push(conv.id);
-    const acceptorChar = charById.get(conv.acceptorId);
-    if (acceptorChar) acceptorChar.activeConversationIds.push(conv.id);
-  }
+  // ── Part 3: Create new conversations, run tick 1 (concurrent) ──
+  await Promise.all(
+    newDialogGroups.map(async (dg) => {
+      const worldId = charById.get(dg.requesterId)!.worldId;
+      const conv: Conversation = {
+        id: `conv-${randomUUID().slice(0, 8)}`,
+        worldId,
+        initiatorId: dg.requesterId,
+        acceptorId: dg.responderId,
+        transcript: [{ speakerId: dg.requesterId, kind: "say", line: dg.openingLine }],
+        tickStarted: tick,
+        currentTickRounds: 0,
+        status: "active",
+      };
+      const tickResult = await runOneTickDialog(conv, charById, input.turnDecide, input.language, tick);
+      conv.transcript = tickResult.transcript;
+      conv.currentTickRounds = TURNS_PER_TICK;
+      if (tickResult.ended) {
+        conv.status = "ended";
+        conv.endedBy = tickResult.endedBy;
+      } else {
+        conv.status = "ending";
+      }
+      updatedConversations.push(conv);
+      consumedActorIds.add(conv.initiatorId);
+      consumedActorIds.add(conv.acceptorId);
+      const initiatorChar = charById.get(conv.initiatorId);
+      if (initiatorChar) initiatorChar.activeConversationIds.push(conv.id);
+      const acceptorChar = charById.get(conv.acceptorId);
+      if (acceptorChar) acceptorChar.activeConversationIds.push(conv.id);
+    }),
+  );
 
   // ── Part 4: Salvage decisions ──
   const salvageResults = await Promise.all(salvageTasks.map((t) => t()));
 
-  // ── Part 5: Generate dialog events + summarize ended conversations ──
-  for (const conv of updatedConversations) {
-    const opener = charById.get(conv.initiatorId)!;
-    const responder = charById.get(conv.acceptorId)!;
+  // ── Part 5: Generate dialog events + summarize ended conversations (concurrent) ──
+  await Promise.all(
+    updatedConversations.map(async (conv) => {
+      const opener = charById.get(conv.initiatorId)!;
+      const responder = charById.get(conv.acceptorId)!;
 
-    if (conv.status === "ended") {
-      let summary: string;
-      try {
-        summary = await retryOnce(() =>
-          input.summaryDecide({
-            openerName: opener.name, openerId: conv.initiatorId,
-            responderName: responder.name, responderId: conv.acceptorId,
-            transcript: conv.transcript, language: input.language,
-          }),
+      if (conv.status === "ended") {
+        let summary: string;
+        try {
+          summary = await retryOnce(() =>
+            input.summaryDecide({
+              openerName: opener.name, openerId: conv.initiatorId,
+              responderName: responder.name, responderId: conv.acceptorId,
+              transcript: conv.transcript, language: input.language,
+            }),
+          );
+        } catch {
+          summary = `（摘要生成失败：双方聊了 ${conv.transcript.length} 句）`;
+        }
+        const maxImportance = clamp(
+          Math.max(
+            rawActions.find((a) => a.actorId === conv.initiatorId)?.selfImportance ?? 2,
+            rawActions.find((a) => a.actorId === conv.acceptorId)?.selfImportance ?? 2,
+          ),
+          2, 4,
         );
-      } catch {
-        summary = `（摘要生成失败：双方聊了 ${conv.transcript.length} 句）`;
+        memoryWrites.push(makeMemory(conv.initiatorId, tick, maxImportance, `和 ${responder.name} 聊了：${summary}`));
+        memoryWrites.push(makeMemory(conv.acceptorId, tick, maxImportance, `和 ${opener.name} 聊了：${summary}`));
+        dialogEvents.push({
+          id: `evt-conv-${conv.id}`,
+          worldId: opener.worldId, tick, category: "social", description: summary,
+          participants: [conv.initiatorId, conv.acceptorId], source: "actor", intensity: 2,
+          scope: "node", nodeId: opener.locationId, duration: 1,
+          dialogTranscript: conv.transcript,
+          dialogEndedBy: conv.endedBy === "passive" ? "passive" : (conv.endedBy ? "end_tool" : "natural"),
+        });
+        // Release from conversation
+        const initiator = charById.get(conv.initiatorId);
+        if (initiator) initiator.activeConversationIds = initiator.activeConversationIds.filter((id) => id !== conv.id);
+        const acceptor = charById.get(conv.acceptorId);
+        if (acceptor) acceptor.activeConversationIds = acceptor.activeConversationIds.filter((id) => id !== conv.id);
+      } else {
+        dialogEvents.push({
+          id: `evt-conv-${conv.id}`,
+          worldId: opener.worldId, tick, category: "social",
+          description: `${opener.name} 和 ${responder.name} 正在对话`,
+          participants: [conv.initiatorId, conv.acceptorId], source: "actor", intensity: 2,
+          scope: "node", nodeId: opener.locationId, duration: 1,
+          dialogTranscript: conv.transcript,
+        });
       }
-      const maxImportance = clamp(
-        Math.max(
-          rawActions.find((a) => a.actorId === conv.initiatorId)?.selfImportance ?? 2,
-          rawActions.find((a) => a.actorId === conv.acceptorId)?.selfImportance ?? 2,
-        ),
-        2, 4,
-      );
-      memoryWrites.push(makeMemory(conv.initiatorId, tick, maxImportance, `和 ${responder.name} 聊了：${summary}`));
-      memoryWrites.push(makeMemory(conv.acceptorId, tick, maxImportance, `和 ${opener.name} 聊了：${summary}`));
-      dialogEvents.push({
-        id: `evt-conv-${conv.id}`,
-        worldId: opener.worldId, tick, category: "social", description: summary,
-        participants: [conv.initiatorId, conv.acceptorId], source: "actor", intensity: 2,
-        scope: "node", nodeId: opener.locationId, duration: 1,
-        dialogTranscript: conv.transcript,
-        dialogEndedBy: conv.endedBy === "passive" ? "passive" : (conv.endedBy ? "end_tool" : "natural"),
-      });
-      // Release from conversation
-      const initiator = charById.get(conv.initiatorId);
-      if (initiator) initiator.activeConversationIds = initiator.activeConversationIds.filter((id) => id !== conv.id);
-      const acceptor = charById.get(conv.acceptorId);
-      if (acceptor) acceptor.activeConversationIds = acceptor.activeConversationIds.filter((id) => id !== conv.id);
-    } else {
-      // Active conversation: push event with current transcript so frontend sees it immediately
-      dialogEvents.push({
-        id: `evt-conv-${conv.id}`,
-        worldId: opener.worldId, tick, category: "social",
-        description: `${opener.name} 和 ${responder.name} 正在对话`,
-        participants: [conv.initiatorId, conv.acceptorId], source: "actor", intensity: 2,
-        scope: "node", nodeId: opener.locationId, duration: 1,
-        dialogTranscript: conv.transcript,
-      });
-    }
-  }
+    }),
+  );
 
   const activeConversations = updatedConversations.filter((c) => c.status !== "ended");
   const endedConversations = updatedConversations.filter((c) => c.status === "ended");

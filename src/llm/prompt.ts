@@ -884,7 +884,6 @@ export function buildDialogSummaryPrompt(args: {
   const history = transcript
     .map((t) => {
       const name = t.speakerId === openerId ? openerName : responderName;
-      if (t.kind === "leave") return `${name}：…先离开了。`;
       return `${name}：${t.line ?? ""}`;
     })
     .join("\n");

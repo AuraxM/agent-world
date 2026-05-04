@@ -1253,14 +1253,36 @@ export function injectTimeMessage(args: {
   const timeStr = `${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
 
   const totalMinutes = elapsedHours * 60 + elapsedMinutes;
+
+  // Escalating end-conversation hint — NPCs tend to forget the tool exists
+  const endHint = (() => {
+    const mins = totalMinutes;
+    if (mins < 24) {
+      // 1 tick (12 min): gentle reminder
+      if (language === "zh") return "如果聊得差不多了，可以调用 end_conversation 工具来自然结束对话。";
+      if (language === "en") return "If the conversation is winding down, use the end_conversation tool to end it naturally.";
+      return "会話が一段落したら、end_conversation ツールを呼び出して自然に終了してください。";
+    }
+    if (mins < 48) {
+      // 2+ ticks: firmer nudge
+      if (language === "zh") return "已经聊了一阵子了。如果话题已尽，请调用 end_conversation 工具结束对话，不要只嘴上说再见。";
+      if (language === "en") return "You've been talking for a while. If the topic is exhausted, call end_conversation — don't just say goodbye in text.";
+      return "もうしばらく話しています。話題が尽きたら、ただ「さようなら」と言うだけではなく、end_conversation ツールを呼び出してください。";
+    }
+    // 48+ min (4+ ticks): strong push
+    if (language === "zh") return "你们已经聊了很久了。应该结束这次对话了——请调用 end_conversation 工具，不要继续闲聊。";
+    if (language === "en") return "You've been talking for a long time. It's time to end this conversation — call the end_conversation tool now.";
+    return "もうかなり長く話しています。そろそろ会話を終了すべきです——end_conversation ツールを呼び出してください。";
+  })();
+
   if (language === "zh") {
     const dur = elapsedHours > 0 ? `${elapsedHours} 小时 ${elapsedMinutes} 分钟` : `${elapsedMinutes} 分钟`;
-    return `现在已经 ${timeStr} 了，你们已经聊了 ${dur}（${totalMinutes} 分钟）。`;
+    return `现在已经 ${timeStr} 了，你们已经聊了 ${dur}（${totalMinutes} 分钟）。${endHint}`;
   }
   if (language === "en") {
     const dur = elapsedHours > 0 ? `${elapsedHours}h ${elapsedMinutes}m` : `${elapsedMinutes}m`;
-    return `It's now ${timeStr}, you've been talking for ${dur} (${totalMinutes} min).`;
+    return `It's now ${timeStr}, you've been talking for ${dur} (${totalMinutes} min). ${endHint}`;
   }
   const dur = elapsedHours > 0 ? `${elapsedHours} 時間 ${elapsedMinutes} 分` : `${elapsedMinutes} 分`;
-  return `もう ${timeStr} です、${dur}（${totalMinutes} 分）話し続けています。`;
+  return `もう ${timeStr} です、${dur}（${totalMinutes} 分）話し続けています。${endHint}`;
 }

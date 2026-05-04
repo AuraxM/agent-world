@@ -3,11 +3,11 @@ import { TICKS_PER_HOUR } from "@/domain/enums";
 /** 1 tick = (60 / TICKS_PER_HOUR) game minutes, in milliseconds */
 const MS_PER_TICK = (60 / TICKS_PER_HOUR) * 60 * 1000;
 
-/** 游戏纪元起点。tick 0 对应此刻。 */
-export const GAME_EPOCH = new Date("2026-05-01T00:00:00");
+/** 世界纪元默认值（当 manifest 未提供 startDate 时使用）。 */
+export const DEFAULT_EPOCH_MS = new Date("2026-05-01T00:00:00").getTime();
 
 function tickToDate(tick: number): Date {
-  return new Date(GAME_EPOCH.getTime() + tick * MS_PER_TICK);
+  return new Date(DEFAULT_EPOCH_MS + tick * MS_PER_TICK);
 }
 
 /** tick → "2026/05/01 08:24" */

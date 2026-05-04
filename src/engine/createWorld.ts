@@ -15,9 +15,10 @@ import {
   resolveIncomeLevel,
 } from "@/config/loader";
 import { getTierInitialMoney } from "./bme";
+import { DEFAULT_EPOCH_MS } from "@/app/_lib/format";
 import type { Emotion, Vitals } from "@/domain/types";
 
-/** Compute epoch ms from ISO 8601 startDate, or default to 2026-05-01. */
+/** Compute epoch ms from ISO 8601 startDate, or default. */
 function computeEpoch(startDate?: string): number {
   if (startDate) {
     const d = new Date(startDate);
@@ -26,8 +27,7 @@ function computeEpoch(startDate?: string): number {
     }
     return d.getTime();
   }
-  // Default: 2026-05-01T00:00:00
-  return new Date("2026-05-01T00:00:00").getTime();
+  return DEFAULT_EPOCH_MS;
 }
 
 export interface CastMember {

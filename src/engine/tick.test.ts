@@ -34,6 +34,7 @@ beforeAll(async () => {
       id TEXT PRIMARY KEY, name TEXT NOT NULL,
       map_id TEXT NOT NULL DEFAULT '',
       current_tick INTEGER NOT NULL DEFAULT 0,
+      epoch INTEGER NOT NULL DEFAULT (unixepoch('2026-05-01T00:00:00') * 1000),
       created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
       updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
     )`,

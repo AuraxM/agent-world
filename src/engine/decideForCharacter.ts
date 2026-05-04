@@ -200,6 +200,8 @@ export async function decideForCharacter(
           facts,
           language,
           arrivalIntro: true,
+          allCharacters: characters,
+          nodes,
         });
 
         try {
@@ -302,6 +304,7 @@ export async function decideForCharacter(
         facts,
         language,
         ctx,
+        allCharacters: characters,
       });
     }
   } catch (err) {

@@ -490,7 +490,7 @@ function formatActionCounts(
 /**
  * 通用世界规则——不嵌入任何角色专属信息（性格 / 作息窗口 / 家），
  * 让此段在所有 NPC 之间字节一致，最大化 prompt cache 命中。
- * 角色专属内容由 buildSystemPrompt 末尾的"自我认知"块单独承载。
+ * 角色专属内容由 buildUserPrompt 开头的身份锚点 + 角色静态认知块单独承载。
  */
 function worldRules(): string {
   return `你是 LLM-as-NPC 模拟世界中的一个角色。这是一个由"导演型玩家"在外部观察、并偶尔向某地点投放事件的虚拟小镇。
@@ -652,18 +652,17 @@ const PROFESSION_LABELS: Record<Profession, string> = {
 };
 
 /**
- * 角色专属"自我认知"块。放 system prompt 末尾，前面 worldRules + mapGraph +
- * languageInstruction 都在所有 NPC 之间字节一致 → prompt cache 在跨角色调用时
- * 仍能命中共享前缀。
+ * 角色静态认知块（原 system prompt characterBlock）。
+ * 移入 user prompt，使 system prompt 在所有 NPC 之间字节一致，最大化 prompt cache 命中。
+ * 名字已移至 user prompt 开头的身份锚点行，此处不再重复。
  */
-function characterBlock(
+export function buildCharacterStaticBlock(
   character: Character,
   nodes: MapNode[],
   sleepWindow: SleepWindow,
 ): string {
   const lines: string[] = [
     "你的自我认知：",
-    `- 名字：${character.name}`,
     `- 年龄：${character.age} 岁`,
     `- 性别：${character.gender === "male" ? "男" : character.gender === "female" ? "女" : "其他"}`,
     `- 身份：${PROFESSION_LABELS[character.profession] ?? character.profession}`,
@@ -882,13 +881,11 @@ export function buildSystemPrompt(args: {
   const language = args.language ?? "zh";
   const sleepWindow = character.sleepWindow ?? DEFAULT_SLEEP_WINDOW;
 
-  // 顺序刻意按"稳定 → 角色专属"排列，让 prompt cache 在跨角色调用时
-  // 仍能命中共享前缀（worldRules + mapGraph + languageInstruction 字节一致）。
+  // 仅包含所有 NPC 共享的世界规则 + 地图 + 语言指令，100% 字节一致 → 跨角色 prompt cache 完全命中。
   const lines: string[] = [worldRules(), "", `你身处的世界：${worldName}。`];
   const mapGraph = describeMapGraph(nodes);
   if (mapGraph) lines.push("", mapGraph);
   lines.push("", languageInstruction(language));
-  lines.push("", characterBlock(character, nodes, sleepWindow));
   return lines.join("\n");
 }
 
@@ -952,8 +949,10 @@ export function buildUserPrompt(args: {
   facts: AggregatedFacts;
   language?: Language;
   arrivalIntro?: boolean;
+  allCharacters?: Character[];
+  nodes?: MapNode[];
 }): string {
-  const { character, here, companions, perceived, options, tick, facts } = args;
+  const { character, here, companions, perceived, options, tick, facts, allCharacters, nodes } = args;
   const language = args.language ?? "zh";
   const sleepWindow = character.sleepWindow ?? DEFAULT_SLEEP_WINDOW;
   const t = timeOfDay(tick, sleepWindow);
@@ -962,6 +961,37 @@ export function buildUserPrompt(args: {
   const hygiene = qualifyVital(character.vitals.hygiene, "hygiene");
 
   const lines: string[] = [];
+
+  // 0. 身份锚点 —— user prompt 的第一行
+  const profLabel = PROFESSION_LABELS[character.profession] ?? character.profession;
+
+  // Build name lookup map for workplace relation labels
+  const nameMap = new Map<string, string>();
+  if (allCharacters) {
+    for (const ac of allCharacters) nameMap.set(ac.id, ac.name);
+  }
+  for (const c of companions) nameMap.set(c.id, c.name);
+
+  // Extract workplace relationships from relations
+  const workplaceParts: string[] = [];
+  for (const [targetId, rel] of Object.entries(character.relations)) {
+    const targetName = nameMap.get(targetId) ?? targetId;
+    if (rel.kinds.includes("boss")) workplaceParts.push(`${targetName}是你的老板`);
+    if (rel.kinds.includes("subordinate")) workplaceParts.push(`${targetName}是你的下属`);
+    if (rel.kinds.includes("colleague")) workplaceParts.push(`${targetName}是你的同事`);
+  }
+
+  lines.push(`你是${character.name}，${character.age}岁的${profLabel}。`);
+  if (workplaceParts.length > 0) {
+    lines.push(workplaceParts.join("；") + "。");
+  }
+  lines.push("");
+
+  // 0.5. 角色静态认知（原 system prompt characterBlock）
+  if (nodes) {
+    lines.push(buildCharacterStaticBlock(character, nodes, sleepWindow));
+    lines.push("");
+  }
 
   // 1. 时间 + 作息引导
   lines.push(

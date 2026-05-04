@@ -77,6 +77,8 @@ export interface DecideInput {
   language: Language;
   /** ActionContext，供 decide.ts 生成 per-action tools。 */
   ctx: import("@/domain/action-system").ActionContext;
+  /** 全量角色列表，用于用户 prompt 身份锚点的 workplace 关系解析。 */
+  allCharacters: Character[];
 }
 
 export type DecideFn = (input: DecideInput) => Promise<Action>;
@@ -512,6 +514,7 @@ export async function tick(
           facts,
           language,
           ctx,
+          allCharacters: loaded.characters,
         });
       } catch (err) {
         action = fallbackWait(c);
@@ -682,6 +685,7 @@ export async function tick(
           ctx,
           rejectReason: input.rejectReason,
           language,
+          allCharacters: characters,
         });
       } catch {
         return {

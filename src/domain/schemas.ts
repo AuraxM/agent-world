@@ -304,3 +304,12 @@ export const MemorySummaryToolSchema = {
   required: ["summary"],
   additionalProperties: false,
 } as const;
+
+// ---------------------------------------------------------------------------
+// End conversation
+// ---------------------------------------------------------------------------
+
+export const EndConversationSchema = z.object({
+  reasoning: z.string().min(1).max(400),
+  closing_line: z.string().max(800).optional(),
+});

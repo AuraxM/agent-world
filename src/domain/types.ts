@@ -191,6 +191,8 @@ export interface Character {
   sickness?: Sickness;
   /** 说话口吻描述（可选，覆盖自动生成） */
   speakingStyle?: string;
+  /** 当前参与的对话 ID 列表（发起者锁在其中，接受者可同时在多段对话） */
+  activeConversationIds: string[];
   /** Stage 1: short memory FIFO 50 */
   shortMemory: Memory[];
   /** 中期日记忆：睡觉时由 LLM 压缩清醒期 shortMemory 生成 */
@@ -250,7 +252,7 @@ export interface WorldEvent {
   /** 对话事件专用：完整对话记录（其它 event 不填） */
   dialogTranscript?: DialogTurn[];
   /** 对话结束方式 */
-  dialogEndedBy?: "natural" | "leave" | "hard_limit" | "turn_failure";
+  dialogEndedBy?: "natural" | "end_tool" | "hard_limit" | "turn_failure" | "passive";
 }
 
 /** update_relation 行动可选的语义子类型。 */
@@ -306,7 +308,7 @@ export interface WorldSnapshot {
 /** 对话内单轮快照（仅供 WorldEvent.dialogTranscript 使用） */
 export interface DialogTurn {
   speakerId: string;
-  kind: "say" | "leave";
+  kind: "say";
   line?: string;
   reasoning?: string;
 }
@@ -330,6 +332,26 @@ export interface EconomicSnapshot {
   weeklyIncome: number;
   weeklyExpense: number;
   updatedAtTick: number;
+}
+
+/** 持久化对话实体。每段双人对话一个实例，随 world 存储。 */
+export interface Conversation {
+  id: string;
+  worldId: string;
+  initiatorId: string;
+  acceptorId: string;
+  transcript: DialogTurn[];
+  tickStarted: number;
+  currentTickRounds: number;
+  status: "active" | "ending" | "ended";
+  endedBy?: "initiator" | "acceptor" | "passive";
+  pendingExtraRound?: boolean;
+}
+
+/** end_conversation tool 的 LLM 输出载荷。 */
+export interface EndConversationPayload {
+  reasoning: string;
+  closingLine?: string;
 }
 
 /** 世界元信息。 */

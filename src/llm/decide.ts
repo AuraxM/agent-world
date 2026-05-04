@@ -418,6 +418,8 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
         parameters: EndConversationToolSchema,
       },
     },
+    buildRecallTool(),
+    buildMemorizeTool(),
   ];
 
   const extra: Record<string, unknown> = {};
@@ -485,13 +487,53 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
         throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮均未返回 tool_call`);
       }
 
+      const tc = toolCall as any;
+
+      // ── Handle recall (during dialog) ──
+      if (tc.function.name === RECALL_TOOL_NAME) {
+        let parsedArgs: unknown;
+        try { parsedArgs = JSON.parse(tc.function.arguments); } catch (e) {
+          messages.push({ role: "user", content: `recall JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
+          continue;
+        }
+        const parseResult = RecallSchema.safeParse(parsedArgs);
+        if (!parseResult.success) {
+          messages.push({ role: "user", content: `recall 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
+          continue;
+        }
+        const recallResult = handleRecall(parseResult.data.target_ids, input.self, [input.peer]);
+        messages.push({ role: "tool", tool_call_id: tc.id, content: recallResult });
+        // recall continues loop, doesn't count as a dialog turn
+        round = Math.max(0, round - 1);
+        continue;
+      }
+
+      // ── Handle memorize (during dialog) ──
+      if (tc.function.name === MEMORIZE_TOOL_NAME) {
+        let parsedArgs: unknown;
+        try { parsedArgs = JSON.parse(tc.function.arguments); } catch (e) {
+          messages.push({ role: "user", content: `memorize JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
+          continue;
+        }
+        const parseResult = MemorizeSchema.safeParse(parsedArgs);
+        if (!parseResult.success) {
+          messages.push({ role: "user", content: `memorize 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
+          continue;
+        }
+        handleMemorize(parseResult.data.target_id, parseResult.data.impression, input.self);
+        messages.push({ role: "tool", tool_call_id: tc.id, content: "已记录。" });
+        // memorize continues loop, doesn't count as a dialog turn
+        round = Math.max(0, round - 1);
+        continue;
+      }
+
       // Parse JSON with error feedback
       let args: unknown;
       try {
-        args = JSON.parse(toolCall.function.arguments);
+        args = JSON.parse(tc.function.arguments);
       } catch (e) {
         const jsonErr = e instanceof Error ? e.message : String(e);
-        const feedback = `你调用了 ${toolCall.function.name}，但 arguments 不是合法 JSON：\n\n\`\`\`json\n${toolCall.function.arguments}\n\`\`\`\n\nJSON 解析错误：${jsonErr}\n\n请修正 JSON 格式后重试。`;
+        const feedback = `你调用了 ${tc.function.name}，但 arguments 不是合法 JSON：\n\n\`\`\`json\n${tc.function.arguments}\n\`\`\`\n\nJSON 解析错误：${jsonErr}\n\n请修正 JSON 格式后重试。`;
         dialogLog.warn("LLM dialog_turn JSON 解析失败", {
           self: input.self.name, round: round + 1, error: jsonErr,
         });
@@ -502,7 +544,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
         throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮 JSON 解析均失败`);
       }
 
-      if (toolCall.function.name === DIALOG_TURN_TOOL_NAME) {
+      if (tc.function.name === DIALOG_TURN_TOOL_NAME) {
         const result = DialogTurnSchema.safeParse(args);
         if (!result.success) {
           const feedback = `你调用了 submit_dialog_turn，但参数不符合要求：\n\n${result.error.message}\n\n请根据错误信息修正参数后重试。`;
@@ -524,7 +566,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
             reasoning: result.data.reasoning,
           },
         };
-      } else if (toolCall.function.name === END_CONVERSATION_TOOL_NAME) {
+      } else if (tc.function.name === END_CONVERSATION_TOOL_NAME) {
         const result = EndConversationSchema.safeParse(args);
         if (!result.success) {
           const feedback = `你调用了 end_conversation，但参数不符合要求：\n\n${result.error.message}\n\n请根据错误信息修正参数后重试。`;
@@ -545,9 +587,9 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
           },
         };
       } else {
-        const feedback = `你调用了未知工具 "${toolCall.function.name}"。当前对话中只能使用以下两个工具：\n\n1. ${DIALOG_TURN_TOOL_NAME} — 说一句话\n2. ${END_CONVERSATION_TOOL_NAME} — 结束对话\n\n请选择正确的工具重试。`;
+        const feedback = `你调用了未知工具 "${tc.function.name}"。当前对话中只能使用以下工具：\n\n1. ${DIALOG_TURN_TOOL_NAME} — 说一句话\n2. ${END_CONVERSATION_TOOL_NAME} — 结束对话\n\n请选择正确的工具重试。`;
         dialogLog.warn("LLM dialog_turn 未知 tool", {
-          self: input.self.name, round: round + 1, tool: toolCall.function.name,
+          self: input.self.name, round: round + 1, tool: tc.function.name,
         });
         if (round < MAX_TOOL_CALL_ROUNDS - 1) {
           messages.push({ role: "user", content: feedback });

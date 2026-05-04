@@ -1242,18 +1242,15 @@ export function injectTimeMessage(args: {
 }): string {
   const { tick, tickStarted } = args;
   const language = args.language ?? "zh";
-  const t = timeOfDay(tick);
-  const elapsedTicks = tick - tickStarted;
+  // Show the time after this round's conversation (tick+1), since the message is
+  // injected after turns complete and one tick's worth of game time has passed.
+  const displayTick = tick + 1;
+  const t = timeOfDay(displayTick);
+  const elapsedTicks = displayTick - tickStarted;
   const elapsedHours = Math.floor(elapsedTicks / TICKS_PER_HOUR);
   const elapsedMinutes = Math.floor((elapsedTicks % TICKS_PER_HOUR) * (60 / TICKS_PER_HOUR));
 
-  const timeStr = `第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
-
-  if (elapsedTicks === 0) {
-    if (language === "zh") return `当前时间：${timeStr}，对话刚刚开始。`;
-    if (language === "en") return `Current time: ${timeStr}, conversation just started.`;
-    return `現在の時間：${timeStr}、会話は始まったばかりです。`;
-  }
+  const timeStr = `${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
 
   const totalMinutes = elapsedHours * 60 + elapsedMinutes;
   if (language === "zh") {

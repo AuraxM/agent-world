@@ -24,7 +24,7 @@ export interface SpeakPairing {
   autoFails: Array<{
     requester: string;
     target: string;
-    reason: "target_left" | "target_sleeping" | "cross_node" | "invalid_request";
+    reason: "target_left" | "cross_node" | "invalid_request";
   }>;
 }
 
@@ -199,14 +199,6 @@ export function pairSpeakRequests(
       });
       continue;
     }
-    if (target.currentAction?.type === "sleep") {
-      autoFails.push({
-        requester: a.actorId,
-        target: target.id,
-        reason: "target_sleeping",
-      });
-      continue;
-    }
     pendingAcceptances.push({
       requester: a.actorId,
       target: target.id,
@@ -359,8 +351,7 @@ export async function runDialogPhase(
     consumedActorIds.add(af.requester);
     const char = charById.get(af.requester)!;
     let reason: string;
-    if (af.reason === "target_sleeping") reason = `想找对方说话但她在睡觉`;
-    else if (af.reason === "cross_node") reason = `想找对方说话但她不在这里`;
+    if (af.reason === "cross_node") reason = `想找对方说话但她不在这里`;
     else if (af.reason === "target_left") reason = `想找对方说话但她已经走了`;
     else reason = `想开口又咽了回去`;
 
@@ -550,12 +541,14 @@ export async function runDialogPhase(
       actorId: dio.requesterId,
       reasoning: `刚和 ${responderName} 聊完`,
       selfImportance: 2,
+      skipExecution: true,
     });
     finalActionsMap.set(dio.responderId, {
       type: "wait",
       actorId: dio.responderId,
       reasoning: `刚和 ${openerName} 聊完`,
       selfImportance: 2,
+      skipExecution: true,
     });
   }
 

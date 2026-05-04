@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Character, MapNode, WorldEvent } from "@/domain/types";
-import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
+import { characterEmoji } from "../_lib/sprite";
 import { childrenOf, indexNodes } from "../_lib/world";
 
 interface Template {
@@ -122,7 +122,7 @@ export function TreeSidebar({
               }`}
             >
               <span className="text-sm">
-                {NPC_EMOJI[c.id] ?? NPC_FALLBACK_EMOJI}
+                {characterEmoji(c)}
               </span>
               <span className="flex-1 truncate">{c.name}</span>
               {followed && <span className="text-pixel-xs text-(--accent-strong)">👁</span>}

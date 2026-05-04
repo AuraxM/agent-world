@@ -111,6 +111,7 @@ function fallbackWait(c: Character): Action {
     actorId: c.id,
     reasoning: "（fallback）暂时没有想做的事。",
     selfImportance: 1,
+    skipExecution: true,
   };
 }
 
@@ -154,17 +155,20 @@ function handleOngoingMove(
     const destId = path[path.length - 1];
     const destName = nodeById.get(destId)?.name ?? destId;
     c.currentAction = undefined;
+    const arrivalType = ca.arrivalAction?.type ?? "wait";
     return {
       action: {
-        type: ca.arrivalAction?.type ?? "wait",
+        type: arrivalType,
         actorId: c.id,
         targetId: ca.arrivalAction?.targetId,
         targetNodeId: ca.arrivalAction?.targetNodeId,
         freeText: ca.arrivalAction?.freeText,
-        reasoning: `到达目的地 ${destName}，执行 ${ca.arrivalAction?.type ?? "wait"}。`,
+        reasoning: `到达目的地 ${destName}，执行 ${arrivalType}。`,
         selfImportance: 3,
         isArrivalAction: true,
         arrivalNodeName: destName,
+        // "wait" fallback (no arrivalAction) is a proxy — skip registry execution
+        ...(arrivalType === "wait" && !ca.arrivalAction ? { skipExecution: true } as any : {}),
       },
       arrived: true,
     };
@@ -177,6 +181,7 @@ function handleOngoingMove(
       reasoning: `正在前往目的地途中（第 ${nextStep}/${path.length - 1} 步）。`,
       selfImportance: 1,
       skipMemory: true,
+      skipExecution: true,
     },
     arrived: false,
   };
@@ -403,6 +408,7 @@ export async function tick(
             reasoning: `持续行动中：${c.currentAction.description}。`,
             selfImportance: 1,
             skipMemory: true,
+            skipExecution: true,
           };
           options.onCharacterDecision?.({
             characterId: c.id,
@@ -524,6 +530,7 @@ export async function tick(
             actorId: c.id,
             reasoning: `想去 ${action.targetNodeId} 但不可达，原地等待。原因为：${action.reason ?? "无"}`,
             selfImportance: action.selfImportance,
+            skipExecution: true,
           };
         } else {
           const targetNode = nodeById.get(action.targetNodeId);
@@ -561,13 +568,18 @@ export async function tick(
               isArrivalAction: true,
               arrivalNodeName: targetNode?.name ?? action.targetNodeId,
             };
+            // "wait" fallback (no arrivalAction) is a proxy — skip registry execution
+            if (action.type === "wait" && !action.arrivalAction) {
+              (action as any).skipExecution = true;
+            }
           } else {
-            // Multi-step: this tick resolves as wait
+            // Multi-step: this tick resolves as wait (proxy, move itself tracks progress)
             action = {
               type: "wait",
               actorId: c.id,
               reasoning: `开始前往 ${targetNode?.name ?? action.targetNodeId}，共需 ${path.length - 1} 步。原因为：${action.reason ?? "无"}`,
               selfImportance: action.selfImportance,
+              skipExecution: true,
             };
           }
           currentLoc = c.locationId;

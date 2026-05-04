@@ -271,6 +271,7 @@ describe("tick engine v0", () => {
         actorId: character.id,
         reasoning: "等",
         selfImportance: 1 as const,
+        skipExecution: true,
       };
     };
 
@@ -318,6 +319,7 @@ describe("tick engine v0", () => {
         actorId: input.character.id,
         reasoning: "等",
         selfImportance: 1 as const,
+        skipExecution: true,
       };
     };
 
@@ -347,6 +349,7 @@ describe("tick engine v0", () => {
         actorId: character.id,
         reasoning: "等。",
         selfImportance: 1 as const,
+        skipExecution: true,
       };
     };
 
@@ -370,6 +373,7 @@ describe("tick engine v0", () => {
       reasoning: longReason,
       emotionTag: "pensive",
       selfImportance: 2 as const,
+      skipExecution: true,
     });
     const before = storeModule.loadWorld("test-world");
     const fromTick = before.world.currentTick;

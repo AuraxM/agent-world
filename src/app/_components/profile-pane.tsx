@@ -3,7 +3,7 @@
 import { type ReactNode, useState } from "react";
 import type { Character, MapNode, Personality, WorldEvent } from "@/domain/types";
 import { affectionTone, formatActionWindow, vitalThreshold } from "../_lib/profile-format";
-import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
+import { characterEmoji } from "../_lib/sprite";
 import { indexNodes } from "../_lib/world";
 
 const PERSONALITY_LABELS: Record<keyof Personality, string> = {
@@ -152,6 +152,8 @@ export function ProfilePane({
   const [thoughtExpanded, setThoughtExpanded] = useState(false);
   const [relationsExpanded, setRelationsExpanded] = useState(false);
   const [memoriesExpanded, setMemoriesExpanded] = useState(false);
+  const [dailyExpanded, setDailyExpanded] = useState(false);
+  const [longExpanded, setLongExpanded] = useState(false);
   const [lastCharacterId, setLastCharacterId] = useState(characterId);
   if (lastCharacterId !== characterId) {
     setLastCharacterId(characterId);
@@ -159,6 +161,8 @@ export function ProfilePane({
     setThoughtExpanded(false);
     setRelationsExpanded(false);
     setMemoriesExpanded(false);
+    setDailyExpanded(false);
+    setLongExpanded(false);
   }
 
   if (!character) {
@@ -180,6 +184,12 @@ export function ProfilePane({
   const sortedMemories = [...character.shortMemory].sort((a, b) => b.tick - a.tick);
   const totalMemories = sortedMemories.length;
   const visibleMemories = memoriesExpanded ? sortedMemories : sortedMemories.slice(0, 5);
+  const sortedDaily = [...character.dailyMemory].sort((a, b) => b.tick - a.tick);
+  const totalDaily = sortedDaily.length;
+  const visibleDaily = dailyExpanded ? sortedDaily : sortedDaily.slice(0, 5);
+  const sortedLong = [...character.longMemory].sort((a, b) => b.tick - a.tick);
+  const totalLong = sortedLong.length;
+  const visibleLong = longExpanded ? sortedLong : sortedLong.slice(0, 5);
   const sortedRelations = Object.entries(character.relations).sort(
     (a, b) => Math.abs(b[1].affection) - Math.abs(a[1].affection),
   );
@@ -233,7 +243,7 @@ export function ProfilePane({
           {/* 头部 */}
           <div className="flex items-start gap-3">
             <span className="npc-chip npc-chip--lg npc-chip--selected pixelated" style={{ fontSize: "36px", width: "60px", height: "60px" }}>
-              {NPC_EMOJI[character.id] ?? NPC_FALLBACK_EMOJI}
+              {characterEmoji(character)}
             </span>
             <div className="flex-1 min-w-0 space-y-1">
               <div className="text-game-lg text-(--color-pixel-fg)">{character.name}</div>
@@ -243,6 +253,10 @@ export function ProfilePane({
                 {character.age} 岁
                 {" · "}
                 {character.gender === "male" ? "男" : character.gender === "female" ? "女" : "其他"}
+                {" · "}
+                {character.origin === "local" ? "本地" : "外来者"}
+                {" · "}
+                💰 {character.money}
               </div>
               <div className="text-game-sm">
                 <button
@@ -295,6 +309,16 @@ export function ProfilePane({
               )}
             </div>
           </div>
+
+          {/* 生平简介 */}
+          {character.biography && (
+            <section className="border-2 border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2) p-2">
+              <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">生平</div>
+              <p className="text-game-sm leading-relaxed text-(--color-pixel-fg) italic">
+                &ldquo;{character.biography}&rdquo;
+              </p>
+            </section>
+          )}
 
           {/* 上一轮思考 */}
           <section className="border-2 border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2) p-2 space-y-1">
@@ -371,6 +395,12 @@ export function ProfilePane({
                   <UniBar label="累" value={character.vitals.fatigue} max={16} danger={10} warn={6} />
                   <UniBar label="脏" value={character.vitals.hygiene} max={16} danger={10} warn={6} />
                 </div>
+                {character.sleepWindow && (
+                  <div className="text-game-xs text-(--color-pixel-muted) mt-1">
+                    🌙 {String(character.sleepWindow.start).padStart(2, "0")}:00 ~{" "}
+                    {String((character.sleepWindow.start + character.sleepWindow.duration) % 24).padStart(2, "0")}:00
+                  </div>
+                )}
               </div>
               <div>
                 <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
@@ -418,7 +448,7 @@ export function ProfilePane({
                   return (
                     <li key={id} className="text-game-sm grid grid-cols-[18px_1fr_auto] gap-2 items-baseline">
                       <span className="text-base">
-                        {NPC_EMOJI[id] ?? NPC_FALLBACK_EMOJI}
+                        {characterEmoji(charById.get(id) ?? { id })}
                       </span>
                       <div className="min-w-0">
                         <div>
@@ -468,6 +498,58 @@ export function ProfilePane({
             ) : (
               <ul className="space-y-1">
                 {visibleMemories.map((m) => (
+                  <li key={m.id} className="text-game-sm text-(--color-pixel-fg) leading-snug">
+                    <span className="text-(--color-pixel-muted)">
+                      t={m.tick}·<span className="text-(--color-pixel-accent)">{"★".repeat(m.importance)}</span>
+                    </span>{" "}
+                    {m.content}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* 日记忆 */}
+          <section>
+            <SectionLabel
+              shown={Math.min(visibleDaily.length, totalDaily)}
+              total={totalDaily}
+              expanded={dailyExpanded}
+              onToggle={() => setDailyExpanded((v) => !v)}
+            >
+              日记忆
+            </SectionLabel>
+            {totalDaily === 0 ? (
+              <p className="text-game-sm text-(--color-pixel-muted)">暂无日记忆</p>
+            ) : (
+              <ul className="space-y-1">
+                {visibleDaily.map((m) => (
+                  <li key={m.id} className="text-game-sm text-(--color-pixel-fg) leading-snug">
+                    <span className="text-(--color-pixel-muted)">
+                      t={m.tick}·<span className="text-(--color-pixel-accent)">{"★".repeat(m.importance)}</span>
+                    </span>{" "}
+                    {m.content}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* 周记忆 */}
+          <section>
+            <SectionLabel
+              shown={Math.min(visibleLong.length, totalLong)}
+              total={totalLong}
+              expanded={longExpanded}
+              onToggle={() => setLongExpanded((v) => !v)}
+            >
+              周记忆
+            </SectionLabel>
+            {totalLong === 0 ? (
+              <p className="text-game-sm text-(--color-pixel-muted)">暂无周记忆</p>
+            ) : (
+              <ul className="space-y-1">
+                {visibleLong.map((m) => (
                   <li key={m.id} className="text-game-sm text-(--color-pixel-fg) leading-snug">
                     <span className="text-(--color-pixel-muted)">
                       t={m.tick}·<span className="text-(--color-pixel-accent)">{"★".repeat(m.importance)}</span>

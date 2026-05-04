@@ -196,6 +196,20 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
     }
     if (key) claimed.add(key);
 
+    // Engine-internal proxy actions (e.g. ongoing action placeholder) skip registry
+    if (action.skipExecution) {
+      if (!action.skipMemory) {
+        pushMemory(actor, {
+          id: `mem-${randomUUID().slice(0, 8)}`,
+          tick,
+          importance: action.selfImportance,
+          content: action.reasoning.slice(0, 80),
+        });
+      }
+      resolvedActions.push({ action, success: true });
+      continue;
+    }
+
     // Lookup definition from registry
     const def = actionRegistry.get(action.type);
     if (!def) {

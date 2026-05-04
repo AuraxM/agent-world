@@ -8,7 +8,7 @@ import {
   isSleepTick,
   stackEventsAtTick,
 } from "../_lib/gantt-utils";
-import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
+import { characterEmoji } from "../_lib/sprite";
 import { GanttCard } from "./gantt-card";
 
 export function GanttRow({
@@ -114,7 +114,7 @@ export function GanttRow({
             flexShrink: 0,
           }}
         >
-          {NPC_EMOJI[character.id] ?? NPC_FALLBACK_EMOJI}
+          {characterEmoji(character)}
         </span>
         <span
           className="text-pixel-xs font-semibold text-(--text-on-frame)"

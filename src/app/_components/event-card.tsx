@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Character, MapNode, WorldEvent } from "@/domain/types";
-import { NPC_EMOJI, NPC_FALLBACK_EMOJI } from "../_lib/sprite";
+import { characterEmoji } from "../_lib/sprite";
 import { formatHHMM } from "../_lib/format";
 
 export function EventCard({
@@ -37,7 +37,7 @@ export function EventCard({
         {/* Avatar */}
         {actor && (
           <span className="npc-chip w-7 h-7 text-base">
-            {NPC_EMOJI[actor.id] ?? NPC_FALLBACK_EMOJI}
+            {characterEmoji(actor)}
           </span>
         )}
 

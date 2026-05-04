@@ -76,25 +76,47 @@ export const batheAction: ActionDefinition = {
 
 export const restAction: ActionDefinition = {
   type: "rest",
-  duration: "instant",
+  duration: 5,
   check(ctx) {
     return ctx.here.tags.includes("residence") || ctx.here.privacy === "private";
   },
   hint(ctx) {
-    return ctx.self.vitals.fatigue >= 12 || ctx.isSleepHour ? "⭐ 休息" : "休息";
+    return ctx.self.vitals.fatigue >= 12 || ctx.isSleepHour ? "⭐ 休息 (5 ticks)" : "休息 (5 ticks)";
   },
   execute(ctx, _input) {
     return {
-      memory: `我在 ${ctx.here.name} 休息了一会儿。`,
-      event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 休息。`, intensity: 1 },
+      memory: `我在 ${ctx.here.name} 开始休息。`,
+      event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 坐下休息。`, intensity: 1 },
+      stateChanges: [{
+        kind: "setOngoingAction",
+        action: {
+          type: "rest",
+          startedAt: ctx.tick,
+          endsAt: ctx.tick + 5,
+          description: `在 ${ctx.here.name} 休息`,
+          interruptThreshold: 3,
+        },
+      }],
+    };
+  },
+  onComplete(ctx) {
+    return {
+      memory: `我在 ${ctx.here.name} 休息好了。`,
+      event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 休息完毕。`, intensity: 1 },
       stateChanges: [{ kind: "adjustVital", vital: "fatigue", delta: -2 }],
+    };
+  },
+  onInterrupt(ctx, reason) {
+    return {
+      memory: `我休息时被打断了——${reason}`,
+      event: { category: "action", description: `${ctx.self.name} 的休息被打断。`, intensity: 2 },
     };
   },
 };
 
 export const workAction: ActionDefinition = {
   type: "work",
-  duration: "instant",
+  duration: 10,
   check(ctx) {
     if (!ctx.facts.activityNodeId) return false;
     if (ctx.self.incomeLevel <= 0) return false;
@@ -104,20 +126,42 @@ export const workAction: ActionDefinition = {
   hint(ctx) {
     const prof = ctx.self.profession;
     const label = prof === "student" ? "学习" : prof;
-    return `工作（${label}）`;
+    return `工作（${label}，10 ticks）`;
   },
   execute(ctx, input) {
     const desc = (input.free_text as string) || "专注于手头的事情";
-    const multiplier = 1.0; // incomeMultiplier from config, default 1.0
+    return {
+      memory: `我开始工作：${desc}。`,
+      event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 开始工作。`, intensity: 1 },
+      stateChanges: [{
+        kind: "setOngoingAction",
+        action: {
+          type: "work",
+          startedAt: ctx.tick,
+          endsAt: ctx.tick + 10,
+          description: `在 ${ctx.here.name} 工作`,
+          interruptThreshold: 3,
+        },
+      }],
+    };
+  },
+  onComplete(ctx) {
+    const multiplier = 1.0;
     const income = rollWorkIncome(ctx.self.incomeLevel, DEFAULT_ECONOMY_CONFIG, multiplier);
     const changes: StateChange[] = [];
     if (income > 0) {
       changes.push({ kind: "adjustMoney", amount: income, reason: "work" });
     }
     return {
-      memory: `我在 ${ctx.here.name} 工作：${desc}。`,
-      event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 工作。`, intensity: 1 },
+      memory: `我完成了工作，收入 ${income}💰。`,
+      event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 完成了工作。`, intensity: 2 },
       stateChanges: changes,
+    };
+  },
+  onInterrupt(ctx, reason) {
+    return {
+      memory: `我的工作被打断了——${reason}，没有收入。`,
+      event: { category: "action", description: `${ctx.self.name} 的工作被打断。`, intensity: 3 },
     };
   },
 };
@@ -281,17 +325,38 @@ export const moveAction: ActionDefinition = {
 
 export const waitAction: ActionDefinition = {
   type: "wait",
-  duration: "instant",
+  duration: 5,
   check(_ctx) {
     return true;
   },
   hint(ctx) {
     const hour = Math.floor(ctx.tick / TICKS_PER_HOUR) % 24;
-    return `等待（当前 world time ${hour}:00，原地停留一 tick）`;
+    return `等待（当前 world time ${hour}:00，原地停留 5 ticks）`;
   },
   execute(ctx, _input) {
     return {
-      memory: `我在 ${ctx.here.name} 等待了一会儿。`,
+      memory: `我在 ${ctx.here.name} 开始等待。`,
+      event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 驻足等待。`, intensity: 1 },
+      stateChanges: [{
+        kind: "setOngoingAction",
+        action: {
+          type: "wait",
+          startedAt: ctx.tick,
+          endsAt: ctx.tick + 5,
+          description: `在 ${ctx.here.name} 等待`,
+          interruptThreshold: 2,
+        },
+      }],
+    };
+  },
+  onComplete(ctx) {
+    return {
+      memory: `我在 ${ctx.here.name} 等待结束。`,
+    };
+  },
+  onInterrupt(ctx, reason) {
+    return {
+      memory: `我等待时被打断了——${reason}`,
     };
   },
 };

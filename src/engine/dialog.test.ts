@@ -109,12 +109,13 @@ describe("pairSpeakRequests", () => {
     expect(r.autoFails[0].reason).toBe("cross_node");
   });
 
-  it("target in sleep → autoFail", () => {
+  it("target in sleep → 不再 autoFail（对话不打断持续动作）", () => {
     const chars = [makeChar("a", "n1"), makeChar("b", "n1", "sleep")];
     const actions = [speakAction("a", "b", "醒了吗")];
     const r = pairSpeakRequests(actions, chars);
-    expect(r.autoFails).toHaveLength(1);
-    expect(r.autoFails[0].reason).toBe("target_sleeping");
+    expect(r.autoFails).toHaveLength(0);
+    expect(r.pendingAcceptances).toHaveLength(1);
+    expect(r.pendingAcceptances[0].target).toBe("b");
   });
 
   it("target in nap → NOT autoFail", () => {
@@ -357,7 +358,7 @@ describe("runDialogPhase", () => {
     expect(bMem.memory.content).toContain("拒绝");
   });
 
-  it("autoFail (target_sleeping) → requester salvage + memory", async () => {
+  it("speak to sleeping target → no longer autoFail, dialog request proceeds", async () => {
     const a = makeCharFull("a", "甲", "n1");
     const b = makeCharFull("b", "乙", "n1", "sleep");
 
@@ -387,9 +388,10 @@ describe("runDialogPhase", () => {
       salvageDecide: mockSalvage("observe"),
     });
 
+    // Speak request reaches the sleeping target; target rejects (mockAccept).
     expect(result.dialogEvents).toHaveLength(0);
     const aMem = result.memoryWrites.find((m) => m.characterId === "a")!;
-    expect(aMem.memory.content).toContain("在睡觉");
+    expect(aMem.memory.content).toContain("被拒");
   });
 
   it("accept decision returns illegal type → treated as reject", async () => {

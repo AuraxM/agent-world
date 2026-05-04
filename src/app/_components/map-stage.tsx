@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import type { Character, MapNode } from "@/domain/types";
-import { NPC_EMOJI, NPC_FALLBACK_EMOJI, paletteVarsFor } from "../_lib/sprite";
+import { characterEmoji, paletteVarsFor } from "../_lib/sprite";
 import { childrenOf, groupCharactersByLocation, pathFromRoot } from "../_lib/world";
 import { PixelFrame } from "./pixel-frame";
 
@@ -73,7 +73,7 @@ function NpcSprite({
       title={c.name}
       className={`npc-chip ${selected ? "npc-chip--selected" : ""} pixelated cursor-pointer`}
     >
-      {NPC_EMOJI[c.id] ?? NPC_FALLBACK_EMOJI}
+      {characterEmoji(c)}
     </div>
   );
 }

@@ -273,6 +273,8 @@ export interface Action {
   arrivalNodeName?: string;
   /** 引擎内部标记：该 action 不写入 shortMemory（用于锁状态持续期间的自动 wait） */
   skipMemory?: boolean;
+  /** 引擎内部标记：该 action 不经过 action registry 执行（用于持续行动占位） */
+  skipExecution?: boolean;
 }
 
 /** 世界全量快照。每 24 tick 持久化一次。 */

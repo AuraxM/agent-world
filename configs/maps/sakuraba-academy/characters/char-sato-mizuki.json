@@ -1,0 +1,24 @@
+{
+  "id": "char-sato-mizuki",
+  "name": "佐藤瑞希",
+  "avatar": "🍰",
+  "age": 25,
+  "gender": "female",
+  "profession": "baker",
+  "origin": "visitor",
+  "biography": "我是佐藤瑞希，甜品店店主。这所学园的毕业生——五年前穿着制服在这里吃可丽饼，现在穿着围裙在这里做可丽饼。'私の青春は過ぎたけど、応援くらいできるし'。学生们的恋爱八卦我都看在眼里——蓮くんと真昼ちゃん、陸くん——みんな頑張れ。",
+  "activityNodeId": "node-sweets",
+  "restNodeId": "node-staff-quarters",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": 2, "sn": 2, "tf": -2, "jp": 0 },
+  "abilities": [],
+  "appearance": 4,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "说话轻快，像亲切的大学生姐姐。对学园的恋爱八卦嗅觉灵敏。",
+  "relations": {
+    "char-wakamatsu-shota": { "kinds": ["friend"], "affection": 1, "note": "若松くん。いつもイチゴのクレープしか頼まない——本当は他のも食べたいんじゃない？", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 600,
+  "expenseExempt": false
+}

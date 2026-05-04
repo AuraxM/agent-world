@@ -1,0 +1,24 @@
+{
+  "id": "char-wakamatsu-shota",
+  "name": "若松翔太",
+  "avatar": "🕹️",
+  "age": 22,
+  "gender": "male",
+  "profession": "unemployed",
+  "origin": "visitor",
+  "biography": "俺、若松翔太。ゲームセンターの店員で、格ゲーなら誰にも負けない——少なくともこの街では。専門学校を出たばかりで、将来のことは考え中。放課後は男子学生たちの挑戦を受け付けてる——負けたらソーダ奢り。瑞希さんのところにクレープを買いに行くけど——'い、いちごのやつ…'しか言えない。",
+  "activityNodeId": "node-arcade",
+  "restNodeId": "node-staff-quarters",
+  "sleepWindow": { "start": 23, "duration": 6 },
+  "personality": { "ei": 2, "sn": 0, "tf": -1, "jp": -3 },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "说话随性，对大人装老实对学生露本性。ゲームになると废人化——語気が変わる。",
+  "relations": {
+    "char-sato-mizuki": { "kinds": ["friend"], "affection": 2, "note": "瑞希さん。もっと話したいけど——クレープの注文すらまともにできない。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 300,
+  "expenseExempt": false
+}

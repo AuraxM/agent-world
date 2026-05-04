@@ -245,10 +245,22 @@ export const sleepAction: ActionDefinition = {
     };
   },
   onComplete(ctx) {
+    const inWindow = ctx.isSleepHour;
+    const changes: StateChange[] = [];
+    if (inWindow) {
+      changes.push({ kind: "resetVital", vital: "fatigue" });
+    } else {
+      const reduction = Math.round(ctx.self.vitals.fatigue * 0.7);
+      changes.push({ kind: "adjustVital", vital: "fatigue", delta: -reduction });
+    }
+    changes.push({ kind: "adjustStress", delta: -1 });
+
     return {
-      memory: "我睡醒了，精神饱满。",
+      memory: inWindow
+        ? "我睡醒了，精神饱满。"
+        : "我睡醒了，但不在习惯的睡眠时间，感觉没完全恢复。",
       event: { category: "action", description: `${ctx.self.name} 睡醒了。`, intensity: 2 },
-      stateChanges: [{ kind: "resetVital", vital: "fatigue" }],
+      stateChanges: changes,
     };
   },
   onInterrupt(ctx, reason) {

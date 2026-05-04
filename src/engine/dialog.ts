@@ -337,6 +337,7 @@ async function runOneTickDialog(
       }
       if (isSixthSentence) {
         // 3+4 rule: other party gets one extra turn
+        conv.pendingExtraRound = true;
         const otherId =
           speakerId === conv.initiatorId ? conv.acceptorId : conv.initiatorId;
         const other = chars.get(otherId)!;
@@ -430,6 +431,7 @@ export async function runDialogPhase(
     if (!initiator || !acceptor) {
       conv.status = "ended";
       conv.endedBy = "passive";
+      updatedConversations.push(conv);
       continue;
     }
     if (initiator.locationId !== acceptor.locationId) {
@@ -441,6 +443,7 @@ export async function runDialogPhase(
         line: `${acceptor.name} 离开了当前场景，对话终止。`,
       };
       conv.transcript.push(sysMsg);
+      updatedConversations.push(conv);
       continue;
     }
 

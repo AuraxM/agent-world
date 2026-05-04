@@ -42,7 +42,7 @@ interface MapNodeConfig {
   children?: MapNodeConfig[];
 }
 
-type Tab = "providers" | "worlds" | "maps";
+type Tab = "providers" | "worlds" | "maps" | "llm";
 
 // ---- provider form ----
 
@@ -61,12 +61,14 @@ const TAB_CLASSES: Record<Tab, string> = {
   providers: "px-4 py-2 text-game-base tracking-widest cursor-pointer border-b-2 transition-colors",
   worlds: "px-4 py-2 text-game-base tracking-widest cursor-pointer border-b-2 transition-colors",
   maps: "px-4 py-2 text-game-base tracking-widest cursor-pointer border-b-2 transition-colors",
+  llm: "px-4 py-2 text-game-base tracking-widest cursor-pointer border-b-2 transition-colors",
 };
 
 const TAB_LABELS: Record<Tab, string> = {
   providers: "LLM Provider",
   worlds: "世界管理",
   maps: "地图预览",
+  llm: "LLM 调用配置",
 };
 
 function buildTree(nodes: MapNodeConfig[]): MapNodeConfig[] {
@@ -173,6 +175,7 @@ function AdminContent() {
         {tab === "providers" && <ProvidersTab />}
         {tab === "worlds" && <WorldsTab />}
         {tab === "maps" && <MapsTab />}
+        {tab === "llm" && <EntryConfigsTab />}
       </div>
     </div>
   );
@@ -814,5 +817,195 @@ function MapDetail({ map }: { map: MapConfig }) {
         </div>
       </div>
     </PixelFrame>
+  );
+}
+
+// ---- entry configs tab ----
+
+function EntryConfigsTab() {
+  const [providers, setProviders] = useState<LLMProvider[]>([]);
+  const [configs, setConfigs] = useState<
+    { entryName: string; providerId: string | null; thinkingEnabled: boolean }[]
+  >([]);
+  const [defaultProvider, setDefaultProvider] = useState<LLMProvider | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState("");
+
+  const ENTRY_LABELS: Record<string, string> = {
+    decide: "行动决策",
+    salvage: "补救决策",
+    dialog_turn: "对话回合",
+    dialog_summarize: "对话摘要",
+    accept_decision: "接受/拒绝对话",
+    character_placement: "角色放置",
+    memory_compress: "记忆压缩",
+  };
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setError("");
+      try {
+        const [provRes, configRes] = await Promise.all([
+          fetch("/api/admin/providers"),
+          fetch("/api/admin/entry-configs"),
+        ]);
+        const provData = await provRes.json();
+        const configData = await configRes.json();
+        if (!provRes.ok) throw new Error(provData.error ?? "fetch providers failed");
+        if (!configRes.ok) throw new Error(configData.error ?? "fetch configs failed");
+        setProviders(provData.providers);
+        setConfigs(configData.entryConfigs);
+        if (configData.defaultProvider) {
+          setDefaultProvider(configData.defaultProvider);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "unknown error");
+      } finally {
+        setLoading(false);
+      }
+    }
+    void load();
+  }, []);
+
+  function handleProviderChange(entryName: string, providerId: string | null) {
+    setConfigs((prev) =>
+      prev.map((c) => (c.entryName === entryName ? { ...c, providerId } : c)),
+    );
+  }
+
+  function handleThinkingToggle(entryName: string) {
+    setConfigs((prev) =>
+      prev.map((c) =>
+        c.entryName === entryName
+          ? { ...c, thinkingEnabled: !c.thinkingEnabled }
+          : c,
+      ),
+    );
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setError("");
+    setResult("");
+    try {
+      const res = await fetch("/api/admin/entry-configs", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ entryConfigs: configs }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "save failed");
+      setResult("配置已保存");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "unknown error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="max-w-3xl space-y-4">
+      <h2 className="text-game-base tracking-widest text-(--color-pixel-muted)">
+        LLM 调用配置
+      </h2>
+
+      {error && (
+        <div className="px-3 py-2 text-game-xs text-(--color-pixel-danger) border border-(--color-pixel-danger) bg-(--color-pixel-bg-2)">
+          {error}
+        </div>
+      )}
+      {result && (
+        <div className="px-3 py-2 text-game-xs text-(--color-pixel-success) border border-(--color-pixel-success) bg-(--color-pixel-bg-2)">
+          {result}
+        </div>
+      )}
+
+      {/* default provider info */}
+      <div className="px-3 py-2 text-game-xs text-(--color-pixel-muted) border border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2)">
+        默认 Provider：
+        {defaultProvider ? (
+          <span className="text-(--color-pixel-fg)">
+            {defaultProvider.name} ({defaultProvider.model})
+          </span>
+        ) : (
+          <span className="text-(--color-pixel-danger)">未设置</span>
+        )}
+        <span className="ml-2">— 在「LLM Provider」tab 中修改</span>
+      </div>
+
+      {loading ? (
+        <div className="text-game-sm text-(--color-pixel-muted)">加载中…</div>
+      ) : (
+        <div className="border border-(--color-pixel-border-dark)">
+          <table className="w-full text-game-xs">
+            <thead>
+              <tr className="border-b border-(--color-pixel-border-dark) text-(--color-pixel-muted)">
+                <th className="text-left py-2 px-3">入口</th>
+                <th className="text-left py-2 px-3">模型</th>
+                <th className="text-left py-2 px-3">Thinking</th>
+              </tr>
+            </thead>
+            <tbody>
+              {configs.map((c) => (
+                <tr key={c.entryName} className="border-b border-(--color-pixel-border-dark) last:border-b-0">
+                  <td className="py-2 px-3 text-(--color-pixel-fg)">
+                    {ENTRY_LABELS[c.entryName] ?? c.entryName}
+                  </td>
+                  <td className="py-2 px-3">
+                    <select
+                      value={c.providerId ?? ""}
+                      onChange={(e) =>
+                        handleProviderChange(
+                          c.entryName,
+                          e.target.value || null,
+                        )
+                      }
+                      className="px-2 py-1 text-game-xs bg-(--color-pixel-bg) border border-(--color-pixel-border-light) text-(--color-pixel-fg) outline-none focus:border-(--color-pixel-accent)"
+                    >
+                      <option value="">默认</option>
+                      {providers.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.model})
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="py-2 px-3">
+                    <button
+                      type="button"
+                      onClick={() => handleThinkingToggle(c.entryName)}
+                      className={
+                        "w-10 h-5 rounded-full border transition-colors " +
+                        (c.thinkingEnabled
+                          ? "bg-(--color-pixel-accent) border-(--color-pixel-accent-dark)"
+                          : "bg-(--color-pixel-border-dark) border-(--color-pixel-border-light)")
+                      }
+                    >
+                      <span
+                        className={
+                          "block w-3.5 h-3.5 rounded-full bg-(--color-pixel-bg) transition-transform " +
+                          (c.thinkingEnabled ? "translate-x-5" : "translate-x-0.5")
+                        }
+                      />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <button
+        onClick={handleSave}
+        disabled={saving || loading}
+        className="px-4 py-2 text-game-xs border border-(--color-pixel-accent) text-(--color-pixel-accent) hover:bg-(--color-pixel-bg-2) transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {saving ? "保存中…" : "保存"}
+      </button>
+    </div>
   );
 }

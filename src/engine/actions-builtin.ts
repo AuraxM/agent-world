@@ -22,6 +22,7 @@ export const eatAction: ActionDefinition = {
     if (h <= 0) return `进食（不饿，纯消遣）${costNote}`;
     return `进食${costNote}`;
   },
+  validateParams() { return null; },
   execute(ctx, input) {
     const desc = (input.free_text as string) || "吃了一顿饭";
     const changes: StateChange[] = [{ kind: "resetVital", vital: "hunger" }];
@@ -57,6 +58,7 @@ export const batheAction: ActionDefinition = {
     if (h >= 8) return `⭐ 洗浴${costNote}`;
     return `洗浴${costNote}`;
   },
+  validateParams() { return null; },
   execute(ctx, input) {
     const desc = (input.free_text as string) || "洗了个澡";
     const changes: StateChange[] = [{ kind: "resetVital", vital: "hygiene" }];
@@ -84,6 +86,7 @@ export const restAction: ActionDefinition = {
   hint(ctx) {
     return ctx.self.vitals.fatigue >= 12 || ctx.isSleepHour ? "⭐ 休息 (5 ticks)" : "休息 (5 ticks)";
   },
+  validateParams() { return null; },
   execute(ctx, _input) {
     return {
       memory: `我在 ${ctx.here.name} 开始休息。`,
@@ -129,6 +132,7 @@ export const workAction: ActionDefinition = {
     const label = prof === "student" ? "学习" : prof;
     return `工作（${label}，10 ticks）`;
   },
+  validateParams() { return null; },
   execute(ctx, input) {
     const desc = (input.free_text as string) || "专注于手头的事情";
     return {
@@ -179,6 +183,7 @@ export const thinkAction: ActionDefinition = {
     if (ctx.here.tags.includes("outdoor")) return `${base}，户外空气清新）`;
     return `${base}，独自一人）`;
   },
+  validateParams() { return null; },
   execute(ctx, input) {
     const thought = (input.free_text as string) || "默然思索";
     return {
@@ -200,6 +205,13 @@ export const speakAction: ActionDefinition = {
       hint: `和 ${c.name} 交谈`,
       targetId: c.id,
     }));
+  },
+  validateParams(input, ctx) {
+    if (!input.target_id) return "speak 需要指定 target_id（对话对象的角色 ID）";
+    if (!input.free_text || input.free_text.trim().length === 0) return "speak 需要 free_text（你想说的话）";
+    const target = ctx.companions.find(c => c.id === input.target_id);
+    if (!target) return `target_id="${input.target_id}" 不在你当前所在节点，无法对话`;
+    return null;
   },
   execute(ctx, input) {
     const targetId = input.target_id as string;
@@ -228,6 +240,7 @@ export const sleepAction: ActionDefinition = {
   hint(ctx) {
     return "⭐ 睡觉（8 小时，intensity >= 3 可打断）";
   },
+  validateParams() { return null; },
   execute(ctx, _input) {
     return {
       memory: `我在 ${ctx.here.name} 躺下准备睡觉。`,
@@ -306,6 +319,12 @@ export const moveAction: ActionDefinition = {
     entries.push({ hint: "前往地图上任意地点（在 reasoning 中说清楚你为什么要去那里）" });
     return entries;
   },
+  validateParams(input, ctx) {
+    if (!input.target_node_id) return "move 需要指定 target_node_id（目的地节点 ID）";
+    const targetNode = ctx.reachable.find(n => n.id === input.target_node_id);
+    if (!targetNode) return `target_node_id="${input.target_node_id}" 不可达或不存在`;
+    return null;
+  },
   execute(ctx, input) {
     const targetId = input.target_node_id as string;
     const target = ctx.reachable.find((n) => n.id === targetId);
@@ -351,6 +370,7 @@ export const waitAction: ActionDefinition = {
     const hour = Math.floor(ctx.tick / TICKS_PER_HOUR) % 24;
     return `等待（当前 world time ${hour}:00，原地停留 5 ticks）`;
   },
+  validateParams() { return null; },
   execute(ctx, _input) {
     return {
       memory: `我在 ${ctx.here.name} 开始等待。`,
@@ -401,14 +421,19 @@ export const giveAction: ActionDefinition = {
     return ctx.companions.map((c) => {
       const rel = ctx.self.relations[c.id];
       const relLabel = rel ? rel.kinds.join("/") : "陌生人";
-      const affLabel = rel
-        ? `感情: ${rel.affection > 0 ? "+" : ""}${rel.affection}`
-        : "";
+      const imp = ctx.self.impressionBook[c.id];
+      const impLabel = imp ? `印象: ${imp.slice(0, 20)}` : "";
       return {
-        hint: `give money to ${c.name} (${relLabel}, ${affLabel})`,
+        hint: `give money to ${c.name} (${relLabel}${impLabel ? ", " + impLabel : ""})`,
         targetId: c.id,
       };
     });
+  },
+  validateParams(input, ctx) {
+    if (!input.target_id) return "give 需要指定 target_id（收款人角色 ID）";
+    if (!input.amount || input.amount <= 0) return "give 需要 amount（金额，正整数）";
+    if (input.amount > ctx.self.money) return `你没有那么多钱（当前 ${ctx.self.money}，尝试给 ${input.amount}）`;
+    return null;
   },
   execute(ctx, input) {
     const targetId = input.target_id as string;

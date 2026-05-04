@@ -38,6 +38,11 @@ export function RelationGraph({
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<ForceGraphMethods | undefined>(undefined);
   const linksRef = useRef<readonly GraphLink[]>([]);
+  // Double-click detection: track last clicked node and time
+  const lastClickRef = useRef<{ nodeId: string; time: number }>({
+    nodeId: "",
+    time: 0,
+  });
 
   // ── ResizeObserver ─────────────────────────────────────────────────
   useEffect(() => {
@@ -58,7 +63,7 @@ export function RelationGraph({
 
   const maxRelationCount = useMemo(
     () =>
-      graphData.nodes.reduce((max, n) => Math.max(max, n.relationCount), 0),
+      Math.max(1, ...graphData.nodes.map((n) => n.relationCount)),
     [graphData.nodes],
   );
 
@@ -131,22 +136,30 @@ export function RelationGraph({
   }, [focusId, graphData, size]);
 
   // ── Event handlers ─────────────────────────────────────────────────
+  // react-force-graph-2d does not expose onNodeDoubleClick /
+  // onBackgroundDoubleClick — use single-click with 300ms timer instead.
   const handleNodeClick = useCallback(
     (node: NodeObject) => {
-      onSelectCharacter(node.id as string);
+      const nodeId = node.id as string;
+      const now = Date.now();
+      const last = lastClickRef.current;
+      // Always select on single-click (instant feedback)
+      onSelectCharacter(nodeId);
+      // Detect double-click: same node within 300ms
+      if (last.nodeId === nodeId && now - last.time < 300) {
+        setFocusId((prev) => (prev === nodeId ? null : nodeId));
+        last.nodeId = "";
+        last.time = 0;
+        return;
+      }
+      last.nodeId = nodeId;
+      last.time = now;
     },
     [onSelectCharacter],
   );
 
-  const handleNodeDoubleClick = useCallback(
-    (node: NodeObject) => {
-      const id = node.id as string;
-      setFocusId((prev) => (prev === id ? null : id));
-    },
-    [],
-  );
-
-  const handleBackgroundDoubleClick = useCallback(() => {
+  const handleBackgroundClick = useCallback(() => {
+    // Clear focus on background click
     setFocusId(null);
   }, []);
 
@@ -170,6 +183,53 @@ export function RelationGraph({
     [],
   );
 
+  // ── Node canvas renderer ────────────────────────────────────────────
+  const nodeCanvasObject = useCallback(
+    (
+      node: NodeObject,
+      ctx: CanvasRenderingContext2D,
+      globalScale: number,
+    ) => {
+      const gn = node as unknown as GraphNode;
+      const nx = node.x ?? 0;
+      const ny = node.y ?? 0;
+      const r = nodeRadius(gn.relationCount, maxRelationCount);
+      const isSelected = gn.id === selectedCharacterId;
+      const isFaded = highlightIds != null && !highlightIds.has(gn.id);
+
+      ctx.globalAlpha = isFaded ? 0.12 : 1;
+
+      // Emoji avatar
+      const emoji = characterEmoji({
+        id: gn.id,
+        avatar: gn.avatar || null,
+      });
+      const emojiSize = Math.max(12, r * 1.0);
+      ctx.font = `${emojiSize}px serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(emoji, nx, ny - r * 0.15);
+
+      // Name label
+      const nameSize = Math.max(6, r * 0.42);
+      ctx.font = `500 ${nameSize}px "Courier New", monospace`;
+      ctx.fillStyle = "#d1d5db";
+      ctx.fillText(gn.name, nx, ny + r * 0.7);
+
+      // Selection ring
+      if (isSelected) {
+        ctx.beginPath();
+        ctx.arc(nx, ny, r + 4, 0, 2 * Math.PI);
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 2 / globalScale;
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 1;
+    },
+    [maxRelationCount, selectedCharacterId, highlightIds],
+  );
+
   // ── Empty state ────────────────────────────────────────────────────
   if (graphData.nodes.length === 0) {
     return (
@@ -186,7 +246,7 @@ export function RelationGraph({
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full overflow-hidden"
+      className="relative h-full w-full"
       onMouseMove={handleMouseMove}
     >
       <ForceGraph2D
@@ -195,48 +255,7 @@ export function RelationGraph({
         height={size.height}
         graphData={graphData}
         // ── nodeCanvasObject ─────────────────────────────────────────
-        nodeCanvasObject={(
-          node: NodeObject,
-          ctx: CanvasRenderingContext2D,
-          globalScale: number,
-        ) => {
-          const gn = node as unknown as GraphNode;
-          const nx = node.x ?? 0;
-          const ny = node.y ?? 0;
-          const r = nodeRadius(gn.relationCount, maxRelationCount);
-          const isSelected = gn.id === selectedCharacterId;
-          const isFaded = highlightIds != null && !highlightIds.has(gn.id);
-
-          ctx.globalAlpha = isFaded ? 0.12 : 1;
-
-          // Emoji avatar
-          const emoji = characterEmoji({
-            id: gn.id,
-            avatar: gn.avatar || null,
-          });
-          const emojiSize = Math.max(12, r * 1.0);
-          ctx.font = `${emojiSize}px serif`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(emoji, nx, ny - r * 0.15);
-
-          // Name label below emoji
-          const nameSize = Math.max(6, r * 0.42);
-          ctx.font = `500 ${nameSize}px "Courier New", monospace`;
-          ctx.fillStyle = "#d1d5db";
-          ctx.fillText(gn.name, nx, ny + r * 0.7);
-
-          // Selection ring
-          if (isSelected) {
-            ctx.beginPath();
-            ctx.arc(nx, ny, r + 4, 0, 2 * Math.PI);
-            ctx.strokeStyle = "#f59e0b";
-            ctx.lineWidth = 2 / globalScale;
-            ctx.stroke();
-          }
-
-          ctx.globalAlpha = 1;
-        }}
+        nodeCanvasObject={nodeCanvasObject}
         // ── linkCanvasObject ─────────────────────────────────────────
         linkCanvasObject={(
           link: LinkObject,
@@ -282,8 +301,7 @@ export function RelationGraph({
         }
         // ── Interaction ──────────────────────────────────────────────
         onNodeClick={handleNodeClick}
-        {...({ onNodeDoubleClick: handleNodeDoubleClick } as any)}
-        {...({ onBackgroundDoubleClick: handleBackgroundDoubleClick } as any)}
+        onBackgroundClick={handleBackgroundClick}
         onLinkHover={handleLinkHover}
         // ── Simulation config ────────────────────────────────────────
         cooldownTicks={100}

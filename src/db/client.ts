@@ -77,6 +77,11 @@ const CHAR_MIGRATIONS: Array<[string, string]> = [
   ["sickness_json", "ALTER TABLE characters ADD COLUMN sickness_json TEXT"],
   ["speaking_style", "ALTER TABLE characters ADD COLUMN speaking_style TEXT"],
   ["active_conversation_ids_json", "ALTER TABLE characters ADD COLUMN active_conversation_ids_json TEXT NOT NULL DEFAULT '[]'"],
+  ["impression_book_json", "ALTER TABLE characters ADD COLUMN impression_book_json TEXT NOT NULL DEFAULT '{}'"],
+  ["short_term_goal_json", "ALTER TABLE characters ADD COLUMN short_term_goal_json TEXT"],
+  ["long_term_goal_json", "ALTER TABLE characters ADD COLUMN long_term_goal_json TEXT"],
+  ["liked", "ALTER TABLE characters ADD COLUMN liked TEXT NOT NULL DEFAULT ''"],
+  ["disliked", "ALTER TABLE characters ADD COLUMN disliked TEXT NOT NULL DEFAULT ''"],
 ];
 
 /** Keep in sync with migrate.ts NODES_NEW_COLUMNS. */

@@ -7,7 +7,7 @@ declare global {
   // eslint-disable-next-line no-var
   var __agent_world_llm__: OpenAI | undefined;
   // eslint-disable-next-line no-var
-  var __agent_world_llm_clients__: Record<string, OpenAI> | undefined;
+  var __agent_world_llm_clients__: Map<string, OpenAI> | undefined;
 }
 
 export interface LLMProvider {
@@ -127,6 +127,7 @@ export function setActiveProvider(id: string): LLMProvider {
     .where(eq(schema.llmProviders.id, id))
     .run();
 
+  globalThis.__agent_world_llm__ = undefined;
   globalThis.__agent_world_llm_clients__ = undefined;
 
   return getProvider(id)!;
@@ -174,20 +175,20 @@ export function listEntryConfigs(allEntryNames: string[]): EntryConfig[] {
 /** Batch upsert entry configs. */
 export function batchUpsertEntryConfigs(configs: { entryName: string; providerId: string | null; thinkingEnabled: boolean }[]): void {
   const now = new Date();
-  db.transaction(() => {
+  db.transaction((tx) => {
     for (const c of configs) {
-      const existing = db
+      const existing = tx
         .select({ id: schema.llmEntryConfigs.id })
         .from(schema.llmEntryConfigs)
         .where(eq(schema.llmEntryConfigs.id, c.entryName))
         .get();
       if (existing) {
-        db.update(schema.llmEntryConfigs)
+        tx.update(schema.llmEntryConfigs)
           .set({ providerId: c.providerId, thinkingEnabled: c.thinkingEnabled, updatedAt: now })
           .where(eq(schema.llmEntryConfigs.id, c.entryName))
           .run();
       } else {
-        db.insert(schema.llmEntryConfigs)
+        tx.insert(schema.llmEntryConfigs)
           .values({ id: c.entryName, providerId: c.providerId, thinkingEnabled: c.thinkingEnabled, createdAt: now, updatedAt: now })
           .run();
       }

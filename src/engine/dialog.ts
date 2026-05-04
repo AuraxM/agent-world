@@ -11,9 +11,20 @@
  */
 import { randomUUID } from "node:crypto";
 import type { Language } from "@/config/types";
-import type { Action, Character, MapNode, Memory, WorldEvent } from "@/domain/types";
-import type { DialogTurn } from "@/domain/types";
+import type {
+  Action,
+  Character,
+  Conversation,
+  DialogTurn,
+  EndConversationPayload,
+  MapNode,
+  Memory,
+  WorldEvent,
+} from "@/domain/types";
 import { createLogger } from "@/util/logger";
+import { injectTimeMessage } from "@/llm/prompt";
+import { db, schema } from "@/db/client";
+import { eq, and } from "drizzle-orm";
 const log = createLogger("dialog");
 
 // ---------------------------------------------------------------------------
@@ -34,14 +45,8 @@ export interface DialogOutcome {
   participants: [string, string];
   transcript: DialogTurn[];
   summary: string;
-  endedBy: "natural" | "leave" | "hard_limit" | "turn_failure";
+  endedBy: "natural" | "end_tool" | "passive";
   endedByCharacterId?: string;
-}
-
-export interface DialogOutcomeInternal {
-  outcome: DialogOutcome;
-  requesterId: string;
-  responderId: string;
 }
 
 export interface MemoryWrite {
@@ -53,6 +58,7 @@ export interface DialogPhaseResult {
   finalActions: Action[];
   dialogEvents: WorldEvent[];
   memoryWrites: MemoryWrite[];
+  updatedConversations: Conversation[];
 }
 
 // ---------------------------------------------------------------------------
@@ -82,10 +88,11 @@ export type TurnDecideFn = (input: {
   self: Character;
   peer: Character;
   transcript: DialogTurn[];
-  isSoftLimit: boolean;
-  turnCount: number;
   language: Language;
-}) => Promise<DialogTurn>;
+}) => Promise<
+  | { kind: "turn"; turn: DialogTurn }
+  | { kind: "end"; payload: EndConversationPayload }
+>;
 
 export type SummaryDecideFn = (input: {
   openerName: string;
@@ -121,6 +128,52 @@ function makeMemory(characterId: string, tick: number, importance: number, conte
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
+}
+
+// ---------------------------------------------------------------------------
+// Conversation persistence helpers
+// ---------------------------------------------------------------------------
+
+export function loadConversations(worldId: string): Conversation[] {
+  const rows = db
+    .select()
+    .from(schema.conversations)
+    .where(eq(schema.conversations.worldId, worldId))
+    .all();
+  return rows.map((r) => JSON.parse(r.payloadJson) as Conversation);
+}
+
+export function saveConversation(conv: Conversation): void {
+  const now = new Date();
+  db
+    .insert(schema.conversations)
+    .values({
+      id: conv.id,
+      worldId: conv.worldId,
+      payloadJson: JSON.stringify(conv),
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [schema.conversations.worldId, schema.conversations.id],
+      set: {
+        payloadJson: JSON.stringify(conv),
+        updatedAt: now,
+      },
+    })
+    .run();
+}
+
+export function deleteConversation(worldId: string, id: string): void {
+  db
+    .delete(schema.conversations)
+    .where(
+      and(
+        eq(schema.conversations.worldId, worldId),
+        eq(schema.conversations.id, id),
+      ),
+    )
+    .run();
 }
 
 // ---------------------------------------------------------------------------
@@ -212,11 +265,10 @@ export function pairSpeakRequests(
 }
 
 // ---------------------------------------------------------------------------
-// runOneDialog — per-group dialog expansion (private)
+// Tick-based dialog expansion
 // ---------------------------------------------------------------------------
 
-const HARD_LIMIT = 12;
-const SOFT_LIMIT = 8;
+const TURNS_PER_TICK = 3;
 
 async function retryOnce<T>(fn: () => Promise<T>): Promise<T> {
   let lastError: unknown;
@@ -231,87 +283,109 @@ async function retryOnce<T>(fn: () => Promise<T>): Promise<T> {
   throw lastError;
 }
 
-async function runOneDialog(
-  openerId: string,
-  responderId: string,
-  openingLine: string,
+interface TickDialogResult {
+  transcript: DialogTurn[];
+  ended: boolean;
+  endedBy?: "initiator" | "acceptor";
+}
+
+async function runOneTickDialog(
+  conv: Conversation,
   chars: Map<string, Character>,
   turnDecide: TurnDecideFn,
-  summaryDecide: SummaryDecideFn,
   language: Language,
-): Promise<DialogOutcomeInternal> {
-  const opener = chars.get(openerId)!;
-  const responder = chars.get(responderId)!;
+  currentTick: number,
+): Promise<TickDialogResult> {
+  const initiator = chars.get(conv.initiatorId)!;
+  const acceptor = chars.get(conv.acceptorId)!;
+  const transcript: DialogTurn[] = [...conv.transcript];
 
-  const transcript: DialogTurn[] = [
-    { speakerId: openerId, kind: "say", line: openingLine },
-  ];
+  // Who speaks first this tick (alternate from last speaker)
+  const lastSpeakerId =
+    transcript.length > 0
+      ? transcript[transcript.length - 1].speakerId
+      : conv.initiatorId;
+  const firstSpeakerId =
+    lastSpeakerId === conv.initiatorId ? conv.acceptorId : conv.initiatorId;
 
-  const summarizeOrFallback = async (
-    endedBy: DialogOutcome["endedBy"],
-    endedByCharacterId?: string,
-  ): Promise<DialogOutcomeInternal> => {
-    let summary: string;
+  for (let round = 0; round < TURNS_PER_TICK * 2; round++) {
+    const speakerId =
+      round % 2 === 0
+        ? firstSpeakerId
+        : firstSpeakerId === conv.initiatorId
+          ? conv.acceptorId
+          : conv.initiatorId;
+    const speaker = chars.get(speakerId)!;
+    const peer = speakerId === conv.initiatorId ? acceptor : initiator;
+
+    let result;
     try {
-      summary = await retryOnce(() =>
-        summaryDecide({
-          openerName: opener.name,
-          openerId: openerId,
-          responderName: responder.name,
-          responderId: responderId,
-          transcript,
-          language,
-        }),
-      );
+      result = await turnDecide({ self: speaker, peer, transcript, language });
     } catch {
-      summary = `（摘要生成失败：双方聊了 ${transcript.length} 句）`;
+      return { transcript, ended: true };
     }
-    return {
-      outcome: {
-        participants: [openerId, responderId],
+
+    if (result.kind === "end") {
+      const isSixthSentence = round === TURNS_PER_TICK * 2 - 1;
+      if (result.payload.closingLine) {
+        transcript.push({
+          speakerId,
+          kind: "say",
+          line: result.payload.closingLine,
+          reasoning: result.payload.reasoning,
+        });
+      }
+      if (isSixthSentence) {
+        // 3+4 rule: other party gets one extra turn
+        const otherId =
+          speakerId === conv.initiatorId ? conv.acceptorId : conv.initiatorId;
+        const other = chars.get(otherId)!;
+        const otherPeer = otherId === conv.initiatorId ? acceptor : initiator;
+        try {
+          const extraResult = await turnDecide({
+            self: other,
+            peer: otherPeer,
+            transcript,
+            language,
+          });
+          if (extraResult.kind === "turn") {
+            transcript.push(extraResult.turn);
+          }
+        } catch {
+          // ignore extra round failure
+        }
+        // Inject time message after extra round
+        transcript.push({
+          speakerId: "__system__",
+          kind: "say",
+          line: injectTimeMessage({ tick: currentTick, tickStarted: conv.tickStarted, language }),
+        });
+      } else {
+        // End before 6th sentence — still inject time
+        transcript.push({
+          speakerId: "__system__",
+          kind: "say",
+          line: injectTimeMessage({ tick: currentTick, tickStarted: conv.tickStarted, language }),
+        });
+      }
+      return {
         transcript,
-        summary,
-        endedBy,
-        endedByCharacterId,
-      },
-      requesterId: openerId,
-      responderId: responderId,
-    };
-  };
-
-  while (transcript.length < HARD_LIMIT) {
-    const lastSpeakerId = transcript[transcript.length - 1].speakerId;
-    const nextSpeakerId = lastSpeakerId === openerId ? responderId : openerId;
-    const nextSpeaker = chars.get(nextSpeakerId)!;
-    const peer = nextSpeakerId === responderId ? opener : responder;
-    const isSoftLimit = transcript.length >= SOFT_LIMIT;
-
-    let turn: DialogTurn;
-    try {
-      turn = await retryOnce(() =>
-        turnDecide({
-          self: nextSpeaker,
-          peer,
-          transcript,
-          isSoftLimit,
-          turnCount: transcript.length,
-          language,
-        }),
-      );
-    } catch {
-      return summarizeOrFallback("turn_failure");
+        ended: true,
+        endedBy: speakerId === conv.initiatorId ? "initiator" : "acceptor",
+      };
     }
 
-    if (turn.kind === "leave" || (turn.kind === "say" && (!turn.line || !turn.line.trim()))) {
-      transcript.push({ speakerId: nextSpeakerId, kind: "leave" });
-      return summarizeOrFallback("leave", nextSpeakerId);
-    }
-    transcript.push(turn);
+    transcript.push(result.turn);
   }
 
-  return summarizeOrFallback(
-    transcript.length >= HARD_LIMIT ? "hard_limit" : "natural",
-  );
+  // After 6 sentences, inject time message
+  transcript.push({
+    speakerId: "__system__",
+    kind: "say",
+    line: injectTimeMessage({ tick: currentTick, tickStarted: conv.tickStarted, language }),
+  });
+
+  return { transcript, ended: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -330,25 +404,65 @@ export interface RunDialogPhaseInput {
   turnDecide: TurnDecideFn;
   summaryDecide: SummaryDecideFn;
   salvageDecide: SalvageDecideFn;
+  ongoingConversations: Conversation[];
 }
 
 export async function runDialogPhase(
   input: RunDialogPhaseInput,
 ): Promise<DialogPhaseResult> {
-  const { rawActions, characters, nodes, perceptions, tick } = input;
+  const { rawActions, characters, nodes, perceptions, tick, ongoingConversations } = input;
   const charById = new Map(characters.map((c) => [c.id, c]));
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
-  const pairing = pairSpeakRequests(rawActions, characters);
   const memoryWrites: MemoryWrite[] = [];
   const dialogEvents: WorldEvent[] = [];
   const finalActionsMap = new Map<string, Action>();
-
-  // Track which actors were consumed by dialog
   const consumedActorIds = new Set<string>();
+  const updatedConversations: Conversation[] = [];
+
+  // ── Part 1: Resume ongoing conversations ──
+  for (const conv of ongoingConversations) {
+    if (conv.status === "ended") continue;
+
+    const initiator = charById.get(conv.initiatorId);
+    const acceptor = charById.get(conv.acceptorId);
+
+    if (!initiator || !acceptor) {
+      conv.status = "ended";
+      conv.endedBy = "passive";
+      continue;
+    }
+    if (initiator.locationId !== acceptor.locationId) {
+      conv.status = "ended";
+      conv.endedBy = "passive";
+      const sysMsg: DialogTurn = {
+        speakerId: "__system__",
+        kind: "say",
+        line: `${acceptor.name} 离开了当前场景，对话终止。`,
+      };
+      conv.transcript.push(sysMsg);
+      continue;
+    }
+
+    const tickResult = await runOneTickDialog(conv, charById, input.turnDecide, input.language, tick);
+    conv.transcript = tickResult.transcript;
+    conv.currentTickRounds = TURNS_PER_TICK;
+
+    if (tickResult.ended) {
+      conv.status = "ended";
+      conv.endedBy = tickResult.endedBy;
+    } else if (conv.status === "active") {
+      conv.status = "ending";
+    }
+
+    consumedActorIds.add(conv.initiatorId);
+    updatedConversations.push(conv);
+  }
+
+  // ── Part 2: Process new speak actions ──
+  const pairing = pairSpeakRequests(rawActions, characters);
   const salvageTasks: Array<() => Promise<{ actorId: string; action: Action }>> = [];
 
-  // ── Process autoFails ──
   for (const af of pairing.autoFails) {
     consumedActorIds.add(af.requester);
     const char = charById.get(af.requester)!;
@@ -356,20 +470,13 @@ export async function runDialogPhase(
     if (af.reason === "cross_node") reason = `想找对方说话但她不在这里`;
     else if (af.reason === "target_left") reason = `想找对方说话但她已经走了`;
     else reason = `想开口又咽了回去`;
-
     memoryWrites.push(makeMemory(af.requester, tick, 1, reason));
-
     salvageTasks.push(() =>
-      input.salvageDecide({
-        character: char,
-        tick,
-        rejectReason: reason,
-        language: input.language,
-      }).then((action) => ({ actorId: af.requester, action })),
+      input.salvageDecide({ character: char, tick, rejectReason: reason, language: input.language })
+        .then((action) => ({ actorId: af.requester, action })),
     );
   }
 
-  // ── Process pending acceptances (parallel) ──
   const acceptResults = await Promise.all(
     pairing.pendingAcceptances.map(async (pa) => {
       const target = charById.get(pa.target)!;
@@ -379,213 +486,147 @@ export async function runDialogPhase(
         (c) => c.id !== target.id && c.locationId === target.locationId,
       );
       const perceived = perceptions.get(target.id) ?? [];
-
       let result: AcceptDecideResult;
       try {
         result = await input.acceptDecide({
-          character: target,
-          requesterName: requester.name,
-          requesterId: pa.requester,
-          freeText: pa.freeText,
-          here,
-          perceived,
-          companions,
-          tick,
-          language: input.language,
+          character: target, requesterName: requester.name, requesterId: pa.requester,
+          freeText: pa.freeText, here, perceived, companions, tick, language: input.language,
         });
       } catch {
-        result = {
-          type: "reject_speak",
-          targetId: pa.requester,
-          reasoning: "决策失败默认拒绝",
-          selfImportance: 1,
-        };
+        result = { type: "reject_speak", targetId: pa.requester, reasoning: "决策失败默认拒绝", selfImportance: 1 };
       }
-
-      // Validate type
       if (result.type !== "accept_speak" && result.type !== "reject_speak") {
-        result = {
-          type: "reject_speak",
-          targetId: pa.requester,
-          reasoning: "决策输出非法 type",
-          selfImportance: 1,
-        };
+        result = { type: "reject_speak", targetId: pa.requester, reasoning: "决策输出非法 type", selfImportance: 1 };
       }
-
       return { pa, result };
     }),
   );
 
-  // ── Split accepted vs rejected ──
-  const acceptedDialogGroups: Array<{
-    requesterId: string;
-    responderId: string;
-    openingLine: string;
-  }> = [];
+  const newDialogGroups: Array<{ requesterId: string; responderId: string; openingLine: string }> = [];
   for (const { pa, result } of acceptResults) {
     consumedActorIds.add(pa.requester);
-
     if (result.type === "accept_speak") {
-      acceptedDialogGroups.push({
-        requesterId: pa.requester,
-        responderId: pa.target,
-        openingLine: pa.freeText,
-      });
+      newDialogGroups.push({ requesterId: pa.requester, responderId: pa.target, openingLine: pa.freeText });
     } else {
-      // Rejected
       const requester = charById.get(pa.requester)!;
       const targetName = charById.get(pa.target)!.name;
-
-      log.info("对话被拒", {
-        A: requester.name,
-        B: targetName,
-      });
-
-      memoryWrites.push(
-        makeMemory(pa.requester, tick, 2, `我邀请 ${targetName} 说话被拒了`),
-      );
-      memoryWrites.push(
-        makeMemory(pa.target, tick, 1, `我拒绝了 ${requester.name} 的搭话邀请`),
-      );
-
+      memoryWrites.push(makeMemory(pa.requester, tick, 2, `我邀请 ${targetName} 说话被拒了`));
+      memoryWrites.push(makeMemory(pa.target, tick, 1, `我拒绝了 ${requester.name} 的搭话邀请`));
       salvageTasks.push(() =>
-        input.salvageDecide({
-          character: requester,
-          tick,
-          rejectReason: `${targetName} 拒绝了你的对话请求。`,
-          language: input.language,
-        }).then((action) => ({ actorId: pa.requester, action })),
+        input.salvageDecide({ character: requester, tick, rejectReason: `${targetName} 拒绝了你的对话请求。`, language: input.language })
+          .then((action) => ({ actorId: pa.requester, action })),
       );
     }
   }
 
-  // ── Process mutual pairs → auto-accepted dialog groups ──
   for (const mp of pairing.mutualPairs) {
     consumedActorIds.add(mp.a);
     consumedActorIds.add(mp.b);
-
-    // Random opener
     const openerFirst = Math.random() < 0.5;
-    acceptedDialogGroups.push({
+    newDialogGroups.push({
       requesterId: openerFirst ? mp.a : mp.b,
       responderId: openerFirst ? mp.b : mp.a,
       openingLine: openerFirst ? mp.aFreeText : mp.bFreeText,
     });
   }
 
-  // ── Expand dialogs (parallel per-group) + salvages (parallel) ──
-  const [dialogOutcomes, salvageResults] = await Promise.all([
-    Promise.all(
-      acceptedDialogGroups.map((dg) =>
-        runOneDialog(
-          dg.requesterId,
-          dg.responderId,
-          dg.openingLine,
-          charById,
-          input.turnDecide,
-          input.summaryDecide,
-          input.language,
-        ),
-      ),
-    ),
-    Promise.all(salvageTasks.map((t) => t())),
-  ]);
+  // ── Part 3: Create new conversations, run tick 1 ──
+  for (const dg of newDialogGroups) {
+    const worldId = charById.get(dg.requesterId)!.worldId;
+    const conv: Conversation = {
+      id: `conv-${randomUUID().slice(0, 8)}`,
+      worldId,
+      initiatorId: dg.requesterId,
+      acceptorId: dg.responderId,
+      transcript: [{ speakerId: dg.requesterId, kind: "say", line: dg.openingLine }],
+      tickStarted: tick,
+      currentTickRounds: 0,
+      status: "active",
+    };
+    const tickResult = await runOneTickDialog(conv, charById, input.turnDecide, input.language, tick);
+    conv.transcript = tickResult.transcript;
+    conv.currentTickRounds = TURNS_PER_TICK;
+    if (tickResult.ended) {
+      conv.status = "ended";
+      conv.endedBy = tickResult.endedBy;
+    } else {
+      conv.status = "ending";
+    }
+    updatedConversations.push(conv);
+    consumedActorIds.add(conv.initiatorId);
+  }
 
-  // ── Build dialog events + memories for accepted dialogs ──
-  for (const dio of dialogOutcomes) {
-    const o = dio.outcome;
-    const opener = charById.get(dio.requesterId)!;
-    const responder = charById.get(dio.responderId)!;
+  // ── Part 4: Salvage decisions ──
+  const salvageResults = await Promise.all(salvageTasks.map((t) => t()));
 
-    log.info("对话开始", {
-      A: opener.name,
-      B: responder.name,
-    });
-
+  // ── Part 5: Summarize ended conversations ──
+  for (const conv of updatedConversations) {
+    if (conv.status !== "ended") continue;
+    const opener = charById.get(conv.initiatorId)!;
+    const responder = charById.get(conv.acceptorId)!;
+    let summary: string;
+    try {
+      summary = await retryOnce(() =>
+        input.summaryDecide({
+          openerName: opener.name, openerId: conv.initiatorId,
+          responderName: responder.name, responderId: conv.acceptorId,
+          transcript: conv.transcript, language: input.language,
+        }),
+      );
+    } catch {
+      summary = `（摘要生成失败：双方聊了 ${conv.transcript.length} 句）`;
+    }
     const maxImportance = clamp(
       Math.max(
-        rawActions.find((a) => a.actorId === dio.requesterId)?.selfImportance ?? 2,
-        rawActions.find((a) => a.actorId === dio.responderId)?.selfImportance ?? 2,
+        rawActions.find((a) => a.actorId === conv.initiatorId)?.selfImportance ?? 2,
+        rawActions.find((a) => a.actorId === conv.acceptorId)?.selfImportance ?? 2,
       ),
-      2,
-      4,
+      2, 4,
     );
-
-    memoryWrites.push(
-      makeMemory(
-        dio.requesterId,
-        tick,
-        maxImportance,
-        `和 ${responder.name} 聊了：${o.summary}`,
-      ),
-    );
-    memoryWrites.push(
-      makeMemory(
-        dio.responderId,
-        tick,
-        maxImportance,
-        `和 ${opener.name} 聊了：${o.summary}`,
-      ),
-    );
-
+    memoryWrites.push(makeMemory(conv.initiatorId, tick, maxImportance, `和 ${responder.name} 聊了：${summary}`));
+    memoryWrites.push(makeMemory(conv.acceptorId, tick, maxImportance, `和 ${opener.name} 聊了：${summary}`));
     dialogEvents.push({
       id: `evt-${randomUUID().slice(0, 8)}`,
-      worldId: opener.worldId,
-      tick,
-      category: "social",
-      description: o.summary,
-      participants: [dio.requesterId, dio.responderId],
-      source: "actor",
-      intensity: 2,
-      scope: "node",
-      nodeId: opener.locationId,
-      duration: 1,
-      dialogTranscript: o.transcript,
-      dialogEndedBy: o.endedBy,
+      worldId: opener.worldId, tick, category: "social", description: summary,
+      participants: [conv.initiatorId, conv.acceptorId], source: "actor", intensity: 2,
+      scope: "node", nodeId: opener.locationId, duration: 1,
+      dialogTranscript: conv.transcript,
+      dialogEndedBy: conv.endedBy === "passive" ? "passive" : (conv.endedBy ? "end_tool" : "natural"),
     });
-
-    log.info("对话结束", {
-      轮数: o.transcript.length,
-      A: opener.name,
-      B: responder.name,
-      endBy: o.endedBy,
-    });
+    // Release from conversation
+    const initiator = charById.get(conv.initiatorId);
+    if (initiator) initiator.activeConversationIds = initiator.activeConversationIds.filter((id) => id !== conv.id);
+    const acceptor = charById.get(conv.acceptorId);
+    if (acceptor) acceptor.activeConversationIds = acceptor.activeConversationIds.filter((id) => id !== conv.id);
   }
 
-  // ── Assign finalActions ──
-  // Consumed actors in successful dialog → wait placeholder
-  for (const dio of dialogOutcomes) {
-    const responderName = charById.get(dio.responderId)!.name;
-    const openerName = charById.get(dio.requesterId)!.name;
-    finalActionsMap.set(dio.requesterId, {
-      type: "wait",
-      actorId: dio.requesterId,
-      reasoning: `刚和 ${responderName} 聊完`,
-      selfImportance: 2,
-      skipExecution: true,
-    });
-    finalActionsMap.set(dio.responderId, {
-      type: "wait",
-      actorId: dio.responderId,
-      reasoning: `刚和 ${openerName} 聊完`,
-      selfImportance: 2,
-      skipExecution: true,
+  const activeConversations = updatedConversations.filter((c) => c.status !== "ended");
+  const endedConversations = updatedConversations.filter((c) => c.status === "ended");
+
+  // ── Part 6: Assign finalActions ──
+  for (const conv of activeConversations) {
+    finalActionsMap.set(conv.initiatorId, {
+      type: "wait", actorId: conv.initiatorId,
+      reasoning: `正在和 ${charById.get(conv.acceptorId)!.name} 对话`,
+      selfImportance: 2, skipExecution: true,
     });
   }
-
-  // Salvaged actors → their salvage action
+  for (const conv of endedConversations) {
+    finalActionsMap.set(conv.initiatorId, {
+      type: "wait", actorId: conv.initiatorId,
+      reasoning: `刚和 ${charById.get(conv.acceptorId)!.name} 聊完`,
+      selfImportance: 2, skipExecution: true,
+    });
+  }
   for (const sr of salvageResults) {
     finalActionsMap.set(sr.actorId, sr.action);
   }
-
-  // Non-speak actors → keep their original action
   for (const a of rawActions) {
     if (!finalActionsMap.has(a.actorId)) {
       finalActionsMap.set(a.actorId, a);
     }
   }
-
   const finalActions = characters.map((c) => finalActionsMap.get(c.id)!);
 
-  return { finalActions, dialogEvents, memoryWrites };
+  return { finalActions, dialogEvents, memoryWrites, updatedConversations: activeConversations };
 }

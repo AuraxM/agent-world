@@ -31,7 +31,7 @@ import { executeActions } from "./execute";
 import { deriveAggregatedFacts, type AggregatedFacts } from "./facts";
 import { findPath } from "./pathfinding";
 import { dispatchPerception } from "./perception";
-import { decayVitals, evolveEmotions } from "./vitals-emotion";
+import { decayVitals, evolveEmotions, checkSickness } from "./vitals-emotion";
 import { DEFAULT_SLEEP_WINDOW, inSleepWindow, timeOfDay } from "@/llm/prompt";
 import {
   appendEventsLog,
@@ -246,6 +246,12 @@ export async function tick(
 
   // 1. vitals decay
   allEvents.push(...decayVitals({ characters, worldId, tick: fromTick }));
+
+  // Daily sickness check (once per game day)
+  if (fromTick % 120 === 0) {
+    allEvents.push(...checkSickness({ characters, worldId, tick: fromTick }));
+  }
+
   const tAfterVitals = Date.now();
 
   // 2. emotion evolution

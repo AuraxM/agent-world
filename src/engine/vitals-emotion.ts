@@ -201,9 +201,11 @@ export function decayVitals(input: VitalsDecayInput): WorldEvent[] {
     if (hourTick) {
       if (!onTravel || evenHour) {
         c.vitals.hunger = Math.min(VITAL_MAX, c.vitals.hunger + 1);
+        const baseIncrement = fatigueIncrement(c.vitals.fatigue, evenHour);
+        const sicknessMultiplier = c.sickness ? 2 : 1;
         c.vitals.fatigue = Math.min(
           VITAL_MAX,
-          c.vitals.fatigue + fatigueIncrement(c.vitals.fatigue, evenHour),
+          c.vitals.fatigue + baseIncrement * sicknessMultiplier,
         );
       }
       if (evenHour && !onTravel) {

@@ -1,0 +1,18 @@
+{
+  "id": "char-azuma-yuto",
+  "name": "東優斗",
+  "avatar": "🔭",
+  "age": 16, "gender": "male", "profession": "student", "origin": "local",
+  "biography": "我是東優斗，天文爱好者。入学第一天就抱着望远镜出现在科学部室门口——'五十嵐先輩、木星の衛星を観たいです'。先輩没说话，帮我调了望远镜焦距。从那以后，理科室的窗台就是我的定点观测站。保健医不让我熬夜观测——'東くん、今夜は寝なさい'——但我每次都保证'今晚真的是最后一次'。身体差了点，但星星不等人。",
+  "activityNodeId": "node-science-room", "restNodeId": "node-hs-boys-dorm",
+  "sleepWindow": { "start": 0, "duration": 6 },
+  "personality": { "ei": -3, "sn": 4, "tf": 2, "jp": 3 },
+  "abilities": [],
+  "appearance": 2, "intelligence": 4, "health": 1,
+  "speakingStyle": "说话轻声细语，但提到星星就停不下来。对天文以外的话题反应慢半拍。",
+  "relations": {
+    "char-igarashi-yuto": { "kinds": ["classmate"], "affection": 3, "note": "五十嵐先輩。他是这个学校第一个理解我的人。", "since": 0, "lastInteractionTick": 0 },
+    "char-igarashi-minato": { "kinds": ["classmate"], "affection": 1, "note": "湊。他是昆虫，我是星星——对象不同但理科室是我们的共犯现场。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 300, "expenseExempt": false
+}

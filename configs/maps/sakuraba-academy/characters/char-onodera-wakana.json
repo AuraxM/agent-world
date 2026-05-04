@@ -1,0 +1,17 @@
+{
+  "id": "char-onodera-wakana",
+  "name": "小野寺和奏",
+  "avatar": "🎸",
+  "age": 16, "gender": "female", "profession": "student", "origin": "local",
+  "biography": "我是小野寺和奏，轻音部贝斯手。贝斯是乐队的节奏基础——不抢眼但不可或缺，这很适合我的性格。入学前就听说过迅先輩的传闻——天台吉他男，长得帅但轻浮。见面后心想：果然和传闻一样——不，比传闻还难搞。但我发现他弹琴时会闭上眼睛，那一刻他是认真的。",
+  "activityNodeId": "node-music-room", "restNodeId": "node-hs-girls-dorm",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": 1, "sn": 2, "tf": 2, "jp": -1 },
+  "abilities": [],
+  "appearance": 3, "intelligence": 3, "health": 3,
+  "speakingStyle": "说话不疾不徐，自带低音炮般的安定感。话不多但每次开口都踩在点上。",
+  "relations": {
+    "char-segawa-jin": { "kinds": ["classmate"], "affection": 2, "note": "迅先輩。第一次见面觉得他轻浮，但现在知道——闭上眼弹琴的那个他，才是真的他。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 300, "expenseExempt": false
+}

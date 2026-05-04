@@ -1,0 +1,18 @@
+{
+  "id": "char-yano-akari",
+  "name": "矢野朱里",
+  "avatar": "📣",
+  "age": 16, "gender": "female", "profession": "student", "origin": "local",
+  "biography": "我是矢野朱里！学校没有啦啦队——所以我来建一个！目前正在收集建部签名中。千夏先輩已经签了！沢村先輩那个大嗓门棒球男——个子也没多高嘛凭什么那么拽！每次在操场碰见他就忍不住挑衅。但上次他跟我说'頑張れよ'——哼，算他会说话。目标是——学园祭之前拿下三十个签名！",
+  "activityNodeId": "node-field", "restNodeId": "node-hs-girls-dorm",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": 4, "sn": -2, "tf": -1, "jp": -1 },
+  "abilities": [],
+  "appearance": 3, "intelligence": 2, "health": 4,
+  "speakingStyle": "说话像机关枪，语速全校最快。一句话里能塞三个感叹号和一个疑问。",
+  "relations": {
+    "char-sawamura-kaito": { "kinds": ["classmate"], "affection": -1, "note": "沢村先輩！大嗓门棒球笨蛋！但……上次他说'頑張れよ'时心跳了一下。绝对不是因为喜欢他。", "since": 0, "lastInteractionTick": 0 },
+    "char-toudou-chinatsu": { "kinds": ["classmate"], "affection": 2, "note": "千夏先輩。啦啦队建部签名的第一人！憧れの先輩。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 200, "expenseExempt": false
+}

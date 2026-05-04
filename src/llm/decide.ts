@@ -22,6 +22,7 @@ import type { Language } from "@/config/types";
 import type { DecideFn, DecideInput } from "@/engine/tick";
 import { getThinkingEnabled } from "@/engine/settings";
 import { getLLMClient, getModelName, hasApiKey } from "./client";
+import { getDefaultProviderId } from "./providers";
 import {
   buildAcceptDecisionPrompt,
   buildDialogSummaryPrompt,
@@ -69,13 +70,14 @@ async function callLLMWithRetry(
   tools: Array<{ type: "function"; function: { name: string; description: string; parameters: Record<string, unknown> } }>,
   fallbackLabel: string,
 ): Promise<{ actionType: string; data: Record<string, any> }> {
-  const client = getLLMClient();
+  const providerId = getDefaultProviderId();
+  const client = getLLMClient(providerId);
   const extra: Record<string, unknown> = {};
   if (getThinkingEnabled()) extra.thinking = { type: "enabled" };
 
   for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
     const response = await client.chat.completions.create({
-      model: getModelName(),
+      model: getModelName(providerId),
       max_tokens: MAX_OUTPUT_TOKENS,
       messages: messages as any,
       tools,
@@ -207,7 +209,8 @@ export interface DialogTurnInput {
 export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn> {
   if (!hasApiKey()) throw new Error("没有激活的 LLM provider");
 
-  const client = getLLMClient();
+  const providerId = getDefaultProviderId();
+  const client = getLLMClient(providerId);
   const language: Language = input.language ?? "zh";
 
   const prompt = buildDialogTurnPrompt({
@@ -232,7 +235,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurn>
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
-        model: getModelName(),
+        model: getModelName(providerId),
         max_tokens: 1024,
         messages: [
           {
@@ -288,7 +291,8 @@ export interface DialogSummaryInput {
 export async function llmDialogSummarize(input: DialogSummaryInput): Promise<string> {
   if (!hasApiKey()) return `（摘要生成失败：双方聊了 ${input.transcript.length} 句）`;
 
-  const client = getLLMClient();
+  const providerId = getDefaultProviderId();
+  const client = getLLMClient(providerId);
   const language: Language = input.language ?? "zh";
 
   const prompt = buildDialogSummaryPrompt({
@@ -312,7 +316,7 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<str
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
-        model: getModelName(),
+        model: getModelName(providerId),
         max_tokens: 512,
         messages: [
           {
@@ -355,7 +359,8 @@ export async function llmMemoryCompress(args: {
 }): Promise<string> {
   if (!hasApiKey()) return "（摘要生成失败：无可用的 LLM provider）";
 
-  const client = getLLMClient();
+  const providerId = getDefaultProviderId();
+  const client = getLLMClient(providerId);
   const language: Language = args.language ?? "zh";
 
   const tool: ChatCompletionTool = {
@@ -370,7 +375,7 @@ export async function llmMemoryCompress(args: {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
-        model: getModelName(),
+        model: getModelName(providerId),
         max_tokens: 512,
         messages: [
           {
@@ -426,7 +431,8 @@ export async function llmAcceptDecide(
     return { type: "reject_speak", targetId: input.requesterId, reasoning: "决策失败默认拒绝", selfImportance: 1 };
   }
 
-  const client = getLLMClient();
+  const providerId = getDefaultProviderId();
+  const client = getLLMClient(providerId);
   const language: Language = input.language ?? "zh";
 
   const prompt = buildAcceptDecisionPrompt({
@@ -452,7 +458,7 @@ export async function llmAcceptDecide(
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
-        model: getModelName(),
+        model: getModelName(providerId),
         max_tokens: 512,
         messages: [
           {

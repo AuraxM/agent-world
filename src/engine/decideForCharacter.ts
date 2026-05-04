@@ -172,6 +172,7 @@ export async function decideForCharacter(
       const { hasApiKey, getLLMClient, getModelName } = await import(
         "@/llm/client"
       );
+      const { getDefaultProviderId } = await import("@/llm/providers");
       if (!hasApiKey()) {
         action = fallbackWait(c, "没有激活的 LLM provider");
       } else {
@@ -203,10 +204,11 @@ export async function decideForCharacter(
         });
 
         try {
-          const client = getLLMClient();
+          const providerId = getDefaultProviderId();
+          const client = getLLMClient(providerId);
           const extra: Record<string, unknown> = {};
           if (getThinkingEnabled()) extra.thinking = { type: "enabled" };
-          const model = getModelName();
+          const model = getModelName(providerId);
 
           const messages: Array<Record<string, unknown>> = [
             { role: "system", content: system },

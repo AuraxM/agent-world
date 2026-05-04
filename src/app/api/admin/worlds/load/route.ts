@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       cast,
     });
 
-    globalThis.__agent_world_llm__ = undefined;
+    globalThis.__agent_world_llm_clients__ = undefined;
 
     return Response.json({
       ok: true,

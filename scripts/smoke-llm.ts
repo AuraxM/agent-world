@@ -19,7 +19,7 @@ async function main() {
   }
   const active = getActiveProvider()!;
   console.log(`Provider: ${active.name}`);
-  console.log(`Model: ${getModelName()}`);
+  console.log(`Model: ${getModelName(active.id)}`);
   console.log(`Base URL: ${active.baseUrl}`);
   console.log("---");
 

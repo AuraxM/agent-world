@@ -21,6 +21,7 @@ import type { Character, Emotion, WorldEvent } from "@/domain/types";
 import {
   characterBME,
   getMoodDecayRate,
+  getSicknessBaseDuration,
   getSocialDecayRate,
   getSocialGainPerInteraction,
 } from "./bme";
@@ -527,12 +528,14 @@ export function checkSickness(input: SicknessCheckInput): WorldEvent[] {
     // Vital modifiers
     if (c.vitals.fatigue >= 12 && (c.vitals.fatigueCapTicks ?? 0) > 0) prob *= 1.5;
     if (c.vitals.hunger >= 12 && (c.vitals.hungerCapTicks ?? 0) > 0) prob *= 1.5;
-    if (c.vitals.hygiene >= 12) prob *= 1.3;
+    if (c.vitals.hygiene >= 14) prob *= 1.3;
 
     prob = Math.min(prob, 0.50);
 
     if (Math.random() < prob) {
-      const days = 1 + Math.floor(Math.random() * 7); // 1-7
+      const baseDays = getSicknessBaseDuration(c.health);
+      const offset = Math.floor(Math.random() * 5) - 2; // -2..+2
+      const days = Math.max(1, Math.min(10, baseDays + offset));
       c.sickness = {
         onsetTick: tick,
         duration: days * 120,

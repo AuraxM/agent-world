@@ -54,7 +54,13 @@ import type {
   WorldEvent,
 } from "@/domain/types";
 import type { ActionOption } from "./actions";
-import { runDialogPhase, type RunDialogPhaseInput } from "./dialog";
+import {
+  runDialogPhase,
+  type RunDialogPhaseInput,
+  loadConversations,
+  saveConversation,
+  deleteConversation,
+} from "./dialog";
 import {
   llmAcceptDecide,
   llmDialogTurn,
@@ -321,8 +327,45 @@ export async function tick(
     : (options.decide ?? DEFAULT_DECIDE);
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
+  // Load ongoing conversations
+  const ongoingConversations = loadConversations(worldId);
+
+  // Mark initiators as locked — skip normal action selection
+  const lockedCharacterIds = new Set<string>();
+  for (const conv of ongoingConversations) {
+    if (conv.status !== "ended") {
+      lockedCharacterIds.add(conv.initiatorId);
+      const initiator = characters.find((c) => c.id === conv.initiatorId);
+      if (initiator && !initiator.activeConversationIds.includes(conv.id)) {
+        initiator.activeConversationIds.push(conv.id);
+      }
+      const acceptor = characters.find((c) => c.id === conv.acceptorId);
+      if (acceptor && !acceptor.activeConversationIds.includes(conv.id)) {
+        acceptor.activeConversationIds.push(conv.id);
+      }
+    }
+  }
+
   // 6. 角色决策（并发：各角色基于 tick 开始时快照独立决策，LLM 调用并行）
   const actionsForExecution: Action[] = [];
+
+  // Filter out characters locked in ongoing conversations
+  const freeCharacters = characters.filter((c) => !lockedCharacterIds.has(c.id));
+
+  // Add placeholder wait actions for locked initiators
+  for (const charId of lockedCharacterIds) {
+    const conv = ongoingConversations.find((c) => c.initiatorId === charId && c.status !== "ended");
+    const acceptorName = conv
+      ? characters.find((c) => c.id === conv.acceptorId)?.name ?? "某人"
+      : "某人";
+    actionsForExecution.push({
+      type: "wait",
+      actorId: charId,
+      reasoning: `正在和 ${acceptorName} 对话`,
+      selfImportance: 2,
+      skipExecution: true,
+    });
+  }
 
   // 位置快照：并发任务间互不干扰
   const locationSnapshot = new Map(characters.map((c) => [c.id, c.locationId]));
@@ -334,7 +377,7 @@ export async function tick(
     finalLocationId: string;
   };
 
-  const decisionTasks: Promise<DecisionTaskResult>[] = characters.map(
+  const decisionTasks: Promise<DecisionTaskResult>[] = freeCharacters.map(
     async (c) => {
       const freeMoveEvents: WorldEvent[] = [];
 
@@ -716,6 +759,7 @@ export async function tick(
         };
       }
     },
+    ongoingConversations,
   });
 
   // Apply dialog results
@@ -740,6 +784,18 @@ export async function tick(
     if (existing) {
       existing.action = fa;
     }
+  }
+
+  // Persist conversation changes
+  for (const conv of dialogResult.updatedConversations) {
+    saveConversation(conv);
+  }
+  // Remove ended conversations
+  const endedIds = ongoingConversations
+    .filter((c) => !dialogResult.updatedConversations.find((u) => u.id === c.id))
+    .map((c) => c.id);
+  for (const id of endedIds) {
+    deleteConversation(worldId, id);
   }
 
   // ── End Phase 4.5 ──
@@ -782,6 +838,13 @@ export async function tick(
   // 9. 持久化
   appendEventsLog(worldId, allEvents);
   world.currentTick = fromTick + 1;
+
+  // Clean up stale activeConversationIds
+  const activeConvIds = new Set(dialogResult.updatedConversations.map((c) => c.id));
+  for (const c of characters) {
+    c.activeConversationIds = c.activeConversationIds.filter((id) => activeConvIds.has(id));
+  }
+
   saveWorld(loaded);
   const tAfterSave = Date.now();
   appendThoughts(

@@ -1,0 +1,22 @@
+{
+  "id": "char-igarashi-yuto",
+  "name": "五十嵐悠斗",
+  "avatar": "🔬",
+  "age": 17, "gender": "male", "profession": "student", "origin": "local",
+  "biography": "我是五十嵐悠斗，科学部部长。物理是我理解这个世界的方式——方程不会背叛你，但人的心情会。千夏就坐在我前排，作业经常借给她抄。每次她把作业还回来时，纸上有水泳部的消毒水味——我知道这个观察不太科学。体弱多病是五十嵐家的家传，湊和我轮流占领保健室的床。",
+  "activityNodeId": "node-science-room", "restNodeId": "node-hs-boys-dorm",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": -4, "sn": 4, "tf": 3, "jp": 2 },
+  "abilities": [],
+  "appearance": 2, "intelligence": 4, "health": 1,
+  "speakingStyle": "说话精准严谨，但涉及非科学话题就断线。表达好意的方式是用理科比喻解释一切。",
+  "relations": {
+    "char-toudou-chinatsu": { "kinds": ["classmate"], "affection": 3, "note": "千夏。她借我作业时，纸上总有泳池的消毒水味。我想告诉她——但实验结果表明我还没准备好。", "since": 0, "lastInteractionTick": 0 },
+    "char-segawa-jin": { "kinds": ["classmate"], "affection": 0, "note": "迅考试前总来找我借笔记。他的吉他我其实不讨厌。", "since": 0, "lastInteractionTick": 0 },
+    "char-hoshino-koharu": { "kinds": ["classmate"], "affection": 1, "note": "小春每次发试卷都会多传一份给我。她知道我会睡着。好人。", "since": 0, "lastInteractionTick": 0 },
+    "char-igarashi-mayumi": { "kinds": ["son"], "affection": 2, "note": "我妈。她教英语。在走廊碰见我叫'悠斗くん'——求求你别在学校这么叫。", "since": 0, "lastInteractionTick": 0 },
+    "char-igarashi-minato": { "kinds": ["older_brother"], "affection": 3, "note": "我弟弟。同样体弱、同样理系——但他是生物。我们在理科室共享同一个角落。", "since": 0, "lastInteractionTick": 0 },
+    "char-azuma-yuto": { "kinds": ["classmate"], "affection": 2, "note": "東優斗。入学第一天就出现在科学部室。看到他就想起两年前的自己。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 400, "expenseExempt": false
+}

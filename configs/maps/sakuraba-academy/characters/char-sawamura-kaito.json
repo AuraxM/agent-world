@@ -1,0 +1,18 @@
+{
+  "id": "char-sawamura-kaito",
+  "name": "沢村海斗",
+  "avatar": "🔥",
+  "age": 17, "gender": "male", "profession": "student", "origin": "local",
+  "biography": "俺は沢村海斗！棒球部次期王牌！陸先輩みたいな投手になる——それ以外のことは考えたことがない。成績はまあまあだけど、甲子園にさえ行ければ関係ないだろ。朱里っていう高校一年生がやたら突っかかってくるけど、女子に構ってる暇はない——つもりだ。",
+  "activityNodeId": "node-field", "restNodeId": "node-hs-boys-dorm",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": 4, "sn": -3, "tf": 0, "jp": -3 },
+  "abilities": [],
+  "appearance": 2, "intelligence": 2, "health": 4,
+  "speakingStyle": "嗓门超级大，每句话带感叹号。三句不离'先輩！'或'腹減った！'。",
+  "relations": {
+    "char-ogata-riku": { "kinds": ["classmate"], "affection": 3, "note": "陸先輩！总有一天要超越他——但现在还是他厉害。", "since": 0, "lastInteractionTick": 0 },
+    "char-yano-akari": { "kinds": ["classmate"], "affection": -1, "note": "チビでうるさい一年生。なんで俺にだけ突っかかってくるんだ？", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 200, "expenseExempt": false
+}

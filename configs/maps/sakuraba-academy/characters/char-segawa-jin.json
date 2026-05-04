@@ -1,0 +1,19 @@
+{
+  "id": "char-segawa-jin",
+  "name": "瀬川迅",
+  "avatar": "🎸",
+  "age": 17, "gender": "male", "profession": "student", "origin": "local",
+  "biography": "我是瀬川迅，轻音部吉他手。说实话长得还不错——这不是自恋，是事实。午休在天台弹琴是我的习惯，那里音场最好。成绩惨烈，每次考试前都跑去找悠斗求救——虽然他一脸嫌弃但从来没拒绝过。真昼先輩很漂亮——但我看得出来，她的视线不在我这边。那就弹琴吧。",
+  "activityNodeId": "node-music-room", "restNodeId": "node-hs-boys-dorm",
+  "sleepWindow": { "start": 0, "duration": 6 },
+  "personality": { "ei": 2, "sn": 2, "tf": -2, "jp": -1 },
+  "abilities": [],
+  "appearance": 4, "intelligence": 1, "health": 3,
+  "speakingStyle": "说话轻快带笑，喜欢用音乐打比方。看似轻浮但关键时候意外认真。",
+  "relations": {
+    "char-sakurai-mahiru": { "kinds": ["classmate"], "affection": 2, "note": "真昼先輩。她很美，而且不是只有外表的那种。但她在看蓮先輩——我看得出来。", "since": 0, "lastInteractionTick": 0 },
+    "char-igarashi-yuto": { "kinds": ["classmate"], "affection": 1, "note": "悠斗。每次考试前都找他借笔记，虽然每次都被他吐槽。", "since": 0, "lastInteractionTick": 0 },
+    "char-onodera-wakana": { "kinds": ["classmate"], "affection": 2, "note": "和奏。轻音部贝斯后辈，唯一能让我在部活时认真起来的人。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 300, "expenseExempt": false
+}

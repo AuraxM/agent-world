@@ -17,6 +17,8 @@ import type {
   WorldSnapshot,
 } from "@/domain/types";
 import type { NodeTag, Privacy } from "@/domain/enums";
+import { createLogger } from "@/util/logger";
+const log = createLogger("store");
 
 export interface LoadedWorld {
   world: World;
@@ -150,6 +152,10 @@ export function saveWorld(loaded: LoadedWorld): void {
         .where(eq(schema.characters.id, c.id))
         .run();
     }
+  });
+  log.info("world 保存", {
+    world: loaded.world.id,
+    角色数: loaded.characters.length,
   });
 }
 
@@ -307,4 +313,8 @@ export function persistSnapshot(loaded: LoadedWorld): void {
       payloadJson: JSON.stringify(snap),
     })
     .run();
+  log.info("snapshot 写入", {
+    world: loaded.world.id,
+    tick: loaded.world.currentTick,
+  });
 }

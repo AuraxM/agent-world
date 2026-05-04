@@ -10,7 +10,6 @@
  */
 import OpenAI from "openai";
 import { getProvider, getDefaultProviderId, getEntryConfig } from "./providers";
-import type { LLMProvider } from "./providers";
 
 export const REQUEST_TIMEOUT_MS = 30_000;
 export const REQUEST_MAX_RETRIES = 1;

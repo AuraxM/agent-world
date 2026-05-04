@@ -1,12 +1,7 @@
 import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
-import type OpenAI from "openai";
 import { db, schema } from "@/db/client";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __agent_world_llm_clients__: Map<string, OpenAI> | undefined;
-}
 
 export interface LLMProvider {
   id: string;

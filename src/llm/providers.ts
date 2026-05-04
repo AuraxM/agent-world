@@ -131,3 +131,68 @@ export function setActiveProvider(id: string): LLMProvider {
 
   return getProvider(id)!;
 }
+
+export interface EntryConfig {
+  entryName: string;
+  providerId: string | null;
+  thinkingEnabled: boolean;
+}
+
+/** Returns the active provider's ID, or throws if none set. */
+export function getDefaultProviderId(): string {
+  const row = db
+    .select({ id: schema.llmProviders.id })
+    .from(schema.llmProviders)
+    .where(eq(schema.llmProviders.isActive, true))
+    .get();
+  if (!row) throw new Error("没有激活的 LLM provider");
+  return row.id;
+}
+
+/** Get a single entry config. Returns defaults (null provider, thinking off) if no row. */
+export function getEntryConfig(entryName: string): EntryConfig {
+  const row = db
+    .select()
+    .from(schema.llmEntryConfigs)
+    .where(eq(schema.llmEntryConfigs.id, entryName))
+    .get();
+  if (!row) return { entryName, providerId: null, thinkingEnabled: false };
+  return {
+    entryName: row.id,
+    providerId: row.providerId,
+    thinkingEnabled: row.thinkingEnabled,
+  };
+}
+
+/** List all entry configs. Missing entries are returned with defaults. */
+export function listEntryConfigs(allEntryNames: string[]): EntryConfig[] {
+  const rows = db.select().from(schema.llmEntryConfigs).all();
+  const map = new Map(rows.map((r) => [r.id, { entryName: r.id, providerId: r.providerId, thinkingEnabled: r.thinkingEnabled }]));
+  return allEntryNames.map((name) => map.get(name) ?? { entryName: name, providerId: null, thinkingEnabled: false });
+}
+
+/** Batch upsert entry configs. */
+export function batchUpsertEntryConfigs(configs: { entryName: string; providerId: string | null; thinkingEnabled: boolean }[]): void {
+  const now = new Date();
+  db.transaction(() => {
+    for (const c of configs) {
+      const existing = db
+        .select({ id: schema.llmEntryConfigs.id })
+        .from(schema.llmEntryConfigs)
+        .where(eq(schema.llmEntryConfigs.id, c.entryName))
+        .get();
+      if (existing) {
+        db.update(schema.llmEntryConfigs)
+          .set({ providerId: c.providerId, thinkingEnabled: c.thinkingEnabled, updatedAt: now })
+          .where(eq(schema.llmEntryConfigs.id, c.entryName))
+          .run();
+      } else {
+        db.insert(schema.llmEntryConfigs)
+          .values({ id: c.entryName, providerId: c.providerId, thinkingEnabled: c.thinkingEnabled, createdAt: now, updatedAt: now })
+          .run();
+      }
+    }
+  });
+  // Bust all cached LLM clients since provider assignment may have changed
+  globalThis.__agent_world_llm_clients__ = undefined;
+}

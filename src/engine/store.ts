@@ -105,6 +105,7 @@ export function loadWorld(worldId: string): LoadedWorld {
     health: c.health,
     sickness: c.sicknessJson ? JSON.parse(c.sicknessJson) : undefined,
     speakingStyle: c.speakingStyle ?? undefined,
+    activeConversationIds: JSON.parse(c.activeConversationIdsJson),
   }));
 
   if (characters.length > 0) {
@@ -148,6 +149,7 @@ export function saveWorld(loaded: LoadedWorld): void {
           dailyMemoryJson: JSON.stringify(c.dailyMemory),
           longMemoryJson: JSON.stringify(c.longMemory),
           relationsJson: JSON.stringify(c.relations),
+          activeConversationIdsJson: JSON.stringify(c.activeConversationIds),
           currentActionJson: c.currentAction
             ? JSON.stringify(c.currentAction)
             : null,

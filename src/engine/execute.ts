@@ -25,6 +25,8 @@ import type {
 import { BLOOD_RELATION_KINDS, TICKS_PER_HOUR } from "@/domain/enums";
 import { actionRegistry } from "@/domain/action-system";
 import type { Outcome, StateChange } from "@/domain/action-system";
+import { createLogger } from "@/util/logger";
+const log = createLogger("execute");
 
 const SHORT_MEMORY_LIMIT = 50;
 const SLEEP_DURATION = 8 * TICKS_PER_HOUR; // 40 ticks
@@ -206,6 +208,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
           content: action.reasoning.slice(0, 80),
         });
       }
+      log.info("执行(proxy)", { action: action.type, 角色: actor.name });
       resolvedActions.push({ action, success: true });
       continue;
     }
@@ -325,6 +328,11 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
     }
 
     resolvedActions.push({ action, success, reason });
+    if (success) {
+      log.info("执行", { action: action.type, 角色: actor.name, success: true });
+    } else {
+      log.error("执行失败", { action: action.type, 角色: actor.name, reason: reason ?? "未知" });
+    }
   }
 
   return { events, resolvedActions };

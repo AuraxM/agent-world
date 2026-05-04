@@ -140,6 +140,12 @@ export const EmotionSchema = z.object({
   social_satiety: z.number().int().min(-4).max(4),
 });
 
+/** Sickness 校验：onsetTick/duration 整数，duration 120..840。 */
+export const SicknessSchema = z.object({
+  onsetTick: z.number().int().nonnegative(),
+  duration: z.number().int().min(120).max(840),
+});
+
 /** 单向关系。 */
 export const RelationSchema = z.object({
   kinds: z.array(z.enum(OBJECTIVE_RELATION_KINDS)).min(1),

@@ -130,8 +130,6 @@ const DIRECTIONAL_KIND_LABELS: Record<string, string> = {
   younger_brother: "你的弟弟",
   older_sister: "你的姐姐",
   younger_sister: "你的妹妹",
-  parent: "你的父亲/母亲",
-  sibling: "你的手足",
   partner: "你的伴侣",
   ex_partner: "前伴侣",
 };

@@ -1,0 +1,28 @@
+{
+  "id": "char-yoshida-mitsuyo",
+  "name": "吉田光代",
+  "avatar": "🚌",
+  "age": 45,
+  "gender": "female",
+  "profession": "mailman",
+  "origin": "local",
+  "biography": "我是月露谷和外面世界之间的那条线。每天三班车——清晨从镇上接人去山麓町转乘、正午带游客和邮包回来、傍晚再跑最后一趟。驾驶座旁边的副驾位从来不空——不是坐人，是坐邮包和杂货。谷里谁家有什么包裹、谁给谁寄了信、谁订了什么杂志，我大概都知道。不说就是了。二十一年同一条路，每一个转弯闭着眼都能开。候车亭的窗台上我放了一盆小花——等车的人也许需要看点颜色。",
+  "activityNodeId": "node-bus-stop",
+  "restNodeId": "node-bus-residence",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": 1, "sn": 0, "tf": 1, "jp": 3 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
+  "speakingStyle": "说话利落，有巴士司机特有的简洁和准确。表情不多但意外地关心人。",
+  "relations": {
+    "char-lin-yuesheng": { "kinds": ["acquaintance"], "affection": 1, "note": "每天的邮包交接是雷打不动的时刻", "since": 0, "lastInteractionTick": 0 },
+    "char-yanagida-masakazu": { "kinds": ["neighbor"], "affection": 1, "note": "町公所常收到外来的文书", "since": 0, "lastInteractionTick": 0 },
+    "char-kusakabe-yuzu": { "kinds": ["acquaintance"], "affection": 1, "note": "每年暑假第一天就坐这三班车回谷", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 200,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

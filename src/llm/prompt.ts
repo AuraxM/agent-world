@@ -915,6 +915,12 @@ export function buildDialogTurnPrompt(args: {
     return `\nこの会話中に提案できるアクション（propose_dialogue_action を submit_dialog_turn と同時に呼び出してください）：\n${actionList}\n`;
   }
 
+  function buildNotebookReminder(lang: Language): string {
+    if (lang === "zh") return "如果你们在这次对话中达成了约定（比如约好某个时间一起做什么事），请记得调用 add_notebook_entry 记录到你的记事本中。";
+    if (lang === "en") return "If you and the other person reach an agreement in this conversation (e.g., to meet or do something together at a specific time), remember to call add_notebook_entry to record it in your notebook.";
+    return "この会話で約束をした場合（例：特定の時間に一緒に何かをするなど）、add_notebook_entry を呼び出してノートに記録することを忘れないでください。";
+  }
+
   function buildUpcomingBlock(lang: Language): string {
     if (!upcomingEntries || upcomingEntries.length === 0 || promptEpoch === undefined) return "";
     const MS_PER_TICK = (60 / 5) * 60 * 1000;
@@ -943,6 +949,7 @@ export function buildDialogTurnPrompt(args: {
     lines.push(buildPendingActionBlock("zh"));
     lines.push(buildDialogueActionsBlock("zh"));
     lines.push(buildUpcomingBlock("zh"));
+    lines.push(buildNotebookReminder("zh"));
     lines.push("现在轮到你说话。请根据你的性格自然地回应，不要重复对方刚说过的话。调用 submit_dialog_turn：kind=\"say\" 并填写 line。如果想结束对话，请调用 end_conversation。");
   } else if (language === "en") {
     lines.push(`You are ${self.name}, speaking with ${peer.name}.`);
@@ -958,6 +965,7 @@ export function buildDialogTurnPrompt(args: {
     lines.push(buildPendingActionBlock("en"));
     lines.push(buildDialogueActionsBlock("en"));
     lines.push(buildUpcomingBlock("en"));
+    lines.push(buildNotebookReminder("en"));
     lines.push("It's your turn. Respond naturally based on your personality — do not repeat what the other person just said. Call submit_dialog_turn with kind=\"say\" and line. If you want to end the conversation, call end_conversation.");
   } else {
     lines.push(`あなたは ${self.name} です。${peer.name} と会話しています。`);
@@ -973,6 +981,7 @@ export function buildDialogTurnPrompt(args: {
     lines.push(buildPendingActionBlock("ja"));
     lines.push(buildDialogueActionsBlock("ja"));
     lines.push(buildUpcomingBlock("ja"));
+    lines.push(buildNotebookReminder("ja"));
     lines.push("あなたの番です。自分の性格に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。submit_dialog_turn で kind=\"say\" を呼び出し line を入力してください。会話を終了する場合は end_conversation を呼び出してください。");
   }
 

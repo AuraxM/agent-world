@@ -308,6 +308,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     allCharacters: input.allCharacters,
     nodes: input.nodes,
     activeEventDefs: input.activeEventDefs,
+    upcomingNotebookText: input.upcomingNotebookText,
   });
 
   const tool = buildDecideActionTool(input.ctx);
@@ -390,6 +391,7 @@ interface DialogTurnInput {
   pendingAction?: import("@/domain/types").DialogueActionRequest;
   dialogueActions?: import("@/domain/action-system").ActionDefinition[];
   tick?: number;
+  upcomingEntries?: import("@/domain/types").NotebookEntry[];
 }
 
 export interface DialogTurnResult {
@@ -420,6 +422,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     language,
     pendingAction: input.pendingAction,
     dialogueActions: input.dialogueActions,
+    upcomingEntries: (input as any).upcomingEntries,
   });
 
   const tools: ChatCompletionTool[] = [
@@ -1022,6 +1025,7 @@ export async function llmSalvageDecide(
     allCharacters: input.allCharacters,
     nodes: input.nodes,
     activeEventDefs: input.activeEventDefs,
+    upcomingNotebookText: input.upcomingNotebookText,
   });
   const salvageCtx = buildSalvageContext({ rejectReason: input.rejectReason });
 

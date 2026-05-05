@@ -855,8 +855,9 @@ export function buildDialogTurnPrompt(args: {
   language?: Language;
   pendingAction?: import("@/domain/types").DialogueActionRequest;
   dialogueActions?: import("@/domain/action-system").ActionDefinition[];
+  upcomingEntries?: import("@/domain/types").NotebookEntry[];
 }): string {
-  const { self, peer, transcript, here, pendingAction, dialogueActions } = args;
+  const { self, peer, transcript, here, pendingAction, dialogueActions, upcomingEntries } = args;
   const language = args.language ?? "zh";
 
   const history = transcript
@@ -912,6 +913,21 @@ export function buildDialogTurnPrompt(args: {
     return `\nこの会話中に提案できるアクション（propose_dialogue_action を submit_dialog_turn と同時に呼び出してください）：\n${actionList}\n`;
   }
 
+  function buildUpcomingBlock(lang: Language): string {
+    if (!upcomingEntries || upcomingEntries.length === 0) return "";
+    const MS_PER_TICK = (60 / 5) * 60 * 1000;
+    const epoch = Date.UTC(2026, 4, 1); // May 2026 UTC
+    const lines = upcomingEntries.map((e) => {
+      const date = new Date(epoch + e.scheduledTick * MS_PER_TICK);
+      const hh = String(date.getUTCHours()).padStart(2, "0");
+      const mm = String(date.getUTCMinutes()).padStart(2, "0");
+      return `${hh}:${mm} — ${e.content}`;
+    });
+    if (lang === "zh") return `\n你未来一小时内的待办：${lines.join("; ")}\n`;
+    if (lang === "en") return `\nYour upcoming tasks in the next hour: ${lines.join("; ")}\n`;
+    return `\n今後1時間以内の予定：${lines.join("; ")}\n`;
+  }
+
   if (language === "zh") {
     lines.push(`你是 ${self.name}，正在和 ${peer.name} 对话。`);
     lines.push("");
@@ -925,6 +941,7 @@ export function buildDialogTurnPrompt(args: {
     lines.push(history || "(尚未开始)");
     lines.push(buildPendingActionBlock("zh"));
     lines.push(buildDialogueActionsBlock("zh"));
+    lines.push(buildUpcomingBlock("zh"));
     lines.push("现在轮到你说话。请根据你的性格自然地回应，不要重复对方刚说过的话。调用 submit_dialog_turn：kind=\"say\" 并填写 line。如果想结束对话，请调用 end_conversation。");
   } else if (language === "en") {
     lines.push(`You are ${self.name}, speaking with ${peer.name}.`);
@@ -939,6 +956,7 @@ export function buildDialogTurnPrompt(args: {
     lines.push(history || "(not yet started)");
     lines.push(buildPendingActionBlock("en"));
     lines.push(buildDialogueActionsBlock("en"));
+    lines.push(buildUpcomingBlock("en"));
     lines.push("It's your turn. Respond naturally based on your personality — do not repeat what the other person just said. Call submit_dialog_turn with kind=\"say\" and line. If you want to end the conversation, call end_conversation.");
   } else {
     lines.push(`あなたは ${self.name} です。${peer.name} と会話しています。`);
@@ -953,6 +971,7 @@ export function buildDialogTurnPrompt(args: {
     lines.push(history || "(まだ始まっていません)");
     lines.push(buildPendingActionBlock("ja"));
     lines.push(buildDialogueActionsBlock("ja"));
+    lines.push(buildUpcomingBlock("ja"));
     lines.push("あなたの番です。自分の性格に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。submit_dialog_turn で kind=\"say\" を呼び出し line を入力してください。会話を終了する場合は end_conversation を呼び出してください。");
   }
 
@@ -1080,8 +1099,9 @@ export function buildUserPrompt(args: {
   allCharacters?: Character[];
   nodes: MapNode[];
   activeEventDefs?: import("@/domain/events").GlobalEventDef[];
+  upcomingNotebookText?: string;
 }): string {
-  const { character, here, companions, perceived, options, tick, epoch, facts, allCharacters, nodes, activeEventDefs } = args;
+  const { character, here, companions, perceived, options, tick, epoch, facts, allCharacters, nodes, activeEventDefs, upcomingNotebookText } = args;
   const language = args.language ?? "zh";
   const sleepWindow = character.sleepWindow ?? DEFAULT_SLEEP_WINDOW;
   const t = timeOfDay(tick, epoch, sleepWindow);
@@ -1248,6 +1268,11 @@ export function buildUserPrompt(args: {
       lines.push(line);
     }
     lines.push("");
+  }
+
+  // Notebook entries
+  if (upcomingNotebookText && upcomingNotebookText.length > 0) {
+    lines.push(upcomingNotebookText, "");
   }
 
   // 末尾仅保留提交指令；languageInstruction 已在 system 末尾提供，不再重复。

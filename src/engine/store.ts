@@ -17,6 +17,7 @@ import type {
   WorldSnapshot,
 } from "@/domain/types";
 import type { NodeTag, Privacy } from "@/domain/enums";
+import { loadNotebookEntries } from "./notebook";
 import { createLogger } from "@/util/logger";
 const log = createLogger("store");
 
@@ -124,6 +125,12 @@ export function loadWorld(worldId: string): LoadedWorld {
       const t = latest.get(c.id);
       if (t) c.lastThought = t;
     }
+  }
+
+  // Load notebook entries
+  const notebookMap = loadNotebookEntries(worldId);
+  for (const c of characters) {
+    c.notebook = notebookMap.get(c.id) ?? [];
   }
 
   return { world, nodes, characters };

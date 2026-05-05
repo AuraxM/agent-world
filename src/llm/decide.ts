@@ -485,11 +485,18 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     dialogueActionCount: input.dialogueActions?.length ?? 0,
   });
 
-  const systemPrompt = language === "zh"
-    ? `你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。请根据你的性格、当前情境和对话历史，自然地回应。不要重复对方刚说过的话。\n\n${languageInstruction(language)}`
+  const nowStr = formatCurrentTime(input.tick ?? 0, input.epoch ?? 0);
+  const timeLine = language === "zh"
+    ? `当前游戏时间：${nowStr}。`
     : language === "en"
-      ? `You are an NPC in a role-playing engine. You are speaking with another person. Respond naturally based on your personality, current situation, and conversation history. Do not repeat what the other person just said.\n\n${languageInstruction(language)}`
-      : `あなたはロールプレイングエンジンの NPC です。他の人と会話しています。あなたの性格、現在の状況、会話の履歴に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。\n\n${languageInstruction(language)}`;
+      ? `Current game time: ${nowStr}.`
+      : `現在のゲーム時間：${nowStr}。`;
+
+  const systemPrompt = language === "zh"
+    ? `你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。${timeLine} 请根据你的性格、当前情境和对话历史，自然地回应。不要重复对方刚说过的话。\n\n${languageInstruction(language)}`
+    : language === "en"
+      ? `You are an NPC in a role-playing engine. You are speaking with another person. ${timeLine} Respond naturally based on your personality, current situation, and conversation history. Do not repeat what the other person just said.\n\n${languageInstruction(language)}`
+      : `あなたはロールプレイングエンジンの NPC です。他の人と会話しています。${timeLine} あなたの性格、現在の状況、会話の履歴に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。\n\n${languageInstruction(language)}`;
 
   const messages: Array<Record<string, unknown>> = [
     { role: "system", content: systemPrompt },

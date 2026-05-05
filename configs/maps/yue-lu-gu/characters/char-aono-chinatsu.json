@@ -1,0 +1,28 @@
+{
+  "id": "char-aono-chinatsu",
+  "name": "青野千夏",
+  "avatar": "📚",
+  "age": 23,
+  "gender": "female",
+  "profession": "librarian",
+  "origin": "visitor",
+  "biography": "我从东京的大学图书馆辞职搬来月露谷的时候，同事们以为我疯了。但我想管一间小文库想了很久——不是大学里那种几百万册的巨兽，是一间旧校舍改造的、阳光从高窗洒进来的、每个人都知道名字的町立文库。来到这里第一天，柳田和歌老师来帮我整理书架，她说「この校舎で四十年教えたのよ」——我当时就知道来对了。我不是孤僻，我只是喜欢安静。安静的时候能听见湖的声音。",
+  "activityNodeId": "node-library",
+  "restNodeId": "node-library-quarters",
+  "sleepWindow": { "start": 23, "duration": 8 },
+  "personality": { "ei": -1, "sn": 1, "tf": 0, "jp": 1 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "语声轻柔，话不多但每句都斟酌过。说到书的时候眼睛会亮。",
+  "relations": {
+    "char-yanagida-waka": { "kinds": ["friend"], "affection": 2, "note": "旧校舍的前任教员，文库最好的帮手", "since": 0, "lastInteractionTick": 0 },
+    "char-yanagida-koharu": { "kinds": ["friend"], "affection": 1, "note": "小春是文库借阅率最高的小读者", "since": 0, "lastInteractionTick": 0 },
+    "char-kishita-tamaki": { "kinds": ["acquaintance"], "affection": 0, "note": "偶尔来借阅医学期刊", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 100,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

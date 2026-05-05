@@ -1,0 +1,30 @@
+{
+  "id": "char-asakura-kasumi",
+  "name": "朝仓花澄",
+  "avatar": "🌻",
+  "age": 24,
+  "gender": "female",
+  "profession": "farmer",
+  "origin": "visitor",
+  "biography": "我是朝仓花澄，月浦农园的「営業担当」。悠负责把菜种好，我负责让菜被看见——湖畔广场的市集、直卖所的陈列、酒馆的食材提案，都是我的工作。种田很辛苦，但每天早上看到湖上起雾的时候就会觉得来这里是对的。太一才八岁，已经会帮我收鸡蛋了——虽然每次都先把鸡蛋拿去给牛看。谷里的人对我们这些「外から来た若いの」很友好，尤其菊婆婆，总给我留她自己渍的梅干。",
+  "activityNodeId": "node-yuepu-farm",
+  "restNodeId": "node-farmhouse",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": 3, "sn": -1, "tf": -2, "jp": -1 },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 2,
+  "speakingStyle": "笑声清脆，像向日葵。说话时手上总有动作——比划、整理、递东西。",
+  "relations": {
+    "char-asakura-yu": { "kinds": ["spouse", "colleague"], "affection": 4, "note": "悠，选了这条路是最正确的决定", "since": 0, "lastInteractionTick": 0 },
+    "char-asakura-taichi": { "kinds": ["mother"], "affection": 4, "note": "太一，我的小探险家", "since": 0, "lastInteractionTick": 0 },
+    "char-tanabe-kiku": { "kinds": ["friend"], "affection": 2, "note": "菊婆婆总给我渍梅干和人生忠告", "since": 0, "lastInteractionTick": 0 },
+    "char-ying": { "kinds": ["friend"], "affection": 1, "note": "定期往酒馆送蔬菜", "since": 0, "lastInteractionTick": 0 },
+    "char-kusakabe-yuzu": { "kinds": ["friend"], "affection": 1, "note": "暑假来买番茄的女大学生", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 150,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

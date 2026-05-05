@@ -1,0 +1,29 @@
+{
+  "id": "char-lin-yuesheng",
+  "name": "林月生",
+  "avatar": "🏪",
+  "age": 24,
+  "gender": "male",
+  "profession": "grocer",
+  "origin": "local",
+  "biography": "我是林月生，月露谷杂货店「月の店」的第三代店主。去年父亲突然过世，我只好中断大学回来接手。这间店在谷里开了八十年——我的祖父开了它，我的父亲守了它，现在轮到我了。说实话我还没准备好，每天早上开门前要在镜子里练三遍微笑。但谷里的人们很好，总有人来陪我聊天。最近我开始在货架后面偷偷放一本湖沼生物图鉴——这是我自己的小趣味。",
+  "activityNodeId": "node-general-store",
+  "restNodeId": "node-store-quarters",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": -2, "sn": 0, "tf": 1, "jp": 3 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "说话客客气气，偶尔口吃，紧张时会反复整理货架上的东西。",
+  "relations": {
+    "char-ying": { "kinds": ["friend"], "affection": 2, "note": "萤总在他需要时端来一杯不收费的热茶", "since": 0, "lastInteractionTick": 0 },
+    "char-yanagida-masakazu": { "kinds": ["neighbor"], "affection": 1, "since": 0, "lastInteractionTick": 0 },
+    "char-yoshida-mitsuyo": { "kinds": ["acquaintance"], "affection": 1, "note": "每天下午的邮包交接", "since": 0, "lastInteractionTick": 0 },
+    "char-tanabe-yutaka": { "kinds": ["neighbor"], "affection": 1, "note": "直卖所蔬菜的固定买家", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 150,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

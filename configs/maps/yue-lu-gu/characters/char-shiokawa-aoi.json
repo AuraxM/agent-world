@@ -1,0 +1,28 @@
+{
+  "id": "char-shiokawa-aoi",
+  "name": "汐川葵",
+  "avatar": "🎨",
+  "age": 25,
+  "gender": "female",
+  "profession": "unemployed",
+  "origin": "visitor",
+  "biography": "我是一个画画的。两年前的夏天来月露谷写生，然后就再也没离开。东京的画廊说我的湖景系列「太安静了卖不动」，但我不在乎——「湖の色は毎日違う」所以每一天都有新的画。把旧船屋改成画室的时候山根健帮了大忙，他只收了我几幅画当工钱。谷里的人们偶尔路过画室会探头看看，说「今日は何色の湖だ？」——这种被理解的感觉，在东京从来没有过。",
+  "activityNodeId": "node-painter-hut",
+  "restNodeId": "node-painter-hut",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": -2, "sn": 3, "tf": -2, "jp": -2 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "说话像在画画——色彩感强，比喻多，有时说一半就停住开始出神。",
+  "relations": {
+    "char-yamane-ken": { "kinds": ["friend"], "affection": 2, "note": "画室就是山根帮忙改造的", "since": 0, "lastInteractionTick": 0 },
+    "char-ying": { "kinds": ["friend"], "affection": 1, "note": "偶尔去酒馆画客人们的素描", "since": 0, "lastInteractionTick": 0 },
+    "char-mine-koyuki": { "kinds": ["friend"], "affection": 1, "note": "蜂场和画室，两个外来女孩子偶尔互相串门", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 80,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

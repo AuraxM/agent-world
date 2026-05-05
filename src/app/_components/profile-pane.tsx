@@ -504,22 +504,16 @@ export function ProfilePane({
                       </span>
                       <div className="min-w-0">
                         <div>
-                          {imp ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                const rect = (e.target as HTMLElement).getBoundingClientRect();
-                                setImpressionPopover({ targetId: id, x: rect.left, y: rect.bottom + 4 });
-                              }}
-                              className="text-(--color-pixel-fg) hover:underline cursor-pointer"
-                            >
-                              {charById.get(id)?.name ?? id}
-                            </button>
-                          ) : (
-                            <span className="text-(--color-pixel-fg)">
-                              {charById.get(id)?.name ?? id}
-                            </span>
-                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                              setImpressionPopover({ targetId: id, x: rect.left, y: rect.bottom + 4 });
+                            }}
+                            className="text-(--color-pixel-fg) hover:underline cursor-pointer"
+                          >
+                            {charById.get(id)?.name ?? id}
+                          </button>
                           <span className="text-(--color-pixel-muted) text-game-xs"> · {rel.kinds.join("/")}</span>
                         </div>
                         {imp && (
@@ -695,23 +689,17 @@ export function ProfilePane({
                   : "zero";
                 return (
                   <li key={targetId} className="text-body-sm text-(--text-on-frame) flex items-center gap-2">
-                    {imp ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          const rect = (e.target as HTMLElement).getBoundingClientRect();
-                          setImpressionPopover({ targetId, x: rect.left, y: rect.bottom + 4 });
-                        }}
-                        className="hover:underline cursor-pointer"
-                        style={{ color: impTone === "pos" ? "var(--color-pixel-success)" : impTone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)" }}
-                      >
-                        {other?.name ?? targetId}
-                      </button>
-                    ) : (
-                      <span className="text-pixel-xs" style={{ color: impTone === "pos" ? "var(--color-pixel-success)" : impTone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)" }}>
-                        {other?.name ?? targetId}
-                      </span>
-                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        setImpressionPopover({ targetId, x: rect.left, y: rect.bottom + 4 });
+                      }}
+                      className="hover:underline cursor-pointer"
+                      style={{ color: impTone === "pos" ? "var(--color-pixel-success)" : impTone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)" }}
+                    >
+                      {other?.name ?? targetId}
+                    </button>
                     <span className="text-pixel-xs text-(--text-on-frame-muted)">
                       {rel.kinds.join("/")}
                     </span>
@@ -767,9 +755,8 @@ export function ProfilePane({
         const targetId = impressionPopover.targetId;
         const targetChar = charById.get(targetId);
         const impText = character.impressionBook[targetId];
-        if (!impText) return null;
         return (
-          <div className="fixed inset-0 z-50" onClick={() => setImpressionPopover(null)}>
+          <div className="fixed inset-0 z-50 bg-black/20" onClick={() => setImpressionPopover(null)}>
             <div
               className="absolute bg-(--color-pixel-bg) border-2 border-(--color-pixel-accent-dark) p-3 max-w-xs"
               style={{
@@ -797,9 +784,15 @@ export function ProfilePane({
                   ✕
                 </button>
               </div>
-              <p className="text-game-sm text-(--color-pixel-fg) italic leading-relaxed">
-                &ldquo;{impText}&rdquo;
-              </p>
+              {impText ? (
+                <p className="text-game-sm text-(--color-pixel-fg) italic leading-relaxed">
+                  &ldquo;{impText}&rdquo;
+                </p>
+              ) : (
+                <p className="text-game-sm text-(--color-pixel-muted)">
+                  暂无印象记录。
+                </p>
+              )}
             </div>
           </div>
         );

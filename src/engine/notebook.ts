@@ -112,26 +112,41 @@ export function getNextHourEntries(
 
 // ── Time Formatting ──
 
+/** Format tick as human-readable calendar date (e.g. "5月3日 14:00"). */
+function formatCalendarTime(tick: Tick, epoch: number): string {
+  const date = new Date(epoch + tick * MS_PER_TICK);
+  const M = date.getUTCMonth() + 1;
+  const d = date.getUTCDate();
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${M}月${d}日 ${hh}:${mm}`;
+}
+
+/** True if two ticks fall on the same UTC calendar day. */
+function sameUTCDay(a: Tick, b: Tick, epoch: number): boolean {
+  const da = new Date(epoch + a * MS_PER_TICK);
+  const db = new Date(epoch + b * MS_PER_TICK);
+  return (
+    da.getUTCFullYear() === db.getUTCFullYear() &&
+    da.getUTCMonth() === db.getUTCMonth() &&
+    da.getUTCDate() === db.getUTCDate()
+  );
+}
+
 export function formatRelativeTime(
   tick: Tick,
   currentTick: Tick,
   epoch: number,
 ): string {
-  const currentDay = Math.floor(currentTick / (24 * TICKS_PER_HOUR));
-  const targetDay = Math.floor(tick / (24 * TICKS_PER_HOUR));
   const date = new Date(epoch + tick * MS_PER_TICK);
   const hh = String(date.getUTCHours()).padStart(2, "0");
   const mm = String(date.getUTCMinutes()).padStart(2, "0");
-  if (targetDay === currentDay) return `${hh}:${mm}`;
-  return `第${targetDay}日 ${hh}:${mm}`;
+  if (sameUTCDay(tick, currentTick, epoch)) return `${hh}:${mm}`;
+  return formatCalendarTime(tick, epoch);
 }
 
 export function formatScheduledTime(tick: Tick, epoch: number): string {
-  const day = Math.floor(tick / (24 * TICKS_PER_HOUR));
-  const date = new Date(epoch + tick * MS_PER_TICK);
-  const hh = String(date.getUTCHours()).padStart(2, "0");
-  const mm = String(date.getUTCMinutes()).padStart(2, "0");
-  return `第${day}日 ${hh}:${mm}`;
+  return formatCalendarTime(tick, epoch);
 }
 
 // ── Prompt Helpers ──
@@ -145,9 +160,8 @@ export function describeEntries(
   const lines = entries.map(
     (e) => `- ${formatRelativeTime(e.scheduledTick, currentTick, epoch)} — ${e.content}`,
   );
-  const currentDay = Math.floor(currentTick / (24 * TICKS_PER_HOUR));
   const allToday = entries.every(
-    (e) => Math.floor(e.scheduledTick / (24 * TICKS_PER_HOUR)) === currentDay,
+    (e) => sameUTCDay(e.scheduledTick, currentTick, epoch),
   );
   const label = allToday ? "今日待办" : "待办";
   return `${label}：\n${lines.join("\n")}`;

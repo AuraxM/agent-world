@@ -309,7 +309,7 @@ export const ProposeDialogueActionToolSchema = {
     reasoning: { type: "string", description: "发起该行为的理由（内心独白）。" },
   },
   required: ["action_type", "target_id", "reasoning"],
-  additionalProperties: false,
+  additionalProperties: true,
 };
 
 // Respond to dialogue action: 接受或拒绝对话中对方发起的交互行为

@@ -69,19 +69,19 @@ describe("getNextHourEntries", () => {
 describe("formatRelativeTime", () => {
   it("shows only HH:MM for same day", () => {
     const result = formatRelativeTime(30, 0, EPOCH);
-    expect(result).toBe("06:00");
+    expect(result).toBe("06:00"); // May 1 06:00, same day as midnight May 1
   });
 
-  it("shows day prefix for different day", () => {
+  it("shows calendar date for different day", () => {
     const result = formatRelativeTime(130, 0, EPOCH);
-    expect(result).toMatch(/^第1日 /);
+    expect(result).toBe("5月2日 02:00"); // May 2 02:00 UTC
   });
 });
 
 describe("formatScheduledTime", () => {
-  it("always shows day prefix", () => {
+  it("shows calendar date", () => {
     const result = formatScheduledTime(30, EPOCH);
-    expect(result).toBe("第0日 06:00");
+    expect(result).toBe("5月1日 06:00");
   });
 });
 

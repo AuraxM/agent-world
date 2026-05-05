@@ -630,7 +630,14 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
           };
           input.self.notebook.push(entry);
           saveNotebookEntry(input.self.worldId, input.self.id, entry);
-          messages.push({ role: "tool", tool_call_id: t.id, content: `已记录到记事本：${year}年${month}月${day}日 ${String(hour).padStart(2, "0")}:00 — ${free_text}` });
+          const timeLabel = `${year}年${month}月${day}日 ${String(hour).padStart(2, "0")}:00`;
+          messages.push({ role: "tool", tool_call_id: t.id, content: `已记录到记事本：${timeLabel} — ${free_text}` });
+          // Also push a system line to the transcript so the LLM doesn't repeat the call
+          input.transcript.push({
+            speakerId: "__system__",
+            kind: "action_result",
+            line: `📝 ${input.self.name} 在记事本中记录了约定：${timeLabel} — ${free_text}`,
+          });
         }
       }
       if (hasSideEffect) {

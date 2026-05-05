@@ -243,6 +243,9 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
         target_id: action.arrivalAction.targetId,
         target_node_id: action.arrivalAction.targetNodeId,
       } : undefined,
+      scheduled_day: (action as any).scheduled_day,
+      scheduled_hour: (action as any).scheduled_hour,
+      scheduled_minute: (action as any).scheduled_minute,
     };
 
     // Execute via definition

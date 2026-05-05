@@ -278,6 +278,9 @@ export async function decideForCharacter(
                   targetNodeId: p.arrival_action.target_node_id,
                 }
               : undefined,
+            scheduled_day: p.scheduled_day,
+            scheduled_hour: p.scheduled_hour,
+            scheduled_minute: p.scheduled_minute,
           };
         } catch (err) {
           const msg =

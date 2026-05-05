@@ -856,8 +856,10 @@ export function buildDialogTurnPrompt(args: {
   pendingAction?: import("@/domain/types").DialogueActionRequest;
   dialogueActions?: import("@/domain/action-system").ActionDefinition[];
   upcomingEntries?: import("@/domain/types").NotebookEntry[];
+  tick?: number;
+  epoch?: number;
 }): string {
-  const { self, peer, transcript, here, pendingAction, dialogueActions, upcomingEntries } = args;
+  const { self, peer, transcript, here, pendingAction, dialogueActions, upcomingEntries, tick, epoch: promptEpoch } = args;
   const language = args.language ?? "zh";
 
   const history = transcript
@@ -914,11 +916,10 @@ export function buildDialogTurnPrompt(args: {
   }
 
   function buildUpcomingBlock(lang: Language): string {
-    if (!upcomingEntries || upcomingEntries.length === 0) return "";
+    if (!upcomingEntries || upcomingEntries.length === 0 || promptEpoch === undefined) return "";
     const MS_PER_TICK = (60 / 5) * 60 * 1000;
-    const epoch = Date.UTC(2026, 4, 1); // May 2026 UTC
     const lines = upcomingEntries.map((e) => {
-      const date = new Date(epoch + e.scheduledTick * MS_PER_TICK);
+      const date = new Date(promptEpoch + e.scheduledTick * MS_PER_TICK);
       const hh = String(date.getUTCHours()).padStart(2, "0");
       const mm = String(date.getUTCMinutes()).padStart(2, "0");
       return `${hh}:${mm} — ${e.content}`;

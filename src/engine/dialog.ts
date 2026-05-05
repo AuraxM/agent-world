@@ -108,6 +108,7 @@ export type TurnDecideFn = (input: {
   pendingAction?: import("@/domain/types").DialogueActionRequest;
   dialogueActions: import("@/domain/action-system").ActionDefinition[];
   tick: number;
+  epoch?: number;
   upcomingEntries?: import("@/domain/types").NotebookEntry[];
 }) => Promise<
   | { kind: "turn"; turn: DialogTurn; proposeAction?: DialogueActionProposal; respondToAction?: DialogueActionResponse }
@@ -455,6 +456,7 @@ async function runOneTickDialog(
         pendingAction,
         dialogueActions,
         tick: currentTick,
+        epoch,
         upcomingEntries,
       }));
     } catch (err) {
@@ -545,6 +547,7 @@ async function runOneTickDialog(
             pendingAction: otherPendingAction,
             dialogueActions: otherDialogueActions,
             tick: currentTick,
+            epoch,
             upcomingEntries,
           });
           if (extraResult.kind === "turn") {

@@ -261,14 +261,7 @@ async function callLLMWithRetry(
 
       // Call action def's validateParams
       if (def.validateParams) {
-        const validationErr = def.validateParams({
-          target_id: schemaResult.data.target_id,
-          target_node_id: schemaResult.data.target_node_id,
-          free_text: schemaResult.data.free_text,
-          amount: schemaResult.data.amount,
-          reason: schemaResult.data.reason,
-          arrival_action: schemaResult.data.arrival_action,
-        }, ctx);
+        const validationErr = def.validateParams(schemaResult.data as Record<string, any>, ctx);
         if (validationErr) {
           if (round < MAX_TOOL_CALL_ROUNDS - 1) {
             messages.push({ role: "user", content: `${actionType} 参数校验失败：${validationErr}。请修正后重试。` });
@@ -358,6 +351,9 @@ function payloadToAction(actionType: string, p: Record<string, any>, actorId: st
           targetNodeId: p.arrival_action.target_node_id,
         }
       : undefined,
+    scheduled_day: p.scheduled_day,
+    scheduled_hour: p.scheduled_hour,
+    scheduled_minute: p.scheduled_minute,
   };
 }
 
@@ -391,6 +387,7 @@ interface DialogTurnInput {
   pendingAction?: import("@/domain/types").DialogueActionRequest;
   dialogueActions?: import("@/domain/action-system").ActionDefinition[];
   tick?: number;
+  epoch?: number;
   upcomingEntries?: import("@/domain/types").NotebookEntry[];
 }
 
@@ -423,6 +420,8 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     pendingAction: input.pendingAction,
     dialogueActions: input.dialogueActions,
     upcomingEntries: input.upcomingEntries,
+    tick: input.tick,
+    epoch: input.epoch,
   });
 
   const tools: ChatCompletionTool[] = [

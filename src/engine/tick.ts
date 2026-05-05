@@ -344,6 +344,10 @@ export async function tick(
   const sinceTick = Math.max(0, fromTick - FACTS_LOOKBACK_TICKS);
   // Clean expired notebook entries
   cleanExpiredEntries(world.id, fromTick);
+  // Also clean in-memory notebooks
+  for (const c of characters) {
+    c.notebook = c.notebook.filter(e => e.scheduledTick >= fromTick);
+  }
   const baseTime = timeOfDay(fromTick, world.epoch); // hour/day/period 全局；isSleepHour 在循环内逐角色算
   const decideFn = options.forceWait
     ? async (input: DecideInput) => fallbackWait(input.character)

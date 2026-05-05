@@ -310,6 +310,12 @@ export interface Action {
   skipMemory?: boolean;
   /** 引擎内部标记：该 action 不经过 action registry 执行（用于持续行动占位） */
   skipExecution?: boolean;
+  /** notebook: 预定日（0-based game day） */
+  scheduled_day?: number;
+  /** notebook: 预定小时 */
+  scheduled_hour?: number;
+  /** notebook: 预定分钟 */
+  scheduled_minute?: number;
 }
 
 /** 世界全量快照。每 24 tick 持久化一次。 */

@@ -72,7 +72,11 @@ export function cleanExpiredEntries(worldId: string, currentTick: Tick): void {
     if (entry.scheduledTick < currentTick) {
       db
         .delete(schema.notebookEntries)
-        .where(eq(schema.notebookEntries.id, r.id))
+        .where(and(
+          eq(schema.notebookEntries.worldId, r.worldId),
+          eq(schema.notebookEntries.characterId, r.characterId),
+          eq(schema.notebookEntries.id, r.id),
+        ))
         .run();
     }
   }
@@ -116,8 +120,8 @@ export function formatRelativeTime(
   const currentDay = Math.floor(currentTick / (24 * TICKS_PER_HOUR));
   const targetDay = Math.floor(tick / (24 * TICKS_PER_HOUR));
   const date = new Date(epoch + tick * MS_PER_TICK);
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
   if (targetDay === currentDay) return `${hh}:${mm}`;
   return `第${targetDay}日 ${hh}:${mm}`;
 }
@@ -125,8 +129,8 @@ export function formatRelativeTime(
 export function formatScheduledTime(tick: Tick, epoch: number): string {
   const day = Math.floor(tick / (24 * TICKS_PER_HOUR));
   const date = new Date(epoch + tick * MS_PER_TICK);
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
   return `第${day}日 ${hh}:${mm}`;
 }
 

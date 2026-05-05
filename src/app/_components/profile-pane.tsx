@@ -175,6 +175,7 @@ export function ProfilePane({
   const [memoriesExpanded, setMemoriesExpanded] = useState(false);
   const [dailyExpanded, setDailyExpanded] = useState(false);
   const [longExpanded, setLongExpanded] = useState(false);
+  const [impressionPopover, setImpressionPopover] = useState<{ targetId: string; x: number; y: number } | null>(null);
   const [lastCharacterId, setLastCharacterId] = useState(characterId);
   if (lastCharacterId !== characterId) {
     setLastCharacterId(characterId);
@@ -184,6 +185,7 @@ export function ProfilePane({
     setMemoriesExpanded(false);
     setDailyExpanded(false);
     setLongExpanded(false);
+    setImpressionPopover(null);
   }
 
   if (!character) {
@@ -502,9 +504,22 @@ export function ProfilePane({
                       </span>
                       <div className="min-w-0">
                         <div>
-                          <span className="text-(--color-pixel-fg)">
-                            {charById.get(id)?.name ?? id}
-                          </span>
+                          {imp ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                const rect = (e.target as HTMLElement).getBoundingClientRect();
+                                setImpressionPopover({ targetId: id, x: rect.left, y: rect.bottom + 4 });
+                              }}
+                              className="text-(--color-pixel-fg) hover:underline cursor-pointer"
+                            >
+                              {charById.get(id)?.name ?? id}
+                            </button>
+                          ) : (
+                            <span className="text-(--color-pixel-fg)">
+                              {charById.get(id)?.name ?? id}
+                            </span>
+                          )}
                           <span className="text-(--color-pixel-muted) text-game-xs"> · {rel.kinds.join("/")}</span>
                         </div>
                         {imp && (
@@ -680,9 +695,22 @@ export function ProfilePane({
                   : "zero";
                 return (
                   <li key={targetId} className="text-body-sm text-(--text-on-frame) flex items-center gap-2">
-                    <span className="text-pixel-xs" style={{ color: impTone === "pos" ? "var(--color-pixel-success)" : impTone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)" }}>
-                      {other?.name ?? targetId}
-                    </span>
+                    {imp ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          const rect = (e.target as HTMLElement).getBoundingClientRect();
+                          setImpressionPopover({ targetId, x: rect.left, y: rect.bottom + 4 });
+                        }}
+                        className="text-(--color-pixel-fg) hover:underline cursor-pointer"
+                      >
+                        {other?.name ?? targetId}
+                      </button>
+                    ) : (
+                      <span className="text-pixel-xs" style={{ color: impTone === "pos" ? "var(--color-pixel-success)" : impTone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)" }}>
+                        {other?.name ?? targetId}
+                      </span>
+                    )}
                     <span className="text-pixel-xs text-(--text-on-frame-muted)">
                       {rel.kinds.join("/")}
                     </span>
@@ -732,6 +760,46 @@ export function ProfilePane({
           )}
         </div>
       )}
+
+      {/* Impression popover */}
+      {impressionPopover && (() => {
+        const targetId = impressionPopover.targetId;
+        const targetChar = charById.get(targetId);
+        const impText = character.impressionBook[targetId];
+        if (!impText) return null;
+        return (
+          <div className="fixed inset-0 z-50" onClick={() => setImpressionPopover(null)}>
+            <div
+              className="absolute bg-(--color-pixel-bg) border-2 border-(--color-pixel-accent-dark) p-3 shadow-lg max-w-xs"
+              style={{
+                left: impressionPopover.x,
+                top: impressionPopover.y,
+                boxShadow: "4px 4px 0 var(--color-pixel-border-dark)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="npc-chip w-6 h-6 text-sm">
+                  {characterEmoji(targetChar ?? { id: targetId })}
+                </span>
+                <span className="text-game-sm font-semibold text-(--color-pixel-fg)">
+                  {targetChar?.name ?? targetId} 的印象
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setImpressionPopover(null)}
+                  className="ml-auto text-(--color-pixel-muted) hover:text-(--color-pixel-fg) cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-game-sm text-(--color-pixel-fg) italic leading-relaxed">
+                &ldquo;{impText}&rdquo;
+              </p>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

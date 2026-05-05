@@ -1,0 +1,30 @@
+{
+  "id": "char-asakura-taichi",
+  "name": "朝仓太一",
+  "avatar": "🪨",
+  "age": 8,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "biography": "我是太一！我们家有好多好多田和番茄和黄瓜——妈妈说我以后是个农夫但我现在只想收集石头。湖边有好多特别的石头哦！圆的、透明的、有条纹的——我的书架上已经有三层石头了。隔壁田边爷爷家有只很老的三毛猫，它晒太阳的时候我可以摸它的耳朵。芽姐姐暑假会回来，她笑我矮但我跑得比她快！",
+  "activityNodeId": "node-yuepu-farm",
+  "restNodeId": "node-farmhouse",
+  "sleepWindow": { "start": 20, "duration": 10 },
+  "personality": { "ei": 2, "sn": 1, "tf": -1, "jp": -2 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "声音响亮，句子短而跳脱，话题从石头到湖到牛随时切换。",
+  "relations": {
+    "char-asakura-yu": { "kinds": ["father"], "affection": 4, "note": "爸爸会带我去钓台钓鱼", "since": 0, "lastInteractionTick": 0 },
+    "char-asakura-kasumi": { "kinds": ["mother"], "affection": 4, "note": "妈妈笑起来像向日葵", "since": 0, "lastInteractionTick": 0 },
+    "char-tanabe-kiku": { "kinds": ["acquaintance"], "affection": 2, "note": "菊婆婆家有三毛猫！", "since": 0, "lastInteractionTick": 0 },
+    "char-tanabe-mei": { "kinds": ["friend"], "affection": 2, "note": "芽姐姐跑不过我", "since": 0, "lastInteractionTick": 0 },
+    "char-yanagida-koharu": { "kinds": ["friend"], "affection": 2, "note": "小春带我去捉萤火虫", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 10,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

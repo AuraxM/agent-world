@@ -1,0 +1,28 @@
+{
+  "id": "char-kano-kuma",
+  "name": "狩野熊",
+  "avatar": "🐻",
+  "age": 68,
+  "gender": "male",
+  "profession": "hunter",
+  "origin": "local",
+  "biography": "私は狩野熊——名前も姿も熊みたいだろ。もう自分でもわかっている。後ろの森で五十年猟をしている。鹿、猪、たまに熊——本当の熊だ。今は罠を仕掛けるくらいで、昔みたいに山を走り回ったりはしない。月に一度くらい谷に下りて、牧野の牧場の柵に腰掛けて一緒に黙るのが楽しみ——あの若いのは牛と話すが、私に話す言葉はない。それでいい。",
+  "activityNodeId": "node-firefly-forest",
+  "restNodeId": "node-hunter-hut",
+  "sleepWindow": { "start": 20, "duration": 9 },
+  "personality": { "ei": -4, "sn": 3, "tf": 2, "jp": -2 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
+  "speakingStyle": "话极稀少，像山里的石头。开口就是切中要害的一句话。",
+  "relations": {
+    "char-makino-shun": { "kinds": ["friend"], "affection": 3, "note": "牧の若いのとは口をきかなくてもいい", "since": 0, "lastInteractionTick": 0 },
+    "char-shioda-gen": { "kinds": ["friend"], "affection": 1, "note": "たまに釣り場で会うが挨拶だけ", "since": 0, "lastInteractionTick": 0 },
+    "char-tanabe-kiku": { "kinds": ["acquaintance"], "affection": 0, "note": "同世代、知っているが話すことは少ない", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 100,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

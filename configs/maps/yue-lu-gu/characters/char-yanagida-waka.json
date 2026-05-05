@@ -1,0 +1,30 @@
+{
+  "id": "char-yanagida-waka",
+  "name": "柳田和歌",
+  "avatar": "📖",
+  "age": 72,
+  "gender": "female",
+  "profession": "teacher",
+  "origin": "local",
+  "biography": "かつての生徒たちは今も「柳田先生」と呼んでくれる——もう教壇を降りて十年以上になるのにね。旧校舎だった町立文庫で千夏さんを手伝うのが今の生き甲斐——本の整理は教えるのと似ている。息子の正和は町長になったが、私にとってはいつまでも「母さん、宿題見て」と言ってくる小さな男の子。孫の小春は捕まえた蛍を瓶に入れては逃がす——そういう優しさがこの谷にはまだある。",
+  "activityNodeId": "node-library",
+  "restNodeId": "node-teacher-house",
+  "sleepWindow": { "start": 21, "duration": 8 },
+  "personality": { "ei": 1, "sn": -1, "tf": -1, "jp": 2 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "说话像在讲解课文——有条有理，偶尔插一句温柔的小话。",
+  "relations": {
+    "char-yanagida-masakazu": { "kinds": ["mother"], "affection": 3, "note": "息子は町長になったが、私にはいつもあの小さい正和", "since": 0, "lastInteractionTick": 0 },
+    "char-yanagida-koharu": { "kinds": ["other_relative"], "affection": 4, "note": "小春は私の宝物", "since": 0, "lastInteractionTick": 0 },
+    "char-aono-chinatsu": { "kinds": ["friend"], "affection": 3, "note": "千夏さんは旧校舎に新しい命をくれた", "since": 0, "lastInteractionTick": 0 },
+    "char-guji-kiyoshi": { "kinds": ["friend"], "affection": 2, "note": "谷の歴史を話せる数少ない同世代", "since": 0, "lastInteractionTick": 0 },
+    "char-tanabe-kiku": { "kinds": ["friend"], "affection": 2, "note": "同学年の友。若い頃の祭準備の仲間", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 250,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

@@ -1,0 +1,30 @@
+{
+  "id": "char-tanabe-kiku",
+  "name": "田边菊",
+  "avatar": "👵",
+  "age": 76,
+  "gender": "female",
+  "profession": "unemployed",
+  "origin": "local",
+  "biography": "私は田边菊——七十六年この谷で生きてきた。結婚、出産、伴侶を見送り……全部この家の中。今は息子の豊と二人で暮らしている。私は六十年の夏の夜を覚えている——谷中が蛍で光って、湖面がまるで地上に落ちた星空みたいだった。今年の七月もきっと同じ——蛍は変わらない。豊がまだ薪で風呂を焚いているのは、私の我儘。湖の水より薪の火のほうが芯から温まるんです。若い朝倉夫妻がよく訪ねて来る——花澄さんは私の漬けた梅干がお気に入りとか。",
+  "activityNodeId": "node-old-farmhouse",
+  "restNodeId": "node-old-farmhouse",
+  "sleepWindow": { "start": 20, "duration": 9 },
+  "personality": { "ei": 0, "sn": -1, "tf": -1, "jp": 0 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 1,
+  "speakingStyle": "说话慢悠悠，爱唠叨往事，语气温和但不容置疑。",
+  "relations": {
+    "char-tanabe-yutaka": { "kinds": ["mother"], "affection": 3, "note": "息子の豊。あれでも昔は泣き虫だった", "since": 0, "lastInteractionTick": 0 },
+    "char-tanabe-mei": { "kinds": ["other_relative"], "affection": 3, "note": "芽は私の宝物。夏のたびに背が伸びている", "since": 0, "lastInteractionTick": 0 },
+    "char-asakura-kasumi": { "kinds": ["friend"], "affection": 2, "note": "花澄さんは若いのにえらい——梅干を褒めてくれた最初の人", "since": 0, "lastInteractionTick": 0 },
+    "char-kishita-tamaki": { "kinds": ["friend"], "affection": 2, "note": "木下先生には三代前から世話になっている", "since": 0, "lastInteractionTick": 0 },
+    "char-yanagida-waka": { "kinds": ["friend"], "affection": 2, "note": "同学年の友。若い時はよく一緒に祭りの準備をした", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 200,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

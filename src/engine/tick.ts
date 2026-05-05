@@ -32,6 +32,7 @@ import { deriveAggregatedFacts, type AggregatedFacts } from "./facts";
 import { findPath } from "./pathfinding";
 import { dispatchPerception } from "./perception";
 import { decayVitals, evolveEmotions, checkSickness } from "./vitals-emotion";
+import { cleanExpiredEntries, getTodayEntries, describeEntries } from "./notebook";
 import { DEFAULT_SLEEP_WINDOW, inSleepWindow, timeOfDay } from "@/llm/prompt";
 import {
   appendEventsLog,
@@ -92,6 +93,7 @@ export interface DecideInput {
   allCharacters: Character[];
   /** 当前 tick 生效的全局事件列表。 */
   activeEventDefs: GlobalEventDef[];
+  upcomingNotebookText: string;
 }
 
 export type DecideFn = (input: DecideInput) => Promise<Action>;
@@ -340,6 +342,8 @@ export async function tick(
   const restMap = buildRestNodeMap();
   const sleepWindowMap = buildSleepWindowMap();
   const sinceTick = Math.max(0, fromTick - FACTS_LOOKBACK_TICKS);
+  // Clean expired notebook entries
+  cleanExpiredEntries(world.id, fromTick);
   const baseTime = timeOfDay(fromTick, world.epoch); // hour/day/period 全局；isSleepHour 在循环内逐角色算
   const decideFn = options.forceWait
     ? async (input: DecideInput) => fallbackWait(input.character)
@@ -576,6 +580,9 @@ export async function tick(
       const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, world.epoch, isSleepHour, facts, localLocationMap);
       const opts = actionRegistry.buildOptions(ctx);
 
+      const todayEntries = getTodayEntries(c.notebook, fromTick);
+      const upcomingNotebookText = describeEntries(todayEntries, fromTick, world.epoch);
+
       try {
         action = await decideFn({
           character: c,
@@ -593,6 +600,7 @@ export async function tick(
           ctx,
           allCharacters: loaded.characters,
           activeEventDefs,
+          upcomingNotebookText,
         });
       } catch (err) {
         log.warn("角色决策失败", { 角色: c.name, error: err instanceof Error ? err.message : String(err) });
@@ -744,6 +752,9 @@ export async function tick(
       const ctx = buildActionContext(input.character, nodes, characters, worldId, fromTick, world.epoch, isSleepHour, facts);
       const opts = actionRegistry.buildOptions(ctx);
 
+      const todayEntries = getTodayEntries(input.character.notebook, fromTick);
+      const upcomingNotebookText = describeEntries(todayEntries, fromTick, world.epoch);
+
       try {
         return await llmSalvageDecide({
           character: {
@@ -767,6 +778,7 @@ export async function tick(
           language,
           allCharacters: characters,
           activeEventDefs,
+          upcomingNotebookText,
         });
       } catch {
         return {

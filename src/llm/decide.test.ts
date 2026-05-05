@@ -162,6 +162,7 @@ const baseInput = (): DecideInput => ({
   ctx: baseCtx,
   allCharacters: [baseCtx.self],
   activeEventDefs: [],
+  upcomingNotebookText: "",
 });
 
 describe("llmDecide (OpenAI-compatible function calling)", () => {

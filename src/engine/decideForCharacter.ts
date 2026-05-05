@@ -307,6 +307,7 @@ export async function decideForCharacter(
         ctx,
         allCharacters: characters,
         activeEventDefs: [],
+        upcomingNotebookText: "",
       });
     }
   } catch (err) {

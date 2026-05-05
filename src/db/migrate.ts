@@ -187,6 +187,7 @@ const CHARACTERS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
 
 const WORLDS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
   { name: "map_id", ddl: "ALTER TABLE worlds ADD COLUMN map_id TEXT NOT NULL DEFAULT ''" },
+  { name: "epoch", ddl: "ALTER TABLE worlds ADD COLUMN epoch INTEGER NOT NULL DEFAULT 1777593600000" },
 ];
 
 const tx = sqlite.transaction(() => {

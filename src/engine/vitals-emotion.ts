@@ -35,8 +35,8 @@ const VITAL_MAX = 16;
 const CAP_PENALTY_LIGHT_TICKS = 4;
 const CAP_PENALTY_HEAVY_TICKS = 8;
 
-const HUNGER_MEDIUM = 5;
-const HUNGER_SEVERE = 10;
+const HUNGER_MEDIUM = 6;
+const HUNGER_SEVERE = 11;
 const FATIGUE_MEDIUM = 5;
 const FATIGUE_SEVERE = 10;
 const HYGIENE_MEDIUM = 8;
@@ -156,13 +156,13 @@ function checkVitalCrossing(args: VitalCrossingCheck): void {
   }
 }
 
-// 0..8 慢段（偶数 tick +1，等价 +0.5/h）；8..13 标段（+1/h）；13..16 快段（+2/h）。
+// 0..8 慢段（偶数 tick 累积，等价 0.5/h）；8..13 标段（1.0/h）；13..16 快段（2.0/h）。
 // 总耗时 ~21h 到顶，留出夜间补觉空间。
-// fatigueIncrement: 按 BME 缩放的三阶段疲劳累积
+// fatigueIncrement: 按 BME 缩放的三阶段疲劳累积（浮点，不取整）
 function fatigueIncrement(currentFatigue: number, isEvenHour: boolean, bme: number): number {
-  if (currentFatigue < 8) return isEvenHour ? Math.round(bme * 0.5) : 0;
-  if (currentFatigue < 13) return Math.round(bme * 1.0);
-  return Math.round(bme * 2.0);
+  if (currentFatigue < 8) return isEvenHour ? bme * 0.5 : 0;
+  if (currentFatigue < 13) return bme * 1.0;
+  return bme * 2.0;
 }
 
 function isHourTick(tick: number): boolean {
@@ -209,8 +209,7 @@ export function decayVitals(input: VitalsDecayInput): WorldEvent[] {
     if (hourTick) {
       const bme = characterBME(c);
       if (!onTravel || evenHour) {
-        const hungerInc = Math.round(bme * 1.0);
-        c.vitals.hunger = Math.min(VITAL_MAX, c.vitals.hunger + hungerInc);
+        c.vitals.hunger = Math.min(VITAL_MAX, c.vitals.hunger + bme * 1.0);
         const baseIncrement = fatigueIncrement(c.vitals.fatigue, evenHour, bme);
         const sicknessMultiplier = c.sickness ? 2 : 1;
         c.vitals.fatigue = Math.min(
@@ -219,8 +218,7 @@ export function decayVitals(input: VitalsDecayInput): WorldEvent[] {
         );
       }
       if (evenHour && !onTravel) {
-        const hygieneInc = Math.round(bme * 0.8);
-        c.vitals.hygiene = Math.min(VITAL_MAX, c.vitals.hygiene + hygieneInc);
+        c.vitals.hygiene = Math.min(VITAL_MAX, c.vitals.hygiene + bme * 0.8);
       }
     }
 

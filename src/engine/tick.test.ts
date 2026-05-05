@@ -67,6 +67,9 @@ beforeAll(async () => {
       income_level INTEGER NOT NULL DEFAULT 0,
       expense_exempt INTEGER NOT NULL DEFAULT 0,
       income_multiplier REAL NOT NULL DEFAULT 1.0,
+      health INTEGER NOT NULL DEFAULT 3,
+      appearance INTEGER NOT NULL DEFAULT 2,
+      intelligence INTEGER NOT NULL DEFAULT 2,
       personality_json TEXT NOT NULL,
       vitals_json TEXT NOT NULL DEFAULT '{"hunger":0,"fatigue":0,"hygiene":0}',
       emotion_json TEXT NOT NULL DEFAULT '{"mood":0,"stress":0,"social_satiety":0}',
@@ -181,7 +184,7 @@ beforeAll(async () => {
   ) => {
     sqlite
       .prepare(
-        `INSERT INTO characters (id, world_id, name, location_id, money, personality_json, vitals_json) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO characters (id, world_id, name, location_id, money, health, personality_json, vitals_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -189,12 +192,13 @@ beforeAll(async () => {
         name,
         locId,
         200,
+        3,
         JSON.stringify({ ei: 0, sn: 0, tf: 0, jp: 0 }),
         JSON.stringify(vitals),
       );
   };
   baseChar("char-a", "甲", "node-root");
-  baseChar("char-b", "乙", "node-root", { hunger: 4, fatigue: 0, hygiene: 0 }); // 下一 tick 跨入 medium
+  baseChar("char-b", "乙", "node-root", { hunger: 5, fatigue: 0, hygiene: 0 }); // 下一 tick 跨入 medium (HUNGER_MEDIUM=6)
   sqlite.close();
 
   // 现在导入业务模块（让 client.ts 在新的 DATABASE_URL 下创建 db）
@@ -219,7 +223,7 @@ describe("tick engine v0", () => {
     const before = storeModule.loadWorld("test-world");
     expect(before.world.currentTick).toBe(0);
     const charB = before.characters.find((c) => c.id === "char-b")!;
-    expect(charB.vitals.hunger).toBe(4);
+    expect(charB.vitals.hunger).toBe(5);
 
     const r = await tickModule.tick("test-world", { forceWait: true });
     expect(r.fromTick).toBe(0);
@@ -233,11 +237,11 @@ describe("tick engine v0", () => {
     const after = storeModule.loadWorld("test-world");
     expect(after.world.currentTick).toBe(1);
     const a = after.characters.find((c) => c.id === "char-a")!;
-    expect(a.vitals.hunger).toBe(1);
-    expect(a.vitals.fatigue).toBe(1);
+    expect(a.vitals.hunger).toBe(1.0);
+    expect(a.vitals.fatigue).toBe(0.5); // BME=1.0 slow even hour +0.5
 
     const b = after.characters.find((c) => c.id === "char-b")!;
-    expect(b.vitals.hunger).toBe(5); // 4 → 5：跨入 medium
+    expect(b.vitals.hunger).toBe(6.0); // 5 → 6.0：跨入 medium (BME=1.0)
 
     // medium 越线产生 inner 事件
     const innerHunger = r.events.find(

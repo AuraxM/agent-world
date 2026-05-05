@@ -99,7 +99,7 @@ function memFromAction(tick: number, action: Action, prefix: string): Memory {
   };
 }
 
-function applyStateChange(
+export function applyStateChange(
   c: Character,
   sc: StateChange,
   worldId: string,

@@ -54,7 +54,7 @@
       "lastInteractionTick": 0
     }
   },
-  "initialMoney": 100,
+  "initialMoney": 200,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

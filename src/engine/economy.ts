@@ -48,8 +48,8 @@ export function rollWorkIncome(
   const bme = characterBME(character);
   const mdc = economyConfig.mdc ?? 20;
   const dailyIncome = getTierDailyIncome(bme, tier, mdc);
-  // Default 2 work sessions per day, multiplier fixed at 1.0
-  return Math.round(dailyIncome / 2);
+  // Default 4 work sessions per day
+  return Math.round(dailyIncome / 4);
 }
 
 /** Compute balance tier [-4..+4] from weekly totals. */

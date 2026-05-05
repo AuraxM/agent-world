@@ -76,7 +76,7 @@ function BiBar({
           }}
         />
       </div>
-      <span className="w-8 text-right text-(--color-pixel-fg)">{value}</span>
+      <span className="w-8 text-right text-(--color-pixel-fg)">{Number.isInteger(value) ? value : value.toFixed(2)}</span>
     </div>
   );
 }
@@ -109,7 +109,7 @@ function UniBar({
       <div className="flex-1 h-2 bg-(--color-pixel-bg) border border-(--color-pixel-border-dark) overflow-hidden">
         <div className="h-full" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span className="w-8 text-right text-(--color-pixel-fg)">{value}</span>
+      <span className="w-8 text-right text-(--color-pixel-fg)">{Number.isInteger(value) ? value : value.toFixed(2)}</span>
     </div>
   );
 }

@@ -54,8 +54,8 @@ export function getMDC(): number { return _mdc; }
 export function setMDC(v: number) { _mdc = v; }
 
 /** 生存行动价格 */
-export function getEatCost(mdc = _mdc): number { return Math.round(mdc * 0.75); }
-export function getBatheCost(mdc = _mdc): number { return Math.round(mdc * 0.25); }
+export function getEatCost(mdc = _mdc): number { return Math.round(mdc * 0.5); }
+export function getBatheCost(mdc = _mdc): number { return Math.round(mdc * 0.2); }
 
 /** 生理值 baseRate (/天) */
 export function getVitalBaseRate(vital: "hunger" | "fatigue" | "hygiene"): number {
@@ -69,7 +69,7 @@ export function dailyVitalDecay(vital: "hunger" | "fatigue" | "hygiene", bme: nu
 }
 
 /** tier → multiplier */
-const TIER_MULTIPLIERS: Record<number, number> = { 0: 0, 1: 1.0, 2: 1.5, 3: 2.5, 4: 4.0 };
+const TIER_MULTIPLIERS: Record<number, number> = { 0: 0, 1: 1.0, 2: 2.0, 3: 3.0, 4: 4.0 };
 export function getTierMultiplier(tier: number): number {
   return TIER_MULTIPLIERS[tier] ?? 0;
 }

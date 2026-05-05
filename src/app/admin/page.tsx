@@ -232,6 +232,7 @@ function ProvidersTab() {
     e.preventDefault();
     setError("");
     const body = providerFormData(e.currentTarget);
+    if (!body.apiKey) delete (body as Record<string, unknown>).apiKey;
     try {
       const res = await fetch(`/api/admin/providers/${id}`, {
         method: "PATCH",
@@ -296,7 +297,7 @@ function ProvidersTab() {
         <div className="text-game-sm text-(--color-pixel-muted)">加载中…</div>
       ) : providers.length === 0 ? (
         <div className="text-game-sm text-(--color-pixel-muted)">
-          暂无 provider，当前使用 .env.local 中的 DeepSeek 配置
+          暂无 provider，请添加 LLM Provider 或运行迁移脚本
         </div>
       ) : null}
 
@@ -411,10 +412,10 @@ function ProviderForm({
           <span className="text-game-2xs text-(--color-pixel-muted)">API Key</span>
           <input
             name="apiKey"
-            defaultValue={initial?.apiKey ?? ""}
-            required
+            defaultValue={initial ? "" : undefined}
+            required={!initial}
             type="password"
-            placeholder="sk-…"
+            placeholder={initial ? "留空则不修改" : "sk-…"}
             className="w-full px-2 py-1 text-game-sm bg-(--color-pixel-bg) border border-(--color-pixel-border-light) text-(--color-pixel-fg) outline-none focus:border-(--color-pixel-accent)"
           />
         </label>

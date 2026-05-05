@@ -20,6 +20,7 @@ function mkChar(
     stress: 0,
     social_satiety: 0,
   },
+  overrides?: Partial<Character>,
 ): Character {
   return {
     id,
@@ -37,7 +38,7 @@ function mkChar(
     abilities: [],
     appearance: 2,
     intelligence: 2,
-    health: 2,
+    health: 3, // healthFactor=1.0 → BME=1.0 for clean test values
     shortMemory: [],
     dailyMemory: [],
     longMemory: [],
@@ -52,6 +53,7 @@ function mkChar(
     longTermGoal: null,
     liked: "",
     disliked: "",
+    ...overrides,
   };
 }
 
@@ -64,36 +66,36 @@ describe("clamp", () => {
 });
 
 describe("decayVitals", () => {
-  it("hunger 每 5 ticks +1（仅整小时衰减）；fatigue 0..8 段偶数整小时 +1（慢段）；hygiene 偶数整小时 +1", () => {
+  it("hunger 每 tick +BME；fatigue 0..8 段偶数整小时 +0.5（慢段）；hygiene 偶数整小时 +0.8", () => {
     const c = mkChar("a", { hunger: 0, fatigue: 0, hygiene: 0 });
     decayVitals({ characters: [c], worldId: "w", tick: 0 });
-    expect(c.vitals.hunger).toBe(1);
-    expect(c.vitals.fatigue).toBe(1); // 0<8 慢段，tick 0 偶数整小时 +1
-    expect(c.vitals.hygiene).toBe(1);
+    expect(c.vitals.hunger).toBe(1.0);
+    expect(c.vitals.fatigue).toBe(0.5); // 0<8 慢段，tick 0 偶数整小时 +0.5
+    expect(c.vitals.hygiene).toBe(0.8);
 
     decayVitals({ characters: [c], worldId: "w", tick: 5 });
-    expect(c.vitals.hunger).toBe(2);
-    expect(c.vitals.fatigue).toBe(1); // 慢段，奇数整小时 +0
-    expect(c.vitals.hygiene).toBe(1);
+    expect(c.vitals.hunger).toBe(2.0);
+    expect(c.vitals.fatigue).toBe(0.5); // 慢段，奇数整小时 +0
+    expect(c.vitals.hygiene).toBe(0.8);
 
     decayVitals({ characters: [c], worldId: "w", tick: 10 });
-    expect(c.vitals.hunger).toBe(3);
-    expect(c.vitals.fatigue).toBe(2); // 慢段，偶数整小时 +1
-    expect(c.vitals.hygiene).toBe(2);
+    expect(c.vitals.hunger).toBe(3.0);
+    expect(c.vitals.fatigue).toBe(1.0); // 慢段，偶数整小时 +0.5
+    expect(c.vitals.hygiene).toBe(1.6);
   });
 
-  it("fatigue 8..13 段每整小时 +1（标段）", () => {
+  it("fatigue 8..13 段每整小时 +1.0（标段）", () => {
     const c = mkChar("a", { hunger: 0, fatigue: 8, hygiene: 0 });
-    decayVitals({ characters: [c], worldId: "w", tick: 5 }); // 奇数整小时，标段不关心奇偶 +1
-    expect(c.vitals.fatigue).toBe(9);
+    decayVitals({ characters: [c], worldId: "w", tick: 5 }); // 奇数整小时，标段不关心奇偶 +1.0
+    expect(c.vitals.fatigue).toBe(9.0);
     decayVitals({ characters: [c], worldId: "w", tick: 10 });
-    expect(c.vitals.fatigue).toBe(10);
+    expect(c.vitals.fatigue).toBe(10.0);
   });
 
-  it("fatigue 13..16 段每整小时 +2（快段）", () => {
+  it("fatigue 13..16 段每整小时 +2.0（快段）", () => {
     const c = mkChar("a", { hunger: 0, fatigue: 13, hygiene: 0 });
     decayVitals({ characters: [c], worldId: "w", tick: 5 });
-    expect(c.vitals.fatigue).toBe(15);
+    expect(c.vitals.fatigue).toBe(15.0);
     decayVitals({ characters: [c], worldId: "w", tick: 10 });
     expect(c.vitals.fatigue).toBe(16); // 封顶
   });
@@ -107,7 +109,7 @@ describe("decayVitals", () => {
   });
 
   it("跨入 medium 触发 inner 事件", () => {
-    const c = mkChar("a", { hunger: 4, fatigue: 0, hygiene: 0 });
+    const c = mkChar("a", { hunger: 5, fatigue: 0, hygiene: 0 }); // 5→6.0 跨入 HUNGER_MEDIUM
     const evs = decayVitals({ characters: [c], worldId: "w", tick: 5 });
     const hungerInner = evs.find(
       (e) => e.audienceCharacterId === "a" && /饿/.test(e.description),
@@ -117,7 +119,7 @@ describe("decayVitals", () => {
   });
 
   it("跨入 severe 触发 intensity=3 inner", () => {
-    const c = mkChar("a", { hunger: 9, fatigue: 0, hygiene: 0 });
+    const c = mkChar("a", { hunger: 10, fatigue: 0, hygiene: 0 }); // 10→11.0 跨入 HUNGER_SEVERE
     const evs = decayVitals({ characters: [c], worldId: "w", tick: 5 });
     const severe = evs.find(
       (e) => e.audienceCharacterId === "a" && e.intensity === 3,
@@ -126,10 +128,10 @@ describe("decayVitals", () => {
   });
 
   it("hygiene 越线（severe 13）触发 inner", () => {
-    const c = mkChar("a", { hunger: 0, fatigue: 0, hygiene: 12 });
-    // tick=10（偶数整小时）→ hygiene 13
+    const c = mkChar("a", { hunger: 0, fatigue: 0, hygiene: 12.5 });
+    // tick=10（偶数整小时）→ hygiene 12.5+0.8=13.3 跨入 severe
     const evs = decayVitals({ characters: [c], worldId: "w", tick: 10 });
-    expect(c.vitals.hygiene).toBe(13);
+    expect(c.vitals.hygiene).toBe(13.3);
     const inner = evs.find((e) => /洗浴|脏/.test(e.description));
     expect(inner).toBeTruthy();
   });
@@ -160,12 +162,12 @@ describe("decayVitals", () => {
       interruptThreshold: 5,
     };
     decayVitals({ characters: [c], worldId: "w", tick: 10 });
-    expect(c.vitals.hunger).toBe(6);
-    expect(c.vitals.fatigue).toBe(6);
-    expect(c.vitals.hygiene).toBe(6); // tick=10 偶数整小时
+    expect(c.vitals.hunger).toBe(6.0);
+    expect(c.vitals.fatigue).toBe(5.5); // slow even hour +0.5
+    expect(c.vitals.hygiene).toBe(5.8); // tick=10 偶数整小时 +0.8
   });
 
-  it("远途 move 期间 vitals 走半速：偶数整小时 +1，奇数整小时不增；hygiene 路上不增", () => {
+  it("远途 move 期间 vitals 走半速：偶数整小时衰减，奇数整小时不增；hygiene 路上不增", () => {
     const c = mkChar("a", { hunger: 5, fatigue: 5, hygiene: 5 });
     c.currentAction = {
       type: "move",
@@ -180,10 +182,10 @@ describe("decayVitals", () => {
     expect(c.vitals.fatigue).toBe(5);
     expect(c.vitals.hygiene).toBe(5);
 
-    // 偶数整小时：hunger/fatigue +1，hygiene 不增（路上洗不到澡）
+    // 偶数整小时：hunger +1.0, fatigue +0.5 (slow even), hygiene 不增
     decayVitals({ characters: [c], worldId: "w", tick: 10 });
-    expect(c.vitals.hunger).toBe(6);
-    expect(c.vitals.fatigue).toBe(6);
+    expect(c.vitals.hunger).toBe(6.0);
+    expect(c.vitals.fatigue).toBe(5.5);
     expect(c.vitals.hygiene).toBe(5);
   });
 });

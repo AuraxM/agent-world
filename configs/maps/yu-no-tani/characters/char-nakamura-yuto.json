@@ -47,7 +47,7 @@
     }
   },
   "initialMoney": 100,
-  "expenseExempt": false,
+  "expenseExempt": true,
   "incomeMultiplier": 1,
   "impressionBook": {}
 }

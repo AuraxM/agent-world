@@ -17,8 +17,8 @@ export const eatAction: ActionDefinition = {
     const costNote = ctx.self.expenseExempt
       ? ""
       : ` (-${getEatCost()}💰)`;
-    if (h >= 10) return `⭐ 进食（已 ${h} 小时未进食）${costNote}`;
-    if (h >= 5) return `⭐ 进食${costNote}`;
+    if (h >= 11) return `⭐ 进食（已 ${Math.round(h)} 小时未进食）${costNote}`;
+    if (h >= 6) return `⭐ 进食${costNote}`;
     if (h <= 0) return `进食（不饿，纯消遣）${costNote}`;
     return `进食${costNote}`;
   },
@@ -54,7 +54,7 @@ export const batheAction: ActionDefinition = {
     const costNote = ctx.self.expenseExempt
       ? ""
       : ` (-${getBatheCost()}💰)`;
-    if (h >= 13) return `⭐ 洗浴（已 ${h} 小时未洗浴）${costNote}`;
+    if (h >= 13) return `⭐ 洗浴（已 ${Math.round(h)} 小时未洗浴）${costNote}`;
     if (h >= 8) return `⭐ 洗浴${costNote}`;
     return `洗浴${costNote}`;
   },
@@ -120,7 +120,7 @@ export const restAction: ActionDefinition = {
 
 export const workAction: ActionDefinition = {
   type: "work",
-  duration: 10,
+  duration: 5,
   check(ctx) {
     if (!ctx.facts.activityNodeId) return false;
     if (ctx.self.incomeLevel <= 0) return false;
@@ -130,7 +130,7 @@ export const workAction: ActionDefinition = {
   hint(ctx) {
     const prof = ctx.self.profession;
     const label = prof === "student" ? "学习" : prof;
-    return `工作（${label}，10 ticks）`;
+    return `工作（${label}，5 ticks）`;
   },
   validateParams() { return null; },
   execute(ctx, input) {
@@ -143,7 +143,7 @@ export const workAction: ActionDefinition = {
         action: {
           type: "work",
           startedAt: ctx.tick,
-          endsAt: ctx.tick + 10,
+          endsAt: ctx.tick + 5,
           description: `在 ${ctx.here.name} 工作`,
           interruptThreshold: 3,
         },

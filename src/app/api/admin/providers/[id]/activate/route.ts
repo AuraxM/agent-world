@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/providers/[id]/activate — 切换活跃 provider
  */
-import { setActiveProvider } from "@/llm/providers";
+import { setActiveProvider, maskApiKey } from "@/llm/providers";
 
 export async function POST(
   _request: Request,
@@ -11,7 +11,7 @@ export async function POST(
 
   try {
     const provider = setActiveProvider(id);
-    return Response.json({ provider });
+    return Response.json({ provider: { ...provider, apiKey: maskApiKey(provider.apiKey) } });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.startsWith("provider not found")) {

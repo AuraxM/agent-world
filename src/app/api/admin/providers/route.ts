@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   createProvider,
   listProviders,
+  maskApiKey,
 } from "@/llm/providers";
 
 const CreateBodySchema = z.object({
@@ -15,10 +16,14 @@ const CreateBodySchema = z.object({
   model: z.string().min(1),
 });
 
+function toPublic(p: ReturnType<typeof listProviders>[number]) {
+  return { ...p, apiKey: maskApiKey(p.apiKey) };
+}
+
 export async function GET() {
   try {
     const providers = listProviders();
-    return Response.json({ providers });
+    return Response.json({ providers: providers.map(toPublic) });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json({ error: message }, { status: 500 });
@@ -42,7 +47,7 @@ export async function POST(request: Request) {
 
   try {
     const provider = createProvider(parsed.data);
-    return Response.json({ provider }, { status: 201 });
+    return Response.json({ provider: toPublic(provider) }, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json({ error: message }, { status: 500 });

@@ -13,6 +13,11 @@ export interface LLMProvider {
   createdAt: number;
 }
 
+export function maskApiKey(key: string): string {
+  if (key.length < 12) return "***";
+  return `${key.slice(0, 8)}…${key.slice(-4)}`;
+}
+
 export interface CreateProviderInput {
   name: string;
   baseUrl: string;

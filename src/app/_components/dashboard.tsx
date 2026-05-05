@@ -168,7 +168,7 @@ export function Dashboard() {
           </div>
 
           {/* Right: character profile */}
-          <div style={{ gridArea: "right" }} className="min-h-0 min-w-0 overflow-hidden bg-(--frame-2) border-l-2 border-(--border)">
+          <div style={{ gridArea: "right" }} className="min-h-0 min-w-0 overflow-hidden flex flex-col bg-(--frame-2) border-l-2 border-(--border)">
             <ProfilePane
               character={selectedCharacter}
               nodes={snapshot.nodes}

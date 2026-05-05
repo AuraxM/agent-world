@@ -1,11 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import ForceGraph2D, {
-  type ForceGraphMethods,
-  type LinkObject,
-  type NodeObject,
+import dynamic from "next/dynamic";
+import type {
+  ForceGraphMethods,
+  LinkObject,
+  NodeObject,
 } from "react-force-graph-2d";
+
+const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
+  ssr: false,
+});
 import type { Character, MapNode } from "@/domain/types";
 import type { GraphLink, GraphNode } from "@/app/_lib/relation-graph-utils";
 import {

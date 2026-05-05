@@ -7,6 +7,7 @@ import {
   deleteProvider,
   getProvider,
   updateProvider,
+  maskApiKey,
 } from "@/llm/providers";
 
 const UpdateBodySchema = z.object({
@@ -15,6 +16,11 @@ const UpdateBodySchema = z.object({
   apiKey: z.string().min(1).optional(),
   model: z.string().min(1).optional(),
 });
+
+function toPublic(p: ReturnType<typeof getProvider>) {
+  if (!p) return undefined;
+  return { ...p, apiKey: maskApiKey(p.apiKey) };
+}
 
 export async function PATCH(
   request: Request,
@@ -38,7 +44,7 @@ export async function PATCH(
 
   try {
     const provider = updateProvider(id, parsed.data);
-    return Response.json({ provider });
+    return Response.json({ provider: toPublic(provider) });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.startsWith("provider not found")) {

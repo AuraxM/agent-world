@@ -703,6 +703,42 @@ export async function runDialogPhase(
   };
   const salvageTasks: Array<() => Promise<{ actorId: string; action: Action }>> = [];
 
+  // Salvage speakers whose target is already in an ongoing conversation
+  for (const mp of rawPairing.mutualPairs) {
+    if (consumedActorIds.has(mp.a) && !consumedActorIds.has(mp.b)) {
+      consumedActorIds.add(mp.b);
+      const targetName = charById.get(mp.a)!.name;
+      const reason = `${targetName} 正在和别人聊天`;
+      memoryWrites.push(makeMemory(mp.b, tick, 1, `想找 ${targetName} 说话但她在和别人聊天`));
+      salvageTasks.push(() =>
+        input.salvageDecide({ character: charById.get(mp.b)!, tick, rejectReason: reason, language: input.language })
+          .then((action) => ({ actorId: mp.b, action })),
+      );
+    }
+    if (!consumedActorIds.has(mp.a) && consumedActorIds.has(mp.b)) {
+      consumedActorIds.add(mp.a);
+      const targetName = charById.get(mp.b)!.name;
+      const reason = `${targetName} 正在和别人聊天`;
+      memoryWrites.push(makeMemory(mp.a, tick, 1, `想找 ${targetName} 说话但她在和别人聊天`));
+      salvageTasks.push(() =>
+        input.salvageDecide({ character: charById.get(mp.a)!, tick, rejectReason: reason, language: input.language })
+          .then((action) => ({ actorId: mp.a, action })),
+      );
+    }
+  }
+  for (const pa of rawPairing.pendingAcceptances) {
+    if (!consumedActorIds.has(pa.requester) && consumedActorIds.has(pa.target)) {
+      consumedActorIds.add(pa.requester);
+      const targetName = charById.get(pa.target)!.name;
+      const reason = `${targetName} 正在和别人聊天`;
+      memoryWrites.push(makeMemory(pa.requester, tick, 1, `想找 ${targetName} 说话但她在和别人聊天`));
+      salvageTasks.push(() =>
+        input.salvageDecide({ character: charById.get(pa.requester)!, tick, rejectReason: reason, language: input.language })
+          .then((action) => ({ actorId: pa.requester, action })),
+      );
+    }
+  }
+
   for (const af of pairing.autoFails) {
     consumedActorIds.add(af.requester);
     const char = charById.get(af.requester)!;

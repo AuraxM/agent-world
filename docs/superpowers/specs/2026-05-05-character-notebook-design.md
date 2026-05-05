@@ -65,18 +65,27 @@ function getTodayEntries(entries: NotebookEntry[], currentTick: Tick): NotebookE
 function getNextHourEntries(entries: NotebookEntry[], currentTick: Tick): NotebookEntry[]
 
 // 格式化（tick → HH:mm 文本，给 LLM 看）
-function formatScheduledTime(tick: Tick): string
+function formatScheduledTime(tick: Tick, epoch: number): string
 //   返回 "第N日 HH:MM" 或 "HH:MM"
-function describeEntries(entries: NotebookEntry[], currentTick: Tick): string
+function describeEntries(entries: NotebookEntry[], currentTick: Tick, epoch: number): string
 //   返回 "今日待办：- 14:00 — 和XX在公园约会"
 //   或 "未来一小时内：- 16:00 — ..."
 ```
 
 ### 时间格式化规则
 
-- tick → 时间：`day = Math.floor(tick / 120)`, `hour = Math.floor((tick % 120) / 5)`, `minute = ((tick % 120) % 5) * 12`
-- 分钟粒度为 12（5 tick/hour → 12 min/tick）
+使用与 `timeOfDay()` 一致的 epoch 基准计算，确保 notebook 显示的时间与 prompt 中的时间一致：
+
+```
+MS_PER_TICK = (60 / 5) * 60 * 1000 = 720000  // 12 分钟
+gameDate = new Date(epoch + tick * MS_PER_TICK)
+hour = gameDate.getHours()
+minute = gameDate.getMinutes()
+day = Math.floor(tick / 120)  // 游戏天，tick 基准
+```
+
 - 同一天：显示 `HH:MM`；不同天：`第N日 HH:MM`
+- 所有格式化函数接受 `epoch: number` 参数
 
 ## Action: `add_notebook_entry`
 

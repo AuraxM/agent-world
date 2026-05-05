@@ -31,6 +31,11 @@ export function EventCard({
   const transcriptMsgCount = hasTranscript
     ? event.dialogTranscript!.filter((t) => t.speakerId !== "__system__").length
     : 0;
+  const dialogueSpeakers = hasTranscript
+    ? [...new Set(event.dialogTranscript!.filter(t => t.speakerId !== "__system__").map(t => t.speakerId))]
+        .map(id => charById.get(id))
+        .filter(Boolean) as Character[]
+    : [];
   const actor = event.participants.length > 0
     ? charById.get(event.participants[0])
     : undefined;
@@ -39,23 +44,43 @@ export function EventCard({
   return (
     <div className={`ev-card ${important ? "ev-card--important" : ""}`}>
       <div className="flex items-center gap-2 mb-1.5">
-        {/* Avatar */}
-        {actor && (
-          <span className="npc-chip w-7 h-7 text-base">
-            {characterEmoji(actor)}
-          </span>
+        {/* Single actor (non-dialogue) */}
+        {!hasTranscript && actor && (
+          <>
+            <span className="npc-chip w-7 h-7 text-base">
+              {characterEmoji(actor)}
+            </span>
+            <button
+              type="button"
+              onClick={() => onSelectCharacter(actor)}
+              className="text-body-sm font-semibold text-(--text) hover:underline cursor-pointer"
+            >
+              {actor.name}
+            </button>
+          </>
         )}
 
-        {/* Actor name */}
-        {actor && (
-          <button
-            type="button"
-            onClick={() => onSelectCharacter(actor)}
-            className="text-body-sm font-semibold text-(--text) hover:underline cursor-pointer"
-          >
-            {actor.name}
-          </button>
-        )}
+        {/* Multi-speaker (dialogue events) */}
+        {hasTranscript && dialogueSpeakers.map((speaker, i) => (
+          <span key={speaker.id} className="flex items-center gap-1">
+            <span className="npc-chip w-7 h-7 text-base">
+              {characterEmoji(speaker)}
+            </span>
+            <button
+              type="button"
+              onClick={() => onSelectCharacter(speaker)}
+              className="text-body-sm font-semibold text-(--text) hover:underline cursor-pointer"
+            >
+              {speaker.name}
+            </button>
+            <span className="text-pixel-2xs text-(--text-faint)">
+              {genderIcon(speaker.gender)} {speaker.age}岁
+            </span>
+            {i < dialogueSpeakers.length - 1 && (
+              <span className="text-(--text-faint) mx-0.5">·</span>
+            )}
+          </span>
+        ))}
 
         {/* Location chip */}
         {loc && (
@@ -174,6 +199,12 @@ export function EventCard({
       </div>
     </div>
   );
+}
+
+function genderIcon(gender: string): string {
+  if (gender === "male") return "♂";
+  if (gender === "female") return "♀";
+  return "⚧";
 }
 
 function ActionBtn({

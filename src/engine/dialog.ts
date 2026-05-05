@@ -28,6 +28,7 @@ import { eq, and } from "drizzle-orm";
 import { actionRegistry } from "@/domain/action-system";
 import { applyStateChange } from "./execute";
 import { recordTransaction } from "./economy";
+import { getNextHourEntries } from "./notebook";
 const log = createLogger("dialog");
 
 // ---------------------------------------------------------------------------
@@ -107,6 +108,7 @@ export type TurnDecideFn = (input: {
   pendingAction?: import("@/domain/types").DialogueActionRequest;
   dialogueActions: import("@/domain/action-system").ActionDefinition[];
   tick: number;
+  upcomingEntries?: import("@/domain/types").NotebookEntry[];
 }) => Promise<
   | { kind: "turn"; turn: DialogTurn; proposeAction?: DialogueActionProposal; respondToAction?: DialogueActionResponse }
   | { kind: "end"; payload: EndConversationPayload; respondToAction?: DialogueActionResponse }
@@ -440,6 +442,8 @@ async function runOneTickDialog(
       ? conv.pendingAction
       : undefined;
 
+    const upcomingEntries = getNextHourEntries(speaker.notebook ?? [], currentTick);
+
     let result;
     try {
       result = await retryOnce(() => turnDecide({
@@ -451,6 +455,7 @@ async function runOneTickDialog(
         pendingAction,
         dialogueActions,
         tick: currentTick,
+        upcomingEntries,
       }));
     } catch (err) {
       log.error("turnDecide 异常，对话被迫终止", {
@@ -530,6 +535,7 @@ async function runOneTickDialog(
           const otherDialogueActions = actionRegistry.getDialogueActions(otherActionCtx);
           const otherPendingAction = conv.pendingAction && conv.pendingAction.targetId === otherId
             ? conv.pendingAction : undefined;
+          const upcomingEntries = getNextHourEntries(other.notebook ?? [], currentTick);
           const extraResult = await turnDecide({
             self: other,
             peer: otherPeer,
@@ -539,6 +545,7 @@ async function runOneTickDialog(
             pendingAction: otherPendingAction,
             dialogueActions: otherDialogueActions,
             tick: currentTick,
+            upcomingEntries,
           });
           if (extraResult.kind === "turn") {
             transcript.push(extraResult.turn);

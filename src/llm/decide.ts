@@ -422,7 +422,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     language,
     pendingAction: input.pendingAction,
     dialogueActions: input.dialogueActions,
-    upcomingEntries: (input as any).upcomingEntries,
+    upcomingEntries: input.upcomingEntries,
   });
 
   const tools: ChatCompletionTool[] = [

@@ -603,7 +603,17 @@ describe("arrivalIntro", () => {
 });
 
 describe("buildAcceptDecisionPrompt", () => {
-  it("contains requester name, freeText, and self state (zh)", () => {
+  const peer: Character = {
+    ...baseCharacter,
+    id: "peer-1",
+    name: "甲",
+    age: 30,
+    gender: "female",
+    profession: "teacher",
+    appearance: 3,
+  };
+
+  it("contains requester name, freeText, self-image, peer-image, and submit instruction (zh)", () => {
     const result = buildAcceptDecisionPrompt({
       self: {
         ...baseCharacter,
@@ -613,40 +623,54 @@ describe("buildAcceptDecisionPrompt", () => {
       requesterName: "甲",
       freeText: "今天天气不错，一起散步吗？",
       here: restaurant,
-      perceived: [],
-      companions: [],
+      peer,
       tick: 12,
     });
     expect(result).toContain("甲");
     expect(result).toContain("今天天气不错，一起散步吗？");
+    expect(result).toContain("关于你自己");
+    expect(result).toContain("姓名：乙");
+    expect(result).toContain("关于 甲");
+    expect(result).toContain("职业：教师");
     expect(result).toContain("submit_accept_decision");
   });
 
-  it("includes perceived events when present", () => {
+  it("does NOT include perceived events or companions (removed)", () => {
     const result = buildAcceptDecisionPrompt({
       self: baseCharacter,
       requesterName: "甲",
       freeText: "嗨",
       here: restaurant,
-      perceived: [
-        {
-          id: "e1",
-          worldId: "w",
-          tick: 5,
-          category: "inner",
-          description: "肚子叫了",
-          participants: [baseCharacter.id],
-          source: "inner",
-          intensity: 2,
-          scope: "private",
-          audienceCharacterId: baseCharacter.id,
-          duration: 1,
-        } as any,
-      ],
-      companions: [],
+      peer,
       tick: 5,
     });
-    expect(result).toContain("肚子叫了");
+    expect(result).not.toContain("你刚刚感知到的事件");
+    expect(result).not.toContain("同节点其他人");
+  });
+
+  it("includes compact personality line instead of expanded traits", () => {
+    const result = buildAcceptDecisionPrompt({
+      self: baseCharacter,
+      requesterName: "甲",
+      freeText: "嗨",
+      here: restaurant,
+      peer,
+      tick: 5,
+    });
+    expect(result).toContain("性格：EN");
+    expect(result).not.toContain("内外向(E/I)");
+  });
+
+  it("uses pre-filled impression from impressionBook", () => {
+    const result = buildAcceptDecisionPrompt({
+      self: { ...baseCharacter, impressionBook: { "peer-1": "安静但可靠。" } },
+      requesterName: "甲",
+      freeText: "嗨",
+      here: restaurant,
+      peer,
+      tick: 5,
+    });
+    expect(result).toContain("安静但可靠");
   });
 });
 
@@ -657,15 +681,80 @@ describe("buildDialogTurnPrompt", () => {
     { speakerId: "a", kind: "say", line: "你最近在忙什么？" },
   ];
 
-  it("renders transcript and speaker context (zh)", () => {
+  const selfChar: Character = {
+    ...baseCharacter,
+    id: "b",
+    name: "乙",
+    age: 25,
+    gender: "male",
+    profession: "merchant",
+    appearance: 2,
+    personality: { ei: 0, sn: 0, tf: 0, jp: 0 },
+    relations: { "a": { kinds: ["friend"] as const, since: 0, lastInteractionTick: 0 } },
+  };
+  const peerChar: Character = {
+    ...baseCharacter,
+    id: "a",
+    name: "甲",
+    age: 30,
+    gender: "female",
+    profession: "teacher",
+    appearance: 3,
+  };
+
+  it("renders self-image, peer-image, compact personality, and transcript (zh)", () => {
     const result = buildDialogTurnPrompt({
-      self: { ...baseCharacter, id: "b", name: "乙" },
-      peer: { ...baseCharacter, id: "a", name: "甲" },
+      self: selfChar,
+      peer: peerChar,
       transcript,
+      here: restaurant,
     });
-    expect(result).toContain("甲");
-    expect(result).toContain("乙");
+    expect(result).toContain("关于你自己");
+    expect(result).toContain("姓名：乙");
+    expect(result).toContain("当前在：老王饭馆");
+    expect(result).toContain("关于 甲");
+    expect(result).toContain("职业：教师");
+    expect(result).toContain("性格：EN");
+    expect(result).not.toContain("内外向(E/I)");
     expect(result).toContain("今天天气真好");
+    expect(result).toContain("submit_dialog_turn");
+  });
+
+  it("renders system messages with 【】 brackets", () => {
+    const transcriptWithSys: DialogTurn[] = [
+      ...transcript,
+      { speakerId: "__system__", kind: "say", line: "已过去 30 分钟。" },
+    ];
+    const result = buildDialogTurnPrompt({
+      self: selfChar,
+      peer: peerChar,
+      transcript: transcriptWithSys,
+      here: restaurant,
+    });
+    expect(result).toContain("【已过去 30 分钟。】");
+  });
+
+  it("en: renders in English with self/peer image", () => {
+    const result = buildDialogTurnPrompt({
+      self: selfChar,
+      peer: peerChar,
+      transcript,
+      here: restaurant,
+      language: "en",
+    });
+    expect(result).toContain("You are 乙, speaking with 甲");
+    expect(result).toContain("submit_dialog_turn");
+  });
+
+  it("ja: renders in Japanese with self/peer image", () => {
+    const result = buildDialogTurnPrompt({
+      self: selfChar,
+      peer: peerChar,
+      transcript,
+      here: restaurant,
+      language: "ja",
+    });
+    expect(result).toContain("あなたは 乙 です");
     expect(result).toContain("submit_dialog_turn");
   });
 });

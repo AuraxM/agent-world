@@ -799,12 +799,11 @@ export function buildAcceptDecisionPrompt(args: {
   requesterName: string;
   freeText: string;
   here: MapNode;
-  perceived: WorldEvent[];
-  companions: Character[];
+  peer: Character;
   tick: number;
   language?: Language;
 }): string {
-  const { self, requesterName, freeText, here, perceived, companions, tick } = args;
+  const { self, requesterName, freeText, here, peer, tick } = args;
   const language = args.language ?? "zh";
   const t = timeOfDay(tick, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW);
   const fatigue = qualifyVital(self.vitals.fatigue, "fatigue");
@@ -814,35 +813,19 @@ export function buildAcceptDecisionPrompt(args: {
 
   lines.push(`${requesterName} 想和你说话："${freeText}"`);
   lines.push("");
-  lines.push(`你当前的状态：`);
-  lines.push(`- 在 ${here.name}`);
+  lines.push(buildSelfImage(self, here.name));
+  lines.push("");
+  lines.push(buildPeerImage(self, peer));
+  lines.push("");
+  lines.push("你当前的状态：");
   lines.push(`- 疲惫：${fatigue.phrase}`);
   lines.push(`- 饥饿：${hunger.phrase}`);
   lines.push(`- 心情：${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
   lines.push(`- 压力：${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
   lines.push(`- 社交满足：${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
   lines.push("");
-
-  lines.push("你的性格特征：");
-  for (const s of describePersonality(self.personality)) {
-    lines.push(`- ${s}`);
-  }
+  lines.push(describePersonalityCompact(self.personality, self.intelligence));
   lines.push("");
-
-  // B 当前感知（如果有）
-  if (perceived.length > 0) {
-    lines.push("你刚刚感知到的事件：");
-    lines.push(describeEvents(perceived));
-    lines.push("");
-  }
-
-  // 同节点其他人（如果有）
-  if (companions.length > 0) {
-    const topPeers = selectTopPeers(self, companions, tick);
-    lines.push("同节点其他人：");
-    lines.push(describeRelations(self, topPeers, tick));
-    lines.push("");
-  }
 
   const timeStr = `第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
   lines.push(`当前时间：${timeStr}`, "");
@@ -865,39 +848,66 @@ export function buildDialogTurnPrompt(args: {
   self: Character;
   peer: Character;
   transcript: DialogTurn[];
+  here: MapNode;
   language?: Language;
 }): string {
-  const { self, peer, transcript } = args;
+  const { self, peer, transcript, here } = args;
   const language = args.language ?? "zh";
 
   const history = transcript
     .map((t) => {
+      if (t.speakerId === "__system__") {
+        return `【${t.line ?? ""}】`;
+      }
       const name = t.speakerId === self.id ? self.name : peer.name;
-      return `${name}：${t.line ?? ""}`;
+      return `${name}: ${t.line ?? ""}`;
     })
     .join("\n");
 
+  const personalityLine = describePersonalityCompact(self.personality, self.intelligence);
+
   const lines: string[] = [];
-  lines.push(`你正在和 ${peer.name} 对话。`);
-  lines.push("");
 
-  lines.push("你的性格特征：");
-  for (const s of describePersonality(self.personality)) {
-    lines.push(`- ${s}`);
+  if (language === "zh") {
+    lines.push(`你是 ${self.name}，正在和 ${peer.name} 对话。`);
+    lines.push("");
+    lines.push(buildSelfImage(self, here.name));
+    lines.push("");
+    lines.push(buildPeerImage(self, peer));
+    lines.push("");
+    lines.push(personalityLine);
+    lines.push("");
+    lines.push("对话记录：");
+    lines.push(history || "(尚未开始)");
+    lines.push("");
+    lines.push("现在轮到你说话。请根据你的性格自然地回应，不要重复对方刚说过的话。调用 submit_dialog_turn：kind=\"say\" 并填写 line。如果想结束对话，请调用 end_conversation。");
+  } else if (language === "en") {
+    lines.push(`You are ${self.name}, speaking with ${peer.name}.`);
+    lines.push("");
+    lines.push(buildSelfImage(self, here.name));
+    lines.push("");
+    lines.push(buildPeerImage(self, peer));
+    lines.push("");
+    lines.push(personalityLine);
+    lines.push("");
+    lines.push("Conversation:");
+    lines.push(history || "(not yet started)");
+    lines.push("");
+    lines.push("It's your turn. Respond naturally based on your personality — do not repeat what the other person just said. Call submit_dialog_turn with kind=\"say\" and line. If you want to end the conversation, call end_conversation.");
+  } else {
+    lines.push(`あなたは ${self.name} です。${peer.name} と会話しています。`);
+    lines.push("");
+    lines.push(buildSelfImage(self, here.name));
+    lines.push("");
+    lines.push(buildPeerImage(self, peer));
+    lines.push("");
+    lines.push(personalityLine);
+    lines.push("");
+    lines.push("会話の記録：");
+    lines.push(history || "(まだ始まっていません)");
+    lines.push("");
+    lines.push("あなたの番です。自分の性格に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。submit_dialog_turn で kind=\"say\" を呼び出し line を入力してください。会話を終了する場合は end_conversation を呼び出してください。");
   }
-  lines.push("");
-
-  lines.push("对话记录：");
-  lines.push(history);
-  lines.push("");
-
-  const sayPrompt =
-    language === "zh"
-      ? `现在轮到你说话。调用 submit_dialog_turn 回复：kind="say" 并填写 line。如果想结束对话，请调用 end_conversation。`
-      : language === "en"
-        ? `It's your turn. Call submit_dialog_turn with kind="say" and line. If you want to end the conversation, call end_conversation.`
-        : `あなたの番です。submit_dialog_turn で kind="say" を呼び出し line を入力してください。会話を終了する場合は end_conversation を呼び出してください。`;
-  lines.push(sayPrompt);
 
   return lines.join("\n");
 }

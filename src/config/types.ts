@@ -61,6 +61,7 @@ export type CharacterTemplate = Omit<
   | "longTermGoal"
   | "liked"
   | "disliked"
+  | "notebook"
 > & {
   initialMoney?: number;
   incomeMultiplier?: number;

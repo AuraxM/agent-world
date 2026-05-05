@@ -58,6 +58,14 @@ export interface Memory {
   refEventId?: string;
 }
 
+/** 记事本条目 */
+export interface NotebookEntry {
+  id: string;
+  scheduledTick: Tick;
+  content: string;
+  createdAt: Tick;
+}
+
 /**
  * 单向关系：A 角色对 B 角色的认知。
  * 仅在 kinds 非空时存在；引擎在 kinds 清空后会自动删除条目。
@@ -215,6 +223,7 @@ export interface Character {
   sleepWindow?: SleepWindow;
   /** 人物印象记录本：targetCharId → 自由文本印象 */
   impressionBook: Record<string, string>;
+  notebook: NotebookEntry[];
   /** 短期目标（≥1 天更新间隔） */
   shortTermGoal: { goal: string; updatedAt: Tick } | null;
   /** 长期目标（≥7 天更新间隔） */

@@ -146,6 +146,13 @@ export const SicknessSchema = z.object({
   duration: z.number().int().min(120).max(840),
 });
 
+export const NotebookEntrySchema = z.object({
+  id: z.string(),
+  scheduledTick: z.number().int().nonnegative(),
+  content: z.string().min(1).max(500),
+  createdAt: z.number().int().nonnegative(),
+});
+
 /** 单向关系。 */
 export const RelationSchema = z.object({
   kinds: z.array(z.enum(OBJECTIVE_RELATION_KINDS)).min(1),

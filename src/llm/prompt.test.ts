@@ -56,6 +56,7 @@ const baseCharacter: Character = {
   expenseExempt: false,
   activeConversationIds: [],
   impressionBook: {},
+  notebook: [],
   shortTermGoal: null,
   longTermGoal: null,
   liked: "",

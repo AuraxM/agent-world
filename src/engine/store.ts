@@ -112,6 +112,7 @@ export function loadWorld(worldId: string): LoadedWorld {
     sickness: c.sicknessJson ? JSON.parse(c.sicknessJson) : undefined,
     speakingStyle: c.speakingStyle ?? undefined,
     activeConversationIds: JSON.parse(c.activeConversationIdsJson),
+    notebook: [],
   }));
 
   if (characters.length > 0) {

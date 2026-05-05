@@ -51,6 +51,7 @@ function makeChar(
     incomeLevel: 0,
     expenseExempt: false,
     impressionBook: {},
+    notebook: [],
     shortTermGoal: null,
     longTermGoal: null,
     liked: "",

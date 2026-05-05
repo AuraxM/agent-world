@@ -37,6 +37,7 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     lastSleepTick: 0,
     activeConversationIds: [],
     impressionBook: {},
+    notebook: [],
     shortTermGoal: null,
     longTermGoal: null,
     liked: "",

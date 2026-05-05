@@ -45,6 +45,7 @@ function makeChar(id: string, loc: string, currentActionType?: string): Characte
       ? { type: currentActionType as any, startedAt: 0, endsAt: 10, description: "", interruptThreshold: 3 }
       : undefined,
     impressionBook: {},
+    notebook: [],
     shortTermGoal: null,
     longTermGoal: null,
     liked: "",
@@ -213,6 +214,7 @@ function makeCharFull(
         }
       : undefined,
     impressionBook: {},
+    notebook: [],
     shortTermGoal: null,
     longTermGoal: null,
     liked: "",

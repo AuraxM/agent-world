@@ -78,8 +78,7 @@ export type AcceptDecideFn = (input: {
   requesterId: string;
   freeText: string;
   here: MapNode;
-  perceived: WorldEvent[];
-  companions: Character[];
+  peer: Character;
   tick: number;
   language: Language;
 }) => Promise<AcceptDecideResult>;
@@ -88,6 +87,7 @@ export type TurnDecideFn = (input: {
   self: Character;
   peer: Character;
   transcript: DialogTurn[];
+  here: MapNode;
   language: Language;
 }) => Promise<
   | { kind: "turn"; turn: DialogTurn }
@@ -292,6 +292,7 @@ interface TickDialogResult {
 async function runOneTickDialog(
   conv: Conversation,
   chars: Map<string, Character>,
+  nodeById: Map<string, MapNode>,
   turnDecide: TurnDecideFn,
   language: Language,
   currentTick: number,
@@ -332,7 +333,8 @@ async function runOneTickDialog(
 
     let result;
     try {
-      result = await retryOnce(() => turnDecide({ self: speaker, peer, transcript, language }));
+      const speakerHere = nodeById.get(speaker.locationId)!;
+      result = await retryOnce(() => turnDecide({ self: speaker, peer, transcript, here: speakerHere, language }));
     } catch (err) {
       log.error("turnDecide 异常，对话被迫终止", {
         speaker: speaker.name,
@@ -362,10 +364,12 @@ async function runOneTickDialog(
         const other = chars.get(otherId)!;
         const otherPeer = otherId === conv.initiatorId ? acceptor : initiator;
         try {
+          const otherHere = nodeById.get(other.locationId)!;
           const extraResult = await turnDecide({
             self: other,
             peer: otherPeer,
             transcript,
+            here: otherHere,
             language,
           });
           if (extraResult.kind === "turn") {
@@ -466,7 +470,7 @@ export async function runDialogPhase(
         return;
       }
 
-      const tickResult = await runOneTickDialog(conv, charById, input.turnDecide, input.language, tick);
+      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick);
       conv.transcript = tickResult.transcript;
       conv.currentTickRounds = TURNS_PER_TICK;
 
@@ -517,15 +521,11 @@ export async function runDialogPhase(
       const target = charById.get(pa.target)!;
       const requester = charById.get(pa.requester)!;
       const here = nodeById.get(target.locationId)!;
-      const companions = characters.filter(
-        (c) => c.id !== target.id && c.locationId === target.locationId,
-      );
-      const perceived = perceptions.get(target.id) ?? [];
       let result: AcceptDecideResult;
       try {
         result = await input.acceptDecide({
           character: target, requesterName: requester.name, requesterId: pa.requester,
-          freeText: pa.freeText, here, perceived, companions, tick, language: input.language,
+          freeText: pa.freeText, here, peer: requester, tick, language: input.language,
         });
       } catch {
         result = { type: "reject_speak", targetId: pa.requester, reasoning: "决策失败默认拒绝", selfImportance: 1 };
@@ -579,7 +579,7 @@ export async function runDialogPhase(
         currentTickRounds: 0,
         status: "active",
       };
-      const tickResult = await runOneTickDialog(conv, charById, input.turnDecide, input.language, tick);
+      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick);
       conv.transcript = tickResult.transcript;
       conv.currentTickRounds = TURNS_PER_TICK;
       if (tickResult.ended) {

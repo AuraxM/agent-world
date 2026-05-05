@@ -382,6 +382,7 @@ interface DialogTurnInput {
   self: Character;
   peer: Character;
   transcript: DialogTurn[];
+  here: MapNode;
   language?: Language;
 }
 
@@ -399,6 +400,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
     self: input.self,
     peer: input.peer,
     transcript: input.transcript,
+    here: input.here,
     language,
   });
 
@@ -801,8 +803,7 @@ export interface AcceptDecisionInput {
   requesterId: string;
   freeText: string;
   here: MapNode;
-  perceived: WorldEvent[];
-  companions: Character[];
+  peer: Character;
   tick: number;
   language?: Language;
 }
@@ -823,8 +824,7 @@ export async function llmAcceptDecide(
     requesterName: input.requesterName,
     freeText: input.freeText,
     here: input.here,
-    perceived: input.perceived,
-    companions: input.companions,
+    peer: input.peer,
     tick: input.tick,
     language,
   });

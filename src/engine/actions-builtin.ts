@@ -3,6 +3,7 @@ import { TICKS_PER_HOUR } from "@/domain/enums";
 import { DEFAULT_ECONOMY_CONFIG } from "@/config/types";
 import { getEatCost, getBatheCost } from "./bme";
 import { rollWorkIncome } from "./economy";
+import { tickFromDayHourMinute, createEntryId, saveNotebookEntry, formatScheduledTime } from "./notebook";
 
 export const eatAction: ActionDefinition = {
   type: "eat",
@@ -464,6 +465,65 @@ export const giveAction: ActionDefinition = {
   usableInDialogue: true,
 };
 
+export const addNotebookEntryAction: ActionDefinition = {
+  type: "add_notebook_entry",
+  duration: "instant",
+  check(_ctx) { return true; },
+  hint(ctx) {
+    const day = Math.floor(ctx.tick / (24 * TICKS_PER_HOUR));
+    const MS_PER_TICK = (60 / TICKS_PER_HOUR) * 60 * 1000;
+    const date = new Date(ctx.epoch + ctx.tick * MS_PER_TICK);
+    const hh = String(date.getHours()).padStart(2, "0");
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    return `添加记事本（当前时间：第 ${day} 日 ${hh}:${mm}）
+  参数：scheduled_day（目标游戏天）、scheduled_hour（0-23）、scheduled_minute（0-55）、free_text（待办描述）`;
+  },
+  validateParams(input, ctx) {
+    const day = input.scheduled_day as number | undefined;
+    const hour = input.scheduled_hour as number | undefined;
+    const minute = input.scheduled_minute as number | undefined;
+    if (day === undefined || day < 0) return "scheduled_day 需要 >= 0 的整数";
+    if (hour === undefined || hour < 0 || hour > 23) return "scheduled_hour 需要在 0-23";
+    if (minute === undefined || minute < 0 || minute > 59) return "scheduled_minute 需要在 0-59";
+    if (!input.free_text || (input.free_text as string).trim().length === 0) return "free_text 不能为空";
+    const scheduledTick = tickFromDayHourMinute(day, hour, minute, ctx.epoch);
+    if (scheduledTick <= ctx.tick) return "目标时间必须在当前时间之后";
+    return null;
+  },
+  execute(ctx, input) {
+    const day = (input.scheduled_day as number)!;
+    const hour = (input.scheduled_hour as number)!;
+    const minute = (input.scheduled_minute as number)!;
+    const freeText = (input.free_text as string) || "（无描述）";
+    const scheduledTick = tickFromDayHourMinute(day, hour, minute, ctx.epoch);
+    const entry: import("@/domain/types").NotebookEntry = {
+      id: createEntryId(),
+      scheduledTick,
+      content: freeText,
+      createdAt: ctx.tick,
+    };
+    ctx.self.notebook.push(entry);
+    saveNotebookEntry(ctx.worldId, ctx.self.id, entry);
+    const timeLabel = formatScheduledTime(scheduledTick, ctx.epoch);
+    return {
+      memory: `我添加了一条记事：${timeLabel} — ${freeText}`,
+      event: {
+        category: "inner",
+        description: `${ctx.self.name} 在记事本上写了些什么。`,
+        intensity: 1,
+      },
+    };
+  },
+  extraParams: {
+    scheduled_day: { type: "integer", description: "目标游戏天（第 N 日）" },
+    scheduled_hour: { type: "integer", description: "目标小时 (0-23)" },
+    scheduled_minute: { type: "integer", description: "目标分钟 (0-55)" },
+    free_text: { type: "string", description: "待办事项描述" },
+  },
+  extraRequired: ["scheduled_day", "scheduled_hour", "scheduled_minute", "free_text"],
+  usableInDialogue: true,
+};
+
 export const BUILTIN_ACTIONS: ActionDefinition[] = [
   eatAction,
   batheAction,
@@ -475,4 +535,5 @@ export const BUILTIN_ACTIONS: ActionDefinition[] = [
   moveAction,
   waitAction,
   giveAction,
+  addNotebookEntryAction,
 ];

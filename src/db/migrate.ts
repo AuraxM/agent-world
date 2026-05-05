@@ -119,6 +119,16 @@ const STATEMENTS = [
     PRIMARY KEY (world_id, id)
   )`,
   `CREATE INDEX IF NOT EXISTS conversations_world_idx ON conversations(world_id)`,
+  `CREATE TABLE IF NOT EXISTS notebook_entries (
+    world_id TEXT NOT NULL,
+    character_id TEXT NOT NULL,
+    id TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    PRIMARY KEY (world_id, character_id, id),
+    FOREIGN KEY (world_id) REFERENCES worlds(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS notebook_char_idx ON notebook_entries(world_id, character_id)`,
   `CREATE TABLE IF NOT EXISTS agent_thoughts (
     world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
     character_id TEXT NOT NULL,

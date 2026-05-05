@@ -702,7 +702,8 @@ export function ProfilePane({
                           const rect = (e.target as HTMLElement).getBoundingClientRect();
                           setImpressionPopover({ targetId, x: rect.left, y: rect.bottom + 4 });
                         }}
-                        className="text-(--color-pixel-fg) hover:underline cursor-pointer"
+                        className="hover:underline cursor-pointer"
+                        style={{ color: impTone === "pos" ? "var(--color-pixel-success)" : impTone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)" }}
                       >
                         {other?.name ?? targetId}
                       </button>
@@ -770,10 +771,13 @@ export function ProfilePane({
         return (
           <div className="fixed inset-0 z-50" onClick={() => setImpressionPopover(null)}>
             <div
-              className="absolute bg-(--color-pixel-bg) border-2 border-(--color-pixel-accent-dark) p-3 shadow-lg max-w-xs"
+              className="absolute bg-(--color-pixel-bg) border-2 border-(--color-pixel-accent-dark) p-3 max-w-xs"
               style={{
                 left: impressionPopover.x,
                 top: impressionPopover.y,
+                maxWidth: Math.min(320, window.innerWidth - impressionPopover.x - 16),
+                maxHeight: Math.min(320, window.innerHeight - impressionPopover.y - 16),
+                overflowY: "auto",
                 boxShadow: "4px 4px 0 var(--color-pixel-border-dark)",
               }}
               onClick={(e) => e.stopPropagation()}

@@ -37,6 +37,7 @@ const NAP_INTERRUPT_THRESHOLD = 3 as const;
 interface ExecuteInput {
   worldId: string;
   tick: number;
+  epoch: number;
   characters: Character[];
   nodes: MapNode[];
   actions: Action[];
@@ -140,7 +141,7 @@ export function applyStateChange(
 }
 
 export function executeActions(input: ExecuteInput): ExecuteResult {
-  const { worldId, tick, characters, nodes, actions } = input;
+  const { worldId, tick, epoch, characters, nodes, actions } = input;
   const charById = new Map(characters.map((c) => [c.id, c]));
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
@@ -222,7 +223,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
     // Build ActionContext for the definition
     const here = nodeById.get(actor.locationId)!;
     const ctx = {
-      worldId, tick, self: actor, here,
+      worldId, tick, epoch, self: actor, here,
       companions: characters.filter((c) => c.id !== actor.id && c.locationId === actor.locationId),
       reachable: nodes.filter((n) => n.id !== actor.locationId),
       isSleepHour: false,

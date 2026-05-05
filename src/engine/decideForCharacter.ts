@@ -158,7 +158,7 @@ export async function decideForCharacter(
   });
   const baseTime = timeOfDay(fromTick, world.epoch);
   const isSleepHour = inSleepWindow(baseTime.hour, sleepWindow);
-  const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, isSleepHour, facts);
+  const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, world.epoch, isSleepHour, facts);
   const opts = getAvailableActions(ctx);
 
   // 3. 决策（强制 arrivalIntro）
@@ -320,6 +320,7 @@ export async function decideForCharacter(
   const exec = executeActions({
     worldId,
     tick: fromTick,
+    epoch: world.epoch,
     characters,
     nodes,
     actions: [action],

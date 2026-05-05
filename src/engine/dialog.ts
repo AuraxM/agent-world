@@ -317,13 +317,14 @@ function executeDialogueAction(
   nodeById: Map<string, MapNode>,
   worldId: string,
   tick: number,
+  epoch: number,
 ): string | undefined {
   const def = actionRegistry.get(actionType);
   if (!def) return undefined;
 
   const here = nodeById.get(actor.locationId)!;
   const ctx = {
-    worldId, tick, self: actor, here,
+    worldId, tick, epoch, self: actor, here,
     companions: [target],
     reachable: [] as MapNode[],
     isSleepHour: false,
@@ -426,7 +427,7 @@ async function runOneTickDialog(
     // Build dialogue action context for this turn
     const speakerHere = nodeById.get(speaker.locationId)!;
     const actionCtx = {
-      worldId: conv.worldId, tick: currentTick, self: speaker, here: speakerHere,
+      worldId: conv.worldId, tick: currentTick, epoch, self: speaker, here: speakerHere,
       companions: [peer],
       reachable: [] as MapNode[],
       isSleepHour: false,
@@ -475,7 +476,7 @@ async function runOneTickDialog(
             const execParams = { ...pa.params };
             const dialogRecord = executeDialogueAction(
               pa.actionType, requester, tgt, execParams,
-              chars, nodeById, conv.worldId, currentTick,
+              chars, nodeById, conv.worldId, currentTick, epoch,
             );
             if (dialogRecord) {
               transcript.push({
@@ -520,7 +521,7 @@ async function runOneTickDialog(
         try {
           const otherHere = nodeById.get(other.locationId)!;
           const otherActionCtx = {
-            worldId: conv.worldId, tick: currentTick, self: other, here: otherHere,
+            worldId: conv.worldId, tick: currentTick, epoch, self: other, here: otherHere,
             companions: [otherPeer],
             reachable: [] as MapNode[],
             isSleepHour: false,
@@ -551,7 +552,7 @@ async function runOneTickDialog(
               if (requester && tgt) {
                 const dialogRecord = executeDialogueAction(
                   pa.actionType, requester, tgt, pa.params,
-                  chars, nodeById, conv.worldId, currentTick,
+                  chars, nodeById, conv.worldId, currentTick, epoch,
                 );
                 if (dialogRecord) {
                   transcript.push({

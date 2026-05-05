@@ -499,6 +499,7 @@ describe("tick engine v0", () => {
     executeActions({
       worldId: "w",
       tick: 0,
+      epoch: 0,
       characters: [char],
       nodes: [node],
       actions: [action],

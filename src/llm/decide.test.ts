@@ -86,6 +86,7 @@ function makeFakeClient(
 const baseCtx: ActionContext = {
   worldId: "w",
   tick: 0,
+  epoch: 0,
   self: {
     id: "char-test",
     worldId: "w",

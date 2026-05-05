@@ -414,7 +414,7 @@ export async function tick(
             const here = nodeById.get(locationSnapshot.get(c.id) ?? c.locationId);
             if (here) {
               const ctx = {
-                worldId, tick: fromTick, self: c, here,
+                worldId, tick: fromTick, epoch: world.epoch, self: c, here,
                 companions: [], reachable: [], isSleepHour: false, facts: {} as any,
               };
               const outcome = actionDef.onInterrupt(ctx, `被「${interrupt.description}」打断`);
@@ -517,7 +517,7 @@ export async function tick(
           const here = nodeById.get(locationSnapshot.get(c.id) ?? c.locationId);
           if (here) {
             const ctx = {
-              worldId, tick: fromTick, self: c, here,
+              worldId, tick: fromTick, epoch: world.epoch, self: c, here,
               companions: [], reachable: [], isSleepHour: false, facts: {} as any,
             };
             const outcome = actionDef.onComplete(ctx);
@@ -573,7 +573,7 @@ export async function tick(
         activityNodeId,
         restNodeId,
       });
-      const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, isSleepHour, facts, localLocationMap);
+      const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, world.epoch, isSleepHour, facts, localLocationMap);
       const opts = actionRegistry.buildOptions(ctx);
 
       try {
@@ -741,7 +741,7 @@ export async function tick(
         activityNodeId: sActivityId,
         restNodeId: sRestId,
       });
-      const ctx = buildActionContext(input.character, nodes, characters, worldId, fromTick, isSleepHour, facts);
+      const ctx = buildActionContext(input.character, nodes, characters, worldId, fromTick, world.epoch, isSleepHour, facts);
       const opts = actionRegistry.buildOptions(ctx);
 
       try {
@@ -832,6 +832,7 @@ export async function tick(
   const execResult = executeActions({
     worldId,
     tick: fromTick,
+    epoch: world.epoch,
     characters,
     nodes,
     actions: actionsForExecution,

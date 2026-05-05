@@ -28,6 +28,7 @@ export function buildActionContext(
   characters: Character[],
   worldId: string,
   tick: number,
+  epoch: number,
   isSleepHour: boolean,
   facts: AggregatedFacts,
   /** 并发 tick 时传入各角色的位置快照；不传则读 character.locationId */
@@ -52,6 +53,7 @@ export function buildActionContext(
   return {
     worldId,
     tick,
+    epoch,
     self: character,
     here,
     companions,

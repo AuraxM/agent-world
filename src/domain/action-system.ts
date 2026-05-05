@@ -24,6 +24,7 @@ export interface ActionInput {
 export interface ActionContext {
   worldId: string;
   tick: number;
+  epoch: number;
   self: Character;
   here: MapNode;
   companions: Character[];

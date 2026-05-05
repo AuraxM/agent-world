@@ -33,6 +33,8 @@ export interface Manifest {
   startDate?: string;
   /** Path to actions.js relative to the map pack directory. */
   actions?: string;
+  /** Path to events.json relative to the map pack directory. */
+  events?: string;
   /** Optional economy configuration overrides. */
   economy?: EconomyConfig;
 }

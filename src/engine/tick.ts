@@ -43,6 +43,8 @@ import {
   type LoadedWorld,
 } from "./store";
 import { loadAllCharacters, loadManifest, loadEconomyConfig } from "@/config/loader";
+import { loadEvents } from "@/config/event-loader";
+import { getActiveEvents, type GlobalEventDef } from "@/domain/events";
 import type { Language } from "@/config/types";
 import { updateAllEconomicSnapshots } from "./economy";
 import type {
@@ -87,6 +89,8 @@ export interface DecideInput {
   ctx: import("@/domain/action-system").ActionContext;
   /** 全量角色列表，用于用户 prompt 身份锚点的 workplace 关系解析。 */
   allCharacters: Character[];
+  /** 当前 tick 生效的全局事件列表。 */
+  activeEventDefs: GlobalEventDef[];
 }
 
 export type DecideFn = (input: DecideInput) => Promise<Action>;
@@ -220,6 +224,10 @@ export async function tick(
   const fromTick = world.currentTick;
   const manifest = loadManifest(world.mapId);
   const language = manifest.language;
+
+  // Load events (builtin + mod) and compute active ones for this tick
+  const allEventDefs = loadEvents(world.mapId);
+  const activeEventDefs = getActiveEvents(allEventDefs, world.epoch, fromTick);
 
   // Register built-in actions (idempotent)
   ensureActionsInitialized();
@@ -577,6 +585,7 @@ export async function tick(
           language,
           ctx,
           allCharacters: loaded.characters,
+          activeEventDefs,
         });
       } catch (err) {
         log.warn("角色决策失败", { 角色: c.name, error: err instanceof Error ? err.message : String(err) });
@@ -748,6 +757,7 @@ export async function tick(
           rejectReason: input.rejectReason,
           language,
           allCharacters: characters,
+          activeEventDefs,
         });
       } catch {
         return {

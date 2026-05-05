@@ -50,6 +50,7 @@ export function loadWorld(worldId: string): LoadedWorld {
     name: w.name,
     mapId: w.mapId,
     currentTick: w.currentTick,
+    epoch: w.epoch.getTime(),
     createdAt: w.createdAt.getTime(),
     updatedAt: w.updatedAt.getTime(),
   };
@@ -327,6 +328,7 @@ export function persistSnapshot(loaded: LoadedWorld): void {
   const snap: WorldSnapshot = {
     worldId: loaded.world.id,
     tick: loaded.world.currentTick,
+    epoch: loaded.world.epoch,
     nodes: loaded.nodes,
     characters: loaded.characters,
     recentEvents,

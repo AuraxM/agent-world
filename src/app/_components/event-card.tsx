@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Character, MapNode, WorldEvent } from "@/domain/types";
 import { characterEmoji } from "../_lib/sprite";
-import { formatHHMM } from "../_lib/format";
+import { DEFAULT_EPOCH_MS, formatHHMM } from "../_lib/format";
 
 export function EventCard({
   event,
@@ -75,7 +75,7 @@ export function EventCard({
 
         {/* Time */}
         <span className="ml-auto text-pixel-xs text-(--text-faint) tracking-[var(--letter-pixel-tight)]">
-          {formatHHMM(event.tick)}
+          {formatHHMM(DEFAULT_EPOCH_MS, event.tick)}
         </span>
       </div>
 

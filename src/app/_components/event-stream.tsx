@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Character, MapNode, WorldEvent } from "@/domain/types";
-import { formatHHMM } from "../_lib/format";
+import { DEFAULT_EPOCH_MS, formatHHMM } from "../_lib/format";
 import { EventCard } from "./event-card";
 
 type Filter = "all" | "action" | "inner" | "social" | "other";
@@ -173,7 +173,7 @@ export function EventStream({
             <div key={group.tick} className="mb-4">
               {/* Tick separator */}
               <div className="tick-sep mb-3">
-                <span>T={group.tick} · {formatHHMM(group.tick)}</span>
+                <span>T={group.tick} · {formatHHMM(DEFAULT_EPOCH_MS, group.tick)}</span>
                 <div className="tick-sep__line" />
               </div>
 

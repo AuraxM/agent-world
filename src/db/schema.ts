@@ -19,6 +19,9 @@ export const worlds = sqliteTable("worlds", {
   name: text("name").notNull(),
   mapId: text("map_id").notNull().default(""),
   currentTick: integer("current_tick").notNull().default(0),
+  epoch: integer("epoch", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch('2026-05-01T00:00:00') * 1000)`),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),

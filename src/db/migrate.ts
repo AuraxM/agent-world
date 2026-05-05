@@ -27,6 +27,7 @@ const STATEMENTS = [
     name TEXT NOT NULL,
     map_id TEXT NOT NULL DEFAULT '',
     current_tick INTEGER NOT NULL DEFAULT 0,
+    epoch INTEGER NOT NULL DEFAULT (unixepoch('2026-05-01T00:00:00') * 1000),
     created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
   )`,
@@ -186,6 +187,7 @@ const CHARACTERS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
 
 const WORLDS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
   { name: "map_id", ddl: "ALTER TABLE worlds ADD COLUMN map_id TEXT NOT NULL DEFAULT ''" },
+  { name: "epoch", ddl: "ALTER TABLE worlds ADD COLUMN epoch INTEGER NOT NULL DEFAULT 1777593600000" },
 ];
 
 const tx = sqlite.transaction(() => {

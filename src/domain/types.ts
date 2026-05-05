@@ -307,6 +307,7 @@ export interface Action {
 export interface WorldSnapshot {
   worldId: string;
   tick: Tick;
+  epoch: number;
   nodes: MapNode[];
   characters: Character[];
   /** 最近 N 条事件，方便前端 dashboard 展示 */
@@ -368,6 +369,7 @@ export interface World {
   name: string;
   mapId: string;
   currentTick: Tick;
+  epoch: number;  // ms timestamp, world start datetime
   createdAt: number;
   updatedAt: number;
 }

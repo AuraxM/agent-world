@@ -478,6 +478,29 @@ export const MemorizeToolSchema = {
 };
 
 // ---------------------------------------------------------------------------
+// Notebook entry tool
+// ---------------------------------------------------------------------------
+
+export const NOTEBOOK_TOOL_NAME = "add_notebook_entry";
+export const NotebookSchema = z.object({
+  scheduled_day: z.number().int().min(0),
+  scheduled_hour: z.number().int().min(0).max(23),
+  scheduled_minute: z.number().int().min(0).max(59),
+  free_text: z.string().min(1).max(500),
+});
+export const NotebookToolSchema = {
+  type: "object" as const,
+  properties: {
+    scheduled_day: { type: "number", description: "约定的目标游戏天（整数 ≥0）。" },
+    scheduled_hour: { type: "number", description: "约定的整点（0-23），代表目标时刻的小时。" },
+    scheduled_minute: { type: "number", description: "分钟（0-59），建议取 0 或 整点附近的值。" },
+    free_text: { type: "string", description: "约定内容的简短描述。" },
+  },
+  required: ["scheduled_day", "scheduled_hour", "scheduled_minute", "free_text"],
+  additionalProperties: false,
+};
+
+// ---------------------------------------------------------------------------
 // Pre-sleep reflection tool
 // ---------------------------------------------------------------------------
 

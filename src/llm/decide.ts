@@ -20,6 +20,7 @@ import {
   MEMORY_SUMMARY_TOOL_NAME, MemorySummarySchema, MemorySummaryToolSchema,
   PROPOSE_DIALOGUE_ACTION_TOOL_NAME, ProposeDialogueActionSchema, ProposeDialogueActionToolSchema,
   RESPOND_DIALOGUE_ACTION_TOOL_NAME, RespondDialogueActionSchema, RespondDialogueActionToolSchema,
+  NOTEBOOK_TOOL_NAME, NotebookSchema, NotebookToolSchema,
   type AcceptDecisionPayload, type DialogTurnPayload, type DialogSummaryPayload, type MemorySummaryPayload,
 } from "@/domain/schemas";
 import type { Action, Character, DialogTurn, EndConversationPayload, MapNode, WorldEvent } from "@/domain/types";
@@ -28,6 +29,7 @@ import type { DecideFn, DecideInput } from "@/engine/tick";
 import { getLLMClientForEntry, getModelNameForEntry, hasApiKey } from "./client";
 import { getEntryConfig } from "./providers";
 import { actionRegistry } from "@/domain/action-system";
+import { tickFromDayHourMinute, createEntryId, saveNotebookEntry } from "@/engine/notebook";
 import type { ActionContext } from "@/engine/actions";
 import {
   buildAcceptDecisionPrompt,
@@ -112,6 +114,10 @@ function handleMemorize(targetId: string, impression: string, self: Character): 
 // ---------------------------------------------------------------------------
 // Tool builders for recall / memorize
 // ---------------------------------------------------------------------------
+
+function buildNotebookTool(): ChatCompletionTool {
+  return { type: "function", function: { name: NOTEBOOK_TOOL_NAME, description: "将对话中达成的约定记录到记事本。比如约好某个时间一起做什么事。", parameters: NotebookToolSchema } };
+}
 
 function buildRecallTool(): ChatCompletionTool {
   return { type: "function", function: { name: RECALL_TOOL_NAME, description: "回想你对某（几）个角色的印象。可以一次查询多个角色。", parameters: RecallToolSchema } };
@@ -443,6 +449,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     },
     buildRecallTool(),
     buildMemorizeTool(),
+    buildNotebookTool(),
   ];
 
   // Add interactive action tools if dialogue actions are available
@@ -540,12 +547,12 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
       }
 
       // Process all tool calls — support parallel tool calls
-      // First pass: handle recall/memorize (side-effect calls that don't end the turn)
-      let hasRecallOrMemorize = false;
+      // First pass: handle side-effect calls that don't end the turn (recall/memorize/notebook)
+      let hasSideEffect = false;
       for (const tc of allToolCalls) {
         const t = tc as any;
         if (t.function.name === RECALL_TOOL_NAME) {
-          hasRecallOrMemorize = true;
+          hasSideEffect = true;
           let parsedArgs: unknown;
           try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
             messages.push({ role: "tool", tool_call_id: t.id, content: `recall JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
@@ -559,7 +566,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
           const recallResult = handleRecall(parseResult.data.target_ids, input.self, [input.peer]);
           messages.push({ role: "tool", tool_call_id: t.id, content: recallResult });
         } else if (t.function.name === MEMORIZE_TOOL_NAME) {
-          hasRecallOrMemorize = true;
+          hasSideEffect = true;
           let parsedArgs: unknown;
           try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
             messages.push({ role: "tool", tool_call_id: t.id, content: `memorize JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
@@ -572,9 +579,36 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
           }
           handleMemorize(parseResult.data.target_id, parseResult.data.impression, input.self);
           messages.push({ role: "tool", tool_call_id: t.id, content: "已记录。" });
+        } else if (t.function.name === NOTEBOOK_TOOL_NAME) {
+          hasSideEffect = true;
+          let parsedArgs: unknown;
+          try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `add_notebook_entry JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
+            continue;
+          }
+          const parseResult = NotebookSchema.safeParse(parsedArgs);
+          if (!parseResult.success) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `add_notebook_entry 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
+            continue;
+          }
+          const { scheduled_day, scheduled_hour, scheduled_minute, free_text } = parseResult.data;
+          const scheduledTick = tickFromDayHourMinute(scheduled_day, scheduled_hour, scheduled_minute, input.epoch ?? 0);
+          if (scheduledTick <= (input.tick ?? 0)) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: "约定时间必须在当前时间之后。请重新计算游戏天数。" });
+            continue;
+          }
+          const entry: import("@/domain/types").NotebookEntry = {
+            id: createEntryId(),
+            scheduledTick,
+            content: free_text,
+            createdAt: input.tick ?? 0,
+          };
+          input.self.notebook.push(entry);
+          saveNotebookEntry(input.self.worldId, input.self.id, entry);
+          messages.push({ role: "tool", tool_call_id: t.id, content: `已记录到记事本：第${scheduled_day}日 ${String(scheduled_hour).padStart(2, "0")}:${String(scheduled_minute).padStart(2, "0")} — ${free_text}` });
         }
       }
-      if (hasRecallOrMemorize) {
+      if (hasSideEffect) {
         round = Math.max(0, round - 1);
         continue;
       }

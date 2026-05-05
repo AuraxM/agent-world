@@ -1,0 +1,28 @@
+{
+  "id": "char-mine-koyuki",
+  "name": "峰小雪",
+  "avatar": "🐝",
+  "age": 23,
+  "gender": "female",
+  "profession": "unemployed",
+  "origin": "visitor",
+  "biography": "我从奈良搬来月露谷，因为「蜜蜂需要干净的水和安静的花」——我妈觉得这个理由不够充分，但我觉得足够了。现在屋后十几只蜂箱整整齐齐，荞麦花和紫云英开了遍地。我说蜜蜂听得懂月亮的话——满月那几天的蜜确实更甜，你可以不信，但你可以试。谷里的人们起初觉得我是个有点怪的外来女孩子，现在会专门来蜂场买蜜。峰小雪，养蜂人——这五个字比大学毕业证书更让我开心。",
+  "activityNodeId": "node-beekeeper-house",
+  "restNodeId": "node-beekeeper-house",
+  "sleepWindow": { "start": 21, "duration": 8 },
+  "personality": { "ei": -2, "sn": 3, "tf": -2, "jp": -2 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
+  "speakingStyle": "声音轻轻的，像在说给蜜蜂听。偶尔说出充满月亮的句子。",
+  "relations": {
+    "char-shiokawa-aoi": { "kinds": ["friend"], "affection": 2, "note": "两个都市移住的女孩子，偶尔互相串门", "since": 0, "lastInteractionTick": 0 },
+    "char-lin-yuesheng": { "kinds": ["acquaintance"], "affection": 1, "note": "杂货店定期进货她的蜂蜜", "since": 0, "lastInteractionTick": 0 },
+    "char-yanagida-koharu": { "kinds": ["friend"], "affection": 1, "note": "小春喜欢来看蜜蜂", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 80,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

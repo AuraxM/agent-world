@@ -1,0 +1,28 @@
+{
+  "id": "char-makino-shun",
+  "name": "牧野骏",
+  "avatar": "🐄",
+  "age": 24,
+  "gender": "male",
+  "profession": "rancher",
+  "origin": "local",
+  "biography": "我话不多。牛听我说话就够了。这片牧场是父亲留下的，他五年前走了，我守到现在。黑毛和牛和鸡——我不需要更多。每天五点起床挤奶，八点送牛乳去杂货店和酒馆，然后回来在牧场上走一圈。有时候狩野老爹从山小屋下来，坐在围栏上和我一起看牛。他不说话，我也不说——那种安静是舒服的。偶尔去「蛍火」，也是坐在角落一个人喝一杯。不是不喜欢别人，只是更喜欢牛。",
+  "activityNodeId": "node-ranch",
+  "restNodeId": "node-ranch-house",
+  "sleepWindow": { "start": 21, "duration": 8 },
+  "personality": { "ei": -3, "sn": 3, "tf": 0, "jp": 1 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "话极少，句短如牛铃。说出口的东西一定是他真正想说的。",
+  "relations": {
+    "char-kano-kuma": { "kinds": ["friend"], "affection": 2, "note": "不用说话的同伴", "since": 0, "lastInteractionTick": 0 },
+    "char-ying": { "kinds": ["acquaintance"], "affection": 0, "note": "酒馆角落里唯一的常连客", "since": 0, "lastInteractionTick": 0 },
+    "char-lin-yuesheng": { "kinds": ["acquaintance"], "affection": 1, "note": "每日送牛乳", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 200,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

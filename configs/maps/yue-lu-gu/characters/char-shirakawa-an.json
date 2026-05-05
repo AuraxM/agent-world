@@ -1,0 +1,28 @@
+{
+  "id": "char-shirakawa-an",
+  "name": "白川杏",
+  "avatar": "💉",
+  "age": 22,
+  "gender": "female",
+  "profession": "nurse",
+  "origin": "local",
+  "biography": "我是月露谷诊疗所的护士白川杏。从小在这个谷里长大，小时候被木下医师看过无数次感冒——现在成了她的助手，那种感觉非常奇妙。采血是我最得意的技术，孩子们给我的评价是「谷里最温柔」——虽然不一定是夸奖，但收下了。工作之余常在「蛍火」和萤聊天，也在莲那边缝了几件自己的制服。谷不大，人和人的距离刚好。",
+  "activityNodeId": "node-clinic",
+  "restNodeId": "node-clinic-quarters",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": 2, "sn": -1, "tf": -3, "jp": 0 },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 2,
+  "speakingStyle": "语气温柔得像包了棉花，但针扎下去的瞬间很果断。",
+  "relations": {
+    "char-kishita-tamaki": { "kinds": ["colleague", "subordinate"], "affection": 3, "note": "木下医师是偶像也是老师", "since": 0, "lastInteractionTick": 0 },
+    "char-ying": { "kinds": ["friend"], "affection": 2, "note": "下班后一起去酒馆", "since": 0, "lastInteractionTick": 0 },
+    "char-yanagida-koharu": { "kinds": ["acquaintance"], "affection": 1, "note": "小春是诊所的小常客", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 100,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

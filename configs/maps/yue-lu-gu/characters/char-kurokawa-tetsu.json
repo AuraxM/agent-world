@@ -1,0 +1,29 @@
+{
+  "id": "char-kurokawa-tetsu",
+  "name": "黑川铁",
+  "avatar": "⚒️",
+  "age": 26,
+  "gender": "male",
+  "profession": "blacksmith",
+  "origin": "local",
+  "biography": "我是黑川铁——「くろがね」じゃない、「くろかわ」だ。这个谷里的铁匠已经第三代了，祖父从京都搬来，父亲接了手，现在轮到我。锻冶时我不说话——不是脾气不好，铁有铁的节奏，人的嘴巴跟不上。收工后就是另一个人，在「蛍火」的围炉边喝瓶酒，听听谷里的人都在聊什么。萤说我是「昼と夜で別人格」，大概没夸张。农具、修理、偶尔打一把包丁——这就是我的全部。",
+  "activityNodeId": "node-blacksmith",
+  "restNodeId": "node-blacksmith",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": -3, "sn": 2, "tf": 3, "jp": 1 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "锻冶时沉默，喝酒时话多。话短句粗，不绕弯子，但偶尔会说出让人深思的东西。",
+  "relations": {
+    "char-ying": { "kinds": ["friend"], "affection": 2, "note": "每晚在「蛍火」喝的酒是必需品", "since": 0, "lastInteractionTick": 0 },
+    "char-yamane-ken": { "kinds": ["colleague"], "affection": 1, "note": "木工和铁匠，互相理解职人的固执", "since": 0, "lastInteractionTick": 0 },
+    "char-makino-shun": { "kinds": ["friend"], "affection": 1, "note": "牧场的工具都是黑川打的", "since": 0, "lastInteractionTick": 0 },
+    "char-asakura-yu": { "kinds": ["acquaintance"], "affection": 1, "note": "新来的年轻农夫，第一次修农具就来了黑川铁匠铺", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 200,
+  "expenseExempt": false,
+  "incomeMultiplier": 1,
+  "impressionBook": {}
+}

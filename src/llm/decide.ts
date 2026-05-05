@@ -431,7 +431,11 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
     peer: input.peer.name,
   });
 
-  const systemPrompt = `你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。请根据你的性格、当前情境和对话历史，自然地回应。\n\n${languageInstruction(language)}`;
+  const systemPrompt = language === "zh"
+    ? `你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。请根据你的性格、当前情境和对话历史，自然地回应。不要重复对方刚说过的话。\n\n${languageInstruction(language)}`
+    : language === "en"
+      ? `You are an NPC in a role-playing engine. You are speaking with another person. Respond naturally based on your personality, current situation, and conversation history. Do not repeat what the other person just said.\n\n${languageInstruction(language)}`
+      : `あなたはロールプレイングエンジンの NPC です。他の人と会話しています。あなたの性格、現在の状況、会話の履歴に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。\n\n${languageInstruction(language)}`;
 
   const messages: Array<Record<string, unknown>> = [
     { role: "system", content: systemPrompt },
@@ -663,6 +667,7 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<{ s
   const extra: Record<string, unknown> = {};
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
+  let lastError: string | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
@@ -692,11 +697,32 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<{ s
       if (!result.success) {
         throw new Error(`DialogSummary 参数不符合 schema：${result.error.message}`);
       }
+
+      summaryLog.info("LLM dialog_summarize 成功", {
+        opener: input.openerName,
+        responder: input.responderName,
+        turns: input.transcript.length,
+        attempt,
+      });
       return { summary: result.data.summary, memorize: result.data.memorize };
-    } catch {
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      summaryLog.warn("LLM dialog_summarize 失败", {
+        opener: input.openerName,
+        responder: input.responderName,
+        turns: input.transcript.length,
+        attempt,
+        error: lastError,
+      });
       if (attempt === 0) continue;
     }
   }
+  summaryLog.error("LLM dialog_summarize 彻底失败", {
+    opener: input.openerName,
+    responder: input.responderName,
+    turns: input.transcript.length,
+    lastError,
+  });
   return { summary: `（摘要生成失败：双方聊了 ${input.transcript.length} 句）` };
 }
 

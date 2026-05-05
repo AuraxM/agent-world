@@ -64,11 +64,11 @@ export function useWorldState(): UseWorldState {
   } | null>(null);
   const shouldStopRef = useRef(false);
   const loadingRef = useRef(false);
-  useEffect(() => { loadingRef.current = loading; }, [loading]);
   const autoRunningRef = useRef(false);
   const [templates, setTemplates] = useState<Array<{ id: string; name: string; avatar: string | null }>>([]);
 
   const refresh = useCallback(async () => {
+    loadingRef.current = true;
     try {
       const [snapRes, evRes] = await Promise.all([
         fetch(`/api/worlds/${worldId}`, { cache: "no-store" }),
@@ -85,6 +85,7 @@ export function useWorldState(): UseWorldState {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, [worldId]);
 
@@ -112,11 +113,17 @@ export function useWorldState(): UseWorldState {
   }, []);
 
   const advance = useCallback(async (): Promise<boolean> => {
+    if (loadingRef.current) {
+      console.warn("advance 被调用时上一轮 tick 仍在执行，已忽略");
+      return false;
+    }
+
     // 取消上一次还在进行中的请求
     abortRef.current?.abort();
     const abort = new AbortController();
     abortRef.current = abort;
 
+    loadingRef.current = true;
     setLoading(true);
     setTickProgress(null);
     const t0 = performance.now();
@@ -222,7 +229,14 @@ export function useWorldState(): UseWorldState {
       setError(e instanceof Error ? e.message : String(e));
       setLoading(false);
       setTickProgress(null);
+      loadingRef.current = false;
       return false;
+    } finally {
+      // 非正常完成路径（tickDone=false 或异常）确保 reset
+      if (loadingRef.current) {
+        setLoading(false);
+        loadingRef.current = false;
+      }
     }
   }, [refresh, worldId, snapshot?.characters.length]);
 
@@ -255,6 +269,7 @@ export function useWorldState(): UseWorldState {
   const placeCharacter = useCallback(
     async (characterId: string): Promise<boolean> => {
       if (loadingRef.current || autoRunningRef.current) return false;
+      loadingRef.current = true;
       setLoading(true);
       try {
         const res = await fetch(`/api/worlds/${worldId}/characters/place`, {
@@ -305,6 +320,7 @@ export function useWorldState(): UseWorldState {
         return false;
       } finally {
         setLoading(false);
+        loadingRef.current = false;
       }
     },
     [worldId, refresh],

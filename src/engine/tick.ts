@@ -27,7 +27,7 @@ import { buildActionContext } from "./actions";
 import { compressSleepMemories } from "./memory-compression";
 import { actionRegistry } from "@/domain/action-system";
 import { BUILTIN_ACTIONS } from "./actions-builtin";
-import { executeActions } from "./execute";
+import { executeActions, applyStateChange } from "./execute";
 import { deriveAggregatedFacts, type AggregatedFacts } from "./facts";
 import { findPath } from "./pathfinding";
 import { dispatchPerception } from "./perception";
@@ -215,6 +215,9 @@ function ensureActionsInitialized(): void {
   actionRegistry.registerAll(BUILTIN_ACTIONS);
 }
 
+/** 防止同一 (worldId, tick) 被并发执行。 */
+const _activeTicks = new Set<string>();
+
 export async function tick(
   worldId: string,
   options: TickOptions = {},
@@ -222,6 +225,15 @@ export async function tick(
   const loaded = loadWorld(worldId);
   const { world, nodes, characters } = loaded;
   const fromTick = world.currentTick;
+
+  const lockKey = `${worldId}:${fromTick}`;
+  if (_activeTicks.has(lockKey)) {
+    throw new Error(
+      `tick #${fromTick} 正在执行中，请等待当前 tick 完成后再推进。`,
+    );
+  }
+  _activeTicks.add(lockKey);
+  try {
   const manifest = loadManifest(world.mapId);
   const language = manifest.language;
 
@@ -516,14 +528,7 @@ export async function tick(
             });
             if (outcome.stateChanges) {
               for (const sc of outcome.stateChanges) {
-                // Apply state changes inline (simplified):
-                if (sc.kind === "resetVital") {
-                  c.vitals[sc.vital] = 0;
-                  if (sc.vital === "fatigue") c.vitals.fatigueCapTicks = 0;
-                } else if (sc.kind === "adjustVital" && sc.vital === "fatigue") {
-                  c.vitals.fatigue = Math.max(0, c.vitals.fatigue + sc.delta);
-                  if (c.vitals.fatigue < 16) c.vitals.fatigueCapTicks = 0;
-                }
+                applyStateChange(c, sc, worldId, fromTick);
               }
             }
             if (outcome.event) {
@@ -895,6 +900,9 @@ export async function tick(
     events: allEvents,
     decisions: allDecisions,
   };
+  } finally {
+    _activeTicks.delete(lockKey);
+  }
 }
 
 function buildActivityNodeMap(): Map<string, string> {

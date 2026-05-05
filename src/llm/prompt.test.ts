@@ -11,7 +11,9 @@ import {
   buildDialogTurnPrompt,
   buildDialogSummaryPrompt,
   buildMemoryCompressionPrompt,
+  buildPeerImage,
   buildSalvageContext,
+  buildSelfImage,
   buildSystemPrompt,
   buildUserPrompt,
   buildWeeklyCompressionPrompt,
@@ -893,5 +895,81 @@ describe("describeRelationBidirectional", () => {
     const result = describeRelationBidirectional(c, "peer-1");
     expect(result).toMatch(/classmate/);
     expect(result).toMatch(/TA 是你的classmate/);
+  });
+});
+
+describe("buildSelfImage", () => {
+  const char: Character = {
+    ...baseCharacter,
+    name: "甲",
+    age: 28,
+    gender: "male",
+    profession: "doctor",
+    appearance: 3,
+  };
+
+  it("renders name, age, gender, profession, appearance, and location", () => {
+    const result = buildSelfImage(char, "镇医院");
+    expect(result).toContain("关于你自己");
+    expect(result).toContain("姓名：甲");
+    expect(result).toContain("年龄：28 岁");
+    expect(result).toContain("性别：男");
+    expect(result).toContain("职业：医生");
+    expect(result).toContain("相貌端正");
+    expect(result).toContain("当前在：镇医院");
+  });
+
+  it("omits location line when locationName is undefined", () => {
+    const result = buildSelfImage(char);
+    expect(result).not.toContain("当前在");
+  });
+
+  it("handles female gender", () => {
+    const result = buildSelfImage({ ...char, gender: "female" });
+    expect(result).toContain("性别：女");
+  });
+});
+
+describe("buildPeerImage", () => {
+  const self: Character = {
+    ...baseCharacter,
+    name: "甲",
+    gender: "male",
+    impressionBook: { "peer-1": "很健谈的一个医生。" },
+    relations: { "peer-1": { kinds: ["colleague"] as const, since: 0, lastInteractionTick: 0 } },
+  };
+  const peer: Character = {
+    ...baseCharacter,
+    id: "peer-1",
+    name: "乙",
+    age: 42,
+    gender: "male",
+    profession: "doctor",
+    appearance: 4,
+    vitals: { hunger: 3, fatigue: 0, hygiene: 0 },
+    emotion: { mood: -1, stress: 1, social_satiety: 0 },
+  };
+
+  it("renders peer info with relation and impression", () => {
+    const result = buildPeerImage(self, peer);
+    expect(result).toContain("关于 乙");
+    expect(result).toContain("年龄：42 岁");
+    expect(result).toContain("性别：男");
+    expect(result).toContain("职业：医生");
+    expect(result).toContain("面容出众");
+    expect(result).toContain("同事");
+    expect(result).toContain("很健谈的一个医生");
+  });
+
+  it("shows no-impression placeholder when impressionBook is empty", () => {
+    const result = buildPeerImage({ ...self, impressionBook: {} }, peer);
+    expect(result).toContain("暂无特别印象");
+  });
+
+  it("does NOT expose vitals or emotion internal values as numbers", () => {
+    const result = buildPeerImage(self, peer);
+    expect(result).not.toContain("hunger");
+    expect(result).not.toContain("fatigue");
+    expect(result).not.toContain("mood");
   });
 });

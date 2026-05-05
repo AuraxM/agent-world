@@ -100,6 +100,15 @@ function describePersonality(p: Personality): string[] {
   ];
 }
 
+function describePersonalityCompact(p: Personality, intelligence: number): string {
+  const ei = p.ei >= 0 ? "E" : "I";
+  const sn = p.sn >= 0 ? "N" : "S";
+  const tf = p.tf >= 0 ? "F" : "T";
+  const jp = p.jp >= 0 ? "J" : "P";
+  const intel = INTELLIGENCE_LABELS[intelligence] ?? INTELLIGENCE_LABELS[2];
+  return `性格：${ei}${sn}${tf}${jp}，${intel}`;
+}
+
 // ---------------------------------------------------------------------------
 // directional relation labels
 // ---------------------------------------------------------------------------
@@ -746,6 +755,39 @@ export function buildCharacterStaticBlock(
 // ---------------------------------------------------------------------------
 // dialog prompt builders
 // ---------------------------------------------------------------------------
+
+export function buildSelfImage(c: Character, locationName?: string): string {
+  const lines: string[] = [
+    "关于你自己：",
+    `- 姓名：${c.name}`,
+    `- 年龄：${c.age} 岁`,
+    `- 性别：${c.gender === "male" ? "男" : c.gender === "female" ? "女" : "其他"}`,
+    `- 职业：${PROFESSION_LABELS[c.profession] ?? c.profession}`,
+    `- 形象：${buildImage(c)}`,
+  ];
+  if (locationName) {
+    lines.push(`- 当前在：${locationName}`);
+  }
+  return lines.join("\n");
+}
+
+export function buildPeerImage(self: Character, peer: Character): string {
+  const lines: string[] = [
+    `关于 ${peer.name}：`,
+    `- 年龄：${peer.age} 岁`,
+    `- 性别：${peer.gender === "male" ? "男" : peer.gender === "female" ? "女" : "其他"}`,
+    `- 职业：${PROFESSION_LABELS[peer.profession] ?? peer.profession}`,
+    `- 形象：${buildImage(peer)}`,
+  ];
+  lines.push(describeRelationBidirectional(self, peer.id));
+  const impression = self.impressionBook[peer.id];
+  if (impression && impression.trim().length > 0) {
+    lines.push(`- 你对 TA 的印象：${impression}`);
+  } else {
+    lines.push("- 你对 TA 的印象：暂无特别印象");
+  }
+  return lines.join("\n");
+}
 
 /**
  * 接受/拒绝决策 prompt。

@@ -812,7 +812,7 @@ describe("describeRelationBidirectional", () => {
   it("renders bidirectional boss relation", () => {
     const c = {
       ...self,
-      relations: { "peer-1": { kinds: ["boss"] as const, sinceTick: 0 } },
+      relations: { "peer-1": { kinds: ["boss"] as const, since: 0, lastInteractionTick: 0 } },
     };
     const result = describeRelationBidirectional(c, "peer-1");
     expect(result).toMatch(/TA 是你的老板/);
@@ -822,7 +822,7 @@ describe("describeRelationBidirectional", () => {
   it("renders symmetric relation as mutual", () => {
     const c = {
       ...self,
-      relations: { "peer-1": { kinds: ["colleague"] as const, sinceTick: 0 } },
+      relations: { "peer-1": { kinds: ["colleague"] as const, since: 0, lastInteractionTick: 0 } },
     };
     const result = describeRelationBidirectional(c, "peer-1");
     expect(result).toMatch(/你们互为同事/);
@@ -832,7 +832,7 @@ describe("describeRelationBidirectional", () => {
     const c = {
       ...self,
       gender: "male" as const,
-      relations: { "peer-1": { kinds: ["father"] as const, sinceTick: 0 } },
+      relations: { "peer-1": { kinds: ["father"] as const, since: 0, lastInteractionTick: 0 } },
     };
     const result = describeRelationBidirectional(c, "peer-1");
     expect(result).toMatch(/TA 是你的父亲/);
@@ -843,7 +843,7 @@ describe("describeRelationBidirectional", () => {
     const c = {
       ...self,
       gender: "female" as const,
-      relations: { "peer-1": { kinds: ["father"] as const, sinceTick: 0 } },
+      relations: { "peer-1": { kinds: ["father"] as const, since: 0, lastInteractionTick: 0 } },
     };
     const result = describeRelationBidirectional(c, "peer-1");
     expect(result).toMatch(/TA 是你的父亲/);
@@ -854,7 +854,7 @@ describe("describeRelationBidirectional", () => {
     const c = {
       ...self,
       gender: "male" as const,
-      relations: { "peer-1": { kinds: ["daughter"] as const, sinceTick: 0 } },
+      relations: { "peer-1": { kinds: ["daughter"] as const, since: 0, lastInteractionTick: 0 } },
     };
     const result = describeRelationBidirectional(c, "peer-1");
     expect(result).toMatch(/TA 是你的女儿/);
@@ -865,7 +865,7 @@ describe("describeRelationBidirectional", () => {
     const c = {
       ...self,
       gender: "female" as const,
-      relations: { "peer-1": { kinds: ["daughter"] as const, sinceTick: 0 } },
+      relations: { "peer-1": { kinds: ["daughter"] as const, since: 0, lastInteractionTick: 0 } },
     };
     const result = describeRelationBidirectional(c, "peer-1");
     expect(result).toMatch(/TA 是你的女儿/);
@@ -876,7 +876,7 @@ describe("describeRelationBidirectional", () => {
     const c = {
       ...self,
       gender: "male" as const,
-      relations: { "peer-1": { kinds: ["colleague", "friend"] as const, sinceTick: 0 } },
+      relations: { "peer-1": { kinds: ["colleague", "friend"] as const, since: 0, lastInteractionTick: 0 } },
     };
     const result = describeRelationBidirectional(c, "peer-1");
     expect(result).toMatch(/同事/);
@@ -888,7 +888,7 @@ describe("describeRelationBidirectional", () => {
   it("falls back to raw kind string when kind has no label", () => {
     const c = {
       ...self,
-      relations: { "peer-1": { kinds: ["classmate"] as const, sinceTick: 0 } },
+      relations: { "peer-1": { kinds: ["classmate"] as const, since: 0, lastInteractionTick: 0 } },
     };
     const result = describeRelationBidirectional(c, "peer-1");
     expect(result).toMatch(/classmate/);

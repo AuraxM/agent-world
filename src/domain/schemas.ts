@@ -483,20 +483,22 @@ export const MemorizeToolSchema = {
 
 export const NOTEBOOK_TOOL_NAME = "add_notebook_entry";
 export const NotebookSchema = z.object({
-  scheduled_day: z.number().int().min(0),
-  scheduled_hour: z.number().int().min(0).max(23),
-  scheduled_minute: z.number().int().min(0).max(59),
+  year: z.number().int().min(2020).max(2100),
+  month: z.number().int().min(1).max(12),
+  day: z.number().int().min(1).max(31),
+  hour: z.number().int().min(0).max(23),
   free_text: z.string().min(1).max(500),
 });
 export const NotebookToolSchema = {
   type: "object" as const,
   properties: {
-    scheduled_day: { type: "number", description: "约定的目标游戏天（整数 ≥0）。" },
-    scheduled_hour: { type: "number", description: "约定的整点（0-23），代表目标时刻的小时。" },
-    scheduled_minute: { type: "number", description: "分钟（0-59），建议取 0 或 整点附近的值。" },
+    year: { type: "number", description: "约定时间的年份（如 2026）。" },
+    month: { type: "number", description: "约定时间的月份 (1-12)。" },
+    day: { type: "number", description: "约定时间的日期 (1-31)。" },
+    hour: { type: "number", description: "约定时间的整点 (0-23)。" },
     free_text: { type: "string", description: "约定内容的简短描述。" },
   },
-  required: ["scheduled_day", "scheduled_hour", "scheduled_minute", "free_text"],
+  required: ["year", "month", "day", "hour", "free_text"],
   additionalProperties: false,
 };
 

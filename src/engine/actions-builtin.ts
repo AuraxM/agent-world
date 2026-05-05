@@ -3,7 +3,7 @@ import { TICKS_PER_HOUR } from "@/domain/enums";
 import { DEFAULT_ECONOMY_CONFIG } from "@/config/types";
 import { getEatCost, getBatheCost } from "./bme";
 import { rollWorkIncome } from "./economy";
-import { tickFromDayHourMinute, createEntryId, saveNotebookEntry, formatScheduledTime } from "./notebook";
+import { tickFromCalendar, formatCurrentTime, createEntryId, saveNotebookEntry, formatScheduledTime } from "./notebook";
 
 export const eatAction: ActionDefinition = {
   type: "eat",
@@ -470,32 +470,38 @@ export const addNotebookEntryAction: ActionDefinition = {
   duration: "instant",
   check(_ctx) { return true; },
   hint(ctx) {
-    const day = Math.floor(ctx.tick / (24 * TICKS_PER_HOUR));
-    const MS_PER_TICK = (60 / TICKS_PER_HOUR) * 60 * 1000;
-    const date = new Date(ctx.epoch + ctx.tick * MS_PER_TICK);
-    const hh = String(date.getHours()).padStart(2, "0");
-    const mm = String(date.getMinutes()).padStart(2, "0");
-    return `添加记事本（当前时间：第 ${day} 日 ${hh}:${mm}）
-  参数：scheduled_day（目标游戏天）、scheduled_hour（0-23）、scheduled_minute（0-55）、free_text（待办描述）`;
+    const nowStr = formatCurrentTime(ctx.tick, ctx.epoch);
+    return `添加记事本（当前时间：${nowStr}）
+  参数：year（年）、month（月 1-12）、day（日 1-31）、hour（整点 0-23）、free_text（待办描述）`;
   },
   validateParams(input, ctx) {
-    const day = input.scheduled_day as number | undefined;
-    const hour = input.scheduled_hour as number | undefined;
-    const minute = input.scheduled_minute as number | undefined;
-    if (day === undefined || day < 0) return "scheduled_day 需要 >= 0 的整数";
-    if (hour === undefined || hour < 0 || hour > 23) return "scheduled_hour 需要在 0-23";
-    if (minute === undefined || minute < 0 || minute > 59) return "scheduled_minute 需要在 0-59";
+    const year = input.year as number | undefined;
+    const month = input.month as number | undefined;
+    const day = input.day as number | undefined;
+    const hour = input.hour as number | undefined;
+    if (year === undefined || year < 2020 || year > 2100) return "year 需要在 2020-2100";
+    if (month === undefined || month < 1 || month > 12) return "month 需要在 1-12";
+    if (day === undefined || day < 1 || day > 31) return "day 需要在 1-31";
+    if (hour === undefined || hour < 0 || hour > 23) return "hour 需要在 0-23";
     if (!input.free_text || (input.free_text as string).trim().length === 0) return "free_text 不能为空";
-    const scheduledTick = tickFromDayHourMinute(day, hour, minute, ctx.epoch);
-    if (scheduledTick <= ctx.tick) return "目标时间必须在当前时间之后";
+    const scheduledTick = tickFromCalendar(year, month, day, hour, ctx.epoch);
+    if (scheduledTick === null) {
+      const nowStr = formatCurrentTime(ctx.tick, ctx.epoch);
+      return `日期无效（${year}-${month}-${day} ${hour}:00）。当前游戏时间是 ${nowStr}。`;
+    }
+    if (scheduledTick <= ctx.tick) {
+      const nowStr = formatCurrentTime(ctx.tick, ctx.epoch);
+      return `目标时间（${year}年${month}月${day}日 ${hour}:00）必须在当前时间之后。当前是 ${nowStr}。`;
+    }
     return null;
   },
   execute(ctx, input) {
-    const day = (input.scheduled_day as number)!;
-    const hour = (input.scheduled_hour as number)!;
-    const minute = (input.scheduled_minute as number)!;
+    const year = (input.year as number)!;
+    const month = (input.month as number)!;
+    const day = (input.day as number)!;
+    const hour = (input.hour as number)!;
     const freeText = (input.free_text as string) || "（无描述）";
-    const scheduledTick = tickFromDayHourMinute(day, hour, minute, ctx.epoch);
+    const scheduledTick = tickFromCalendar(year, month, day, hour, ctx.epoch)!;
     const entry: import("@/domain/types").NotebookEntry = {
       id: createEntryId(),
       scheduledTick,
@@ -515,9 +521,10 @@ export const addNotebookEntryAction: ActionDefinition = {
     };
   },
   extraParams: {
-    scheduled_day: { type: "integer", description: "目标游戏天（第 N 日）" },
-    scheduled_hour: { type: "integer", description: "目标小时 (0-23)" },
-    scheduled_minute: { type: "integer", description: "目标分钟 (0-55)" },
+    year: { type: "integer", description: "约定时间的年份（如 2026）" },
+    month: { type: "integer", description: "约定时间的月份 (1-12)" },
+    day: { type: "integer", description: "约定时间的日期 (1-31)" },
+    hour: { type: "integer", description: "约定时间的整点 (0-23)" },
     free_text: { type: "string", description: "待办事项描述" },
   },
   extraRequired: ["scheduled_day", "scheduled_hour", "scheduled_minute", "free_text"],

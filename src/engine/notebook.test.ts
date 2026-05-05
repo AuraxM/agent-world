@@ -6,7 +6,7 @@ import {
   formatRelativeTime,
   formatScheduledTime,
   describeEntries,
-  tickFromDayHourMinute,
+  tickFromCalendar,
 } from "./notebook";
 import type { NotebookEntry } from "@/domain/types";
 import { TICKS_PER_HOUR } from "@/domain/enums";
@@ -102,19 +102,24 @@ describe("describeEntries", () => {
   });
 });
 
-describe("tickFromDayHourMinute", () => {
-  it("converts midnight epoch references", () => {
-    const tick = tickFromDayHourMinute(0, 6, 0, EPOCH);
-    expect(tick).toBe(30); // 6h * 5 ticks/h
+describe("tickFromCalendar", () => {
+  it("converts calendar date to tick", () => {
+    const tick = tickFromCalendar(2026, 5, 1, 6, EPOCH);
+    expect(tick).toBe(30); // May 1 2026 06:00 UTC = 6h * 5 ticks/h
   });
 
-  it("converts cross-day reference", () => {
-    const tick = tickFromDayHourMinute(1, 6, 0, EPOCH);
-    expect(tick).toBe(150); // (24+6) * 5
+  it("converts next day", () => {
+    const tick = tickFromCalendar(2026, 5, 2, 6, EPOCH);
+    expect(tick).toBe(150); // May 2 2026 06:00 UTC = (24+6) * 5
   });
 
-  it("rounds minutes to nearest tick", () => {
-    const tick = tickFromDayHourMinute(0, 6, 5, EPOCH);
-    expect(tick).toBe(30); // 6h05 ≈ 6h00 at 12min granularity
+  it("returns null for invalid date", () => {
+    const tick = tickFromCalendar(2026, 2, 30, 6, EPOCH);
+    expect(tick).toBeNull();
+  });
+
+  it("returns null for date before epoch", () => {
+    const tick = tickFromCalendar(2026, 4, 30, 6, EPOCH);
+    expect(tick).toBeNull();
   });
 });

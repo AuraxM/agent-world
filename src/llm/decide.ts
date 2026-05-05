@@ -29,7 +29,7 @@ import type { DecideFn, DecideInput } from "@/engine/tick";
 import { getLLMClientForEntry, getModelNameForEntry, hasApiKey } from "./client";
 import { getEntryConfig } from "./providers";
 import { actionRegistry } from "@/domain/action-system";
-import { tickFromDayHourMinute, createEntryId, saveNotebookEntry } from "@/engine/notebook";
+import { tickFromCalendar, formatCurrentTime, createEntryId, saveNotebookEntry } from "@/engine/notebook";
 import type { ActionContext } from "@/engine/actions";
 import {
   buildAcceptDecisionPrompt,
@@ -116,7 +116,7 @@ function handleMemorize(targetId: string, impression: string, self: Character): 
 // ---------------------------------------------------------------------------
 
 function buildNotebookTool(): ChatCompletionTool {
-  return { type: "function", function: { name: NOTEBOOK_TOOL_NAME, description: "将对话中达成的约定记录到记事本。比如约好某个时间一起做什么事。", parameters: NotebookToolSchema } };
+  return { type: "function", function: { name: NOTEBOOK_TOOL_NAME, description: "将对话中达成的约定记录到记事本。用 year/month/day/hour 指定约定时间（绝对日历日期+整点）。", parameters: NotebookToolSchema } };
 }
 
 function buildRecallTool(): ChatCompletionTool {
@@ -581,6 +581,13 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
           messages.push({ role: "tool", tool_call_id: t.id, content: "已记录。" });
         } else if (t.function.name === NOTEBOOK_TOOL_NAME) {
           hasSideEffect = true;
+          const NBR = "NOTEBOOK_TIMEFAIL" as const;
+
+          // Count previous notebook time-validation failures in this turn
+          const previousFails = messages.filter(
+            (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.startsWith(`[${NBR}]`),
+          ).length;
+
           let parsedArgs: unknown;
           try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
             messages.push({ role: "tool", tool_call_id: t.id, content: `add_notebook_entry JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
@@ -591,12 +598,30 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
             messages.push({ role: "tool", tool_call_id: t.id, content: `add_notebook_entry 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
             continue;
           }
-          const { scheduled_day, scheduled_hour, scheduled_minute, free_text } = parseResult.data;
-          const scheduledTick = tickFromDayHourMinute(scheduled_day, scheduled_hour, scheduled_minute, input.epoch ?? 0);
-          if (scheduledTick <= (input.tick ?? 0)) {
-            messages.push({ role: "tool", tool_call_id: t.id, content: "约定时间必须在当前时间之后。请重新计算游戏天数。" });
+          const { year, month, day, hour, free_text } = parseResult.data;
+          const epoch = input.epoch ?? 0;
+          const scheduledTick = tickFromCalendar(year, month, day, hour, epoch);
+
+          if (scheduledTick === null) {
+            const nowStr = formatCurrentTime(input.tick ?? 0, epoch);
+            if (previousFails === 0) {
+              messages.push({ role: "tool", tool_call_id: t.id, content: `[${NBR}] 日期无效（${year}-${month}-${day} ${hour}:00）。当前游戏时间是 ${nowStr}。请根据当前时间重新设定，确保在未来。` });
+            } else {
+              messages.push({ role: "tool", tool_call_id: t.id, content: `[${NBR}] 日期仍无效，放弃记录。你可以继续对话或结束。` });
+            }
             continue;
           }
+
+          if (scheduledTick <= (input.tick ?? 0)) {
+            const nowStr = formatCurrentTime(input.tick ?? 0, epoch);
+            if (previousFails === 0) {
+              messages.push({ role: "tool", tool_call_id: t.id, content: `[${NBR}] 约定时间（${year}年${month}月${day}日 ${hour}:00）必须在当前时间之后。当前游戏时间是 ${nowStr}。请根据当前时间重新调整。` });
+            } else {
+              messages.push({ role: "tool", tool_call_id: t.id, content: `[${NBR}] 约定时间仍不正确，放弃记录。你可以继续对话或结束。` });
+            }
+            continue;
+          }
+
           const entry: import("@/domain/types").NotebookEntry = {
             id: createEntryId(),
             scheduledTick,
@@ -605,7 +630,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
           };
           input.self.notebook.push(entry);
           saveNotebookEntry(input.self.worldId, input.self.id, entry);
-          messages.push({ role: "tool", tool_call_id: t.id, content: `已记录到记事本：第${scheduled_day}日 ${String(scheduled_hour).padStart(2, "0")}:${String(scheduled_minute).padStart(2, "0")} — ${free_text}` });
+          messages.push({ role: "tool", tool_call_id: t.id, content: `已记录到记事本：${year}年${month}月${day}日 ${String(hour).padStart(2, "0")}:00 — ${free_text}` });
         }
       }
       if (hasSideEffect) {

@@ -916,9 +916,9 @@ export function buildDialogTurnPrompt(args: {
   }
 
   function buildNotebookReminder(lang: Language): string {
-    if (lang === "zh") return "如果你们在这次对话中达成了约定（比如约好某个时间一起做什么事），请记得调用 add_notebook_entry 记录到你的记事本中。";
-    if (lang === "en") return "If you and the other person reach an agreement in this conversation (e.g., to meet or do something together at a specific time), remember to call add_notebook_entry to record it in your notebook.";
-    return "この会話で約束をした場合（例：特定の時間に一緒に何かをするなど）、add_notebook_entry を呼び出してノートに記録することを忘れないでください。";
+    if (lang === "zh") return "如果你们在这次对话中达成了约定（比如约好某个时间一起做什么事），请记得调用 add_notebook_entry 记录到你的记事本中（用 year/month/day/hour 指定日历时间）。";
+    if (lang === "en") return "If you and the other person reach an agreement in this conversation (e.g., to meet or do something together at a specific time), remember to call add_notebook_entry to record it in your notebook (use year/month/day/hour for the calendar time).";
+    return "この会話で約束をした場合（例：特定の時間に一緒に何かをするなど）、add_notebook_entry を呼び出してノートに記録してください（year/month/day/hour でカレンダー時間を指定）。";
   }
 
   function buildUpcomingBlock(lang: Language): string {

@@ -153,30 +153,44 @@ export function describeEntries(
   return `${label}：\n${lines.join("\n")}`;
 }
 
-// ── Action helper ──
+// ── Action helpers ──
 
 /**
- * Convert LLM-provided day/hour/minute to tick.
- * Uses epoch to align clock hour with the game calendar.
+ * Convert LLM-provided calendar date (year/month/day/hour) to tick.
+ * Returns null if the date is invalid or before epoch.
  */
-export function tickFromDayHourMinute(
+export function tickFromCalendar(
+  year: number,
+  month: number,
   day: number,
   hour: number,
-  minute: number,
   epoch: number,
-): Tick {
-  const dayStartTick = day * 24 * TICKS_PER_HOUR;
-  // Find tick within this game day whose Date hours match
-  for (let t = dayStartTick; t < dayStartTick + 24 * TICKS_PER_HOUR; t++) {
-    const d = new Date(epoch + t * MS_PER_TICK);
-    if (d.getHours() === hour && Math.abs(d.getMinutes() - minute) <= 6) {
-      return t;
-    }
-  }
-  // Fallback: compute from epoch hour offset
-  const epochHour = new Date(epoch).getHours();
-  const hourOffset = ((hour - epochHour) % 24 + 24) % 24;
-  return dayStartTick + hourOffset * TICKS_PER_HOUR + Math.floor(minute / (60 / TICKS_PER_HOUR));
+): Tick | null {
+  const targetMs = Date.UTC(year, month - 1, day, hour);
+  if (isNaN(targetMs)) return null;
+  // Reconstruct to detect Date.UTC overflow (e.g. Feb 30 → Mar 2)
+  const reconstructed = new Date(targetMs);
+  if (
+    reconstructed.getUTCFullYear() !== year ||
+    reconstructed.getUTCMonth() !== month - 1 ||
+    reconstructed.getUTCDate() !== day
+  ) return null;
+  const tick = Math.round((targetMs - epoch) / MS_PER_TICK);
+  if (tick < 0) return null;
+  return tick;
+}
+
+/**
+ * 返回当前游戏时间的可读字符串，用于告知 LLM 上下文。
+ */
+export function formatCurrentTime(tick: Tick, epoch: number): string {
+  const date = new Date(epoch + tick * MS_PER_TICK);
+  const y = date.getUTCFullYear();
+  const M = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${y}年${M}月${d}日 ${hh}:${mm}`;
 }
 
 /** Create a unique notebook entry ID. */

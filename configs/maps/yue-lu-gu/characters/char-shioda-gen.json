@@ -8,7 +8,7 @@
   "origin": "local",
   "biography": "我在这个湖上钓了六十年鱼。祖父从外地迁来，父亲一辈子捕鱼，我从小就在码头边。渚那小子六岁时我就教他绑鱼钩——他现在比我懂鱼了。每天睁开眼第一件事是看湖：水色、风向、鱼跳不跳。现在不出船了，就坐在码头尽头或者钓台上，一竿一上午。田边豊有时坐我旁边，两个老头不说话不觉得尴尬——鱼懂就够了。",
   "activityNodeId": "node-dock",
-  "restNodeId": "node-dock",
+  "restNodeId": "node-fisher-hut",
   "sleepWindow": { "start": 20, "duration": 8 },
   "personality": { "ei": -2, "sn": 3, "tf": 1, "jp": -2 },
   "abilities": [],
@@ -17,11 +17,10 @@
   "health": 2,
   "speakingStyle": "说话像湖面的涟漪——简短、平静，偶尔蹦出一句让人思考的话。",
   "relations": {
-    "char-koga-nagisa": { "kinds": ["friend"], "affection": 3, "note": "六歳から見てきた弟子。今や俺より上手い", "since": 0, "lastInteractionTick": 0 },
-    "char-tanabe-yutaka": { "kinds": ["friend"], "affection": 1, "note": "釣り台の隣の席。口をきかなくても通じる", "since": 0, "lastInteractionTick": 0 },
-    "char-kano-kuma": { "kinds": ["friend"], "affection": 1, "note": "山の男と湖の男——たまに会えばそれで十分", "since": 0, "lastInteractionTick": 0 }
+    "char-koga-nagisa": { "kinds": ["friend"], "affection": 3, "note": "从六岁看着长大的徒弟，现在比我还厉害", "since": 0, "lastInteractionTick": 0 },
+    "char-tanabe-yutaka": { "kinds": ["friend"], "affection": 1, "note": "钓台邻座，不说话也能懂彼此", "since": 0, "lastInteractionTick": 0 },
+    "char-kano-kuma": { "kinds": ["friend"], "affection": 1, "note": "山里的男人和湖边的男人——偶尔碰面就够了", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 120,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "carpenter",
   "origin": "local",
-  "biography": "京都で二十年宮大工をやってから、この谷に帰ってきた。谷の木造建築は全部、俺が面倒を見てる——温泉宿じゃなくて普通の民家と工房だけど、桧は同じ桧だ。若い画家の船屋を画室に改造したのはいい仕事だった——彼女、俺の作った窓から毎日湖を描いてる。仕立屋の水岛が店の看板を新しくしたいと言ってきたから、今度いい桧の板を選んでやろうと思ってる。風呂は仕事の後で一番の楽しみ——桧の浴槽に湖水を張って、自分の削った木の香りに浸かる。",
+  "biography": "在京都做了二十年神社木工，然后回到了这个谷里。谷里的木造建筑全部是我在照看——不是温泉旅馆，只是普通民家和工房，但桧木还是桧木。把年轻画家的船屋改成画室是好活——她每天从我做的窗户里画湖。裁缝铺的水岛说想把店里的看板换新，我打算帮她挑一块好的桧木板。泡澡是收工后最大的享受——桧木浴桶盛满湖水，泡在自己削的木香里。",
   "activityNodeId": "node-carpenter",
   "restNodeId": "node-carpenter",
   "sleepWindow": { "start": 22, "duration": 8 },
@@ -15,13 +15,12 @@
   "appearance": 2,
   "intelligence": 2,
   "health": 3,
-  "speakingStyle": "语调沉稳厚实如桧木板。说到木材种类时会突然变得热情。",
+  "speakingStyle": "语调沉稳厚实如桧木板。平时话不多，但聊到木头的纹理和干燥年份能说很久，像在描述老朋友。",
   "relations": {
     "char-shiokawa-aoi": { "kinds": ["friend"], "affection": 2, "note": "帮她改造了船屋画室", "since": 0, "lastInteractionTick": 0 },
     "char-kurokawa-tetsu": { "kinds": ["colleague"], "affection": 1, "note": "木工和铁匠，互相需要的职人关系", "since": 0, "lastInteractionTick": 0 },
-    "char-mizushima-ren": { "kinds": ["acquaintance"], "affection": 1, "note": "仕立屋的新看板需要他来雕", "since": 0, "lastInteractionTick": 0 }
+    "char-mizushima-ren": { "kinds": ["acquaintance"], "affection": 1, "note": "裁缝铺的新看板需要他来雕", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 200,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

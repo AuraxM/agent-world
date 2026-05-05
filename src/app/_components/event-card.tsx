@@ -3,12 +3,13 @@
 import { useState } from "react";
 import type { Character, MapNode, WorldEvent } from "@/domain/types";
 import { characterEmoji } from "../_lib/sprite";
-import { DEFAULT_EPOCH_MS, formatHHMM } from "../_lib/format";
+import { formatHHMM } from "../_lib/format";
 
 export function EventCard({
   event,
   characters,
   nodes,
+  epoch,
   onJumpToNode,
   onSelectCharacter,
   onFollow,
@@ -16,6 +17,7 @@ export function EventCard({
   event: WorldEvent;
   characters: Character[];
   nodes: MapNode[];
+  epoch: number;
   onJumpToNode: (id: string) => void;
   onSelectCharacter: (c: Character) => void;
   onFollow: (id: string) => void;
@@ -75,7 +77,7 @@ export function EventCard({
 
         {/* Time */}
         <span className="ml-auto text-pixel-xs text-(--text-faint) tracking-[var(--letter-pixel-tight)]">
-          {formatHHMM(DEFAULT_EPOCH_MS, event.tick)}
+          {formatHHMM(epoch, event.tick)}
         </span>
       </div>
 

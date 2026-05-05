@@ -104,12 +104,48 @@ Required. Must be one of the 23 `PROFESSIONS` enum values (see `src/domain/enums
 - 公共与其他: `priest`, `mailman`, `mayor`, `student`, `unemployed`
 
 ### `origin`
+
 Required. One of `"local"` or `"visitor"` from the `CHARACTER_ORIGINS` enum.
-- `"local"`: Born/rooted in the world. Should have deep relations (3-6) and a fixed residence (`restNodeId`).
-- `"visitor"`: Newly arrived or transient. Light relations (0-2), may lack a permanent residence. Spawns at entry node with travel fatigue unless overridden.
+
+`origin` 决定了角色在世界创建时的**出生点**、初始 vitals、关系密度基线，是模板中最具引擎影响力的字段之一。**写完所有其他字段之后必须回头验证 origin 是否正确。**
+
+#### 决策流程（按顺序检查，命中即停）
+
+1. **关系密度检查** — 拥有 ≥3 段 relation，且其中包含血缘/婚姻关系（father/mother/son/daughter/spouse 等）？→ `"local"`
+2. **住宅检查** — `restNodeId` 指向一个**属于角色自己的**独立住宅（而非酒馆二楼、旅店、亲属家的临时床位）？→ `"local"`
+3. **家庭一致性检查** — 角色的子女/配偶已是 `"local"` 且同住？→ `"local"`（不允许父 visitor 子 local 的矛盾）
+4. **季节性/临时停留** — 角色只在特定期段出现（暑假、祭典、探亲），常住地在 pack 之外？→ `"visitor"`
+5. **刚抵达** — 角色叙事上在过去几周内才到达，尚无固定住所，关系 ≤2？→ `"visitor"`
+6. **其他情况** — 默认 `"local"`（当角色已有固定住所和收入来源时）
+
+#### 快速判定表
+
+| 条件 | origin |
+|------|--------|
+| 有自己的住宅 + 血缘关系 ≥1 | `"local"` |
+| 有自己的住宅 + 在此经营 ≥1 年 | `"local"` |
+| restNodeId 指向自己家（非借宿） | `"local"` |
+| 未成年且父母已是 local | `"local"` |
+| 季节性学生/短期探亲 | `"visitor"` |
+| 无固定住所 + 关系 ≤2 | `"visitor"` |
+
+#### 引擎行为
+
+| | `"local"` | `"visitor"` |
+|--|-----------|-------------|
+| 出生点 | `restNodeId`（自己的住所） | 地图 entry node（如巴士站） |
+| 初始 vitals | 饥饿 0 / 疲惫 0 | 饥饿 1 / 疲惫 2（旅行疲劳） |
+| 关系密度预期 | 3-6，含血缘 | 0-2，轻关系 |
+
+**⚠️ 常见错误：** 角色有自己的住宅和生意，但因 "biography 写了从外地搬来" 而设为 `visitor`。**只要角色已在此定居、拥有自己的住宅，就是 `local`**——biography 中的 "移住" 只是背景故事，不影响 initial spawn 逻辑。
 
 ### `biography`
-Required. First-person narrative (CoC character sheet style). Example:
+Required. First-person narrative (CoC character sheet style). **Must be written in the pack's declared language** (see SKILL.md "语言纪律").
+
+Example (`language: "zh"`):
+> 我叫张默，在这镇上种了十五年地。爹也是农民。庄稼长得好，日子就踏实。
+
+Example (`language: "ja"`):
 > 私は斉藤。この町で20年医者をやっている。父も医者だった。患者の笑顔が何よりの報酬だ。
 
 ## Avatars
@@ -128,12 +164,43 @@ Three required integer attributes, range [1, 4]. 1 = low, 4 = high.
 
 ### `speakingStyle`
 
-Optional. A single Chinese sentence describing how the character talks, e.g.:
-- `"说话慢悠悠，爱唠叨往事，语气温和。"`
-- `"话少句短，不绕弯，语气直接。"`
+Optional. 2-3 句自然中文描述角色的说话方式，必须涵盖：话量 + 句式 + 语气/用词倾向，至少一处 unique 细节（如"说到X时眼睛会亮""紧张时反复做Y"）。
 
-If omitted, the agent-world-mod skill should generate it at creation time from:
-age + MBTI ei + MBTI tf + profession + intelligence.
+If omitted, the agent-world-mod skill generates it from a 6-dimension matrix (age / ei / tf / jp / profession / intelligence). See SKILL.md "口吻差异化" section.
+
+**禁止：**
+- 笼统描述（如"话不多不少""语气温和"）——没有区分度
+- 北方口语词（"啥/咋/整/忒/贼/老XX了"）除非角色背景明确有北方地域标签
+- 语气词堆砌（"嘛/呢/吧/啦"过多）
+- 同 pack 内两个角色的 speakingStyle 共享 ≥3 个相同特征片段
+
+### `initialMoney`
+
+Optional integer ≥ 0. Initial money carried at world creation.
+
+**禁止拍脑袋写。** 要么省略（引擎按公式自动计算），要么严格按公式赋值。
+
+| tier | 公式 `max(MDC×7, MDC×7×tierMultiplier)` | MDC=20 时 |
+|------|------------------------------------------|-----------|
+| 0 | `max(140, 0)` | 140 |
+| 2 | `max(140, 280)` | 280 |
+| 3 | `max(140, 420)` | 420 |
+
+如果角色的 profession 与收入不匹配（如 mayor 退休当志愿者），通过 relations 中的经济来源（spouse/child/landlord）来体现，而非随意调低 initialMoney。
+
+### `expenseExempt`
+
+Optional boolean. If `true`, character is exempt from survival costs (eat/bathe).
+
+**规则：**
+- **age < 18**：禁止写 `"expenseExempt": false`（引擎默认豁免，显式 false 会覆盖导致破产）；如需豁免写 `true` 或省略
+- **student/unemployed（age ≥ 18）**：必须设为 `true`，或 `initialMoney ≥ MDC × 21` + relations 中注明经济来源
+- **visitor（短期停留）**：建议 `true`（除非有本地收入来源）
+- **其余职业者**：省略或 `false`
+
+### `incomeMultiplier`
+
+Optional number ≥ 0. 收入倍率，默认 1.0。用于调整个体收入（如半职=0.5，加班=1.5）。一般不设。
 
 ## Character creation order
 
@@ -141,10 +208,11 @@ The agent-world-mod skill must follow this sequence:
 
 1. **Identity** — name, age, gender, profession, origin, biography
 2. **Numerical attributes** — personality (ei/sn/tf/jp), appearance, intelligence, health
-3. **Derived text** — speakingStyle (from steps 1-2)
-4. **Relations**
-5. **Locations** — activityNodeId, restNodeId
-6. **Other** — sleepWindow, initialMoney, expenseExempt
+3. **Derived text** — speakingStyle (from steps 1-2, via 6-dimension matrix)
+4. **Economy** — resolve income tier → verify daily balance → set initialMoney/expenseExempt per formula
+5. **Relations**
+6. **Locations** — activityNodeId, restNodeId
+7. **Other** — sleepWindow
 
 ## Common mistakes
 
@@ -159,3 +227,9 @@ The agent-world-mod skill must follow this sequence:
 - Setting all 4 personality dims to extreme values — the character becomes noise to the LLM.
 - Forgetting `origin` — it's a required field; every character must declare `"local"` or `"visitor"`.
 - Forgetting `appearance`, `intelligence`, or `health` — all three are required (1-4).
+- **Language:** biography/speakingStyle/notes 中包含外语完整句子 —— 必须翻译为 pack 语言（专有名词除外）。
+- **Speaking:** speakingStyle 使用"啥/咋/整/忒/贼/老XX了"等北方口语词 —— 禁止，除非角色背景有明确北方地域标签。
+- **Speaking:** 同 pack 内角色 speakingStyle 雷同 —— 每个角色必须有不同的特征片段组合。
+- **Economy:** 拍脑袋写 `initialMoney`（100/150/200 等魔术数字）—— 必须按公式或省略。
+- **Economy:** 未成年人（age<18）设置 `"expenseExempt": false` —— 禁止，显式 false 会覆盖引擎默认豁免。
+- **Economy:** 成年无收入者（student/unemployed）不豁免且无经济来源 —— 必须豁免或注明资助关系。

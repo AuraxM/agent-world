@@ -255,6 +255,26 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
       if (outcome.stateChanges) {
         for (const sc of outcome.stateChanges) {
           applyStateChange(actor, sc, worldId, tick);
+          // Cross-character adjustMoney: credit target
+          if (sc.kind === "adjustMoney" && sc.targetCharacterId) {
+            const target = charById.get(sc.targetCharacterId);
+            if (target) {
+              const received = -sc.amount; // sc.amount is negative (deduction from actor)
+              if (received > 0) {
+                target.money += received;
+                recordTransaction(worldId, tick, target.id, received, "transfer_in",
+                  `收到 ${actor.name} 转账`, actor.id);
+                pushMemory(target, {
+                  id: `mem-${randomUUID().slice(0, 8)}`,
+                  tick,
+                  importance: 4,
+                  content: outcome.dialogRecord
+                    ? outcome.dialogRecord.replace(actor.name, `${actor.name}（对方）`)
+                    : `${actor.name} 给了我 ${received} 金钱。`,
+                });
+              }
+            }
+          }
         }
       }
 
@@ -293,27 +313,6 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
     } catch (err) {
       success = false;
       reason = `执行失败：${err instanceof Error ? err.message : String(err)}`;
-    }
-
-    // Handle give: credit recipient
-    if (action.type === "give" && action.targetId) {
-      const target = charById.get(action.targetId);
-      if (target && outcome?.stateChanges) {
-        const givenAmount = outcome.stateChanges
-          .filter((sc) => sc.kind === "adjustMoney" && sc.amount < 0)
-          .reduce((sum, sc) => sum + (sc.kind === "adjustMoney" ? -sc.amount : 0), 0);
-        if (givenAmount > 0) {
-          target.money += givenAmount;
-          recordTransaction(worldId, tick, target.id, givenAmount, "transfer_in",
-            `收到 ${actor.name} 转账`, actor.id);
-          pushMemory(target, {
-            id: `mem-${randomUUID().slice(0, 8)}`,
-            tick,
-            importance: 4,
-            content: `${actor.name} 给了我 ${givenAmount} 金钱。`,
-          });
-        }
-      }
     }
 
     resolvedActions.push({ action, success, reason });

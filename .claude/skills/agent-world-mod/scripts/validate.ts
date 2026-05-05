@@ -30,14 +30,14 @@ function inferKind(filePath: string): "map" | "character" | "manifest" | "unknow
   if (base === "manifest.json" || /manifest/i.test(base)) {
     return "manifest";
   }
-  if (/\/configs\/maps\//.test(norm) || /map/i.test(base)) {
-    return "map";
-  }
   if (
     /\/configs\/characters\//.test(norm) ||
     /character|char/i.test(base)
   ) {
     return "character";
+  }
+  if (/\/configs\/maps\//.test(norm) || /map/i.test(base)) {
+    return "map";
   }
   return "unknown";
 }

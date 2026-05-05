@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Character, MapNode, WorldEvent } from "@/domain/types";
-import { DEFAULT_EPOCH_MS, formatHHMM } from "../_lib/format";
+import { formatHHMM } from "../_lib/format";
 import { EventCard } from "./event-card";
 
 type Filter = "all" | "action" | "inner" | "social" | "other";
@@ -34,6 +34,7 @@ export function EventStream({
   characters,
   nodes,
   followingId,
+  epoch,
   onJumpToNode,
   onSelectCharacter,
   onFollow,
@@ -42,6 +43,7 @@ export function EventStream({
   characters: Character[];
   nodes: MapNode[];
   followingId: string | null;
+  epoch: number;
   onJumpToNode: (id: string) => void;
   onSelectCharacter: (c: Character) => void;
   onFollow: (id: string) => void;
@@ -173,7 +175,7 @@ export function EventStream({
             <div key={group.tick} className="mb-4">
               {/* Tick separator */}
               <div className="tick-sep mb-3">
-                <span>T={group.tick} · {formatHHMM(DEFAULT_EPOCH_MS, group.tick)}</span>
+                <span>T={group.tick} · {formatHHMM(epoch, group.tick)}</span>
                 <div className="tick-sep__line" />
               </div>
 
@@ -184,6 +186,7 @@ export function EventStream({
                     event={ev}
                     characters={characters}
                     nodes={nodes}
+                    epoch={epoch}
                     onJumpToNode={onJumpToNode}
                     onSelectCharacter={onSelectCharacter}
                     onFollow={onFollow}

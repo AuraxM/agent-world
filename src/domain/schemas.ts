@@ -282,6 +282,46 @@ export const EndConversationToolSchema = {
   additionalProperties: false,
 };
 
+// Propose dialogue action: 对话中发起双人交互行为
+export const PROPOSE_DIALOGUE_ACTION_TOOL_NAME = "propose_dialogue_action";
+export const ProposeDialogueActionSchema = z.object({
+  action_type: z.string().min(1),
+  target_id: z.string().min(1),
+  amount: z.number().int().positive().optional(),
+  free_text: z.string().max(300).optional(),
+  reasoning: z.string().min(1).max(400),
+});
+export type ProposeDialogueActionPayload = z.infer<typeof ProposeDialogueActionSchema>;
+export const ProposeDialogueActionToolSchema = {
+  type: "object" as const,
+  properties: {
+    action_type: { type: "string", description: "要发起的交互行为类型。" },
+    target_id: { type: "string", description: "交互目标角色 ID。" },
+    amount: { type: "integer", description: "金额（give 需要）。" },
+    free_text: { type: "string", description: "附言或说明（可选）。" },
+    reasoning: { type: "string", description: "发起该行为的理由（内心独白）。" },
+  },
+  required: ["action_type", "target_id", "reasoning"],
+  additionalProperties: false,
+};
+
+// Respond to dialogue action: 接受或拒绝对话中对方发起的交互行为
+export const RESPOND_DIALOGUE_ACTION_TOOL_NAME = "respond_to_dialogue_action";
+export const RespondDialogueActionSchema = z.object({
+  response: z.enum(["accept", "reject"]),
+  reasoning: z.string().min(1).max(400),
+});
+export type RespondDialogueActionPayload = z.infer<typeof RespondDialogueActionSchema>;
+export const RespondDialogueActionToolSchema = {
+  type: "object" as const,
+  properties: {
+    response: { type: "string", enum: ["accept", "reject"], description: "接受或拒绝对方发起的交互行为。" },
+    reasoning: { type: "string", description: "接受或拒绝的理由（内心独白）。" },
+  },
+  required: ["response", "reasoning"],
+  additionalProperties: false,
+};
+
 // Dialog summary
 export const DialogSummarySchema = z.object({
   summary: z.string().min(1).max(500),

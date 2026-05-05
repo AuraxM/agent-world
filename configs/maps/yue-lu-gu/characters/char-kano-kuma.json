@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "hunter",
   "origin": "local",
-  "biography": "私は狩野熊——名前も姿も熊みたいだろ。もう自分でもわかっている。後ろの森で五十年猟をしている。鹿、猪、たまに熊——本当の熊だ。今は罠を仕掛けるくらいで、昔みたいに山を走り回ったりはしない。月に一度くらい谷に下りて、牧野の牧場の柵に腰掛けて一緒に黙るのが楽しみ——あの若いのは牛と話すが、私に話す言葉はない。それでいい。",
+  "biography": "我叫狩野熊——名字和体型都像熊对吧，我自己知道。在后山打了五十年猎。鹿、野猪，偶尔遇到熊——真正的熊。现在主要是下下套子，不再像年轻时整座山跑。一个月下山一两次，坐在牧野牧场栅栏边跟那小伙子一起沉默——他跟牛说话，但对我没什么话。挺好的。",
   "activityNodeId": "node-firefly-forest",
   "restNodeId": "node-hunter-hut",
   "sleepWindow": { "start": 20, "duration": 9 },
@@ -17,11 +17,10 @@
   "health": 2,
   "speakingStyle": "话极稀少，像山里的石头。开口就是切中要害的一句话。",
   "relations": {
-    "char-makino-shun": { "kinds": ["friend"], "affection": 3, "note": "牧の若いのとは口をきかなくてもいい", "since": 0, "lastInteractionTick": 0 },
-    "char-shioda-gen": { "kinds": ["friend"], "affection": 1, "note": "たまに釣り場で会うが挨拶だけ", "since": 0, "lastInteractionTick": 0 },
-    "char-tanabe-kiku": { "kinds": ["acquaintance"], "affection": 0, "note": "同世代、知っているが話すことは少ない", "since": 0, "lastInteractionTick": 0 }
+    "char-makino-shun": { "kinds": ["friend"], "affection": 3, "note": "牧场的年轻人，不用说话也能一起待着", "since": 0, "lastInteractionTick": 0 },
+    "char-shioda-gen": { "kinds": ["friend"], "affection": 1, "note": "偶尔在钓场碰见，点点头就够了", "since": 0, "lastInteractionTick": 0 },
+    "char-tanabe-kiku": { "kinds": ["acquaintance"], "affection": 0, "note": "同代人，知道彼此但说话少", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 100,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

@@ -1,0 +1,329 @@
+---
+name: agent-world-action-test
+description: Use when writing or debugging tests for any dialogue-based interactive action (give, kiss, trade, comfort, teach, etc.) in the agent-world project. Triggers include "测试对话action"、"dialogue action test"、"mock turnDecide"、"propose_dialogue_action"、any mention of testing the propose→pending→respond→execute flow, or when a dialogue action test fails. Also use when adding usableInDialogue to a new action and needing to verify end-to-end behavior.
+---
+
+# Agent World Dialogue Action Testing
+
+How to write and debug tests for actions proposed and accepted during dialogue — any action where `usableInDialogue: true`.
+
+## Architecture
+
+Every dialogue action follows the same 4-phase protocol, regardless of what the action does:
+
+```
+Phase 1 — Propose:  A calls submit_dialog_turn + propose_dialogue_action(<type>, B, params)
+                     → conv.pendingAction = { requesterId: A, actionType: <type>, params }
+                     → state unchanged (execution is deferred)
+
+Phase 2 — Respond:   B calls submit_dialog_turn + respond_to_dialogue_action("accept"|"reject")
+                     → if accept: executeDialogueAction() runs, action_result pushed to transcript
+                     → if reject: pendingAction cleared, nothing executes
+
+Phase 3 — Execute:   executeDialogueAction() calls def.execute(ctx, params)
+                     → applies stateChanges to initiator via applyStateChange
+                     → applies cross-character stateChanges via targetCharacterId
+                     → injects outcome.dialogRecord as __system__ action_result turn
+                     → writes memory to both parties
+```
+
+Code path: `decide.ts/llmDialogTurn` → `dialog.ts/runOneTickDialog` → `dialog.ts/executeDialogueAction`
+
+## Test file location and setup
+
+```typescript
+// src/engine/dialog-<action-name>.test.ts
+import {
+  runDialogPhase,
+  type AcceptDecideFn, type TurnDecideFn,
+  type SummaryDecideFn, type SalvageDecideFn,
+  type DialogueActionProposal, type DialogueActionResponse,
+} from "./dialog";
+import { actionRegistry, type ActionInput } from "@/domain/action-system";
+import { BUILTIN_ACTIONS } from "./actions-builtin";
+
+// Register builtins (actionRegistry is a global singleton)
+BUILTIN_ACTIONS.forEach((a) => actionRegistry.register(a));
+```
+
+## Test harness
+
+Always test through `runDialogPhase` directly (not `tick.ts`). All LLM decision points are injected as mocks:
+
+```typescript
+const result = await runDialogPhase({
+  rawActions,            // Action[] — at least one "speak" to start conversation
+  characters,            // Character[] — the participants
+  nodes,                 // MapNode[] — usually just [baseNode()]
+  perceptions,           // Map<string, WorldEvent[]> — usually new Map()
+  tick,                  // number
+  worldName: "测试世界",
+  language: "zh",
+  acceptDecide,          // AcceptDecideFn mock
+  turnDecide,            // TurnDecideFn mock ← where you control the action flow
+  summaryDecide,         // SummaryDecideFn mock
+  salvageDecide,         // SalvageDecideFn mock
+  ongoingConversations,  // Conversation[] | undefined — for multi-tick tests
+});
+```
+
+### Character factory
+
+```typescript
+function makeChar(id: string, name: string, loc: string, overrides?: Partial<Character>): Character {
+  return {
+    id, worldId: "w", name, age: 30, gender: "male" as const,
+    profession: "farmer" as const, biography: "テスト", origin: "local" as const,
+    locationId: loc, personality: { ei: 0, sn: 0, tf: 0, jp: 0 },
+    vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+    emotion: { mood: 0, stress: 0, social_satiety: 0 },
+    abilities: [], activeConversationIds: [], appearance: 2, intelligence: 2, health: 2,
+    shortMemory: [], dailyMemory: [], longMemory: [], relations: {}, lastSleepTick: 0,
+    money: 100, incomeLevel: 0, expenseExempt: false,
+    impressionBook: {}, shortTermGoal: null, longTermGoal: null, liked: "", disliked: "",
+    ...overrides,
+  };
+}
+```
+
+### Default mocks (reusable)
+
+```typescript
+const mockAccept = (result: "accept_speak" | "reject_speak" = "accept_speak"): AcceptDecideFn =>
+  async ({ requesterId }) => ({ type: result, targetId: requesterId, reasoning: "ok", selfImportance: 2 });
+
+const mockSummary = (text = "一段闲聊"): SummaryDecideFn => async () => ({ summary: text });
+
+const mockSalvage = (): SalvageDecideFn =>
+  async ({ character }) => ({ type: "wait" as any, actorId: character.id, reasoning: "等等", selfImportance: 2 });
+
+function baseNode(): any {
+  return {
+    id: "n1", worldId: "w", parentId: null, name: "测试场景", description: "",
+    tags: ["public"], capacity: null, privacy: "public", visibleFromParent: true,
+    shortcuts: [], isEntry: false,
+  };
+}
+```
+
+## Mock patterns for TurnDecideFn
+
+### CRITICAL: one-shot guard for propose
+
+Each character speaks 3 times per tick (6 turns total per tick). Without a guard, `if (!pendingAction)` re-triggers on every turn after pendingAction is cleared. Always use a closure flag:
+
+```typescript
+let proposed = false;
+let accepted = false;
+
+turnDecide: async ({ self, pendingAction }) => {
+  if (self.id === "b" && !pendingAction && !proposed) {
+    proposed = true;
+    return {
+      kind: "turn" as const,
+      turn: { speakerId: "b", kind: "say" as const, line: "来，给你。" },
+      proposeAction: {
+        actionType: "<action_type>",
+        targetId: "a",
+        params: { /* action-specific params */ },
+      } as DialogueActionProposal,
+    };
+  }
+  if (self.id === "a" && pendingAction && !accepted) {
+    accepted = true;
+    return {
+      kind: "turn" as const,
+      turn: { speakerId: "a", kind: "say" as const, line: "谢谢！" },
+      respondToAction: { accepted: true, reasoning: "..." } as DialogueActionResponse,
+    };
+  }
+  return { kind: "turn" as const, turn: { speakerId: self.id, kind: "say" as const, line: "…" } };
+},
+```
+
+All patterns below assume the one-shot guard pattern. It is not repeated in every example, but it is always required.
+
+### Reject a pending action
+
+```typescript
+respondToAction: { accepted: false, reasoning: "不需要" } as DialogueActionResponse
+```
+
+### End conversation + respond to pending
+
+```typescript
+return {
+  kind: "end" as const,
+  payload: { reasoning: "聊完了", closingLine: "再见" },
+  respondToAction: { accepted: true, reasoning: "收下" } as DialogueActionResponse,
+};
+```
+
+### Simultaneously accept AND propose (back-and-forth)
+
+Character accepts old pending, then immediately proposes a new one:
+
+```typescript
+return {
+  kind: "turn" as const,
+  turn: { speakerId: "a", kind: "say" as const, line: "收到了，这给你回礼。" },
+  respondToAction: { accepted: true, reasoning: "收下" } as DialogueActionResponse,
+  proposeAction: { actionType: "<type>", targetId: "b", params: {...} } as DialogueActionProposal,
+};
+```
+
+The engine processes `respondToAction` first (clearing old pending), then `proposeAction` (setting new pending). This ordering prevents the new proposal from overwriting the old one before it's responded to.
+
+## How to determine what to verify
+
+Read the action definition's `execute()` return value. The `Outcome` fields tell you what to check:
+
+| Outcome field | What to verify |
+|---|---|
+| `stateChanges[]` | Character state mutated (money, vitals, emotion, relations, etc.) |
+| `stateChanges[].targetCharacterId` | Cross-character effects applied to target |
+| `dialogRecord` | `action_result` turn injected into transcript with this text |
+| `memory` | Short memory written for the initiator |
+| `event` | WorldEvent generated |
+
+For each state change kind, determine the right assertion:
+
+| StateChange kind | Assertion |
+|---|---|
+| `adjustMoney` | `expect(char.money).toBe(expected)` |
+| `adjustMoney` + `targetCharacterId` | Both initiator AND target money changed |
+| `resetVital` / `adjustVital` | `expect(char.vitals.hunger).toBe(expected)` etc. |
+| `adjustMood` | `expect(char.emotion.mood).toBe(expected)` |
+| `setOngoingAction` / `clearOngoingAction` | `expect(char.currentAction).toBe(expected)` |
+
+**Example for a give action** (stateChanges = `[{ kind: "adjustMoney", amount: -N, targetCharacterId: "a" }]`):
+
+```typescript
+expect(b.money).toBe(100 - N);  // initiator: deducted
+expect(a.money).toBe(5 + N);    // target: credited via targetCharacterId
+```
+
+**Example for a hypothetical "kiss" action** (stateChanges = `[{ kind: "adjustMood", delta: 1, targetCharacterId: "a" }]`):
+
+```typescript
+expect(b.emotion.mood).toBe(prevB + 1);  // initiator mood up
+expect(a.emotion.mood).toBe(prevA + 1);  // target mood up via targetCharacterId
+```
+
+## Verifying transcript injection
+
+Every accepted dialogue action should inject an `action_result` turn:
+
+```typescript
+const conv = result.updatedConversations.find(
+  c => c.status !== "ended" || c.endedBy
+);
+const actionResults = conv.transcript.filter(t => t.kind === "action_result");
+expect(actionResults.length).toBeGreaterThan(0);
+expect(actionResults[0].line).toContain("<expected dialogRecord text>");
+```
+
+The `action_result` turn has `speakerId: "__system__"` and `kind: "action_result"`.
+
+## Common bugs
+
+### 1. State change applied to initiator but NOT to target
+
+**Symptom:** Initiator's state changes but target's stays the same (e.g., giver loses money but recipient doesn't gain it).
+
+**Root cause:** `executeDialogueAction` calls `applyStateChange()` which triggers `recordTransaction()` — a DB write. In test environments without the DB table, `recordTransaction` throws. The `catch` in `executeDialogueAction` swallows it, but `applyStateChange` already modified initiator's state before the throw. The cross-character code (which runs after `applyStateChange`) never executes.
+
+**Fix:** In `executeDialogueAction`, handle state changes that involve `targetCharacterId` inline, without going through `applyStateChange`. For money:
+
+```typescript
+if (sc.kind === "adjustMoney") {
+  actor.money += sc.amount;
+  if (sc.targetCharacterId) {
+    const tgt = chars.get(sc.targetCharacterId);
+    if (tgt) tgt.money += (-sc.amount);
+  }
+} else {
+  applyStateChange(actor, sc, worldId, tick);
+}
+```
+
+For other state change types with `targetCharacterId`, apply the same pattern: mutate target directly instead of relying on `applyStateChange`. If the state change is pure (no DB side effect in `applyStateChange`), calling `applyStateChange` for both initiator and target is fine.
+
+### 2. Action executes multiple times in the same tick
+
+**Symptom:** State change magnitude is 2x or 3x expected (money, vitals, etc.).
+
+**Root cause:** 6 turns per tick. Without a `!proposed` guard, the propose branch re-triggers every time `!pendingAction` is true again (after accept clears it).
+
+**Fix:** Always use one-shot flags in mock turnDecide.
+
+### 3. Wrong pendingAction read during back-and-forth
+
+**Symptom:** When A accepts B's action AND proposes a new one, the wrong action executes.
+
+**Root cause:** If `proposeAction` were processed before `respondToAction`, the new proposal overwrites `conv.pendingAction` before respond reads it.
+
+**Fix:** The engine already processes `respondToAction` first. If you encounter this bug, check the processing order hasn't been accidentally changed.
+
+### 4. Conversation state between ticks
+
+**Symptom:** Multi-tick tests fail with unexpected state.
+
+**Root cause:** Between ticks, conversations move from "active" to "ending" status. The filter `c.status !== "ended"` passes "ending". But if you accidentally use `c.status === "active"`, the second tick won't process the conversation.
+
+**Fix:** Pass ongoing conversations with: `r1.updatedConversations.filter(c => c.status !== "ended")`.
+
+## Debugging
+
+### Log inside executeDialogueAction
+
+Add temporary logs in `src/engine/dialog.ts`:
+
+```typescript
+console.log("[executeDialogueAction]", actionType, "actor:", actor.name, "params:", JSON.stringify(params));
+```
+
+### Run a single test with verbose output
+
+```bash
+npx vitest run src/engine/dialog-<action>.test.ts -t "<test name>" --reporter verbose
+```
+
+### Filter log output
+
+```bash
+npx vitest run src/engine/dialog-<action>.test.ts --reporter verbose 2>&1 | grep -E "AFTER|executeDialogueAction|transcript"
+```
+
+### Trace turn-by-turn
+
+Log from inside the mock turnDecide:
+
+```typescript
+console.log("turnDecide:", self.name, "pending:", !!pendingAction,
+  "proposed:", proposed, "accepted:", accepted);
+```
+
+### Check the transcript structure
+
+```typescript
+console.log(conv.transcript.map(t =>
+  `[${t.speakerId}] ${t.kind}: ${(t as any).line ?? ""}`
+));
+```
+
+## Test scenarios checklist
+
+For any new dialogue action, cover at minimum:
+
+- [ ] Propose → accept → state changes applied correctly to both parties
+- [ ] Propose → accept → `action_result` injected into transcript with correct `dialogRecord` text
+- [ ] Propose → accept → memory written to both initiator and target
+- [ ] Propose → reject → no state changes, no transcript injection
+- [ ] Propose → target ignores (doesn't respond) → state unchanged, pendingAction preserved in conversation
+- [ ] Propose → conversation ends before response → state unchanged, pendingAction cleared
+- [ ] Conversation ends WITH accept in same turn → state changes applied
+- [ ] Back-and-forth: accept old pending + propose new one in same turn — both execute correctly
+- [ ] Action params validation: invalid/edge params handled gracefully
+- [ ] Cross-character effects: verify `targetCharacterId` path works
+- [ ] Unknown action_type in pendingAction → no crash, no state change

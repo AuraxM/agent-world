@@ -6,7 +6,7 @@
   "gender": "female",
   "profession": "unemployed",
   "origin": "local",
-  "biography": "私は田边菊——七十六年この谷で生きてきた。結婚、出産、伴侶を見送り……全部この家の中。今は息子の豊と二人で暮らしている。私は六十年の夏の夜を覚えている——谷中が蛍で光って、湖面がまるで地上に落ちた星空みたいだった。今年の七月もきっと同じ——蛍は変わらない。豊がまだ薪で風呂を焚いているのは、私の我儘。湖の水より薪の火のほうが芯から温まるんです。若い朝倉夫妻がよく訪ねて来る——花澄さんは私の漬けた梅干がお気に入りとか。",
+  "biography": "我叫田边菊——七十六年，在这谷里活了一辈子。结婚、生子、送走伴侶……全都在这间老屋里。现在和儿子丰两个人过日子。我记得六十年前夏天夜晚的样子——满谷萤火虫的光，湖面像落在地上的星空。今年七月应该也一样——萤火虫不会变。丰到现在还用柴火烧洗澡水，是我任性——湖水烧不出那种透到骨头里的暖。年轻的朝仓夫妇常来看我——花澄那姑娘特别喜欢我渍的梅干。",
   "activityNodeId": "node-old-farmhouse",
   "restNodeId": "node-old-farmhouse",
   "sleepWindow": { "start": 20, "duration": 9 },
@@ -17,11 +17,11 @@
   "health": 1,
   "speakingStyle": "说话慢悠悠，爱唠叨往事，语气温和但不容置疑。",
   "relations": {
-    "char-tanabe-yutaka": { "kinds": ["mother"], "affection": 3, "note": "息子の豊。あれでも昔は泣き虫だった", "since": 0, "lastInteractionTick": 0 },
-    "char-tanabe-mei": { "kinds": ["other_relative"], "affection": 3, "note": "芽は私の宝物。夏のたびに背が伸びている", "since": 0, "lastInteractionTick": 0 },
-    "char-asakura-kasumi": { "kinds": ["friend"], "affection": 2, "note": "花澄さんは若いのにえらい——梅干を褒めてくれた最初の人", "since": 0, "lastInteractionTick": 0 },
-    "char-kishita-tamaki": { "kinds": ["friend"], "affection": 2, "note": "木下先生には三代前から世話になっている", "since": 0, "lastInteractionTick": 0 },
-    "char-yanagida-waka": { "kinds": ["friend"], "affection": 2, "note": "同学年の友。若い時はよく一緒に祭りの準備をした", "since": 0, "lastInteractionTick": 0 }
+    "char-tanabe-yutaka": { "kinds": ["mother"], "affection": 3, "note": "儿子丰，别看他现在这样，小时候可爱哭呢", "since": 0, "lastInteractionTick": 0 },
+    "char-tanabe-mei": { "kinds": ["other_relative"], "affection": 3, "note": "芽是我的宝贝，每年暑假回来都长高了一截", "since": 0, "lastInteractionTick": 0 },
+    "char-asakura-kasumi": { "kinds": ["friend"], "affection": 2, "note": "花澄年纪轻轻很懂事——第一个夸我梅干好吃的人", "since": 0, "lastInteractionTick": 0 },
+    "char-kishita-tamaki": { "kinds": ["friend"], "affection": 2, "note": "木下医生家三代给我们家看病", "since": 0, "lastInteractionTick": 0 },
+    "char-yanagida-waka": { "kinds": ["friend"], "affection": 2, "note": "同年的朋友，年轻时一起准备祭典", "since": 0, "lastInteractionTick": 0 }
   },
   "initialMoney": 200,
   "expenseExempt": true,

@@ -11,6 +11,7 @@ export function EventGantt({
   events,
   characters,
   nodes,
+  epoch,
   onJumpToNode,
   onSelectCharacter,
   onFollow,
@@ -18,6 +19,7 @@ export function EventGantt({
   events: WorldEvent[];
   characters: Character[];
   nodes: MapNode[];
+  epoch: number;
   onJumpToNode: (id: string) => void;
   onSelectCharacter: (c: Character) => void;
   onFollow: (id: string) => void;
@@ -110,7 +112,7 @@ export function EventGantt({
         style={{ overflow: "auto" }}
       >
         <div style={{ width: contentWidth + 100, display: "flex", flexDirection: "column" }}>
-          <GanttTimeline startTick={startTick} endTick={endTick} />
+          <GanttTimeline startTick={startTick} endTick={endTick} epoch={epoch} />
 
           {characters.map((c) => (
             <GanttRow
@@ -133,6 +135,7 @@ export function EventGantt({
           event={selectedEvent}
           characters={characters}
           nodes={nodes}
+          epoch={epoch}
           anchorRect={popupAnchor}
           onClose={handleClosePopup}
           onJumpToNode={onJumpToNode}

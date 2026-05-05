@@ -1,15 +1,17 @@
 // src/app/_components/gantt-timeline.tsx
 "use client";
 
-import { DEFAULT_EPOCH_MS, formatHHMM } from "../_lib/format";
+import { formatHHMM } from "../_lib/format";
 import { TICK_WIDTH, tickRangeDesc } from "../_lib/gantt-utils";
 
 export function GanttTimeline({
   startTick,
   endTick,
+  epoch,
 }: {
   startTick: number;
   endTick: number;
+  epoch: number;
 }) {
   const ticks = tickRangeDesc(startTick, endTick);
 
@@ -48,7 +50,7 @@ export function GanttTimeline({
               T={t}
             </div>
             <div className="text-pixel-2xs text-(--text-on-frame-faint)">
-              {formatHHMM(DEFAULT_EPOCH_MS, t)}
+              {formatHHMM(epoch, t)}
             </div>
           </div>
         );

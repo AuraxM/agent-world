@@ -21,7 +21,6 @@
     "char-ying": { "kinds": ["friend"], "affection": 2, "note": "下班后一起去酒馆", "since": 0, "lastInteractionTick": 0 },
     "char-yanagida-koharu": { "kinds": ["acquaintance"], "affection": 1, "note": "小春是诊所的小常客", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 100,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

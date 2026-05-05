@@ -10,6 +10,7 @@ export function GanttPopup({
   event,
   characters,
   nodes,
+  epoch,
   anchorRect,
   onClose,
   onJumpToNode,
@@ -19,6 +20,7 @@ export function GanttPopup({
   event: WorldEvent;
   characters: Character[];
   nodes: MapNode[];
+  epoch: number;
   anchorRect: DOMRect | null;
   onClose: () => void;
   onJumpToNode: (id: string) => void;
@@ -74,6 +76,7 @@ export function GanttPopup({
         event={event}
         characters={characters}
         nodes={nodes}
+        epoch={epoch}
         onJumpToNode={onJumpToNode}
         onSelectCharacter={onSelectCharacter}
         onFollow={onFollow}

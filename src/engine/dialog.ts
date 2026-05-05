@@ -25,6 +25,9 @@ import { createLogger } from "@/util/logger";
 import { injectTimeMessage } from "@/llm/prompt";
 import { db, schema } from "@/db/client";
 import { eq, and } from "drizzle-orm";
+import { actionRegistry } from "@/domain/action-system";
+import { applyStateChange } from "./execute";
+import { recordTransaction } from "./economy";
 const log = createLogger("dialog");
 
 // ---------------------------------------------------------------------------
@@ -80,8 +83,20 @@ export type AcceptDecideFn = (input: {
   here: MapNode;
   peer: Character;
   tick: number;
+  epoch: number;
   language: Language;
 }) => Promise<AcceptDecideResult>;
+
+export interface DialogueActionProposal {
+  actionType: string;
+  targetId: string;
+  params: import("@/domain/action-system").ActionInput;
+}
+
+export interface DialogueActionResponse {
+  accepted: boolean;
+  reasoning: string;
+}
 
 export type TurnDecideFn = (input: {
   self: Character;
@@ -89,9 +104,12 @@ export type TurnDecideFn = (input: {
   transcript: DialogTurn[];
   here: MapNode;
   language: Language;
+  pendingAction?: import("@/domain/types").DialogueActionRequest;
+  dialogueActions: import("@/domain/action-system").ActionDefinition[];
+  tick: number;
 }) => Promise<
-  | { kind: "turn"; turn: DialogTurn }
-  | { kind: "end"; payload: EndConversationPayload }
+  | { kind: "turn"; turn: DialogTurn; proposeAction?: DialogueActionProposal; respondToAction?: DialogueActionResponse }
+  | { kind: "end"; payload: EndConversationPayload; respondToAction?: DialogueActionResponse }
 >;
 
 export type SummaryDecideFn = (input: {
@@ -289,6 +307,79 @@ interface TickDialogResult {
   endedBy?: "initiator" | "acceptor";
 }
 
+/** Execute a dialogue action that was accepted. Returns the dialogRecord string if any. */
+function executeDialogueAction(
+  actionType: string,
+  actor: Character,
+  target: Character,
+  params: import("@/domain/action-system").ActionInput,
+  chars: Map<string, Character>,
+  nodeById: Map<string, MapNode>,
+  worldId: string,
+  tick: number,
+): string | undefined {
+  const def = actionRegistry.get(actionType);
+  if (!def) return undefined;
+
+  const here = nodeById.get(actor.locationId)!;
+  const ctx = {
+    worldId, tick, self: actor, here,
+    companions: [target],
+    reachable: [] as MapNode[],
+    isSleepHour: false,
+    facts: {} as any,
+  };
+
+  try {
+    const outcome = def.execute(ctx, params);
+    if (outcome.stateChanges) {
+      for (const sc of outcome.stateChanges) {
+        // Direct money adjustments (skip applyStateChange to avoid DB dependency in dialog context)
+        if (sc.kind === "adjustMoney") {
+          actor.money += sc.amount;
+          // Cross-character adjustMoney: credit the target
+          if (sc.targetCharacterId) {
+            const tgtChar = chars.get(sc.targetCharacterId);
+            if (tgtChar) {
+              const received = -sc.amount;
+              if (received > 0) {
+                tgtChar.money += received;
+                pushMemo(tgtChar, {
+                  id: `mem-${randomUUID().slice(0, 8)}`,
+                  tick,
+                  importance: 4,
+                  content: outcome.dialogRecord
+                    ? outcome.dialogRecord.replace(actor.name, `${actor.name}（对方）`)
+                    : `${actor.name} 给我执行了 ${actionType}。`,
+                });
+              }
+            }
+          }
+        } else {
+          // Non-money state changes go through applyStateChange as normal
+          applyStateChange(actor, sc, worldId, tick);
+        }
+      }
+    }
+    pushMemo(actor, {
+      id: `mem-${randomUUID().slice(0, 8)}`,
+      tick,
+      importance: 3,
+      content: outcome.memory,
+    });
+    return outcome.dialogRecord;
+  } catch {
+    return undefined;
+  }
+}
+
+function pushMemo(c: Character, mem: Memory): void {
+  c.shortMemory.push(mem);
+  if (c.shortMemory.length > 50) {
+    c.shortMemory.splice(0, c.shortMemory.length - 50);
+  }
+}
+
 async function runOneTickDialog(
   conv: Conversation,
   chars: Map<string, Character>,
@@ -296,6 +387,7 @@ async function runOneTickDialog(
   turnDecide: TurnDecideFn,
   language: Language,
   currentTick: number,
+  epoch: number,
 ): Promise<TickDialogResult> {
   const initiator = chars.get(conv.initiatorId)!;
   const acceptor = chars.get(conv.acceptorId)!;
@@ -331,10 +423,34 @@ async function runOneTickDialog(
     const speaker = chars.get(speakerId)!;
     const peer = speakerId === conv.initiatorId ? acceptor : initiator;
 
+    // Build dialogue action context for this turn
+    const speakerHere = nodeById.get(speaker.locationId)!;
+    const actionCtx = {
+      worldId: conv.worldId, tick: currentTick, self: speaker, here: speakerHere,
+      companions: [peer],
+      reachable: [] as MapNode[],
+      isSleepHour: false,
+      facts: {} as any,
+    };
+    const dialogueActions = actionRegistry.getDialogueActions(actionCtx);
+
+    // Determine pendingAction for this speaker: only if it targets them
+    const pendingAction = conv.pendingAction && conv.pendingAction.targetId === speakerId
+      ? conv.pendingAction
+      : undefined;
+
     let result;
     try {
-      const speakerHere = nodeById.get(speaker.locationId)!;
-      result = await retryOnce(() => turnDecide({ self: speaker, peer, transcript, here: speakerHere, language }));
+      result = await retryOnce(() => turnDecide({
+        self: speaker,
+        peer,
+        transcript,
+        here: speakerHere,
+        language,
+        pendingAction,
+        dialogueActions,
+        tick: currentTick,
+      }));
     } catch (err) {
       log.error("turnDecide 异常，对话被迫终止", {
         speaker: speaker.name,
@@ -345,6 +461,44 @@ async function runOneTickDialog(
         stack: err instanceof Error ? err.stack?.slice(0, 500) : undefined,
       });
       return { transcript, ended: true };
+    }
+
+    // ── Process respondToAction FIRST (clear existing pending before setting new) ──
+    if (result.respondToAction) {
+      const pa = conv.pendingAction;
+      if (pa) {
+        if (result.respondToAction.accepted) {
+          const requester = chars.get(pa.requesterId);
+          const tgt = chars.get(pa.targetId);
+          if (requester && tgt) {
+            // Build the full action params for execution
+            const execParams = { ...pa.params };
+            const dialogRecord = executeDialogueAction(
+              pa.actionType, requester, tgt, execParams,
+              chars, nodeById, conv.worldId, currentTick,
+            );
+            if (dialogRecord) {
+              transcript.push({
+                speakerId: "__system__",
+                kind: "action_result",
+                line: dialogRecord,
+              });
+            }
+          }
+        }
+        // Clear pending regardless
+        conv.pendingAction = undefined;
+      }
+    }
+
+    // ── Process proposeAction (after respondToAction, so it won't overwrite existing pending) ──
+    if (result.kind === "turn" && result.proposeAction) {
+      conv.pendingAction = {
+        requesterId: speakerId,
+        targetId: result.proposeAction.targetId,
+        actionType: result.proposeAction.actionType,
+        params: result.proposeAction.params,
+      };
     }
 
     if (result.kind === "end") {
@@ -365,15 +519,50 @@ async function runOneTickDialog(
         const otherPeer = otherId === conv.initiatorId ? acceptor : initiator;
         try {
           const otherHere = nodeById.get(other.locationId)!;
+          const otherActionCtx = {
+            worldId: conv.worldId, tick: currentTick, self: other, here: otherHere,
+            companions: [otherPeer],
+            reachable: [] as MapNode[],
+            isSleepHour: false,
+            facts: {} as any,
+          };
+          const otherDialogueActions = actionRegistry.getDialogueActions(otherActionCtx);
+          const otherPendingAction = conv.pendingAction && conv.pendingAction.targetId === otherId
+            ? conv.pendingAction : undefined;
           const extraResult = await turnDecide({
             self: other,
             peer: otherPeer,
             transcript,
             here: otherHere,
             language,
+            pendingAction: otherPendingAction,
+            dialogueActions: otherDialogueActions,
+            tick: currentTick,
           });
           if (extraResult.kind === "turn") {
             transcript.push(extraResult.turn);
+          }
+          // Process any respondToAction in extra round too
+          if (extraResult.respondToAction) {
+            const pa = conv.pendingAction;
+            if (pa && extraResult.respondToAction.accepted) {
+              const requester = chars.get(pa.requesterId);
+              const tgt = chars.get(pa.targetId);
+              if (requester && tgt) {
+                const dialogRecord = executeDialogueAction(
+                  pa.actionType, requester, tgt, pa.params,
+                  chars, nodeById, conv.worldId, currentTick,
+                );
+                if (dialogRecord) {
+                  transcript.push({
+                    speakerId: "__system__",
+                    kind: "action_result",
+                    line: dialogRecord,
+                  });
+                }
+              }
+            }
+            conv.pendingAction = undefined;
           }
         } catch {
           // ignore extra round failure
@@ -382,14 +571,14 @@ async function runOneTickDialog(
         transcript.push({
           speakerId: "__system__",
           kind: "say",
-          line: injectTimeMessage({ tick: currentTick, tickStarted: conv.tickStarted, language }),
+          line: injectTimeMessage({ tick: currentTick, epoch, tickStarted: conv.tickStarted, language }),
         });
       } else {
         // End before 6th sentence — still inject time
         transcript.push({
           speakerId: "__system__",
           kind: "say",
-          line: injectTimeMessage({ tick: currentTick, tickStarted: conv.tickStarted, language }),
+          line: injectTimeMessage({ tick: currentTick, epoch, tickStarted: conv.tickStarted, language }),
         });
       }
       return {
@@ -406,7 +595,7 @@ async function runOneTickDialog(
   transcript.push({
     speakerId: "__system__",
     kind: "say",
-    line: injectTimeMessage({ tick: currentTick, tickStarted: conv.tickStarted, language }),
+    line: injectTimeMessage({ tick: currentTick, epoch, tickStarted: conv.tickStarted, language }),
   });
 
   return { transcript, ended: false };
@@ -422,6 +611,7 @@ export interface RunDialogPhaseInput {
   nodes: MapNode[];
   perceptions: Map<string, WorldEvent[]>;
   tick: number;
+  epoch: number;
   worldName: string;
   language: Language;
   acceptDecide: AcceptDecideFn;
@@ -434,7 +624,7 @@ export interface RunDialogPhaseInput {
 export async function runDialogPhase(
   input: RunDialogPhaseInput,
 ): Promise<DialogPhaseResult> {
-  const { rawActions, characters, nodes, perceptions, tick, ongoingConversations } = input;
+  const { rawActions, characters, nodes, perceptions, tick, epoch, ongoingConversations } = input;
   const charById = new Map(characters.map((c) => [c.id, c]));
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
@@ -470,7 +660,7 @@ export async function runDialogPhase(
         return;
       }
 
-      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick);
+      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick, epoch);
       conv.transcript = tickResult.transcript;
       conv.currentTickRounds = TURNS_PER_TICK;
 
@@ -525,7 +715,7 @@ export async function runDialogPhase(
       try {
         result = await input.acceptDecide({
           character: target, requesterName: requester.name, requesterId: pa.requester,
-          freeText: pa.freeText, here, peer: requester, tick, language: input.language,
+          freeText: pa.freeText, here, peer: requester, tick, epoch, language: input.language,
         });
       } catch {
         result = { type: "reject_speak", targetId: pa.requester, reasoning: "决策失败默认拒绝", selfImportance: 1 };
@@ -579,7 +769,7 @@ export async function runDialogPhase(
         currentTickRounds: 0,
         status: "active",
       };
-      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick);
+      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick, epoch);
       conv.transcript = tickResult.transcript;
       conv.currentTickRounds = TURNS_PER_TICK;
       if (tickResult.ended) {
@@ -678,25 +868,25 @@ export async function runDialogPhase(
     const waitInit: Action = {
       type: "wait", actorId: conv.initiatorId,
       reasoning: `正在和 ${charById.get(conv.acceptorId)!.name} 对话`,
-      selfImportance: 2, skipExecution: true,
+      selfImportance: 2, skipExecution: true, skipMemory: true,
     };
     finalActionsMap.set(conv.initiatorId, waitInit);
     finalActionsMap.set(conv.acceptorId, {
       type: "wait", actorId: conv.acceptorId,
       reasoning: `正在和 ${charById.get(conv.initiatorId)!.name} 对话`,
-      selfImportance: 2, skipExecution: true,
+      selfImportance: 2, skipExecution: true, skipMemory: true,
     });
   }
   for (const conv of endedConversations) {
     finalActionsMap.set(conv.initiatorId, {
       type: "wait", actorId: conv.initiatorId,
       reasoning: `刚和 ${charById.get(conv.acceptorId)!.name} 聊完`,
-      selfImportance: 2, skipExecution: true,
+      selfImportance: 2, skipExecution: true, skipMemory: true,
     });
     finalActionsMap.set(conv.acceptorId, {
       type: "wait", actorId: conv.acceptorId,
       reasoning: `刚和 ${charById.get(conv.initiatorId)!.name} 聊完`,
-      selfImportance: 2, skipExecution: true,
+      selfImportance: 2, skipExecution: true, skipMemory: true,
     });
   }
   for (const sr of salvageResults) {

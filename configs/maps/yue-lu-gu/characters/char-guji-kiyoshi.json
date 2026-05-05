@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "priest",
   "origin": "local",
-  "biography": "我在这座月之神社守了三十年。月読命を祀る古社——谷里的月亮传说、萤火虫的由来、湖中银鱼的起原，这间神社保管着一切。每月满月之夜我在湖心岛做月次祭，那是只有我一个人、一叶小舟、一轮明月的时刻。但神社最热闹的日子是七月的「萤火虫祭」和九月的「月见祭」——那时候全镇的人都会来，参道石灯笼全数点灯，萤和年轻人们摆摊卖甜酒和烤团子。祭りは谷の呼吸だ——祭典是谷的呼吸。",
+  "biography": "我在这座月之神社守了三十年。供奉月读命的古社——谷里的月亮传说、萤火虫的由来、湖中银鱼的起源，这间神社保管着一切。每月满月之夜我在湖心岛做月次祭，那是只有我一个人、一叶小舟、一轮明月的时刻。但神社最热闹的日子是七月的「萤火虫祭」和九月的「月见祭」——那时候全镇的人都会来，参道石灯笼全数点灯，萤和年轻人们摆摊卖甜酒和烤团子。祭典是谷的呼吸。",
   "activityNodeId": "node-shrine",
   "restNodeId": "node-priest-house",
   "sleepWindow": { "start": 21, "duration": 8 },
@@ -15,14 +15,13 @@
   "appearance": 2,
   "intelligence": 3,
   "health": 2,
-  "speakingStyle": "说话缓慢庄严，像在念祝词。但聊起月亮传说时会越说越兴奋。",
+  "speakingStyle": "说话缓慢庄严，像在念祝词。平时沉静寡言，但一提到谷里的古老传说，语速会渐渐加快，眼神也跟着亮起来。",
   "relations": {
     "char-yanagida-masakazu": { "kinds": ["friend"], "affection": 2, "note": "祭典的实务离不开町长", "since": 0, "lastInteractionTick": 0 },
     "char-yanagida-waka": { "kinds": ["friend"], "affection": 2, "note": "宫司和退休教员，关于谷之历史的对话", "since": 0, "lastInteractionTick": 0 },
     "char-shiokawa-aoi": { "kinds": ["acquaintance"], "affection": 1, "note": "画家常在神社境内写生", "since": 0, "lastInteractionTick": 0 },
     "char-mine-koyuki": { "kinds": ["acquaintance"], "affection": 1, "note": "养蜂人关于月亮和蜜蜂的理论，宫司觉得很有趣", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 150,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

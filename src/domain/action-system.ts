@@ -47,6 +47,8 @@ export interface Outcome {
     targetId: string;
     openingLine: string;
   };
+  /** accept 后注入双方 transcript 的系统消息（如 "A 亲吻了 B"） */
+  dialogRecord?: string;
 }
 
 // ---- StateChange: declarative side effects ----
@@ -59,7 +61,7 @@ export type StateChange =
   | { kind: "adjustStress"; delta: number }
   | { kind: "setOngoingAction"; action: import("./types").OngoingAction }
   | { kind: "clearOngoingAction" }
-  | { kind: "adjustMoney"; amount: number; reason: string };
+  | { kind: "adjustMoney"; amount: number; reason: string; targetCharacterId?: string };
 
 // ---- ActionOption: presented to LLM ----
 
@@ -95,6 +97,9 @@ export interface ActionDefinition {
   extraParams?: Record<string, unknown>;
   /** extraParams 中必填字段名列表。 */
   extraRequired?: string[];
+
+  /** 是否可在对话中发起。仅 instant 类 action 可设 true。 */
+  usableInDialogue?: boolean;
 }
 
 // ---- ActionRegistry ----
@@ -136,6 +141,16 @@ export class ActionRegistry {
       }
     }
     return opts;
+  }
+
+  /** 获取对话中可用的 action 定义（usableInDialogue 即表示对话中可用，LLM 自行判断时机）。 */
+  getDialogueActions(_ctx?: ActionContext): ActionDefinition[] {
+    const result: ActionDefinition[] = [];
+    for (const [type, def] of this._defs) {
+      if (!def.usableInDialogue) continue;
+      result.push(def);
+    }
+    return result;
   }
 }
 

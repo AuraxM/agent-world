@@ -23,8 +23,6 @@
     "char-tanabe-mei": { "kinds": ["friend"], "affection": 2, "note": "芽姐姐跑不过我", "since": 0, "lastInteractionTick": 0 },
     "char-yanagida-koharu": { "kinds": ["friend"], "affection": 2, "note": "小春带我去捉萤火虫", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 10,
-  "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}
 }

@@ -447,12 +447,13 @@ export const giveAction: ActionDefinition = {
       memory: `我给了 ${target.name} ${actual} 金钱。`,
       event: {
         category: "social",
-        description: `${ctx.self.name} 给了 ${target.name} 一些钱。`,
+        description: `${ctx.self.name} 给了 ${target.name} ${actual} 金钱。`,
         intensity: 2,
       },
       stateChanges: [
-        { kind: "adjustMoney", amount: -actual, reason: `give to ${target.id}` },
+        { kind: "adjustMoney", amount: -actual, reason: `give to ${target.id}`, targetCharacterId: target.id },
       ],
+      dialogRecord: `${ctx.self.name} 给了 ${target.name} ${actual} 金钱。`,
     };
   },
   extraParams: {
@@ -460,6 +461,7 @@ export const giveAction: ActionDefinition = {
     amount: { type: "integer", description: "给予金额（默认全部余额）。" },
   },
   extraRequired: ["target_id"],
+  usableInDialogue: true,
 };
 
 export const BUILTIN_ACTIONS: ActionDefinition[] = [

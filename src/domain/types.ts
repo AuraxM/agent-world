@@ -314,10 +314,18 @@ export interface WorldSnapshot {
   recentEvents: WorldEvent[];
 }
 
+/** 对话内待处理的双人交互 action 请求。 */
+export interface DialogueActionRequest {
+  requesterId: string;
+  targetId: string;
+  actionType: string;
+  params: import("./action-system").ActionInput;
+}
+
 /** 对话内单轮快照（仅供 WorldEvent.dialogTranscript 使用） */
 export interface DialogTurn {
   speakerId: string;
-  kind: "say";
+  kind: "say" | "action_result";
   line?: string;
   reasoning?: string;
 }
@@ -355,6 +363,8 @@ export interface Conversation {
   status: "active" | "ending" | "ended";
   endedBy?: "initiator" | "acceptor" | "passive";
   pendingExtraRound?: boolean;
+  /** 对话中一方发起的双人交互 action，等待对方回应 */
+  pendingAction?: DialogueActionRequest;
 }
 
 /** end_conversation tool 的 LLM 输出载荷。 */

@@ -312,6 +312,7 @@ describe("runDialogPhase", () => {
       nodes: [baseNode()],
       perceptions: emptyPerceptions,
       tick: 5,
+      epoch: 0,
       worldName: "测试",
       language: "zh",
       acceptDecide: mockAccept("accept_speak"),
@@ -354,6 +355,7 @@ describe("runDialogPhase", () => {
       nodes: [baseNode()],
       perceptions: emptyPerceptions,
       tick: 5,
+      epoch: 0,
       worldName: "测试",
       language: "zh",
       acceptDecide: mockAccept("reject_speak"),
@@ -395,6 +397,7 @@ describe("runDialogPhase", () => {
       nodes: [baseNode()],
       perceptions: emptyPerceptions,
       tick: 5,
+      epoch: 0,
       worldName: "测试",
       language: "zh",
       acceptDecide: mockAccept("reject_speak"),
@@ -439,6 +442,7 @@ describe("runDialogPhase", () => {
       nodes: [baseNode()],
       perceptions: emptyPerceptions,
       tick: 5,
+      epoch: 0,
       worldName: "测试",
       language: "zh",
       acceptDecide: badAccept,
@@ -486,6 +490,7 @@ describe("runDialogPhase", () => {
       nodes: [baseNode()],
       perceptions: emptyPerceptions,
       tick: 5,
+      epoch: 0,
       worldName: "测试",
       language: "zh",
       acceptDecide: mockAccept("accept_speak"),
@@ -526,7 +531,7 @@ describe("multi-tick conversation", () => {
     };
     const result = await runDialogPhase({
       rawActions: actions, characters: chars, nodes: [makeNode("n1")],
-      perceptions: new Map(), tick: 0, worldName: "test", language: "zh",
+      perceptions: new Map(), tick: 0, epoch: 0, worldName: "test", language: "zh",
       acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
       turnDecide: turnDecide as any,
       summaryDecide: async () => ({ summary: "摘要" }),
@@ -563,7 +568,7 @@ describe("multi-tick conversation", () => {
     };
     const result = await runDialogPhase({
       rawActions: [], characters: chars, nodes: [makeNode("n1")],
-      perceptions: new Map(), tick: 5, worldName: "test", language: "zh",
+      perceptions: new Map(), tick: 5, epoch: 0, worldName: "test", language: "zh",
       acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
       turnDecide: turnDecide as any,
       summaryDecide: async () => ({ summary: "ok" }),
@@ -581,7 +586,7 @@ describe("multi-tick conversation", () => {
     };
     const result = await runDialogPhase({
       rawActions: [], characters: chars, nodes: [makeNode("n1"), makeNode("n2")],
-      perceptions: new Map(), tick: 1, worldName: "test", language: "zh",
+      perceptions: new Map(), tick: 1, epoch: 0, worldName: "test", language: "zh",
       acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
       turnDecide: async () => mockTurn("a", "hi"),
       summaryDecide: async () => ({ summary: "summary" }),

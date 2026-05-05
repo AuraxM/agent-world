@@ -26,7 +26,7 @@ This skill covers three tracks. Read the relevant reference when you start worki
 | Track | Reference | What it covers |
 |-------|-----------|----------------|
 | Map / nodes | `references/map-schema.md` | Node tree structure, tags, privacy, travelCost, invariants (entry node, bathing node) |
-| Characters | `references/character-schema.md` | Template shape, personality, relations, profession, origin, sleepWindow |
+| Characters | `references/character-schema.md` | Template shape, personality, relations, profession, origin, sleepWindow, economy fields, language discipline |
 | Actions | `references/action-system.md` | ActionDefinition interface, ActionContext, Outcome, StateChange, EventCategory |
 
 Also available:
@@ -74,7 +74,7 @@ A character template is a **location-agnostic** identity. Runtime state (locatio
 ### Workflow
 
 1. **Clarify with the user:**
-   - Origin (`"local"` or `"visitor"`) — determines spawn behavior, default vitals, relation density.
+   - Origin (`"local"` or `"visitor"`) — this dictates spawn point, initial vitals, and relation density. Follow the origin decision flow below.
    - Name, age, gender, profession (from `PROFESSIONS` enum).
    - MBTI archetype — which 1-2 dimensions are strong (|3|-|4|)?
    - `activityNodeId` and `restNodeId` — where do they work and sleep?
@@ -84,7 +84,8 @@ A character template is a **location-agnostic** identity. Runtime state (locatio
    - `configs/maps/<pack-id>/characters/` for existing character IDs and names.
    - `src/domain/enums.ts` for `PROFESSIONS`, `CHARACTER_ORIGINS`, `OBJECTIVE_RELATION_KINDS`, `GENDERS`.
 3. **Draft the JSON** following `references/character-schema.md`.
-4. **Validate:**
+4. **Validate origin before saving** — run the origin decision tree below against the completed template. A wrong origin is the #1 cause of "character spawns at bus stop instead of their own home."
+5. **Validate JSON:**
    ```bash
    npx tsx .claude/skills/agent-world-mod/scripts/validate.ts configs/maps/<pack-id>/characters/char-name.json
    ```
@@ -101,18 +102,41 @@ A character template is a **location-agnostic** identity. Runtime state (locatio
 - `age` — 1-120.
 - `gender` — `"male"` | `"female"` | `"other"`.
 
+### 语言纪律（Language discipline）
+
+**所有文本字段必须使用 manifest 声明的 `language` 书写。** 文化背景≠输出语言——日式小镇设定不等于角色说日语。
+
+受此约束的字段：`biography`、`speakingStyle`、`relations[*].note`、`impressionBook` 的值。
+
+**允许例外：**
+- 角色名、地名、专有名词可保留原文或音译（如"鸟居""味噌""月読命""の店"）
+- 单一外来词在中文句子中自然出现是允许的（如"她是我的 senpai"）
+
+**禁止：**
+- 完整的外语句子出现在 biography 中（如 `「この校舎で四十年教えたのよ」`）
+- 外语段落或对话引用——应翻译为 pack 语言 + 用描述传达原语言感受
+  - ❌ `她说「ここは私の家です」`
+  - ✅ `她用日语说这里就是她的家`
+- 外语填充词/语气词（如日语 `あの`、`えっと`）——应替换为对应中文语气词
+
+**创建后自检：**
+1. 逐字段扫描非 pack 语言字符集（如 `language: "zh"` 时扫描ひらがな/カタカナ/韓글）
+2. 发现完整外语句子 → 翻译重写
+3. 发现外语语气词 → 替换为中文对应词
+
 ### Design principles
 
-**Origin first.** This affects everything:
+**Origin first.** `origin` controls spawn point, initial vitals, and relation density. Wrong origin = character spawns at bus stop instead of their own home. Follow `references/character-schema.md#origin` decision flow.
 
-| Aspect | `"local"` | `"visitor"` |
-|--------|-----------|-------------|
-| Biography tone | Rooted, multi-generational | Arrived/moved, outside perspective |
-| Relations | 3-6 deep connections, blood ties | 0-2 light connections |
-| `restNodeId` | Their own residence | Optional; inn or temporary lodging |
-| `activityNodeId` | Local workplace | May be absent |
-| Initial spawn | At `restNodeId` | At entry node |
-| Initial vitals | Fresh (hunger 0, fatigue 0) | Travel-worn (hunger 1, fatigue 2) |
+### Origin decision tree（创建完成后必检）
+1. **关系密度检查** — ≥3 段 relation，含血缘/婚姻？→ `"local"`
+2. **住宅检查** — `restNodeId` 指向自己拥有的住宅（非借宿酒馆/旅店）？→ `"local"`
+3. **家庭一致性检查** — 配偶/子女已是 `"local"` 且同住？→ `"local"`（禁止父 visitor 子 local）
+4. **季节性/临时** — 只在特定时段出现，常住地在外？→ `"visitor"`
+5. **刚抵达** — 叙事上最近几周才到，无固定住所，关系 ≤2？→ `"visitor"`
+6. **其他** — 默认 `"local"`（有自己住宅和收入来源就是 local）
+
+**⚠️ "移住者悖论"：** biography 写"我从XX搬来"不代表角色是 visitor。只要已定居、有自己的住宅、在此经营 ≥1 年，就是 `local`——"移住"只是背景故事，不影响引擎 spawn 逻辑。这个错误已经造成月露谷 4 个角色站在巴士站而不是自己家。
 
 **Personality restraint.** Keep most dims modest (0..±2). Strong values (|3|–|4|) should be storyline-load-bearing. Aim for 1–2 strong dims per character.
 
@@ -125,6 +149,88 @@ A character template is a **location-agnostic** identity. Runtime state (locatio
 - **Names in Chinese, ids in kebab-case English** (e.g., `"char-zhangmo"`, `"node-restaurant"`).
 - `avatar`: a single emoji is fine.
 - `spriteKey`: match existing CSS palette tokens in `src/app/globals.css` (`town, school, classroom, playground, restaurant, park, home-cool, home-warm`). Reuse before inventing.
+
+### 口吻差异化（Speaking style diversity）
+
+`speakingStyle` 是 2-3 句自然中文，描述角色如何说话。必须从以下属性中提取特征并组合——**禁止**仅凭直觉写一条笼统的描述。
+
+**输入维度与特征片段对照表：**
+
+| 维度 | 档位 | 特征片段 |
+|------|------|---------|
+| age | 1-12 | 用词简单、句子短、语气天真、好奇心外露 |
+| | 13-17 | 带青春期色彩——热情/反叛/羞怯之一；用词较新 |
+| | 18-25 | 年轻活力、用词较新、可能带理想主义 |
+| | 26-50 | 成熟完整、语气沉稳、生活经验见于措辞 |
+| | 51-65 | 语速偏慢、偶引往事或经验之谈 |
+| | 66+ | 缓慢沧桑、句子可能短、可能重复、常有"以前…" |
+| ei | -4~-2 | 话少句短、被动应答、不主动展开 |
+| | -1~1 | 正常交流、适度展开、看情境而定 |
+| | 2~4 | 话多健谈、主动描述细节、喜欢分享 |
+| tf | -4~-2 | 带情绪色彩、主观评价多、感受词丰富（"觉得""好感动""气人"） |
+| | -1~1 | 情绪与逻辑趋于平衡 |
+| | 2~4 | 偏逻辑分析、冷静克制、因果词多（"因为""所以""按理说"） |
+| jp | -4~-2 | 松散跳跃、想到哪说哪、可能离题再绕回来 |
+| | -1~1 | 适度组织、偶尔离题 |
+| | 2~4 | 有条理、先总后分、结构词明显（"首先""其次""总之"） |
+| profession | 农业/采集 | 自然比喻（"跟种地一样""看天气的"）、简短务实 |
+| | 餐饮/食品 | 食物比喻、温度/时间敏感（"火候""时候""刚好"） |
+| | 手工/制造 | 材料比喻（"跟木头一样实在"）、尺寸/精确性词汇 |
+| | 商业/服务 | 数字敏感、人际话题、客气体贴 |
+| | 医疗/教育 | 关心语气、解释性表达（"你看啊""原因在于"）、温和/威信 |
+| | 学生 | 求知或懒散语气、同辈用语 |
+| | 公共/其他 | 按具体职业推导——如 priest 偏仪式感/肃穆，mayor 偏审慎/大局观 |
+| intelligence | 1 | 用词基础、句式单一、少用修饰 |
+| | 2 | 正常词汇量、偶用成语/歇后语 |
+| | 3 | 词汇丰富、句式多变、善用比喻和成语 |
+| | 4 | 精妙用典、修辞层次丰富、可能带学术/文人气 |
+
+**合成规则：**
+1. 从 6 个维度各取特征片段
+2. 选取 3-4 个最突出的维度特征（age + ei/tf 二选一 + profession + intelligence 可选）组合为 2-3 句描述
+3. 句子必须包含：话量 + 句式 + 语气/用词倾向，至少一处 unique 细节（如"说到X时眼睛会亮""紧张时反复做Y"）
+4. **同 pack 内自检**：任意两个角色的 speakingStyle 共享特征片段不得超过 2 个
+
+**禁止特征清单：**
+- ❌ "啥/咋/整/忒/贼/老XX了/可XX了/贼XX" 等北方口语词 —— 除非角色背景确有明确北方地域标签
+- ❌ "嘛/呢/吧/啦" 滥用堆砌结尾
+- ❌ 所有人都是"话不多不少""语气温和"——这是无特征的默认态，没有区分度
+
+### 经济平衡（Economy balance）
+
+角色创建时必须保证收支可持续。**禁止拍脑袋写 `initialMoney`**——要么省略让引擎按公式计算，要么严格使用以下公式。
+
+**核心公式（与 `src/engine/bme.ts` 一致）：**
+
+`MDC`（每日最低生存成本）= `economy.mdc ?? 20`（取 manifest economy 配置或默认 20）
+
+| 变量 | 公式 |
+|------|------|
+| `initialMoney` 默认值 | `max(MDC × 7, MDC × 7 × tierMultiplier)` |
+| 日收入 | `BME × tierMultiplier × MDC`（分 4 次工作 session 获得） |
+| 日生存开销 | `eatCost × 2.5 + batheCost × 1.5`（2-3 餐 + 1-2 次洗浴） |
+| eatCost | `round(MDC × 0.5)` |
+| batheCost | `round(MDC × 0.2)` |
+| BME | `metabolicBase(age) × healthFactor(health)` |
+
+**强制规则：**
+
+1. **禁止拍脑袋写 `initialMoney`** —— 要么省略该字段（引擎自动按公式计算），要么严格使用公式值。不得写 100、150、200 等无依据的魔术数字
+2. **未成年豁免（age < 18）**：**禁止写 `"expenseExempt": false`**。引擎默认给未成年人豁免，但模板显式写 `false` 会覆盖引擎默认值导致破产。如需豁免请写 `true`，否则省略该字段
+3. **成年无收入者（student/unemployed，age ≥ 18）**：必须满足以下之一：
+   - `"expenseExempt": true`
+   - 或 `initialMoney ≥ MDC × 21`（三周缓冲）+ `relations` 中注明经济来源（如父母资助）
+4. **生存自检**：创建每个角色后，核验 `日收入 × 7 ≥ 周生存开销`（豁免者除外）。不满足则需调整 profession/tier 或增加 initialMoney
+
+**速查表（MDC=20 为例）：**
+
+| tier | 默认 initialMoney | 日收入(BME=1.2) | 日开销(≈) | 日净余(≈) | 判定 |
+|------|------------------|-----------------|-----------|----------|------|
+| 0 | 140 | 0 | 34 | -34 | ❌ 必须豁免 |
+| 2 | 280 | 48 | 34 | +14 | ✓ 可持续 |
+| 3 | 420 | 72 | 34 | +38 | ✓ 充裕 |
+
+**注意：** BME 随 age 和 health 浮动。age 1-12（BME=0.6×healthFactor）和 age 66+（BME=0.75×healthFactor）的角色的日收入和日开销都低于上表。创建后应用实际 BME 重新核算。
 
 ## Track C: Actions (actions.js)
 

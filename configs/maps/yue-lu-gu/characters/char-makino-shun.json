@@ -21,7 +21,6 @@
     "char-ying": { "kinds": ["acquaintance"], "affection": 0, "note": "酒馆角落里唯一的常连客", "since": 0, "lastInteractionTick": 0 },
     "char-lin-yuesheng": { "kinds": ["acquaintance"], "affection": 1, "note": "每日送牛乳", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 200,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

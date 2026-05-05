@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "blacksmith",
   "origin": "local",
-  "biography": "我是黑川铁——「くろがね」じゃない、「くろかわ」だ。这个谷里的铁匠已经第三代了，祖父从京都搬来，父亲接了手，现在轮到我。锻冶时我不说话——不是脾气不好，铁有铁的节奏，人的嘴巴跟不上。收工后就是另一个人，在「蛍火」的围炉边喝瓶酒，听听谷里的人都在聊什么。萤说我是「昼と夜で別人格」，大概没夸张。农具、修理、偶尔打一把包丁——这就是我的全部。",
+  "biography": "我是黑川铁——不是黑铁，是黑川。这个谷里的铁匠已经第三代了，祖父从京都搬来，父亲接了手，现在轮到我。锻冶时我不说话——不是脾气不好，铁有铁的节奏，人的嘴巴跟不上。收工后就是另一个人，在「蛍火」的围炉边喝瓶酒，听听谷里的人都在聊什么。萤说我是白天晚上两个人，大概没夸张。农具、修理、偶尔打一把菜刀——这就是我的全部。",
   "activityNodeId": "node-blacksmith",
   "restNodeId": "node-blacksmith",
   "sleepWindow": { "start": 22, "duration": 8 },
@@ -22,7 +22,6 @@
     "char-makino-shun": { "kinds": ["friend"], "affection": 1, "note": "牧场的工具都是黑川打的", "since": 0, "lastInteractionTick": 0 },
     "char-asakura-yu": { "kinds": ["acquaintance"], "affection": 1, "note": "新来的年轻农夫，第一次修农具就来了黑川铁匠铺", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 200,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

@@ -154,6 +154,7 @@ const baseInput = (): DecideInput => ({
   options: [{ type: "wait", hint: "等" }],
   worldName: "测试世界",
   tick: 0,
+  epoch: 0,
   facts: baseCtx.facts,
   language: "zh",
   ctx: baseCtx,

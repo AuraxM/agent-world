@@ -470,6 +470,7 @@ export function formatSleepWindow(w: SleepWindow): string {
 
 export function timeOfDay(
   tick: number,
+  epoch: number,
   sleepWindow: SleepWindow = DEFAULT_SLEEP_WINDOW,
 ): {
   hour: number;
@@ -478,10 +479,11 @@ export function timeOfDay(
   period: DayPeriod;
   isSleepHour: boolean;
 } {
-  const totalHours = Math.floor(tick / TICKS_PER_HOUR);
-  const day = Math.floor(totalHours / 24);
-  const hour = ((totalHours % 24) + 24) % 24;
-  const minute = (tick % TICKS_PER_HOUR) * (60 / TICKS_PER_HOUR);
+  const MS_PER_TICK = (60 / TICKS_PER_HOUR) * 60 * 1000;
+  const gameDate = new Date(epoch + tick * MS_PER_TICK);
+  const hour = gameDate.getHours();
+  const minute = gameDate.getMinutes();
+  const day = Math.floor(tick / (24 * TICKS_PER_HOUR));
   let period: DayPeriod;
   if (hour < 5) period = "深夜";
   else if (hour < 7) period = "凌晨";
@@ -801,11 +803,12 @@ export function buildAcceptDecisionPrompt(args: {
   here: MapNode;
   peer: Character;
   tick: number;
+  epoch: number;
   language?: Language;
 }): string {
-  const { self, requesterName, freeText, here, peer, tick } = args;
+  const { self, requesterName, freeText, here, peer, tick, epoch } = args;
   const language = args.language ?? "zh";
-  const t = timeOfDay(tick, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW);
+  const t = timeOfDay(tick, epoch, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW);
   const fatigue = qualifyVital(self.vitals.fatigue, "fatigue");
   const hunger = qualifyVital(self.vitals.hunger, "hunger");
 
@@ -850,8 +853,10 @@ export function buildDialogTurnPrompt(args: {
   transcript: DialogTurn[];
   here: MapNode;
   language?: Language;
+  pendingAction?: import("@/domain/types").DialogueActionRequest;
+  dialogueActions?: import("@/domain/action-system").ActionDefinition[];
 }): string {
-  const { self, peer, transcript, here } = args;
+  const { self, peer, transcript, here, pendingAction, dialogueActions } = args;
   const language = args.language ?? "zh";
 
   const history = transcript
@@ -868,6 +873,45 @@ export function buildDialogTurnPrompt(args: {
 
   const lines: string[] = [];
 
+  // Common: pending action context
+  function buildPendingActionBlock(lang: Language): string {
+    if (!pendingAction) return "";
+    const requesterName = pendingAction.requesterId === self.id ? "你" : peer.name;
+    const params = pendingAction.params;
+    const detail = params.amount
+      ? ` 金额：${params.amount}💰`
+      : params.free_text
+        ? ` "${params.free_text}"`
+        : "";
+    if (lang === "zh") {
+      return `\n⚠️ 对方发起的交互：${requesterName} 想对你执行「${pendingAction.actionType}」。${detail}\n你可以同时调用 submit_dialog_turn + respond_to_dialogue_action（接受 accept 或拒绝 reject），或仅说话不理睬。\n`;
+    }
+    if (lang === "en") {
+      return `\n⚠️ Pending interaction: ${requesterName} wants to perform "${pendingAction.actionType}" on you.${detail}\nYou can call submit_dialog_turn + respond_to_dialogue_action (accept or reject) together, or just speak to ignore it.\n`;
+    }
+    return `\n⚠️ 相手からのアクション：${requesterName} があなたに「${pendingAction.actionType}」を実行しようとしています。${detail}\nsubmit_dialog_turn + respond_to_dialogue_action（accept または reject）を同時に呼び出すか、発言だけして無視することもできます。\n`;
+  }
+
+  // Common: available dialogue actions
+  function buildDialogueActionsBlock(lang: Language): string {
+    if (!dialogueActions || dialogueActions.length === 0) return "";
+    const actionList = dialogueActions
+      .map((a) => {
+        const extra = a.extraParams
+          ? Object.keys(a.extraParams).filter(k => k !== "free_text").join(", ")
+          : "";
+        return `- ${a.type}${extra ? ` (需要 ${extra})` : ""}`;
+      })
+      .join("\n");
+    if (lang === "zh") {
+      return `\n你可以在此对话中发起的行为（调用 propose_dialogue_action，与 submit_dialog_turn 同时调用）：\n${actionList}\n`;
+    }
+    if (lang === "en") {
+      return `\nActions you can propose during this dialogue (call propose_dialogue_action together with submit_dialog_turn):\n${actionList}\n`;
+    }
+    return `\nこの会話中に提案できるアクション（propose_dialogue_action を submit_dialog_turn と同時に呼び出してください）：\n${actionList}\n`;
+  }
+
   if (language === "zh") {
     lines.push(`你是 ${self.name}，正在和 ${peer.name} 对话。`);
     lines.push("");
@@ -879,7 +923,8 @@ export function buildDialogTurnPrompt(args: {
     lines.push("");
     lines.push("对话记录：");
     lines.push(history || "(尚未开始)");
-    lines.push("");
+    lines.push(buildPendingActionBlock("zh"));
+    lines.push(buildDialogueActionsBlock("zh"));
     lines.push("现在轮到你说话。请根据你的性格自然地回应，不要重复对方刚说过的话。调用 submit_dialog_turn：kind=\"say\" 并填写 line。如果想结束对话，请调用 end_conversation。");
   } else if (language === "en") {
     lines.push(`You are ${self.name}, speaking with ${peer.name}.`);
@@ -892,7 +937,8 @@ export function buildDialogTurnPrompt(args: {
     lines.push("");
     lines.push("Conversation:");
     lines.push(history || "(not yet started)");
-    lines.push("");
+    lines.push(buildPendingActionBlock("en"));
+    lines.push(buildDialogueActionsBlock("en"));
     lines.push("It's your turn. Respond naturally based on your personality — do not repeat what the other person just said. Call submit_dialog_turn with kind=\"say\" and line. If you want to end the conversation, call end_conversation.");
   } else {
     lines.push(`あなたは ${self.name} です。${peer.name} と会話しています。`);
@@ -905,7 +951,8 @@ export function buildDialogTurnPrompt(args: {
     lines.push("");
     lines.push("会話の記録：");
     lines.push(history || "(まだ始まっていません)");
-    lines.push("");
+    lines.push(buildPendingActionBlock("ja"));
+    lines.push(buildDialogueActionsBlock("ja"));
     lines.push("あなたの番です。自分の性格に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。submit_dialog_turn で kind=\"say\" を呼び出し line を入力してください。会話を終了する場合は end_conversation を呼び出してください。");
   }
 
@@ -1026,6 +1073,7 @@ export function buildUserPrompt(args: {
   perceived: WorldEvent[];
   options: ActionOption[];
   tick: number;
+  epoch: number;
   facts: AggregatedFacts;
   language?: Language;
   arrivalIntro?: boolean;
@@ -1033,10 +1081,10 @@ export function buildUserPrompt(args: {
   nodes: MapNode[];
   activeEventDefs?: import("@/domain/events").GlobalEventDef[];
 }): string {
-  const { character, here, companions, perceived, options, tick, facts, allCharacters, nodes, activeEventDefs } = args;
+  const { character, here, companions, perceived, options, tick, epoch, facts, allCharacters, nodes, activeEventDefs } = args;
   const language = args.language ?? "zh";
   const sleepWindow = character.sleepWindow ?? DEFAULT_SLEEP_WINDOW;
-  const t = timeOfDay(tick, sleepWindow);
+  const t = timeOfDay(tick, epoch, sleepWindow);
   const fatigue = qualifyVital(character.vitals.fatigue, "fatigue");
   const hunger = qualifyVital(character.vitals.hunger, "hunger");
   const hygiene = qualifyVital(character.vitals.hygiene, "hygiene");
@@ -1295,15 +1343,16 @@ ${lines}
  */
 export function injectTimeMessage(args: {
   tick: number;
+  epoch: number;
   tickStarted: number;
   language?: Language;
 }): string {
-  const { tick, tickStarted } = args;
+  const { tick, epoch, tickStarted } = args;
   const language = args.language ?? "zh";
   // Show the time after this round's conversation (tick+1), since the message is
   // injected after turns complete and one tick's worth of game time has passed.
   const displayTick = tick + 1;
-  const t = timeOfDay(displayTick);
+  const t = timeOfDay(displayTick, epoch);
   const elapsedTicks = displayTick - tickStarted;
   const elapsedHours = Math.floor(elapsedTicks / TICKS_PER_HOUR);
   const elapsedMinutes = Math.floor((elapsedTicks % TICKS_PER_HOUR) * (60 / TICKS_PER_HOUR));

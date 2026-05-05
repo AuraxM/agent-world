@@ -18,6 +18,8 @@ import {
   DIALOG_SUMMARY_TOOL_NAME, DialogSummarySchema, DialogSummaryToolSchema,
   END_CONVERSATION_TOOL_NAME, EndConversationToolSchema, EndConversationSchema,
   MEMORY_SUMMARY_TOOL_NAME, MemorySummarySchema, MemorySummaryToolSchema,
+  PROPOSE_DIALOGUE_ACTION_TOOL_NAME, ProposeDialogueActionSchema, ProposeDialogueActionToolSchema,
+  RESPOND_DIALOGUE_ACTION_TOOL_NAME, RespondDialogueActionSchema, RespondDialogueActionToolSchema,
   type AcceptDecisionPayload, type DialogTurnPayload, type DialogSummaryPayload, type MemorySummaryPayload,
 } from "@/domain/schemas";
 import type { Action, Character, DialogTurn, EndConversationPayload, MapNode, WorldEvent } from "@/domain/types";
@@ -300,6 +302,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     perceived: input.perceived,
     options: input.options,
     tick: input.tick,
+    epoch: input.epoch,
     facts: input.facts,
     language: input.language,
     allCharacters: input.allCharacters,
@@ -384,12 +387,25 @@ interface DialogTurnInput {
   transcript: DialogTurn[];
   here: MapNode;
   language?: Language;
+  pendingAction?: import("@/domain/types").DialogueActionRequest;
+  dialogueActions?: import("@/domain/action-system").ActionDefinition[];
+  tick?: number;
 }
 
-export async function llmDialogTurn(input: DialogTurnInput): Promise<
-  | { kind: "turn"; turn: DialogTurn }
-  | { kind: "end"; payload: EndConversationPayload }
-> {
+export interface DialogTurnResult {
+  kind: "turn";
+  turn: DialogTurn;
+  proposeAction?: import("@/engine/dialog").DialogueActionProposal;
+  respondToAction?: import("@/engine/dialog").DialogueActionResponse;
+}
+
+export interface DialogEndResult {
+  kind: "end";
+  payload: EndConversationPayload;
+  respondToAction?: import("@/engine/dialog").DialogueActionResponse;
+}
+
+export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnResult | DialogEndResult> {
   if (!hasApiKey()) throw new Error("没有激活的 LLM provider");
 
   const config = getEntryConfig("dialog_turn");
@@ -402,6 +418,8 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
     transcript: input.transcript,
     here: input.here,
     language,
+    pendingAction: input.pendingAction,
+    dialogueActions: input.dialogueActions,
   });
 
   const tools: ChatCompletionTool[] = [
@@ -425,12 +443,37 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
     buildMemorizeTool(),
   ];
 
+  // Add interactive action tools if dialogue actions are available
+  const hasDialogueActions = input.dialogueActions && input.dialogueActions.length > 0;
+  if (hasDialogueActions) {
+    tools.push({
+      type: "function",
+      function: {
+        name: PROPOSE_DIALOGUE_ACTION_TOOL_NAME,
+        description: "在对话中发起一个交互行为（如给钱）。与 submit_dialog_turn 同时调用，不计入对话轮次。",
+        parameters: ProposeDialogueActionToolSchema,
+      },
+    });
+  }
+  if (input.pendingAction) {
+    tools.push({
+      type: "function",
+      function: {
+        name: RESPOND_DIALOGUE_ACTION_TOOL_NAME,
+        description: "接受或拒绝对方发起的交互行为。与 submit_dialog_turn 同时调用，不计入对话轮次。",
+        parameters: RespondDialogueActionToolSchema,
+      },
+    });
+  }
+
   const extra: Record<string, unknown> = {};
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
   dialogLog.info("LLM dialog_turn 请求", {
     self: input.self.name,
     peer: input.peer.name,
+    hasPendingAction: !!input.pendingAction,
+    dialogueActionCount: input.dialogueActions?.length ?? 0,
   });
 
   const systemPrompt = language === "zh"
@@ -474,10 +517,10 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
       if (message.tool_calls) assistantMsg.tool_calls = message.tool_calls;
       messages.push(assistantMsg);
 
-      const toolCall = (message.tool_calls ?? []).find(
+      const allToolCalls = (message.tool_calls ?? []).filter(
         (c: any) => c.type === "function",
       );
-      if (!toolCall) {
+      if (allToolCalls.length === 0) {
         const hasText = typeof message.content === "string" && message.content.trim().length > 0;
         const feedback = hasText
           ? `你输出了文本但没有调用工具。你的回复是：\n\n"""\n${message.content}\n"""\n\n这不符合要求。你必须调用 ${DIALOG_TURN_TOOL_NAME} 来说一句话，或调用 ${END_CONVERSATION_TOOL_NAME} 来结束对话。请重新以工具调用形式输出，不要输出纯文本。`
@@ -494,116 +537,162 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<
         throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮均未返回 tool_call`);
       }
 
-      const tc = toolCall as any;
-
-      // ── Handle recall (during dialog) ──
-      if (tc.function.name === RECALL_TOOL_NAME) {
-        let parsedArgs: unknown;
-        try { parsedArgs = JSON.parse(tc.function.arguments); } catch (e) {
-          messages.push({ role: "user", content: `recall JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
-          continue;
+      // Process all tool calls — support parallel tool calls
+      // First pass: handle recall/memorize (side-effect calls that don't end the turn)
+      let hasRecallOrMemorize = false;
+      for (const tc of allToolCalls) {
+        const t = tc as any;
+        if (t.function.name === RECALL_TOOL_NAME) {
+          hasRecallOrMemorize = true;
+          let parsedArgs: unknown;
+          try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `recall JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
+            continue;
+          }
+          const parseResult = RecallSchema.safeParse(parsedArgs);
+          if (!parseResult.success) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `recall 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
+            continue;
+          }
+          const recallResult = handleRecall(parseResult.data.target_ids, input.self, [input.peer]);
+          messages.push({ role: "tool", tool_call_id: t.id, content: recallResult });
+        } else if (t.function.name === MEMORIZE_TOOL_NAME) {
+          hasRecallOrMemorize = true;
+          let parsedArgs: unknown;
+          try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `memorize JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
+            continue;
+          }
+          const parseResult = MemorizeSchema.safeParse(parsedArgs);
+          if (!parseResult.success) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `memorize 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
+            continue;
+          }
+          handleMemorize(parseResult.data.target_id, parseResult.data.impression, input.self);
+          messages.push({ role: "tool", tool_call_id: t.id, content: "已记录。" });
         }
-        const parseResult = RecallSchema.safeParse(parsedArgs);
-        if (!parseResult.success) {
-          messages.push({ role: "user", content: `recall 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
-          continue;
-        }
-        const recallResult = handleRecall(parseResult.data.target_ids, input.self, [input.peer]);
-        messages.push({ role: "tool", tool_call_id: tc.id, content: recallResult });
-        // recall continues loop, doesn't count as a dialog turn
+      }
+      if (hasRecallOrMemorize) {
         round = Math.max(0, round - 1);
         continue;
       }
 
-      // ── Handle memorize (during dialog) ──
-      if (tc.function.name === MEMORIZE_TOOL_NAME) {
-        let parsedArgs: unknown;
-        try { parsedArgs = JSON.parse(tc.function.arguments); } catch (e) {
-          messages.push({ role: "user", content: `memorize JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
-          continue;
+      // Second pass: extract turn/end decisions + optional action proposal/response
+      let turnResult: { kind: "turn"; turn: DialogTurn } | null = null;
+      let endResult: { kind: "end"; payload: EndConversationPayload } | null = null;
+      let proposeAction: DialogTurnResult["proposeAction"] | undefined;
+      let respondToAction: DialogEndResult["respondToAction"] | undefined;
+      let hasError = false;
+
+      for (const tc of allToolCalls) {
+        const t = tc as any;
+        const name = t.function.name;
+
+        // Parse JSON
+        let args: unknown;
+        try {
+          args = JSON.parse(t.function.arguments);
+        } catch (e) {
+          const jsonErr = e instanceof Error ? e.message : String(e);
+          const feedback = `你调用了 ${name}，但 arguments 不是合法 JSON：\n\n\`\`\`json\n${t.function.arguments}\n\`\`\`\n\nJSON 解析错误：${jsonErr}\n\n请修正 JSON 格式后重试。`;
+          dialogLog.warn("LLM dialog_turn JSON 解析失败", {
+            self: input.self.name, round: round + 1, tool: name, error: jsonErr,
+          });
+          messages.push({ role: "user", content: feedback });
+          hasError = true;
+          break;
         }
-        const parseResult = MemorizeSchema.safeParse(parsedArgs);
-        if (!parseResult.success) {
-          messages.push({ role: "user", content: `memorize 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
-          continue;
+
+        if (name === DIALOG_TURN_TOOL_NAME) {
+          const result = DialogTurnSchema.safeParse(args);
+          if (!result.success) {
+            messages.push({ role: "user", content: `submit_dialog_turn 参数不符合要求：${result.error.message}。请修正后重试。` });
+            hasError = true;
+            break;
+          }
+          turnResult = {
+            kind: "turn",
+            turn: {
+              speakerId: input.self.id,
+              kind: result.data.kind,
+              line: result.data.line,
+              reasoning: result.data.reasoning,
+            },
+          };
+        } else if (name === END_CONVERSATION_TOOL_NAME) {
+          const result = EndConversationSchema.safeParse(args);
+          if (!result.success) {
+            messages.push({ role: "user", content: `end_conversation 参数不符合要求：${result.error.message}。请修正后重试。` });
+            hasError = true;
+            break;
+          }
+          endResult = {
+            kind: "end",
+            payload: {
+              reasoning: result.data.reasoning,
+              closingLine: result.data.closing_line,
+            },
+          };
+        } else if (name === PROPOSE_DIALOGUE_ACTION_TOOL_NAME) {
+          const result = ProposeDialogueActionSchema.safeParse(args);
+          if (!result.success) {
+            messages.push({ role: "user", content: `propose_dialogue_action 参数不符合要求：${result.error.message}。请修正后重试。` });
+            hasError = true;
+            break;
+          }
+          // Validate the action type exists and is usableInDialogue
+          const def = actionRegistry.get(result.data.action_type);
+          if (!def || !def.usableInDialogue) {
+            messages.push({ role: "user", content: `action_type="${result.data.action_type}" 不存在或不可在对话中使用。` });
+            hasError = true;
+            break;
+          }
+          proposeAction = {
+            actionType: result.data.action_type,
+            targetId: result.data.target_id,
+            params: {
+              target_id: result.data.target_id,
+              amount: result.data.amount,
+              free_text: result.data.free_text,
+            },
+          };
+        } else if (name === RESPOND_DIALOGUE_ACTION_TOOL_NAME) {
+          const result = RespondDialogueActionSchema.safeParse(args);
+          if (!result.success) {
+            messages.push({ role: "user", content: `respond_to_dialogue_action 参数不符合要求：${result.error.message}。请修正后重试。` });
+            hasError = true;
+            break;
+          }
+          respondToAction = {
+            accepted: result.data.response === "accept",
+            reasoning: result.data.reasoning,
+          };
+        } else {
+          messages.push({ role: "user", content: `未知工具 "${name}"。请使用以下工具：${DIALOG_TURN_TOOL_NAME}、${END_CONVERSATION_TOOL_NAME}${hasDialogueActions ? `、${PROPOSE_DIALOGUE_ACTION_TOOL_NAME}` : ""}${input.pendingAction ? `、${RESPOND_DIALOGUE_ACTION_TOOL_NAME}` : ""}。` });
+          hasError = true;
+          break;
         }
-        handleMemorize(parseResult.data.target_id, parseResult.data.impression, input.self);
-        messages.push({ role: "tool", tool_call_id: tc.id, content: "已记录。" });
-        // memorize continues loop, doesn't count as a dialog turn
-        round = Math.max(0, round - 1);
-        continue;
       }
 
-      // Parse JSON with error feedback
-      let args: unknown;
-      try {
-        args = JSON.parse(tc.function.arguments);
-      } catch (e) {
-        const jsonErr = e instanceof Error ? e.message : String(e);
-        const feedback = `你调用了 ${tc.function.name}，但 arguments 不是合法 JSON：\n\n\`\`\`json\n${tc.function.arguments}\n\`\`\`\n\nJSON 解析错误：${jsonErr}\n\n请修正 JSON 格式后重试。`;
-        dialogLog.warn("LLM dialog_turn JSON 解析失败", {
-          self: input.self.name, round: round + 1, error: jsonErr,
-        });
+      if (hasError) {
+        if (round < MAX_TOOL_CALL_ROUNDS - 1) continue;
+        throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮均存在错误`);
+      }
+
+      // Must have either turn or end
+      if (!turnResult && !endResult) {
+        const feedback = `你必须调用 ${DIALOG_TURN_TOOL_NAME} 来说一句话，或调用 ${END_CONVERSATION_TOOL_NAME} 来结束对话。`;
         if (round < MAX_TOOL_CALL_ROUNDS - 1) {
           messages.push({ role: "user", content: feedback });
           continue;
         }
-        throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮 JSON 解析均失败`);
+        throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮均未返回 turn 或 end`);
       }
 
-      if (tc.function.name === DIALOG_TURN_TOOL_NAME) {
-        const result = DialogTurnSchema.safeParse(args);
-        if (!result.success) {
-          const feedback = `你调用了 submit_dialog_turn，但参数不符合要求：\n\n${result.error.message}\n\n请根据错误信息修正参数后重试。`;
-          dialogLog.warn("LLM dialog_turn schema 校验失败", {
-            self: input.self.name, round: round + 1, error: result.error.message,
-          });
-          if (round < MAX_TOOL_CALL_ROUNDS - 1) {
-            messages.push({ role: "user", content: feedback });
-            continue;
-          }
-          throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮 schema 校验均失败`);
-        }
-        return {
-          kind: "turn",
-          turn: {
-            speakerId: input.self.id,
-            kind: result.data.kind,
-            line: result.data.line,
-            reasoning: result.data.reasoning,
-          },
-        };
-      } else if (tc.function.name === END_CONVERSATION_TOOL_NAME) {
-        const result = EndConversationSchema.safeParse(args);
-        if (!result.success) {
-          const feedback = `你调用了 end_conversation，但参数不符合要求：\n\n${result.error.message}\n\n请根据错误信息修正参数后重试。`;
-          dialogLog.warn("LLM dialog_turn end_conversation schema 校验失败", {
-            self: input.self.name, round: round + 1, error: result.error.message,
-          });
-          if (round < MAX_TOOL_CALL_ROUNDS - 1) {
-            messages.push({ role: "user", content: feedback });
-            continue;
-          }
-          throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮 end_conversation schema 校验均失败`);
-        }
-        return {
-          kind: "end",
-          payload: {
-            reasoning: result.data.reasoning,
-            closingLine: result.data.closing_line,
-          },
-        };
-      } else {
-        const feedback = `你调用了未知工具 "${tc.function.name}"。当前对话中只能使用以下工具：\n\n1. ${DIALOG_TURN_TOOL_NAME} — 说一句话\n2. ${END_CONVERSATION_TOOL_NAME} — 结束对话\n\n请选择正确的工具重试。`;
-        dialogLog.warn("LLM dialog_turn 未知 tool", {
-          self: input.self.name, round: round + 1, tool: tc.function.name,
-        });
-        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
-          messages.push({ role: "user", content: feedback });
-          continue;
-        }
-        throw new Error(`LLM ${MAX_TOOL_CALL_ROUNDS} 轮均使用了未知工具`);
+      if (turnResult) {
+        return { ...turnResult, proposeAction, respondToAction };
       }
+      return { ...endResult!, respondToAction };
     } catch (err) {
       lastError = err;
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -805,6 +894,7 @@ export interface AcceptDecisionInput {
   here: MapNode;
   peer: Character;
   tick: number;
+  epoch: number;
   language?: Language;
 }
 
@@ -826,6 +916,7 @@ export async function llmAcceptDecide(
     here: input.here,
     peer: input.peer,
     tick: input.tick,
+    epoch: input.epoch,
     language,
   });
 
@@ -925,6 +1016,7 @@ export async function llmSalvageDecide(
     perceived: input.perceived,
     options: input.options,
     tick: input.tick,
+    epoch: input.epoch,
     facts: input.facts,
     language,
     allCharacters: input.allCharacters,

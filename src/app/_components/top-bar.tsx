@@ -1,12 +1,13 @@
 "use client";
 
 import type { MapNode } from "@/domain/types";
-import { DEFAULT_EPOCH_MS, formatGameTime } from "../_lib/format";
+import { formatGameTime } from "../_lib/format";
 import { pathFromRoot } from "../_lib/world";
 import { ThemeSwitcher } from "./theme-switcher";
 
 export function TopBar({
   tick,
+  epoch,
   worldName,
   currentNodeId,
   nodes,
@@ -15,6 +16,7 @@ export function TopBar({
   onClearFollow,
 }: {
   tick: number;
+  epoch: number;
   worldName: string;
   currentNodeId: string | null;
   nodes: MapNode[];
@@ -98,7 +100,7 @@ export function TopBar({
       <ThemeSwitcher />
 
       <span className="text-pixel-xs text-(--accent-strong) tracking-[var(--letter-pixel-tight)]">
-        T={tick} · {formatGameTime(DEFAULT_EPOCH_MS, tick)}
+        T={tick} · {formatGameTime(epoch, tick)}
       </span>
     </header>
   );

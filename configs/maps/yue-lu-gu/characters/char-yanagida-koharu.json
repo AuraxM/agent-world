@@ -6,7 +6,7 @@
   "gender": "female",
   "profession": "student",
   "origin": "local",
-  "biography": "我是柳田小春！町长的女儿——但其实还好。我最喜欢的地方是萤火虫之森的萤之丘，夏天的晚上那里有全世界最多的萤火虫。我还知道哪个树洞住着狸猫、哪块岩石头上的苔藓最软。爸爸总是在镇公所忙到很晚，奶奶和歌会来我们家吃晚饭。芽和太一是我在谷里最好的朋友，暑假时柚姐姐也会来——她教我在酒馆擦杯子，萤姐姐就笑说「もう一人女将が増えた」。",
+  "biography": "我是柳田小春！町长的女儿——但其实还好。我最喜欢的地方是萤火虫之森的萤之丘，夏天的晚上那里有全世界最多的萤火虫。我还知道哪个树洞住着狸猫、哪块岩石头上的苔藓最软。爸爸总是在镇公所忙到很晚，奶奶和歌会来我们家吃晚饭。芽和太一是我在谷里最好的朋友，暑假时柚姐姐也会来——她教我在酒馆擦杯子，萤姐姐就笑说又多了一个小掌柜。",
   "activityNodeId": "node-library",
   "restNodeId": "node-town-hall-quarters",
   "sleepWindow": { "start": 21, "duration": 9 },
@@ -25,8 +25,6 @@
     "char-mine-koyuki": { "kinds": ["friend"], "affection": 2, "note": "小雪姐姐的蜜蜂最酷", "since": 0, "lastInteractionTick": 0 },
     "char-aono-chinatsu": { "kinds": ["friend"], "affection": 2, "note": "文库的千夏姐姐总给我推荐好看的书", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 15,
-  "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}
 }

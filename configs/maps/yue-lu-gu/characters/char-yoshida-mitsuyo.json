@@ -21,7 +21,6 @@
     "char-yanagida-masakazu": { "kinds": ["neighbor"], "affection": 1, "note": "町公所常收到外来的文书", "since": 0, "lastInteractionTick": 0 },
     "char-kusakabe-yuzu": { "kinds": ["acquaintance"], "affection": 1, "note": "每年暑假第一天就坐这三班车回谷", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 200,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

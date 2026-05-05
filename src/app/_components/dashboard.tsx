@@ -56,6 +56,7 @@ export function Dashboard() {
     <div className="flex-1 min-h-0 flex flex-col">
       <TopBar
         tick={snapshot?.world.currentTick ?? 0}
+        epoch={snapshot?.world.epoch ?? 0}
         worldName={snapshot?.world.name ?? "加载中…"}
         currentNodeId={view.currentNodeId}
         nodes={snapshot?.nodes ?? []}
@@ -131,6 +132,7 @@ export function Dashboard() {
                   characters={snapshot.characters}
                   nodes={snapshot.nodes}
                   followingId={followingId}
+                  epoch={snapshot.world.epoch}
                   onJumpToNode={view.setCurrentNode}
                   onSelectCharacter={(c) => view.selectCharacter(c.id)}
                   onFollow={follow}
@@ -151,6 +153,7 @@ export function Dashboard() {
                   events={events}
                   characters={snapshot.characters}
                   nodes={snapshot.nodes}
+                  epoch={snapshot.world.epoch}
                   onJumpToNode={view.setCurrentNode}
                   onSelectCharacter={(c) => view.selectCharacter(c.id)}
                   onFollow={follow}
@@ -184,6 +187,7 @@ export function Dashboard() {
           <div style={{ gridArea: "bottom" }}>
             <TickBar
               tick={snapshot.world.currentTick}
+              epoch={snapshot.world.epoch}
               loading={loading}
               onAdvance={() => void advance()}
               autoMode={autoMode}

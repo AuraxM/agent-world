@@ -22,7 +22,6 @@
     "char-yoshida-mitsuyo": { "kinds": ["acquaintance"], "affection": 1, "note": "每天下午的邮包交接", "since": 0, "lastInteractionTick": 0 },
     "char-tanabe-yutaka": { "kinds": ["neighbor"], "affection": 1, "note": "直卖所蔬菜的固定买家", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 150,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

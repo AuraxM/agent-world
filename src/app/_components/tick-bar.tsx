@@ -1,9 +1,10 @@
 "use client";
 
-import { DEFAULT_EPOCH_MS, formatGameTime } from "../_lib/format";
+import { formatGameTime } from "../_lib/format";
 
 export function TickBar({
   tick,
+  epoch,
   loading,
   onAdvance,
   autoMode,
@@ -14,6 +15,7 @@ export function TickBar({
   onOpenInject,
 }: {
   tick: number;
+  epoch: number;
   loading: boolean;
   onAdvance: () => void;
   autoMode: { running: boolean; total: number; done: number } | null;
@@ -40,7 +42,7 @@ export function TickBar({
       {/* Group 2: Clock */}
       <div className="pr-3 border-r border-(--border)">
         <span className="text-pixel-md text-(--accent-strong) tracking-[var(--letter-pixel-tight)]">
-          {formatGameTime(DEFAULT_EPOCH_MS, tick)}
+          {formatGameTime(epoch, tick)}
         </span>
       </div>
 

@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "farmer",
   "origin": "local",
-  "biography": "我在月露谷的田里整整站了四十年。春天翻土，夏天灌溉，秋天收获，冬天修农具。每一块田的脾气我都知道——这块怕旱、那块怕雨、地炉边那畦的土特别甜。母亲菊已经七十六岁了，依然会在灶台边指挥我「味噌の量が少ない」，我没什么好反驳的。隔壁朝仓夫妇是新来的年轻人，种地的方式和我不同——但不坏。时代不同，土还是那片土。午后没活在钓台上坐一阵，是我最好的休息。",
+  "biography": "我在月露谷的田里整整站了四十年。春天翻土，夏天灌溉，秋天收获，冬天修农具。每一块田的脾气我都知道——这块怕旱、那块怕雨、地炉边那畦的土特别甜。母亲菊已经七十六岁了，依然会在灶台边指挥我味噌放少了，我没什么好反驳的。隔壁朝仓夫妇是新来的年轻人，种地的方式和我不同——但不坏。时代不同，土还是那片土。午后没活在钓台上坐一阵，是我最好的休息。",
   "activityNodeId": "node-farmland",
   "restNodeId": "node-old-farmhouse",
   "sleepWindow": { "start": 21, "duration": 8 },
@@ -24,7 +24,6 @@
     "char-koga-nagisa": { "kinds": ["acquaintance"], "affection": 0, "note": "钓台上的沉默同伴", "since": 0, "lastInteractionTick": 0 },
     "char-shioda-gen": { "kinds": ["friend"], "affection": 1, "note": "钓台邻座，不说话的钓鱼同伴", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 200,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

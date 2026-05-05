@@ -156,7 +156,7 @@ export async function decideForCharacter(
     activityNodeId,
     restNodeId,
   });
-  const baseTime = timeOfDay(fromTick);
+  const baseTime = timeOfDay(fromTick, world.epoch);
   const isSleepHour = inSleepWindow(baseTime.hour, sleepWindow);
   const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, isSleepHour, facts);
   const opts = getAvailableActions(ctx);
@@ -196,6 +196,7 @@ export async function decideForCharacter(
           perceived,
           options: opts,
           tick: fromTick,
+          epoch: world.epoch,
           facts,
           language,
           arrivalIntro: true,
@@ -300,6 +301,7 @@ export async function decideForCharacter(
         options: opts,
         worldName: world.name,
         tick: fromTick,
+        epoch: world.epoch,
         facts,
         language,
         ctx,

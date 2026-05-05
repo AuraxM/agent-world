@@ -22,9 +22,12 @@ import {
   qualifyVital,
   timeOfDay,
 } from "./prompt";
+import { DEFAULT_EPOCH_MS } from "../app/_lib/format";
 import type { AggregatedFacts } from "@/engine/facts";
 import type { Character, DialogTurn, MapNode, Memory } from "@/domain/types";
 import type { ObjectiveRelationKind } from "@/domain/enums";
+
+const TEST_EPOCH = DEFAULT_EPOCH_MS; // local-midnight epoch for deterministic tests
 
 const baseCharacter: Character = {
   id: "char-x",
@@ -128,7 +131,7 @@ describe("timeOfDay", () => {
   ])(
     "tick %i → hour %i, period %s, sleepHour %s",
     (tick, hour, period, sleep) => {
-      const t = timeOfDay(tick);
+      const t = timeOfDay(tick, TEST_EPOCH);
       expect(t.hour).toBe(hour);
       expect(t.period).toBe(period);
       expect(t.isSleepHour).toBe(sleep);
@@ -136,7 +139,7 @@ describe("timeOfDay", () => {
   );
 
   it("tick=240 算第 2 日 0:00", () => {
-    const t = timeOfDay(240);
+    const t = timeOfDay(240, TEST_EPOCH);
     expect(t.day).toBe(2);
     expect(t.hour).toBe(0);
   });
@@ -270,6 +273,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 25,
+      epoch: TEST_EPOCH,
       facts: { ...emptyFacts, restNodeId: "node-home", restNodeName: "我的家" },
       nodes: [restaurant],
       allCharacters: [baseCharacter],
@@ -291,6 +295,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: { ...emptyFacts, restNodeId: "node-home", restNodeName: "我的家" },
       nodes: [restaurant],
       allCharacters: [baseCharacter],
@@ -317,6 +322,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: { ...emptyFacts, restNodeId: "node-home", restNodeName: "我的家" },
       nodes: [home],
       allCharacters: [baseCharacter],
@@ -335,6 +341,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: emptyFacts,
       nodes: [restaurant],
       allCharacters: [baseCharacter],
@@ -351,6 +358,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 12,
+      epoch: TEST_EPOCH,
       facts: {
         activityNodeId: null,
         activityNodeName: null,
@@ -389,6 +397,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: emptyFacts,
       nodes: [restaurant],
       allCharacters: [baseCharacter],
@@ -408,6 +417,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: emptyFacts,
       nodes: [restaurant],
       allCharacters: [baseCharacter],
@@ -440,6 +450,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 245,
+      epoch: TEST_EPOCH,
       facts: emptyFacts,
       nodes: [restaurant],
       allCharacters: [baseCharacter],
@@ -460,6 +471,7 @@ describe("buildUserPrompt", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: emptyFacts,
       nodes: [restaurant],
       allCharacters: [baseCharacter],
@@ -494,6 +506,7 @@ describe("language", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: emptyFacts,
       language: "en",
       nodes: [restaurant],
@@ -518,6 +531,7 @@ describe("language", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: emptyFacts,
       language: "ja",
       nodes: [restaurant],
@@ -545,6 +559,7 @@ describe("arrivalIntro", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: emptyFacts,
       arrivalIntro: true,
       nodes: [restaurant],
@@ -561,6 +576,7 @@ describe("arrivalIntro", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: emptyFacts,
       nodes: [restaurant],
       allCharacters: [baseCharacter],
@@ -576,6 +592,7 @@ describe("arrivalIntro", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: emptyFacts,
       language: "en",
       arrivalIntro: true,
@@ -593,6 +610,7 @@ describe("arrivalIntro", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: emptyFacts,
       language: "ja",
       arrivalIntro: true,
@@ -626,6 +644,7 @@ describe("buildAcceptDecisionPrompt", () => {
       here: restaurant,
       peer,
       tick: 12,
+      epoch: TEST_EPOCH,
     });
     expect(result).toContain("甲");
     expect(result).toContain("今天天气不错，一起散步吗？");
@@ -644,6 +663,7 @@ describe("buildAcceptDecisionPrompt", () => {
       here: restaurant,
       peer,
       tick: 5,
+      epoch: TEST_EPOCH,
     });
     expect(result).not.toContain("你刚刚感知到的事件");
     expect(result).not.toContain("同节点其他人");
@@ -657,6 +677,7 @@ describe("buildAcceptDecisionPrompt", () => {
       here: restaurant,
       peer,
       tick: 5,
+      epoch: TEST_EPOCH,
     });
     expect(result).toContain("性格：EN");
     expect(result).not.toContain("内外向(E/I)");
@@ -670,6 +691,7 @@ describe("buildAcceptDecisionPrompt", () => {
       here: restaurant,
       peer,
       tick: 5,
+      epoch: TEST_EPOCH,
     });
     expect(result).toContain("安静但可靠");
   });
@@ -799,6 +821,7 @@ describe("ACTION_NAMES speak label", () => {
       perceived: [],
       options: [{ type: "wait", hint: "等" }],
       tick: 5,
+      epoch: TEST_EPOCH,
       facts: {
         activityNodeId: null,
         activityNodeName: null,

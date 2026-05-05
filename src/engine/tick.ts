@@ -83,6 +83,7 @@ export interface DecideInput {
   options: ActionOption[];
   worldName: string;
   tick: number;
+  epoch: number;
   facts: AggregatedFacts;
   language: Language;
   /** ActionContext，供 decide.ts 生成 per-action tools。 */
@@ -339,7 +340,7 @@ export async function tick(
   const restMap = buildRestNodeMap();
   const sleepWindowMap = buildSleepWindowMap();
   const sinceTick = Math.max(0, fromTick - FACTS_LOOKBACK_TICKS);
-  const baseTime = timeOfDay(fromTick); // hour/day/period 全局；isSleepHour 在循环内逐角色算
+  const baseTime = timeOfDay(fromTick, world.epoch); // hour/day/period 全局；isSleepHour 在循环内逐角色算
   const decideFn = options.forceWait
     ? async (input: DecideInput) => fallbackWait(input.character)
     : (options.decide ?? DEFAULT_DECIDE);
@@ -382,7 +383,7 @@ export async function tick(
       actorId: charId,
       reasoning: `正在和 ${acceptorName} 对话`,
       selfImportance: 2,
-      skipExecution: true,
+      skipExecution: true, skipMemory: true,
     });
   }
 
@@ -586,6 +587,7 @@ export async function tick(
           options: opts,
           worldName: world.name,
           tick: fromTick,
+          epoch: world.epoch,
           facts,
           language,
           ctx,
@@ -719,6 +721,7 @@ export async function tick(
     nodes,
     perceptions,
     tick: fromTick,
+    epoch: world.epoch,
     worldName: world.name,
     language,
     acceptDecide: (input) => llmAcceptDecide(input),
@@ -757,6 +760,7 @@ export async function tick(
           options: opts,
           worldName: world.name,
           tick: fromTick,
+          epoch: world.epoch,
           facts,
           ctx,
           rejectReason: input.rejectReason,

@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "fisherman",
   "origin": "local",
-  "biography": "我在月露湖边出生，大概也会在月露湖边老去。潮田源老爷子教我钓鱼的时候我才六岁——那时用的是他削的竹竿。现在我能叫出湖里每条大鱼的藏身处：虹鳟在湖东暗礁、大银鱼在码头底下、岩鱼在湖北的冷水带。每天早晨四点出船、八点前把渔获送上码头——酒馆「蛍火」的鱼锅是我供的，说一句「今朝の虹鱒はいい」就够了。不钓鱼的日子我在湖岸小舍的窗口发呆——看湖也是一种修行。",
+  "biography": "我在月露湖边出生，大概也会在月露湖边老去。潮田源老爷子教我钓鱼的时候我才六岁——那时用的是他削的竹竿。现在我能叫出湖里每条大鱼的藏身处：虹鳟在湖东暗礁、大银鱼在码头底下、岩鱼在湖北的冷水带。每天早晨四点出船、八点前把渔获送上码头——酒馆「蛍火」的鱼锅是我供的，说一句今天的虹鳟不错就够了。不钓鱼的日子我在湖岸小舍的窗口发呆——看湖也是一种修行。",
   "activityNodeId": "node-dock",
   "restNodeId": "node-fisher-hut",
   "sleepWindow": { "start": 21, "duration": 8 },
@@ -15,14 +15,13 @@
   "appearance": 2,
   "intelligence": 2,
   "health": 3,
-  "speakingStyle": "话不多，声音低缓像湖面的涟漪。说到鱼的时候话会多一点。",
+  "speakingStyle": "话不多，声音低而平，像清晨无风的湖。三言两语说完正事就沉默，但聊到当天的渔获会多挤几句。",
   "relations": {
     "char-shioda-gen": { "kinds": ["student"], "affection": 3, "note": "师傅，从六岁开始教我钓鱼", "since": 0, "lastInteractionTick": 0 },
     "char-ying": { "kinds": ["acquaintance"], "affection": 1, "note": "每天早晨酒馆送鱼", "since": 0, "lastInteractionTick": 0 },
     "char-tanabe-yutaka": { "kinds": ["acquaintance"], "affection": 0, "note": "钓台上的沉默同伴", "since": 0, "lastInteractionTick": 0 },
     "char-asakura-kasumi": { "kinds": ["acquaintance"], "affection": 0, "note": "月浦农园有时用鱼内脏做堆肥", "since": 0, "lastInteractionTick": 0 }
   },
-  "initialMoney": 150,
   "expenseExempt": false,
   "incomeMultiplier": 1,
   "impressionBook": {}

@@ -22,7 +22,7 @@
     "char-yanagida-koharu": { "kinds": ["friend"], "affection": 1, "note": "暑假里小春带着她跑遍了萤火虫之森", "since": 0, "lastInteractionTick": 0 }
   },
   "initialMoney": 50,
-  "expenseExempt": false,
+  "expenseExempt": true,
   "incomeMultiplier": 1,
   "impressionBook": {}
 }

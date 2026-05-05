@@ -24,7 +24,7 @@
     "char-yanagida-waka": { "kinds": ["friend"], "affection": 2, "note": "同学年の友。若い時はよく一緒に祭りの準備をした", "since": 0, "lastInteractionTick": 0 }
   },
   "initialMoney": 200,
-  "expenseExempt": false,
+  "expenseExempt": true,
   "incomeMultiplier": 1,
   "impressionBook": {}
 }

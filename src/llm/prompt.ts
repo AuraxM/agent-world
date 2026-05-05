@@ -105,21 +105,55 @@ function describePersonality(p: Personality): string[] {
 // ---------------------------------------------------------------------------
 
 const DIRECTIONAL_KIND_LABELS: Record<string, string> = {
-  boss: "你的老板",
-  subordinate: "你的下属",
-  colleague: "你的同事",
-  spouse: "你的配偶",
-  father: "你的父亲",
-  mother: "你的母亲",
-  son: "你的儿子",
-  daughter: "你的女儿",
-  older_brother: "你的哥哥",
-  younger_brother: "你的弟弟",
-  older_sister: "你的姐姐",
-  younger_sister: "你的妹妹",
-  partner: "你的伴侣",
+  boss: "老板",
+  subordinate: "下属",
+  colleague: "同事",
+  spouse: "配偶",
+  father: "父亲",
+  mother: "母亲",
+  son: "儿子",
+  daughter: "女儿",
+  older_brother: "哥哥",
+  younger_brother: "弟弟",
+  older_sister: "姐姐",
+  younger_sister: "妹妹",
+  partner: "伴侣",
   ex_partner: "前伴侣",
 };
+
+const REVERSE_KIND: Record<string, string | ((gender: string) => string)> = {
+  boss: "下属",
+  subordinate: "老板",
+  spouse: "配偶",
+  partner: "伴侣",
+  colleague: "同事",
+  father: (g) => (g === "male" ? "儿子" : "女儿"),
+  mother: (g) => (g === "male" ? "儿子" : "女儿"),
+  son: (g) => (g === "male" ? "父亲" : "母亲"),
+  daughter: (g) => (g === "male" ? "父亲" : "母亲"),
+  older_brother: (g) => (g === "male" ? "弟弟" : "妹妹"),
+  younger_brother: (g) => (g === "male" ? "哥哥" : "姐姐"),
+  older_sister: (g) => (g === "male" ? "弟弟" : "妹妹"),
+  younger_sister: (g) => (g === "male" ? "哥哥" : "姐姐"),
+  ex_partner: "前伴侣",
+};
+
+export function describeRelationBidirectional(self: Character, targetId: string): string {
+  const rel = self.relations[targetId];
+  if (!rel || rel.kinds.length === 0) {
+    return "客观关系：你与 TA 尚无正式关系";
+  }
+  return rel.kinds.map((k) => {
+    const forward = DIRECTIONAL_KIND_LABELS[k] ?? k;
+    const revRaw = REVERSE_KIND[k];
+    if (!revRaw) return `- 客观关系：TA 是你的${forward}`;
+    const rev = typeof revRaw === "function" ? revRaw(self.gender) : revRaw;
+    if (forward === rev) {
+      return `- 客观关系：你们互为${forward}`;
+    }
+    return `- 客观关系：TA 是你的${forward}（你是 TA 的${rev}）`;
+  }).join("\n");
+}
 
 // ---------------------------------------------------------------------------
 // 关系筛选：5 人上限 + 优先级

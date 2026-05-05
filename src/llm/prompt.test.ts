@@ -16,6 +16,7 @@ import {
   buildUserPrompt,
   buildWeeklyCompressionPrompt,
   describeEmotion,
+  describeRelationBidirectional,
   qualifyVital,
   timeOfDay,
 } from "./prompt";
@@ -797,5 +798,100 @@ describe("buildWeeklyCompressionPrompt", () => {
     });
     expect(result).toContain("You are Test");
     expect(result).toContain("submit_memory_summary");
+  });
+});
+
+describe("describeRelationBidirectional", () => {
+  const self: Character = { ...baseCharacter, gender: "male", relations: {} };
+
+  it("returns no-relation message when no relations exist", () => {
+    const result = describeRelationBidirectional({ ...self, relations: {} }, "peer-1");
+    expect(result).toContain("尚无正式关系");
+  });
+
+  it("renders bidirectional boss relation", () => {
+    const c = {
+      ...self,
+      relations: { "peer-1": { kinds: ["boss"] as const, sinceTick: 0 } },
+    };
+    const result = describeRelationBidirectional(c, "peer-1");
+    expect(result).toMatch(/TA 是你的老板/);
+    expect(result).toMatch(/你是 TA 的下属/);
+  });
+
+  it("renders symmetric relation as mutual", () => {
+    const c = {
+      ...self,
+      relations: { "peer-1": { kinds: ["colleague"] as const, sinceTick: 0 } },
+    };
+    const result = describeRelationBidirectional(c, "peer-1");
+    expect(result).toMatch(/你们互为同事/);
+  });
+
+  it("renders father relation with male self", () => {
+    const c = {
+      ...self,
+      gender: "male" as const,
+      relations: { "peer-1": { kinds: ["father"] as const, sinceTick: 0 } },
+    };
+    const result = describeRelationBidirectional(c, "peer-1");
+    expect(result).toMatch(/TA 是你的父亲/);
+    expect(result).toMatch(/你是 TA 的儿子/);
+  });
+
+  it("renders father relation with female self", () => {
+    const c = {
+      ...self,
+      gender: "female" as const,
+      relations: { "peer-1": { kinds: ["father"] as const, sinceTick: 0 } },
+    };
+    const result = describeRelationBidirectional(c, "peer-1");
+    expect(result).toMatch(/TA 是你的父亲/);
+    expect(result).toMatch(/你是 TA 的女儿/);
+  });
+
+  it("renders daughter relation with male self", () => {
+    const c = {
+      ...self,
+      gender: "male" as const,
+      relations: { "peer-1": { kinds: ["daughter"] as const, sinceTick: 0 } },
+    };
+    const result = describeRelationBidirectional(c, "peer-1");
+    expect(result).toMatch(/TA 是你的女儿/);
+    expect(result).toMatch(/你是 TA 的父亲/);
+  });
+
+  it("renders daughter relation with female self", () => {
+    const c = {
+      ...self,
+      gender: "female" as const,
+      relations: { "peer-1": { kinds: ["daughter"] as const, sinceTick: 0 } },
+    };
+    const result = describeRelationBidirectional(c, "peer-1");
+    expect(result).toMatch(/TA 是你的女儿/);
+    expect(result).toMatch(/你是 TA 的母亲/);
+  });
+
+  it("handles multiple relation kinds", () => {
+    const c = {
+      ...self,
+      gender: "male" as const,
+      relations: { "peer-1": { kinds: ["colleague", "friend"] as const, sinceTick: 0 } },
+    };
+    const result = describeRelationBidirectional(c, "peer-1");
+    expect(result).toMatch(/同事/);
+    expect(result).toMatch(/friend/);
+    const lines = result.split("\n");
+    expect(lines.length).toBe(2);
+  });
+
+  it("falls back to raw kind string when kind has no label", () => {
+    const c = {
+      ...self,
+      relations: { "peer-1": { kinds: ["classmate"] as const, sinceTick: 0 } },
+    };
+    const result = describeRelationBidirectional(c, "peer-1");
+    expect(result).toMatch(/classmate/);
+    expect(result).toMatch(/TA 是你的classmate/);
   });
 });

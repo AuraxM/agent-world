@@ -258,9 +258,8 @@ export const AcceptToolSchema = {
   additionalProperties: false,
 };
 
-// Dialog turn: kind=say only
+// Dialog turn
 export const DialogTurnSchema = z.object({
-  kind: z.literal("say"),
   line: z.string().min(1).max(800),
   reasoning: z.string().min(1).max(300).optional(),
 });
@@ -270,11 +269,10 @@ export const DIALOG_TURN_TOOL_NAME = "submit_dialog_turn";
 export const DialogTurnToolSchema = {
   type: "object" as const,
   properties: {
-    kind: { type: "string", enum: ["say"], description: "说一句话。" },
     line: { type: "string", description: "说的话。" },
     reasoning: { type: "string", description: "简短内心独白（可选）。" },
   },
-  required: ["kind", "line"],
+  required: ["line"],
   additionalProperties: false,
 };
 

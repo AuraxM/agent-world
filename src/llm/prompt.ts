@@ -790,6 +790,22 @@ export function buildPeerImage(self: Character, peer: Character): string {
   return lines.join("\n");
 }
 
+function buildDialogTimeStr(
+  tick: number,
+  epoch: number,
+  sleepWindow: SleepWindow,
+  lang: Language,
+): string {
+  const t = timeOfDay(tick, epoch, sleepWindow);
+  if (lang === "zh") {
+    return `第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
+  }
+  if (lang === "en") {
+    return `Day ${t.day}, ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")} (${t.period})`;
+  }
+  return `${t.day}日目 ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
+}
+
 /**
  * 接受/拒绝决策 prompt。
  * B 看到 A 的开场白（freeText），决定是否接茬。
@@ -813,32 +829,76 @@ export function buildAcceptDecisionPrompt(args: {
 
   const lines: string[] = [];
 
-  lines.push(`${requesterName} 想和你说话："${freeText}"`);
-  lines.push("");
-  lines.push(buildSelfImage(self));
-  lines.push("");
-  lines.push(buildPeerImage(self, peer));
-  lines.push("");
-  lines.push("你当前的状态：");
-  lines.push(`- 疲惫：${fatigue.phrase}`);
-  lines.push(`- 饥饿：${hunger.phrase}`);
-  lines.push(`- 心情：${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
-  lines.push(`- 压力：${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
-  lines.push(`- 社交满足：${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
-  lines.push("");
-  lines.push(describePersonalityCompact(self.personality, self.intelligence));
-  lines.push("");
+  const timeStr = buildDialogTimeStr(tick, epoch, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW, language);
 
-  const timeStr = `第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
-  lines.push(`当前时间：${timeStr}`, "");
+  if (language === "zh") {
+    // 头部：指令
+    lines.push("你是一个角色扮演引擎中的 NPC。你正在决定是否接受对方的对话邀请。");
+    lines.push(`当前游戏时间：${timeStr}`);
+    lines.push("");
+    lines.push(
+      "决定：你是否要和这个人说话？请调用 submit_accept_decision 工具，输出 accept_speak 或 reject_speak。",
+    );
+    lines.push("");
 
-  lines.push(
-    language === "zh"
-      ? "决定：你是否要和这个人说话？请调用 submit_accept_decision 工具，输出 accept_speak 或 reject_speak。"
-      : language === "en"
-        ? "Decide: will you talk to this person? Call submit_accept_decision with accept_speak or reject_speak."
-        : "決定：この人と話しますか？submit_accept_decision を呼び出し、accept_speak か reject_speak を返してください。",
-  );
+    // 中部：情境 + 角色
+    lines.push(`${requesterName} 想和你说话："${freeText}"`);
+    lines.push("");
+    lines.push(buildSelfImage(self));
+    lines.push("");
+    lines.push("你当前的状态：");
+    lines.push(`- 疲惫：${fatigue.phrase}`);
+    lines.push(`- 饥饿：${hunger.phrase}`);
+    lines.push(`- 心情：${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
+    lines.push(`- 压力：${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
+    lines.push(`- 社交满足：${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
+    lines.push("");
+    lines.push(buildPeerImage(self, peer));
+    lines.push("");
+    lines.push(`当前地点：${here.name}`);
+  } else if (language === "en") {
+    lines.push("You are an NPC in a role-playing engine. You are deciding whether to accept someone's conversation invitation.");
+    lines.push(`Current game time: ${timeStr}`);
+    lines.push("");
+    lines.push("Decide: will you talk to this person? Call submit_accept_decision with accept_speak or reject_speak.");
+    lines.push("");
+
+    lines.push(`${requesterName} wants to talk to you: "${freeText}"`);
+    lines.push("");
+    lines.push(buildSelfImage(self));
+    lines.push("");
+    lines.push("Your current state:");
+    lines.push(`- Fatigue: ${fatigue.phrase}`);
+    lines.push(`- Hunger: ${hunger.phrase}`);
+    lines.push(`- Mood: ${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
+    lines.push(`- Stress: ${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
+    lines.push(`- Social: ${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
+    lines.push("");
+    lines.push(buildPeerImage(self, peer));
+    lines.push("");
+    lines.push(`Current location: ${here.name}`);
+  } else {
+    lines.push("あなたはロールプレイングエンジンの NPC です。会話の招待を受けるかどうか決定しています。");
+    lines.push(`現在のゲーム時間：${timeStr}`);
+    lines.push("");
+    lines.push("決定：この人と話しますか？submit_accept_decision を呼び出し、accept_speak か reject_speak を返してください。");
+    lines.push("");
+
+    lines.push(`${requesterName} があなたと話したがっています：「${freeText}」`);
+    lines.push("");
+    lines.push(buildSelfImage(self));
+    lines.push("");
+    lines.push("あなたの現在の状態：");
+    lines.push(`- 疲労：${fatigue.phrase}`);
+    lines.push(`- 空腹：${hunger.phrase}`);
+    lines.push(`- 気分：${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
+    lines.push(`- ストレス：${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
+    lines.push(`- 社交満足度：${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
+    lines.push("");
+    lines.push(buildPeerImage(self, peer));
+    lines.push("");
+    lines.push(`現在地：${here.name}`);
+  }
 
   return lines.join("\n");
 }
@@ -866,12 +926,10 @@ export function buildDialogTurnPrompt(args: {
       if (t.speakerId === "__system__") {
         return `【${t.line ?? ""}】`;
       }
-      const name = t.speakerId === self.id ? self.name : peer.name;
+      const name = t.speakerId === self.id ? "你" : peer.name;
       return `${name}: ${t.line ?? ""}`;
     })
     .join("\n");
-
-  const personalityLine = describePersonalityCompact(self.personality, self.intelligence);
 
   const lines: string[] = [];
 
@@ -935,53 +993,98 @@ export function buildDialogTurnPrompt(args: {
   }
 
   if (language === "zh") {
-    lines.push(`你是 ${self.name}，正在和 ${peer.name} 对话。`);
+    // 头部：指令（缓存前缀）
+    lines.push(
+      "你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。",
+      "请根据你的性格、当前情境和对话历史，自然地回应。",
+      "不要重复对方刚说过的话。",
+    );
+    if (tick !== undefined && promptEpoch !== undefined) {
+      lines.push(`当前游戏时间：${buildDialogTimeStr(tick, promptEpoch, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW, "zh")}`);
+    }
     lines.push("");
+    lines.push(buildNotebookReminder("zh"));
+    lines.push("");
+    lines.push(buildDialogueActionsBlock("zh"));
+    lines.push(buildPendingActionBlock("zh"));
+    lines.push(buildUpcomingBlock("zh"));
+    lines.push("");
+    lines.push(
+      "现在轮到你说话。请根据你的性格自然地回应，不要重复对方刚说过的话。调用 submit_dialog_turn：kind=\"say\" 并填写 line。如果想结束对话，请调用 end_conversation。",
+    );
+    lines.push("");
+
+    // 中部：角色信息（缓存前缀 — 跨轮次一致）
     lines.push(buildSelfImage(self));
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
-    lines.push(personalityLine);
+    lines.push(`当前地点：${here.name}`);
     lines.push("");
+
+    // 尾部：对话记录（每轮变化）
     lines.push("对话记录：");
     lines.push(history || "(尚未开始)");
-    lines.push(buildPendingActionBlock("zh"));
-    lines.push(buildDialogueActionsBlock("zh"));
-    lines.push(buildUpcomingBlock("zh"));
-    lines.push(buildNotebookReminder("zh"));
-    lines.push("现在轮到你说话。请根据你的性格自然地回应，不要重复对方刚说过的话。调用 submit_dialog_turn：kind=\"say\" 并填写 line。如果想结束对话，请调用 end_conversation。");
   } else if (language === "en") {
-    lines.push(`You are ${self.name}, speaking with ${peer.name}.`);
+    lines.push(
+      "You are an NPC in a role-playing engine. You are speaking with another person.",
+      "Respond naturally based on your personality, current situation, and conversation history.",
+      "Do not repeat what the other person just said.",
+    );
+    if (tick !== undefined && promptEpoch !== undefined) {
+      lines.push(`Current game time: ${buildDialogTimeStr(tick, promptEpoch, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW, "en")}`);
+    }
     lines.push("");
+    lines.push(buildNotebookReminder("en"));
+    lines.push("");
+    lines.push(buildDialogueActionsBlock("en"));
+    lines.push(buildPendingActionBlock("en"));
+    lines.push(buildUpcomingBlock("en"));
+    lines.push("");
+    lines.push(
+      "It's your turn. Respond naturally based on your personality — do not repeat what the other person just said. Call submit_dialog_turn with kind=\"say\" and line. If you want to end the conversation, call end_conversation.",
+    );
+    lines.push("");
+
     lines.push(buildSelfImage(self));
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
-    lines.push(personalityLine);
+    lines.push(`Current location: ${here.name}`);
     lines.push("");
+
     lines.push("Conversation:");
     lines.push(history || "(not yet started)");
-    lines.push(buildPendingActionBlock("en"));
-    lines.push(buildDialogueActionsBlock("en"));
-    lines.push(buildUpcomingBlock("en"));
-    lines.push(buildNotebookReminder("en"));
-    lines.push("It's your turn. Respond naturally based on your personality — do not repeat what the other person just said. Call submit_dialog_turn with kind=\"say\" and line. If you want to end the conversation, call end_conversation.");
   } else {
-    lines.push(`あなたは ${self.name} です。${peer.name} と会話しています。`);
+    lines.push(
+      "あなたはロールプレイングエンジンの NPC です。他の人と会話しています。",
+      "あなたの性格、現在の状況、会話の履歴に基づいて自然に応答してください。",
+      "相手が今言ったことをそのまま繰り返さないでください。",
+    );
+    if (tick !== undefined && promptEpoch !== undefined) {
+      lines.push(`現在のゲーム時間：${buildDialogTimeStr(tick, promptEpoch, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW, "ja")}`);
+    }
     lines.push("");
+    lines.push(buildNotebookReminder("ja"));
+    lines.push("");
+    lines.push(buildDialogueActionsBlock("ja"));
+    lines.push(buildPendingActionBlock("ja"));
+    lines.push(buildUpcomingBlock("ja"));
+    lines.push("");
+    lines.push(
+      "あなたの番です。自分の性格に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。submit_dialog_turn で kind=\"say\" を呼び出し line を入力してください。会話を終了する場合は end_conversation を呼び出してください。",
+    );
+    lines.push("");
+
     lines.push(buildSelfImage(self));
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
-    lines.push(personalityLine);
+    lines.push(`現在地：${here.name}`);
     lines.push("");
+
     lines.push("会話の記録：");
     lines.push(history || "(まだ始まっていません)");
-    lines.push(buildPendingActionBlock("ja"));
-    lines.push(buildDialogueActionsBlock("ja"));
-    lines.push(buildUpcomingBlock("ja"));
-    lines.push(buildNotebookReminder("ja"));
-    lines.push("あなたの番です。自分の性格に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。submit_dialog_turn で kind=\"say\" を呼び出し line を入力してください。会話を終了する場合は end_conversation を呼び出してください。");
   }
 
   return lines.join("\n");

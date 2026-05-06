@@ -21,9 +21,8 @@ const kissAction = {
       memory: `我亲吻了 ${target.name}，心里泛起一阵暖意。`,
       dialogRecord: `${ctx.self.name} 亲吻了 ${target.name}。`,
       stateChanges: [
-        { kind: "adjustMood", delta: 2 },
-        { kind: "adjustStress", delta: -1 },
-        { kind: "adjustSocialSatiety", delta: 2 },
+        { kind: "adjustMood", delta: 1 },
+        { kind: "adjustSocialSatiety", delta: 1 },
       ],
     };
   },
@@ -55,8 +54,6 @@ const caressAction = {
       memory: `我轻轻抚摸了 ${target.name}，彼此都放松了下来。`,
       dialogRecord: `${ctx.self.name} 抚摸了 ${target.name}。`,
       stateChanges: [
-        { kind: "adjustMood", delta: 1 },
-        { kind: "adjustStress", delta: -1 },
         { kind: "adjustSocialSatiety", delta: 1 },
       ],
     };
@@ -90,8 +87,7 @@ const hugAction = {
       dialogRecord: `${ctx.self.name} 拥抱了 ${target.name}。`,
       stateChanges: [
         { kind: "adjustMood", delta: 1 },
-        { kind: "adjustStress", delta: -1 },
-        { kind: "adjustSocialSatiety", delta: 2 },
+        { kind: "adjustSocialSatiety", delta: 1 },
       ],
     };
   },

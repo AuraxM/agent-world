@@ -633,7 +633,7 @@ describe("buildAcceptDecisionPrompt", () => {
     appearance: 3,
   };
 
-  it("contains requester name, freeText, self-image, peer-image, and submit instruction (zh)", () => {
+  it("contains requester name, freeText, self-image, peer-image, location, and decision instruction at top (zh)", () => {
     const result = buildAcceptDecisionPrompt({
       self: {
         ...baseCharacter,
@@ -654,6 +654,15 @@ describe("buildAcceptDecisionPrompt", () => {
     expect(result).toContain("关于 甲");
     expect(result).toContain("职业：教师");
     expect(result).toContain("submit_accept_decision");
+    // Instructions at top before self-image
+    expect(result.indexOf("submit_accept_decision")).toBeLessThan(result.indexOf("关于你自己"));
+    // Location at end after peer
+    expect(result.indexOf("当前地点")).toBeGreaterThan(result.indexOf("关于 甲"));
+    // No standalone personality line (now inside buildSelfImage)
+    // Verify personality is inside self block
+    const selfStart = result.indexOf("关于你自己");
+    const selfEnd = result.indexOf("关于 甲");
+    expect(result.slice(selfStart, selfEnd)).toContain("性格：");
   });
 
   it("does NOT include perceived events or companions (removed)", () => {
@@ -670,7 +679,7 @@ describe("buildAcceptDecisionPrompt", () => {
     expect(result).not.toContain("同节点其他人");
   });
 
-  it("includes compact personality line instead of expanded traits", () => {
+  it("personality is inside self-image, not standalone", () => {
     const result = buildAcceptDecisionPrompt({
       self: baseCharacter,
       requesterName: "甲",
@@ -680,8 +689,11 @@ describe("buildAcceptDecisionPrompt", () => {
       tick: 5,
       epoch: TEST_EPOCH,
     });
-    expect(result).toContain("性格：EN");
-    expect(result).not.toContain("内外向(E/I)");
+    // Personality should be inside buildSelfImage block
+    const selfImageStart = result.indexOf("关于你自己");
+    const selfImageEnd = result.indexOf("关于 甲");
+    const selfSection = result.slice(selfImageStart, selfImageEnd);
+    expect(selfSection).toContain("性格：");
   });
 
   it("uses pre-filled impression from impressionBook", () => {
@@ -726,25 +738,34 @@ describe("buildDialogTurnPrompt", () => {
     appearance: 3,
   };
 
-  it("renders self-image, peer-image, compact personality, and transcript (zh)", () => {
+  it("renders instructions at top, self-image, peer-image, location, and transcript at bottom (zh)", () => {
     const result = buildDialogTurnPrompt({
       self: selfChar,
       peer: peerChar,
       transcript,
       here: restaurant,
     });
-    expect(result).toContain("关于你自己");
+    // Instructions at top before self-image
+    expect(result.indexOf("submit_dialog_turn")).toBeLessThan(result.indexOf("关于你自己"));
+    // Location after peer
+    expect(result.indexOf("当前地点")).toBeGreaterThan(result.indexOf("关于 甲"));
+    // Transcript at very end
+    expect(result.indexOf("对话记录：")).toBeGreaterThan(result.indexOf("当前地点"));
+    // Uses "你" not self.name
+    expect(result).toContain("你: 是啊，适合出去走走。");
+    expect(result).not.toContain("乙: 是啊，适合出去走走。");
+    // Peer name unchanged
+    expect(result).toContain("甲: 今天天气真好");
+    // Personality inside self-image
+    const selfStart = result.indexOf("关于你自己");
+    const selfEnd = result.indexOf("关于 甲");
+    expect(result.slice(selfStart, selfEnd)).toContain("性格：");
+    // Contains required content
     expect(result).toContain("姓名：乙");
-    expect(result).toContain("当前在：老王饭馆");
-    expect(result).toContain("关于 甲");
     expect(result).toContain("职业：教师");
-    expect(result).toContain("性格：EN");
-    expect(result).not.toContain("内外向(E/I)");
-    expect(result).toContain("今天天气真好");
-    expect(result).toContain("submit_dialog_turn");
   });
 
-  it("renders system messages with 【】 brackets", () => {
+  it("renders system messages with brackets", () => {
     const transcriptWithSys: DialogTurn[] = [
       ...transcript,
       { speakerId: "__system__", kind: "say", line: "已过去 30 分钟。" },
@@ -758,7 +779,7 @@ describe("buildDialogTurnPrompt", () => {
     expect(result).toContain("【已过去 30 分钟。】");
   });
 
-  it("en: renders in English with self/peer image", () => {
+  it("en: renders instructions at top, location after peer, transcript at bottom", () => {
     const result = buildDialogTurnPrompt({
       self: selfChar,
       peer: peerChar,
@@ -766,11 +787,14 @@ describe("buildDialogTurnPrompt", () => {
       here: restaurant,
       language: "en",
     });
-    expect(result).toContain("You are 乙, speaking with 甲");
-    expect(result).toContain("submit_dialog_turn");
+    expect(result.indexOf("submit_dialog_turn")).toBeLessThan(result.indexOf("关于你自己"));
+    expect(result.indexOf("Current location")).toBeGreaterThan(result.indexOf("关于 甲"));
+    expect(result.indexOf("Conversation:")).toBeGreaterThan(result.indexOf("Current location"));
+    expect(result).toContain("你: 是啊，适合出去走走。");
+    expect(result).not.toContain("乙: 是啊，适合出去走走。");
   });
 
-  it("ja: renders in Japanese with self/peer image", () => {
+  it("ja: renders instructions at top, location after peer, transcript at bottom", () => {
     const result = buildDialogTurnPrompt({
       self: selfChar,
       peer: peerChar,
@@ -778,8 +802,11 @@ describe("buildDialogTurnPrompt", () => {
       here: restaurant,
       language: "ja",
     });
-    expect(result).toContain("あなたは 乙 です");
-    expect(result).toContain("submit_dialog_turn");
+    expect(result.indexOf("submit_dialog_turn")).toBeLessThan(result.indexOf("关于你自己"));
+    expect(result.indexOf("現在地")).toBeGreaterThan(result.indexOf("关于 甲"));
+    expect(result.indexOf("会話の記録：")).toBeGreaterThan(result.indexOf("現在地"));
+    expect(result).toContain("你: 是啊，适合出去走走。");
+    expect(result).not.toContain("乙: 是啊，适合出去走走。");
   });
 });
 
@@ -1020,22 +1047,29 @@ describe("buildSelfImage", () => {
     gender: "male",
     profession: "doctor",
     appearance: 3,
+    biography: "出生于小镇，毕业于医学院。",
+    personality: { ei: 2, sn: -1, tf: 1, jp: -1 },
+    intelligence: 3,
   };
 
-  it("renders name, age, gender, profession, appearance, and location", () => {
-    const result = buildSelfImage(char, "镇医院");
+  it("renders name, age, gender, profession, health, personality, and biography (no appearance, no location)", () => {
+    const result = buildSelfImage(char);
     expect(result).toContain("关于你自己");
     expect(result).toContain("姓名：甲");
     expect(result).toContain("年龄：28 岁");
     expect(result).toContain("性别：男");
     expect(result).toContain("职业：医生");
-    expect(result).toContain("相貌端正");
-    expect(result).toContain("当前在：镇医院");
+    expect(result).not.toContain("相貌端正");
+    expect(result).toContain("健康状况：健康");
+    expect(result).toContain("性格：");
+    expect(result).toContain("生平简介：出生于小镇，毕业于医学院。");
+    expect(result).not.toContain("当前在");
   });
 
-  it("omits location line when locationName is undefined", () => {
-    const result = buildSelfImage(char);
-    expect(result).not.toContain("当前在");
+  it("shows sick when character has sickness", () => {
+    const sickChar = { ...char, sickness: true };
+    const result = buildSelfImage(sickChar);
+    expect(result).toContain("健康状况：你生病了");
   });
 
   it("handles female gender", () => {

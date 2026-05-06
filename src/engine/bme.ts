@@ -90,6 +90,11 @@ export function getMoodDecayRate(tf: number): number {
   return 1.0 / (3 + Math.abs(tf));
 }
 
+/** mood 每 tick 随机波动幅度 = 0.5 / (3 + |TF|) */
+export function getMoodVolatilityPerTick(tf: number): number {
+  return 0.5 / (3 + Math.abs(tf));
+}
+
 /**
  * 社交满足每 tick 衰减（独处/不在对话中时）。
  * d(EI) = 0.024 + (EI + 4) × 0.0095

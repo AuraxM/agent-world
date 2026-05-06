@@ -523,37 +523,32 @@ export const NotebookToolSchema = {
 };
 
 // ---------------------------------------------------------------------------
-// Pre-sleep reflection tool
+// Update likes / goals tools (available in dialogue and think)
 // ---------------------------------------------------------------------------
 
-export const REFLECTION_TOOL_NAME = "submit_reflection";
-export const ReflectionSchema = z.object({
-  memorize: z.array(z.object({
-    target_id: z.string().min(1),
-    impression: z.string(),
-  })).optional(),
+export const UPDATE_LIKES_TOOL_NAME = "update_likes";
+export const UpdateLikesSchema = z.object({
   liked: z.string().max(500).optional(),
   disliked: z.string().max(500).optional(),
+});
+export const UpdateLikesToolSchema = {
+  type: "object" as const,
+  properties: {
+    liked: { type: "string", description: "更新你最喜欢的人或事（可选）。" },
+    disliked: { type: "string", description: "更新你最讨厌的人或事（可选）。" },
+  },
+  required: [],
+  additionalProperties: false,
+};
+
+export const UPDATE_GOALS_TOOL_NAME = "update_goals";
+export const UpdateGoalsSchema = z.object({
   short_term_goal: z.string().max(300).optional(),
   long_term_goal: z.string().max(300).optional(),
 });
-export const ReflectionToolSchema = {
+export const UpdateGoalsToolSchema = {
   type: "object" as const,
   properties: {
-    memorize: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          target_id: { type: "string", description: "角色 ID。" },
-          impression: { type: "string", description: "新的印象文本。空字符串代表忘记此人。" },
-        },
-        required: ["target_id", "impression"],
-      },
-      description: "本次反思中需要更新的印象列表（可选）。",
-    },
-    liked: { type: "string", description: "更新你最喜欢的人或事（可选）。" },
-    disliked: { type: "string", description: "更新你最讨厌的人或事（可选）。" },
     short_term_goal: { type: "string", description: "更新你的短期目标（可选，每日最多一次）。" },
     long_term_goal: { type: "string", description: "更新你的长期目标（可选，每周最多一次）。" },
   },

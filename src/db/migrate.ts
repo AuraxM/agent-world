@@ -154,6 +154,15 @@ const STATEMENTS = [
     created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
   )`,
+  `CREATE TABLE IF NOT EXISTS think_sessions (
+    id TEXT NOT NULL,
+    world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
+    payload_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    PRIMARY KEY (world_id, id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS think_sessions_world_idx ON think_sessions(world_id)`,
 ];
 
 /** SQLite 不支持 ALTER ADD COLUMN IF NOT EXISTS；按 PRAGMA 自查后追加。 */

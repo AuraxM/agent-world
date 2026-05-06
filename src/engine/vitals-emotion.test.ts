@@ -192,48 +192,50 @@ describe("decayVitals", () => {
 });
 
 describe("evolveEmotions", () => {
-  it("偶数整小时 mood 朝 0 走 1 — 性格驱动概率回归，mock random 保证触发", () => {
+  it("每 tick mood 随机波动，波动量由 TF 决定", () => {
     const c = mkChar(
       "a",
       { hunger: 0, fatigue: 0, hygiene: 0 },
-      { mood: 3, stress: 0, social_satiety: 0 },
+      { mood: 0, stress: 0, social_satiety: 0 },
     );
+    // TF=0 → volatility = 0.5/(3+0) ≈ 0.1667, range [-0.1667, +0.1667]
     const rand = vi.spyOn(Math, "random").mockReturnValue(0);
-    evolveEmotions({
-      characters: [c],
-      worldId: "w",
-      tick: 10,
-    });
-    expect(c.emotion.mood).toBe(2);
+    evolveEmotions({ characters: [c], worldId: "w", tick: 0 });
+    // random=0 → (0-0.5)*2*0.1667 = -0.1667
+    expect(c.emotion.mood).toBeCloseTo(-0.1667, 3);
     rand.mockRestore();
   });
 
-  it("奇数 tick mood 不变", () => {
+  it("高 |TF| 性格波动更小", () => {
     const c = mkChar(
       "a",
       { hunger: 0, fatigue: 0, hygiene: 0 },
-      { mood: -3, stress: 0, social_satiety: 0 },
+      { mood: 0, stress: 0, social_satiety: 0 },
+      { personality: { ei: 0, sn: 0, tf: 4, jp: 0 } },
     );
-    evolveEmotions({
-      characters: [c],
-      worldId: "w",
-      tick: 1,
-    });
-    expect(c.emotion.mood).toBe(-3);
+    // TF=4 → volatility = 0.5/(3+4) ≈ 0.0714
+    const rand = vi.spyOn(Math, "random").mockReturnValue(0);
+    evolveEmotions({ characters: [c], worldId: "w", tick: 0 });
+    // random=0 → (0-0.5)*2*0.0714 = -0.0714
+    expect(Math.abs(c.emotion.mood)).toBeLessThan(0.1);
+    rand.mockRestore();
   });
 
-  it("每 24 游戏小时 stress -1", () => {
+  it("每 tick stress 递减 1/120（日总量保持 -1）", () => {
     const c = mkChar(
       "a",
       { hunger: 0, fatigue: 0, hygiene: 0 },
       { mood: 0, stress: 4, social_satiety: 0 },
     );
-    evolveEmotions({
-      characters: [c],
-      worldId: "w",
-      tick: 120,
-    });
-    expect(c.emotion.stress).toBe(3);
+    // 1 tick → stress -= 1/120
+    evolveEmotions({ characters: [c], worldId: "w", tick: 1 });
+    expect(c.emotion.stress).toBeCloseTo(4 - 1 / 120, 5);
+
+    // 120 ticks → stress -= 1.0
+    for (let t = 2; t <= 120; t++) {
+      evolveEmotions({ characters: [c], worldId: "w", tick: t });
+    }
+    expect(c.emotion.stress).toBeCloseTo(3, 5);
   });
 
   it("evolveEmotions 不再修改 social_satiety（改由 tick.ts 按对话状态 per-tick 处理）", () => {
@@ -267,19 +269,19 @@ describe("evolveEmotions", () => {
   });
 
   it("低 mood 周期性提醒（每 8 游戏小时）", () => {
-    // mood=-4 → 概率回归到 -3（仍 ≤-3，触发提醒），mock random 保证触发
+    // mood=-4 持续 ≤-3，每 8 游戏小时触发提醒
     const c = mkChar(
       "a",
       { hunger: 0, fatigue: 0, hygiene: 0 },
       { mood: -4, stress: 0, social_satiety: 0 },
     );
-    const rand = vi.spyOn(Math, "random").mockReturnValue(0);
+    const rand = vi.spyOn(Math, "random").mockReturnValue(0.5); // 0.5 → 波动=0，mood 保持 -4
     const evs = evolveEmotions({
       characters: [c],
       worldId: "w",
       tick: 40,
     });
-    expect(c.emotion.mood).toBe(-3);
+    expect(c.emotion.mood).toBe(-4);
     expect(evs.some((e) => /低落|出口/.test(e.description))).toBe(true);
     rand.mockRestore();
   });

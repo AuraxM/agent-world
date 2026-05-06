@@ -3,7 +3,7 @@
 const kissAction = {
   type: "kiss",
   duration: "instant",
-  triggerHint: "情到深处，想给对方回应或安抚时使用——一个吻胜过千言万语。",
+  triggerHint: "亲吻可以缓解压力，感到愉悦",
   paramRule: "必填 target_id（亲吻对象）。仅在对话中可用。",
   check(ctx) {
     return false;
@@ -23,6 +23,7 @@ const kissAction = {
       dialogRecord: `${ctx.self.name} 亲吻了 ${target.name}。`,
       stateChanges: [
         { kind: "adjustMood", delta: 1 },
+        { kind: "adjustStress", delta: -1 },
         { kind: "adjustSocialSatiety", delta: 1 },
       ],
     };
@@ -37,7 +38,7 @@ const kissAction = {
 const caressAction = {
   type: "caress",
   duration: "instant",
-  triggerHint: "想安抚对方情绪、表达无声的关心时使用——轻柔的触碰比语言更温柔。",
+  triggerHint: "可以安抚对方，增进感情",
   paramRule: "必填 target_id（抚摸对象）。仅在对话中可用。",
   check(ctx) {
     return false;
@@ -56,6 +57,7 @@ const caressAction = {
       memory: `我轻轻抚摸了 ${target.name}，彼此都放松了下来。`,
       dialogRecord: `${ctx.self.name} 抚摸了 ${target.name}。`,
       stateChanges: [
+        { kind: "adjustStress", delta: -1 },
         { kind: "adjustSocialSatiety", delta: 1 },
       ],
     };
@@ -70,7 +72,7 @@ const caressAction = {
 const hugAction = {
   type: "hug",
   duration: "instant",
-  triggerHint: "久别重逢、离别之际、或是对方难过时使用——一个拥抱让人感到被在乎。",
+  triggerHint: "可以缓解压力，增进感情。",
   paramRule: "必填 target_id（拥抱对象）。仅在对话中可用。",
   check(ctx) {
     return false;
@@ -90,6 +92,7 @@ const hugAction = {
       dialogRecord: `${ctx.self.name} 拥抱了 ${target.name}。`,
       stateChanges: [
         { kind: "adjustMood", delta: 1 },
+        { kind: "adjustStress", delta: -1 },
         { kind: "adjustSocialSatiety", delta: 1 },
       ],
     };

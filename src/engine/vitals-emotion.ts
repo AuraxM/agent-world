@@ -6,9 +6,9 @@
  * - fatigue: 非线性 — 0..8 偶数 tick +1（慢段）/ 8..13 每 tick +1（标段）/ 13..16 每 tick +2（快段）。
  *   ~23h 到顶，与 24h 昼夜节律对齐；前 8h 不催，后 3h 强催。
  * - hygiene: +1 per even tick (0..16)
- * - mood: even tick → 朝 0 走 1（自然回归）
- * - stress: 每 24 tick 末 -1 (封底 0)
- * - social_satiety: even tick → 同节点有伴 +1 (封顶 +4)，独处 -1 (封底 -4)
+ * - mood: 每 tick 随机波动，波动幅度 = 0.5/(3+|TF|)，性格越极端越稳定
+ * - stress: 每 tick -1/120 (封底 0)，每日总衰减量保持 -1
+ * - social_satiety: 由 tick.ts 按对话状态 per-tick 处理
  *
  * 越线提醒（节流）：
  * - hunger / fatigue: ≥5 medium (每 8 tick 复述), ≥10 severe (每 5 tick 复述)
@@ -20,7 +20,7 @@ import { TICKS_PER_HOUR } from "@/domain/enums";
 import type { Character, Emotion, WorldEvent } from "@/domain/types";
 import {
   characterBME,
-  getMoodDecayRate,
+  getMoodVolatilityPerTick,
   getSicknessBaseDuration,
 } from "./bme";
 
@@ -347,24 +347,17 @@ export interface EmotionEvolutionInput {
 export function evolveEmotions(input: EmotionEvolutionInput): WorldEvent[] {
   const { characters, worldId, tick } = input;
   const inner: WorldEvent[] = [];
-  const evenHour = isEvenHour(tick);
   const hourTick = isHourTick(tick);
   const totalHours = Math.floor(tick / TICKS_PER_HOUR);
 
   for (const c of characters) {
-    // mood: personality-driven regression toward 0
-    if (hourTick && evenHour && c.emotion.mood !== 0) {
-      const moodDecay = getMoodDecayRate(c.personality.tf);
-      // Per even-hour (~every 2h), probability = daily rate / 12 (12 even hours per day)
-      if (Math.random() < moodDecay / 12) {
-        c.emotion.mood += c.emotion.mood > 0 ? -1 : 1;
-      }
-    }
+    // mood: per-tick random fluctuation, volatility determined by TF
+    const moodVolatility = getMoodVolatilityPerTick(c.personality.tf);
+    c.emotion.mood += (Math.random() - 0.5) * 2 * moodVolatility;
+    c.emotion.mood = clamp(c.emotion.mood, -4, 4);
 
-    // stress: every 24 hours → -1
-    if (totalHours > 0 && totalHours % STRESS_DECAY_INTERVAL === 0 && hourTick) {
-      c.emotion.stress = Math.max(0, c.emotion.stress - 1);
-    }
+    // stress: per-tick decay, total 1/day preserved
+    c.emotion.stress = Math.max(0, c.emotion.stress - 1 / (TICKS_PER_HOUR * STRESS_DECAY_INTERVAL));
 
     // social_satiety decay/gain is handled per-tick in tick.ts,
     // so it can distinguish "in conversation" from "not in conversation".

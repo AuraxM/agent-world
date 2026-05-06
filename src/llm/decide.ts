@@ -12,7 +12,8 @@ import {
   DECIDE_ACTION_TOOL_NAME, DecideActionSchema, buildDecideActionTool,
   RECALL_TOOL_NAME, RecallSchema, RecallToolSchema,
   MEMORIZE_TOOL_NAME, MemorizeSchema, MemorizeToolSchema,
-  REFLECTION_TOOL_NAME, ReflectionSchema, ReflectionToolSchema,
+  UPDATE_LIKES_TOOL_NAME, UpdateLikesSchema, UpdateLikesToolSchema,
+  UPDATE_GOALS_TOOL_NAME, UpdateGoalsSchema, UpdateGoalsToolSchema,
   ACCEPT_TOOL_NAME, AcceptDecisionSchema, AcceptToolSchema,
   DIALOG_TURN_TOOL_NAME, DialogTurnSchema, DialogTurnToolSchema,
   DIALOG_SUMMARY_TOOL_NAME, DialogSummarySchema, DialogSummaryToolSchema,
@@ -490,6 +491,8 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     buildRecallTool(),
     buildMemorizeTool(),
     buildNotebookTool(),
+    buildUpdateLikesTool(),
+    buildUpdateGoalsTool(),
   ];
 
   // Add interactive action tools if dialogue actions are available
@@ -707,6 +710,52 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
             kind: "action_result",
             line: `📝 ${input.self.name} 在记事本中记录了约定：${timeLabel} — ${free_text}`,
           });
+        } else if (t.function.name === UPDATE_LIKES_TOOL_NAME) {
+          hasSideEffect = true;
+          let parsedArgs: unknown;
+          try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `update_likes JSON 解析失败。` });
+            continue;
+          }
+          const parseResult = UpdateLikesSchema.safeParse(parsedArgs);
+          if (!parseResult.success) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `update_likes 参数不符合要求：${parseResult.error.message}。` });
+            continue;
+          }
+          if (parseResult.data.liked !== undefined) input.self.liked = parseResult.data.liked;
+          if (parseResult.data.disliked !== undefined) input.self.disliked = parseResult.data.disliked;
+          messages.push({ role: "tool", tool_call_id: t.id, content: "已更新喜好。" });
+        } else if (t.function.name === UPDATE_GOALS_TOOL_NAME) {
+          hasSideEffect = true;
+          let parsedArgs: unknown;
+          try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `update_goals JSON 解析失败。` });
+            continue;
+          }
+          const parseResult = UpdateGoalsSchema.safeParse(parsedArgs);
+          if (!parseResult.success) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `update_goals 参数不符合要求：${parseResult.error.message}。` });
+            continue;
+          }
+          const currentTick = input.tick ?? 0;
+          const SHORT_GOAL_INTERVAL = 120;
+          const LONG_GOAL_INTERVAL = 840;
+          let applied: string[] = [];
+          if (parseResult.data.short_term_goal !== undefined) {
+            const lastUpdate = input.self.shortTermGoal?.updatedAt ?? 0;
+            if (currentTick - lastUpdate >= SHORT_GOAL_INTERVAL) {
+              input.self.shortTermGoal = { goal: parseResult.data.short_term_goal, updatedAt: currentTick };
+              applied.push("短期目标");
+            }
+          }
+          if (parseResult.data.long_term_goal !== undefined) {
+            const lastUpdate = input.self.longTermGoal?.updatedAt ?? 0;
+            if (currentTick - lastUpdate >= LONG_GOAL_INTERVAL) {
+              input.self.longTermGoal = { goal: parseResult.data.long_term_goal, updatedAt: currentTick };
+              applied.push("长期目标");
+            }
+          }
+          messages.push({ role: "tool", tool_call_id: t.id, content: applied.length > 0 ? `已更新：${applied.join("、")}。` : "目标更新间隔未到，暂未应用。" });
         }
       }
       if (hasSideEffect) {
@@ -1020,6 +1069,8 @@ export async function llmThink(args: {
     buildRecallTool(),
     buildMemorizeTool(),
     buildNotebookTool(),
+    buildUpdateLikesTool(),
+    buildUpdateGoalsTool(),
   ];
 
   const extra: Record<string, unknown> = {};
@@ -1132,6 +1183,51 @@ export async function llmThink(args: {
         args.self.notebook.push(entry);
         saveNotebookEntry(args.self.worldId, args.self.id, entry);
         messages.push({ role: "tool", tool_call_id: t.id, content: `已记录：${timeLabel} — ${free_text}` });
+      } else if (t.function.name === UPDATE_LIKES_TOOL_NAME) {
+        hasSideEffect = true;
+        let parsedArgs: unknown;
+        try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `update_likes JSON 解析失败。` });
+          continue;
+        }
+        const parseResult = UpdateLikesSchema.safeParse(parsedArgs);
+        if (!parseResult.success) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `update_likes 参数不符合要求。` });
+          continue;
+        }
+        if (parseResult.data.liked !== undefined) args.self.liked = parseResult.data.liked;
+        if (parseResult.data.disliked !== undefined) args.self.disliked = parseResult.data.disliked;
+        messages.push({ role: "tool", tool_call_id: t.id, content: "已更新喜好。" });
+      } else if (t.function.name === UPDATE_GOALS_TOOL_NAME) {
+        hasSideEffect = true;
+        let parsedArgs: unknown;
+        try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `update_goals JSON 解析失败。` });
+          continue;
+        }
+        const parseResult = UpdateGoalsSchema.safeParse(parsedArgs);
+        if (!parseResult.success) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `update_goals 参数不符合要求。` });
+          continue;
+        }
+        const SHORT_GOAL_INTERVAL = 120;
+        const LONG_GOAL_INTERVAL = 840;
+        let applied: string[] = [];
+        if (parseResult.data.short_term_goal !== undefined) {
+          const lastUpdate = args.self.shortTermGoal?.updatedAt ?? 0;
+          if (args.tick - lastUpdate >= SHORT_GOAL_INTERVAL) {
+            args.self.shortTermGoal = { goal: parseResult.data.short_term_goal, updatedAt: args.tick };
+            applied.push("短期目标");
+          }
+        }
+        if (parseResult.data.long_term_goal !== undefined) {
+          const lastUpdate = args.self.longTermGoal?.updatedAt ?? 0;
+          if (args.tick - lastUpdate >= LONG_GOAL_INTERVAL) {
+            args.self.longTermGoal = { goal: parseResult.data.long_term_goal, updatedAt: args.tick };
+            applied.push("长期目标");
+          }
+        }
+        messages.push({ role: "tool", tool_call_id: t.id, content: applied.length > 0 ? `已更新：${applied.join("、")}。` : "目标更新间隔未到，暂未应用。" });
       }
     }
     if (hasSideEffect) {
@@ -1474,62 +1570,13 @@ export async function llmSalvageDecide(
 }
 
 // ---------------------------------------------------------------------------
-// Pre-sleep reflection
+// Update likes / goals helpers (used in dialogue and think)
 // ---------------------------------------------------------------------------
 
-export interface ReflectionResult {
-  memorize?: Array<{ target_id: string; impression: string }>;
-  liked?: string;
-  disliked?: string;
-  short_term_goal?: string;
-  long_term_goal?: string;
+function buildUpdateLikesTool(): ChatCompletionTool {
+  return { type: "function", function: { name: UPDATE_LIKES_TOOL_NAME, description: "更新你的喜好——喜欢或讨厌的人、事、物。", parameters: UpdateLikesToolSchema } };
 }
 
-export async function llmReflection(args: { prompt: string; language?: Language }): Promise<ReflectionResult> {
-  if (!hasApiKey()) return {};
-
-  const config = getEntryConfig("memory_compress");
-  const client = getLLMClientForEntry("memory_compress");
-  const language: Language = args.language ?? "zh";
-  const tool: ChatCompletionTool = {
-    type: "function",
-    function: { name: REFLECTION_TOOL_NAME, description: "提交睡前反思结果。所有字段可选。", parameters: ReflectionToolSchema },
-  };
-  const extra: Record<string, unknown> = {};
-  if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
-
-  let lastResponseSnapshot = "(no response)";
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const response = await client.chat.completions.create({
-        model: getModelNameForEntry("memory_compress"),
-        max_tokens: 1024,
-        messages: [
-          { role: "system", content: `你是一个角色反思助手。请基于提供的记忆和当前状态进行反思。\n\n${languageInstruction(language)}` },
-          { role: "user", content: args.prompt },
-        ],
-        tools: [tool],
-        ...extra,
-      });
-      lastResponseSnapshot = llmResponseSnapshot(response);
-      const message = response.choices[0]?.message;
-      const tc = (message?.tool_calls ?? []).find(
-        (c: any) => c.type === "function" && c.function.name === REFLECTION_TOOL_NAME,
-      ) as any;
-      if (!tc) throw new Error(`LLM 没有返回 reflection tool_call。响应：${lastResponseSnapshot}`);
-      const parsed = JSON.parse(tc.function.arguments);
-      const result = ReflectionSchema.safeParse(parsed);
-      if (!result.success) throw new Error(`Reflection 参数不符合 schema：${result.error.message}。rawArgs：${tc.function.arguments.slice(0, 1000)}`);
-      return result.data;
-    } catch (err) {
-      memoryLog.warn("LLM reflection 失败", {
-        attempt,
-        error: err instanceof Error ? err.message : String(err),
-        llmResponse: lastResponseSnapshot,
-      });
-      if (attempt === 0) continue;
-    }
-  }
-  memoryLog.error("LLM reflection 彻底失败", { llmResponse: lastResponseSnapshot });
-  return {};
+function buildUpdateGoalsTool(): ChatCompletionTool {
+  return { type: "function", function: { name: UPDATE_GOALS_TOOL_NAME, description: "更新你的短期或长期目标。", parameters: UpdateGoalsToolSchema } };
 }

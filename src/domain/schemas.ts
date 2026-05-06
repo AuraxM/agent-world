@@ -408,7 +408,7 @@ export const DecideActionSchema = z.object({
     target_id: z.string().optional(),
     target_node_id: z.string().optional(),
   }).optional(),
-});
+}).passthrough();
 
 export const DecideActionToolSchema = {
   type: "object" as const,

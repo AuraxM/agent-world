@@ -534,7 +534,7 @@ export const addNotebookEntryAction: ActionDefinition = {
     hour: { type: "integer", description: "约定时间的整点 (0-23)" },
     free_text: { type: "string", description: "待办事项描述" },
   },
-  extraRequired: ["scheduled_day", "scheduled_hour", "scheduled_minute", "free_text"],
+  extraRequired: ["year", "month", "day", "hour", "free_text"],
   usableInDialogue: true,
 };
 

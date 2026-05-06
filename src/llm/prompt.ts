@@ -723,7 +723,6 @@ export function buildCharacterStaticBlock(
   } else {
     lines.push("- 生存开销：吃饭 15💰/次，洗澡 10💰/次");
   }
-  lines.push(`- 当前持有：${character.money} 金钱`);
   const actNode = character.activityNodeId
     ? nodes.find((n) => n.id === character.activityNodeId)
     : undefined;

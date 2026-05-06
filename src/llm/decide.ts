@@ -1263,8 +1263,8 @@ export interface ReflectionResult {
   memorize?: Array<{ target_id: string; impression: string }>;
   liked?: string;
   disliked?: string;
-  shortTermGoal?: string;
-  longTermGoal?: string;
+  short_term_goal?: string;
+  long_term_goal?: string;
 }
 
 export async function llmReflection(args: { prompt: string; language?: Language }): Promise<ReflectionResult> {

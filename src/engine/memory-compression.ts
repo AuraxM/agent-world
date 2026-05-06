@@ -46,16 +46,16 @@ export async function compressSleepMemories(
 
     const SHORT_GOAL_INTERVAL = 120;
     const LONG_GOAL_INTERVAL = 840;
-    if (reflection.shortTermGoal !== undefined) {
+    if (reflection.short_term_goal !== undefined) {
       const lastUpdate = character.shortTermGoal?.updatedAt ?? 0;
       if (currentTick - lastUpdate >= SHORT_GOAL_INTERVAL) {
-        character.shortTermGoal = { goal: reflection.shortTermGoal, updatedAt: currentTick };
+        character.shortTermGoal = { goal: reflection.short_term_goal, updatedAt: currentTick };
       }
     }
-    if (reflection.longTermGoal !== undefined) {
+    if (reflection.long_term_goal !== undefined) {
       const lastUpdate = character.longTermGoal?.updatedAt ?? 0;
       if (currentTick - lastUpdate >= LONG_GOAL_INTERVAL) {
-        character.longTermGoal = { goal: reflection.longTermGoal, updatedAt: currentTick };
+        character.longTermGoal = { goal: reflection.long_term_goal, updatedAt: currentTick };
       }
     }
   } catch {

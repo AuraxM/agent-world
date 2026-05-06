@@ -132,6 +132,15 @@ function makeTableSQL() {
       PRIMARY KEY (world_id, character_id, id)
     )`,
     `CREATE INDEX IF NOT EXISTS notebook_char_idx ON notebook_entries(world_id, character_id)`,
+    `CREATE TABLE IF NOT EXISTS think_sessions (
+      id TEXT NOT NULL,
+      world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
+      payload_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+      PRIMARY KEY (world_id, id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS think_sessions_world_idx ON think_sessions(world_id)`,
   ];
 }
 
@@ -139,6 +148,7 @@ function seedWorld(sqlite: any, charCount: number) {
   // Clear existing
   sqlite.exec("DELETE FROM notebook_entries");
   sqlite.exec("DELETE FROM conversations");
+  sqlite.exec("DELETE FROM think_sessions");
   sqlite.exec("DELETE FROM transactions");
   sqlite.exec("DELETE FROM agent_thoughts");
   sqlite.exec("DELETE FROM events_log");

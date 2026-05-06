@@ -5,7 +5,7 @@ const kissAction = {
   duration: "instant",
   guidance: "可以用来亲密互动时",
   check(ctx) {
-    return ctx.companions.length > 0;
+    return false;
   },
   hint(ctx) {
     const target = ctx.companions[0];
@@ -34,7 +34,7 @@ const caressAction = {
   duration: "instant",
   guidance: "可以用来与对方温柔互动",
   check(ctx) {
-    return ctx.companions.length > 0;
+    return false;
   },
   hint(ctx) {
     const target = ctx.companions[0];
@@ -63,7 +63,7 @@ const hugAction = {
   duration: "instant",
   guidance: "可以用来安慰、告别或表达亲密",
   check(ctx) {
-    return ctx.companions.length > 0;
+    return false;
   },
   hint(ctx) {
     const target = ctx.companions[0];

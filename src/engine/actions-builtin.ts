@@ -3,7 +3,6 @@ import { TICKS_PER_HOUR } from "@/domain/enums";
 import { DEFAULT_ECONOMY_CONFIG } from "@/config/types";
 import { getEatCost, getBatheCost } from "./bme";
 import { rollWorkIncome } from "./economy";
-import { tickFromCalendar, formatCurrentTime, createEntryId, saveNotebookEntry, formatScheduledTime } from "./notebook";
 
 export const eatAction: ActionDefinition = {
   type: "eat",
@@ -178,7 +177,7 @@ export const workAction: ActionDefinition = {
 export const thinkAction: ActionDefinition = {
   type: "think",
   duration: "instant",
-  guidance: "无急迫生理需求时整理思绪或做内心独白",
+  guidance: "社交满足不想说话或需要整理思绪时，独自沉思回顾记忆、整理印象",
   check(_ctx) {
     return true;
   },
@@ -369,64 +368,12 @@ export const moveAction: ActionDefinition = {
   extraRequired: ["target_node_id", "reason"],
 };
 
-export const waitAction: ActionDefinition = {
-  type: "wait",
-  duration: 5,
-  guidance: "当前没有合适的行动时原地等待（兜底选项）",
-  check(_ctx) {
-    return true;
-  },
-  hint(ctx) {
-    const hour = Math.floor(ctx.tick / TICKS_PER_HOUR) % 24;
-    return `等待（当前 world time ${hour}:00，原地停留 5 ticks）`;
-  },
-  validateParams() { return null; },
-  execute(ctx, _input) {
-    return {
-      memory: `我在 ${ctx.here.name} 开始等待。`,
-      event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 驻足等待。`, intensity: 1 },
-      stateChanges: [{
-        kind: "setOngoingAction",
-        action: {
-          type: "wait",
-          startedAt: ctx.tick,
-          endsAt: ctx.tick + 5,
-          description: `在 ${ctx.here.name} 等待`,
-          interruptThreshold: 2,
-        },
-      }],
-    };
-  },
-  onComplete(ctx) {
-    return {
-      memory: `我在 ${ctx.here.name} 等待结束。`,
-    };
-  },
-  onInterrupt(ctx, reason) {
-    return {
-      memory: `我等待时被打断了——${reason}`,
-    };
-  },
-};
-
 export const giveAction: ActionDefinition = {
   type: "give",
   duration: "instant",
   guidance: "身边有人向你求助、借钱或表达经济困难时给予金钱帮助",
-  check(ctx) {
-    if (ctx.self.money <= 0) return false;
-    if (ctx.companions.length === 0) return false;
-    // Check shortMemory for recent beg/help requests
-    const hasRequest = ctx.self.shortMemory.some(
-      (m) =>
-        m.content.includes("缺钱") ||
-        m.content.includes("借钱") ||
-        m.content.includes("求助") ||
-        m.content.includes("给点钱") ||
-        m.content.includes("帮帮忙") ||
-        m.content.includes("经济困难"),
-    );
-    return hasRequest;
+  check(_ctx) {
+    return false;
   },
   hint(ctx) {
     return ctx.companions.map((c) => {
@@ -475,87 +422,13 @@ export const giveAction: ActionDefinition = {
   usableInDialogue: true,
 };
 
-export const addNotebookEntryAction: ActionDefinition = {
-  type: "add_notebook_entry",
-  duration: "instant",
-  guidance: "与他人约定了未来的事项、或需要记住某个时间要做的事时添加记事",
-  check(_ctx) { return true; },
-  hint(ctx) {
-    const nowStr = formatCurrentTime(ctx.tick, ctx.epoch);
-    return `添加记事本（当前时间：${nowStr}）
-  参数：year（年）、month（月 1-12）、day（日 1-31）、hour（整点 0-23）、free_text（待办描述）`;
-  },
-  validateParams(input, ctx) {
-    const year = input.year as number | undefined;
-    const month = input.month as number | undefined;
-    const day = input.day as number | undefined;
-    const hour = input.hour as number | undefined;
-    if (year === undefined || year < 2020 || year > 2100) return "year 需要在 2020-2100";
-    if (month === undefined || month < 1 || month > 12) return "month 需要在 1-12";
-    if (day === undefined || day < 1 || day > 31) return "day 需要在 1-31";
-    if (hour === undefined || hour < 0 || hour > 23) return "hour 需要在 0-23";
-    if (!input.free_text || (input.free_text as string).trim().length === 0) return "free_text 不能为空";
-    const scheduledTick = tickFromCalendar(year, month, day, hour, ctx.epoch);
-    if (scheduledTick === null) {
-      const nowStr = formatCurrentTime(ctx.tick, ctx.epoch);
-      return `日期无效（${year}-${month}-${day} ${hour}:00）。当前游戏时间是 ${nowStr}。`;
-    }
-    if (scheduledTick <= ctx.tick) {
-      const nowStr = formatCurrentTime(ctx.tick, ctx.epoch);
-      return `目标时间（${year}年${month}月${day}日 ${hour}:00）必须在当前时间之后。当前是 ${nowStr}。`;
-    }
-    const timeFormat = `${year}年${month}月${day}日 ${hour}:00`;
-    if (ctx.self.notebook.some(e => e.scheduledTick === scheduledTick)) {
-      return `${timeFormat} 已经有约了。`;
-    }
-    if (scheduledTick - ctx.tick < TICKS_PER_HOUR) {
-      return `${timeFormat} 马上就要到了，不需要备忘。`;
-    }
-    return null;
-  },
-  execute(ctx, input) {
-    const year = (input.year as number)!;
-    const month = (input.month as number)!;
-    const day = (input.day as number)!;
-    const hour = (input.hour as number)!;
-    const freeText = (input.free_text as string) || "（无描述）";
-    const scheduledTick = tickFromCalendar(year, month, day, hour, ctx.epoch)!;
-    const entry: import("@/domain/types").NotebookEntry = {
-      id: createEntryId(),
-      scheduledTick,
-      content: freeText,
-      createdAt: ctx.tick,
-    };
-    ctx.self.notebook.push(entry);
-    saveNotebookEntry(ctx.worldId, ctx.self.id, entry);
-    const timeLabel = formatScheduledTime(scheduledTick, ctx.epoch);
-    return {
-      memory: `我添加了一条记事：${timeLabel} — ${freeText}`,
-      event: {
-        category: "inner",
-        description: `${ctx.self.name} 在记事本上写了些什么。`,
-        intensity: 1,
-      },
-    };
-  },
-  extraParams: {
-    year: { type: "integer", description: "约定时间的年份（如 2026）" },
-    month: { type: "integer", description: "约定时间的月份 (1-12)" },
-    day: { type: "integer", description: "约定时间的日期 (1-31)" },
-    hour: { type: "integer", description: "约定时间的整点 (0-23)" },
-    free_text: { type: "string", description: "待办事项描述" },
-  },
-  extraRequired: ["year", "month", "day", "hour", "free_text"],
-  usableInDialogue: true,
-};
-
 export const lookAroundAction: ActionDefinition = {
   type: "look_around",
-  duration: "instant",
-  guidance: "想了解周围环境或观察身边有哪些人时环顾四周",
+  duration: 5,
+  guidance: "当前没有合适的行动时原地观察等待（兜底选项）",
   check(_ctx) { return true; },
   hint(ctx) {
-    return `环顾四周（查看 ${ctx.here.name} 的情况）`;
+    return `环顾四周（查看 ${ctx.here.name} 的情况，原地停留 5 ticks）`;
   },
   validateParams() { return null; },
   execute(ctx, _input) {
@@ -583,6 +456,26 @@ export const lookAroundAction: ActionDefinition = {
         description: `${ctx.self.name} 环顾四周，观察周围情况。`,
         intensity: 1,
       },
+      stateChanges: [{
+        kind: "setOngoingAction",
+        action: {
+          type: "look_around",
+          startedAt: ctx.tick,
+          endsAt: ctx.tick + 5,
+          description: `在 ${ctx.here.name} 观察等待`,
+          interruptThreshold: 2,
+        },
+      }],
+    };
+  },
+  onComplete(ctx) {
+    return {
+      memory: `我在 ${ctx.here.name} 观察等待结束。`,
+    };
+  },
+  onInterrupt(ctx, reason) {
+    return {
+      memory: `我观察时被打断了——${reason}`,
     };
   },
 };
@@ -596,8 +489,6 @@ export const BUILTIN_ACTIONS: ActionDefinition[] = [
   speakAction,
   sleepAction,
   moveAction,
-  waitAction,
   giveAction,
-  addNotebookEntryAction,
   lookAroundAction,
 ];

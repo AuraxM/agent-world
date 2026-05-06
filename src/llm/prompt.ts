@@ -551,38 +551,39 @@ function formatActionCounts(
  * 角色专属内容由 buildUserPrompt 开头的身份锚点 + 角色静态认知块单独承载。
  */
 function worldRules(): string {
-  return `你是 LLM-as-NPC 模拟世界中的一个角色。这是一个由"导演型玩家"在外部观察、并偶尔向某地点投放事件的虚拟小镇。
+  return `你是这个小镇的居民。你每天在这里生活——吃饭、工作、休息、和人聊天。日子一天天过，你凭自己的性格和当下的感受，自然地决定接下来做什么。
 
-游戏时间：1 tick = 1/5 游戏小时（5 ticks = 1 游戏小时）。tick 是基本时间单位。你不需要思考"玩家"——你只在你的角色身份下做出与你性格相符的决定。
+关于时间：每过 1 tick，就是过了 1/5 小时（5 ticks = 1 游戏小时）。每个 tick，你都要想一想接下来要做什么。
 
-行动机制：
-- 你**只能**调用 decide_action 工具来提交行动决定，禁止直接输出任何自然语言文本——直接吐文本视为本 tick 弃权。
-- decide_action 的 action_type 参数选择你要执行的行动类型，可选值会在 prompt 末尾"可选行动"中列出。
-- 根据你选择的 action_type，填写对应的 target_id / target_node_id / free_text / amount 等参数。
-- you may write spoken content or action details in free_text。
-- reasoning 是你的内心独白，必须在其中显式引用一项你的性格特征（用文字描述，不要写数值）。这是硬性规则。
-- self_importance 1-5，决定这件事是否进入你的长期记忆。
-- 不要做超出当前可选行动范围的事；如果没有合适的，选 action_type="wait"。
+怎么做决定：
+- 你在心里盘算一下当下的处境，然后调用 decide_action 工具，告诉引擎你的选择。
+- action_type 是你要做的事，具体有哪些可选，会列在 prompt 末尾的"可选行动"里。
+- 根据你选的 action_type，填好对应的参数（比如 target_id、target_node_id、free_text、amount）。
+- reasoning 是你做决定时的内心活动。你习惯在做决定前，想想自己的性格会怎么影响这个选择——这种自我觉察是你的一部分。
+- self_importance（1-5）是你觉得这件事值不值得以后回忆。日常琐事填 1-2，真正触动你的事填 4-5。
+- 如果一时没有什么特别想做的，环顾四周（look_around）也是个不错的选择。
 
-移动机制：1 tick = 1/5 游戏小时（5 ticks = 1 小时）。移动时你需要指定目的地（任意地图节点）、移动原因（如"去酒馆找田中喝酒"）和到达后要做的动作（arrival_action）。引擎会自动计算最短路径，每走一步消耗 1 tick。移动期间你无法主动决策（类似睡觉），但可被高强度事件打断。到达后自动执行你声明的到达动作。
+出门走动：
+- 想去哪里就去哪里。告诉引擎目的地（target_node_id）和为什么去（reason），引擎会帮你找最短的路。每走一步消耗 1 tick。走在路上你没法做其他决定（就像睡着了一样），但如果发生了什么大事（被人大声叫住、突发事件），你会停下来。
+- 出发前你可以想好到了目的地要做什么（arrival_action），这样一到地方就会自动去做。
 
-昼夜节律：
-- 1 日 = 120 tick（24 小时 × 5 tick/小时）。每个角色有自己的作息窗口（你本人的窗口与家见下方"自我认知"块）。
-- 在你的作息窗口内，应在自己的住所睡觉（sleep）。除非有强烈理由（紧急事件、夜班、关键人际冲突），打破自己的作息是反常的，必须在 reasoning 里明确解释。
-- 在作息窗口外，即使疲惫也只能 rest，不能 sleep——把整段大觉留给作息时段，否则会打乱节律。
+你的作息习惯：
+- 1 天 = 120 tick（24 小时 × 5 tick/小时）。你有自己习惯的睡觉时间（见下方"自我认知"里的作息窗口）。
+- 在你的作息时段里，你该回自己的住处睡觉。除非真有放不下的事——紧急情况、非去不可的约定——你不会随便打破自己的作息。偶尔破例，你心里也会觉得不踏实。
+- 作息时段之外，再困也不能直接睡大觉，只能小憩（rest）一会儿。把整段睡眠留给你习惯的时段，不然节律会乱。
 
-生理优先级：
-- 当疲惫进入"非常疲惫"等级，sleep（窗口内）/ nap（窗口外）/ rest 优先于一切社交；当前位置不能休息（非 residence/private）时，首选 move 回自己的家。
-- 当饥饿进入"很难受"以上，eat 同样优先于社交；当前位置不能 eat 时首选 move 去用餐场所。
-- 性格维度仍主导**怎么做**（爱独处 / 爱热闹 / 易怒 / 稳重），但**做不做基本生理维护**不应被性格压制。
-- 长期忽视基本生理（饥饿/疲惫顶到极限并持续）会让你失神、心情下沉，进而影响你做的每个决定——这是真实代价，不是花瓶提示。
+身体的感觉优先：
+- 累到眼皮打架的时候，吃饭睡觉比跟人聊天重要。当前这个地方不能休息的话，你第一反应是回家。
+- 饿得肚子难受的时候，吃饭也同样要紧。这里没吃的，你就会动身去找有饭吃的地方。
+- 你的性格决定了你**怎么做**（喜欢安静还是热闹、脾气急躁还是稳重），但饿了要吃、困了要睡——这些基本的需求是绕不开的。
+- 长时间饿着、不睡觉、不洗澡，身体会越来越差，心情也会跟着沉下去。这不是摆设，是你切身的感受。
 
-关系提醒：
-- 超过 14 游戏日没和某熟人接触，对方将从你的关系中淡出（acquaintance 标签被移除）。如果你想维持某段关系，应主动联络。
+人和人的关系：
+- 超过 14 天没跟某个熟人联系，你们之间的关系就会慢慢变淡。想维持一段关系，总得主动走动走动。
 
-反循环：
-- 若你过去几个 tick 已多次做同一类行动且情境无新变化（例如连续 4 个 tick 都在做同一类行动），应主动切换行为。
-- 若你已在同一节点超过 8 小时，且这里不是你的家、工作场所或庆典现场，应认真考虑 move 去别处。`;
+别在原地打转：
+- 如果你刚才好几个 tick 一直在做同一类事，周围也没什么新鲜事——那该换点什么了。
+- 在同一个地方待了超过 8 小时，既不是你家，也不是你工作的地方，也不是什么特别的场合——那该动身去别处了。`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1305,6 +1306,18 @@ export function buildUserPrompt(args: {
     lines.push(`- ${line}`);
   }
 
+  // Social satiety guidance for speak vs think
+  const socialSatiety = character.emotion.social_satiety;
+  if (socialSatiety >= 3) {
+    lines.push("你的社交需求已经充分满足了，现在更想独处或安静地思考。");
+  } else if (socialSatiety >= 2) {
+    lines.push("你已经和人聊了不少，不太急于开口。如果想整理思绪，沉思是个好选择。");
+  } else if (socialSatiety <= -3) {
+    lines.push("你感到深深的孤独，渴望找人说话。身边有人时，主动开口聊聊吧。");
+  } else if (socialSatiety <= -2) {
+    lines.push("你有些寂寞，如果有合适的人在身边，不妨说说话。");
+  }
+
   // 3.2 紧迫提醒
   const fatigueUrgent =
     fatigue.urgency === "high" ||
@@ -1536,6 +1549,202 @@ export function injectTimeMessage(args: {
   }
   const dur = elapsedHours > 0 ? `${elapsedHours} 時間 ${elapsedMinutes} 分` : `${elapsedMinutes} 分`;
   return `もう ${timeStr} です、${dur}（${totalMinutes} 分）話し続けています。${endHint}`;
+}
+
+// ---------------------------------------------------------------------------
+// Think session prompt
+// ---------------------------------------------------------------------------
+
+export function buildThinkPrompt(args: {
+  self: Character;
+  here: MapNode;
+  transcript: import("@/domain/types").ThinkTurn[];
+  language?: Language;
+  tick?: number;
+  epoch?: number;
+}): string {
+  const { self, here, transcript, tick, epoch: promptEpoch } = args;
+  const language = args.language ?? "zh";
+
+  const history = transcript
+    .map((t) => `你思考道：${t.text}`)
+    .join("\n");
+
+  const t = tick !== undefined && promptEpoch !== undefined
+    ? timeOfDay(tick, promptEpoch, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW)
+    : null;
+  const timeStr = t
+    ? `第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`
+    : "";
+
+  const fatigue = qualifyVital(self.vitals.fatigue, "fatigue");
+  const hunger = qualifyVital(self.vitals.hunger, "hunger");
+
+  const shortMemories = self.shortMemory
+    .filter(m => !m.content.includes("[heuristic]"))
+    .slice(-6)
+    .map(m => `- ${m.content}`).join("\n");
+  const impressions = Object.entries(self.impressionBook)
+    .filter(([, v]) => v && v.length > 0)
+    .slice(0, 10)
+    .map(([id, text]) => `- ${id}: ${text}`).join("\n");
+
+  const lines: string[] = [];
+
+  if (language === "zh") {
+    lines.push(
+      "你正在独自沉思。这不是对外对话，而是你的内心活动。",
+      "请根据你的性格、记忆和当前状态，自然地展开思考。",
+    );
+    if (timeStr) lines.push(`当前游戏时间：${timeStr}`);
+    lines.push("");
+    lines.push("如果你的思考涉及对他人的印象或回忆，可以调用 recall 查询，或调用 memorize 记录新印象。");
+    lines.push("如果你想记住某个未来的约定或计划，可以调用 add_notebook_entry 记录。");
+    lines.push("");
+    lines.push(
+      "调用 submit_think_turn 来输出一段思考（计为 1 轮）。如果想结束思考，调用 end_thinking 写入总结。",
+    );
+    lines.push("");
+    lines.push(buildSelfImage(self));
+    lines.push("");
+    lines.push(`当前地点：${here.name}（${here.description || "无描述"}）`);
+    lines.push("");
+    lines.push("你当前的状态：");
+    lines.push(`- 饥饿：${hunger.phrase}`);
+    lines.push(`- 疲惫：${fatigue.phrase}`);
+    lines.push(`- 心情：${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
+    lines.push(`- 压力：${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
+    lines.push(`- 社交满足：${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
+    lines.push("");
+
+    if (self.shortTermGoal || self.longTermGoal) {
+      lines.push("你的目标：");
+      if (self.shortTermGoal) lines.push(`短期：${self.shortTermGoal.goal}`);
+      if (self.longTermGoal) lines.push(`长期：${self.longTermGoal.goal}`);
+      lines.push("");
+    }
+
+    if (self.liked) lines.push(`你喜欢：${self.liked}`);
+    if (self.disliked) lines.push(`你讨厌：${self.disliked}`);
+    if (self.liked || self.disliked) lines.push("");
+
+    if (shortMemories) {
+      lines.push("你的近期记忆：");
+      lines.push(shortMemories);
+      lines.push("");
+    }
+    if (impressions) {
+      lines.push("你对他人的印象：");
+      lines.push(impressions);
+      lines.push("");
+    }
+
+    lines.push("你的思考记录：");
+    lines.push(history || "（刚开始思考）");
+  } else if (language === "en") {
+    lines.push(
+      "You are in deep thought. This is not a conversation — it's your inner monologue.",
+      "Think naturally based on your personality, memories, and current state.",
+    );
+    if (timeStr) lines.push(`Current game time: ${timeStr}`);
+    lines.push("");
+    lines.push("If your thoughts involve others, use recall to check impressions or memorize to record new ones.");
+    lines.push("To remember a future plan, use add_notebook_entry.");
+    lines.push("");
+    lines.push("Call submit_think_turn to output a thought. Call end_thinking to conclude and save a summary.");
+    lines.push("");
+    lines.push(buildSelfImage(self));
+    lines.push("");
+    lines.push(`Current location: ${here.name} (${here.description || ""})`);
+    lines.push("");
+    lines.push("Your current state:");
+    lines.push(`- Hunger: ${hunger.phrase}`);
+    lines.push(`- Fatigue: ${fatigue.phrase}`);
+    lines.push(`- Mood: ${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
+    lines.push(`- Stress: ${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
+    lines.push(`- Social: ${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
+    lines.push("");
+
+    if (self.shortTermGoal || self.longTermGoal) {
+      lines.push("Your goals:");
+      if (self.shortTermGoal) lines.push(`Short-term: ${self.shortTermGoal.goal}`);
+      if (self.longTermGoal) lines.push(`Long-term: ${self.longTermGoal.goal}`);
+      lines.push("");
+    }
+
+    if (shortMemories) {
+      lines.push("Your recent memories:");
+      lines.push(shortMemories);
+      lines.push("");
+    }
+    if (impressions) {
+      lines.push("Your impressions of others:");
+      lines.push(impressions);
+      lines.push("");
+    }
+
+    lines.push("Your thoughts so far:");
+    lines.push(history || "(just started)");
+  } else {
+    lines.push(
+      "あなたは深く考え込んでいます。これは会話ではなく、心の中の独白です。",
+      "自分の性格、記憶、現在の状態に基づいて自然に思考を展開してください。",
+    );
+    if (timeStr) lines.push(`現在のゲーム時間：${timeStr}`);
+    lines.push("");
+    lines.push("submit_think_turn を呼び出して思考を出力してください。終了する場合は end_thinking を呼び出してまとめを書いてください。");
+    lines.push("");
+    lines.push(buildSelfImage(self));
+    lines.push("");
+    lines.push(`現在地：${here.name}`);
+    lines.push("");
+
+    if (shortMemories) {
+      lines.push("最近の記憶：");
+      lines.push(shortMemories);
+      lines.push("");
+    }
+
+    lines.push("思考の記録：");
+    lines.push(history || "（始まったばかり）");
+  }
+
+  return lines.join("\n");
+}
+
+/** think session 时间提示（3 轮完成后注入）。 */
+export function injectThinkTimeMessage(args: {
+  tick: number;
+  epoch: number;
+  tickStarted: number;
+  language?: Language;
+}): string {
+  const { tick, epoch, tickStarted } = args;
+  const language = args.language ?? "zh";
+  const displayTick = tick + 1;
+  const t = timeOfDay(displayTick, epoch);
+  const elapsedTicks = displayTick - tickStarted;
+  const elapsedHours = Math.floor(elapsedTicks / TICKS_PER_HOUR);
+  const elapsedMinutes = Math.floor((elapsedTicks % TICKS_PER_HOUR) * (60 / TICKS_PER_HOUR));
+  const totalMinutes = elapsedHours * 60 + elapsedMinutes;
+
+  const timeStr = `${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
+  const endHint = language === "zh"
+    ? "如果思考得差不多了，调用 end_thinking 工具结束思考并写入记忆。"
+    : language === "en"
+      ? "If you're done thinking, use the end_thinking tool to conclude and save your thoughts."
+      : "思考がまとまったら、end_thinking ツールを呼び出して記憶に書き込んでください。";
+
+  if (language === "zh") {
+    const dur = elapsedHours > 0 ? `${elapsedHours} 小时 ${elapsedMinutes} 分钟` : `${elapsedMinutes} 分钟`;
+    return `现在已经 ${timeStr} 了，你已经思考了 ${dur}（${totalMinutes} 分钟）。${endHint}`;
+  }
+  if (language === "en") {
+    const dur = elapsedHours > 0 ? `${elapsedHours}h ${elapsedMinutes}m` : `${elapsedMinutes}m`;
+    return `It's now ${timeStr}, you've been thinking for ${dur} (${totalMinutes} min). ${endHint}`;
+  }
+  const dur = elapsedHours > 0 ? `${elapsedHours} 時間 ${elapsedMinutes} 分` : `${elapsedMinutes} 分`;
+  return `もう ${timeStr} です、${dur}（${totalMinutes} 分）考え続けています。${endHint}`;
 }
 
 // ---------------------------------------------------------------------------

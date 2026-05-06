@@ -70,9 +70,14 @@ import {
   llmDialogTurn,
   llmDialogSummarize,
   llmSalvageDecide,
+  llmThink,
 } from "@/llm/decide";
+import { loadThinkSessions, saveThinkSession, deleteThinkSession } from "./think-sessions";
+import type { ThinkSession, ThinkTurn } from "@/domain/types";
+import { injectThinkTimeMessage } from "@/llm/prompt";
 
 const FACTS_LOOKBACK_TICKS = 48 * TICKS_PER_HOUR;
+const THINK_TURNS_PER_TICK = 3;
 
 export interface DecideInput {
   character: Character;
@@ -367,25 +372,50 @@ export async function tick(
     }
   }
 
+  // Load ongoing think sessions
+  const ongoingThinkSessions = loadThinkSessions(worldId);
+
+  // Lock characters in active think sessions
+  for (const ts of ongoingThinkSessions) {
+    if (ts.status !== "ended") {
+      lockedCharacterIds.add(ts.characterId);
+      const thinker = characters.find((c) => c.id === ts.characterId);
+      if (thinker && !thinker.activeConversationIds.includes(ts.id)) {
+        thinker.activeConversationIds.push(ts.id);
+      }
+    }
+  }
+
   // 6. 角色决策（并发：各角色基于 tick 开始时快照独立决策，LLM 调用并行）
   const actionsForExecution: Action[] = [];
 
-  // Filter out characters locked in ongoing conversations
+  // Filter out characters locked in ongoing conversations or think sessions
   const freeCharacters = characters.filter((c) => !lockedCharacterIds.has(c.id));
 
-  // Add placeholder wait actions for locked initiators
+  // Add placeholder actions for locked characters
   for (const charId of lockedCharacterIds) {
-    const conv = ongoingConversations.find((c) => c.initiatorId === charId && c.status !== "ended");
-    const acceptorName = conv
-      ? characters.find((c) => c.id === conv.acceptorId)?.name ?? "某人"
-      : "某人";
-    actionsForExecution.push({
-      type: "wait",
-      actorId: charId,
-      reasoning: `正在和 ${acceptorName} 对话`,
-      selfImportance: 2,
-      skipExecution: true, skipMemory: true,
-    });
+    const conv = ongoingConversations.find((c) => (c.initiatorId === charId || c.acceptorId === charId) && c.status !== "ended");
+    const ts = ongoingThinkSessions.find((s) => s.characterId === charId && s.status !== "ended");
+    if (conv) {
+      const otherName = conv.initiatorId === charId
+        ? characters.find((c) => c.id === conv.acceptorId)?.name ?? "某人"
+        : characters.find((c) => c.id === conv.initiatorId)?.name ?? "某人";
+      actionsForExecution.push({
+        type: "wait",
+        actorId: charId,
+        reasoning: `正在和 ${otherName} 对话`,
+        selfImportance: 2,
+        skipExecution: true, skipMemory: true,
+      });
+    } else if (ts) {
+      actionsForExecution.push({
+        type: "wait",
+        actorId: charId,
+        reasoning: "正在沉思",
+        selfImportance: 2,
+        skipExecution: true, skipMemory: true,
+      });
+    }
   }
 
   // 位置快照：并发任务间互不干扰
@@ -731,6 +761,96 @@ export async function tick(
   }
   const tAfterDecisions = Date.now();
 
+  // ── Phase 4.4: Think sessions (solo reasoning) ──
+  const updatedThinkSessions: ThinkSession[] = [];
+
+  for (const ts of ongoingThinkSessions) {
+    if (ts.status === "ended") continue;
+
+    const thinker = characters.find((c) => c.id === ts.characterId);
+    if (!thinker) {
+      ts.status = "ended";
+      updatedThinkSessions.push(ts);
+      continue;
+    }
+
+    const here = nodeById.get(thinker.locationId);
+    if (!here) {
+      ts.status = "ended";
+      updatedThinkSessions.push(ts);
+      continue;
+    }
+
+    const transcript: ThinkTurn[] = [...ts.transcript];
+
+    for (let round = 0; round < THINK_TURNS_PER_TICK; round++) {
+      let result;
+      try {
+        result = await llmThink({
+          self: thinker,
+          here,
+          transcript,
+          language,
+          tick: fromTick,
+          epoch: world.epoch,
+          tickStarted: ts.tickStarted,
+        });
+      } catch (err) {
+        log.error("llmThink 异常，思考被迫终止", {
+          character: thinker.name,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        ts.status = "ended";
+        break;
+      }
+
+      if (result.kind === "turn") {
+        transcript.push(result.turn);
+      } else {
+        // end_thinking
+        thinker.shortMemory.push({
+          id: `mem-${randomUUID().slice(0, 8)}`,
+          tick: fromTick,
+          importance: 3,
+          content: `我沉思了一番：${result.summary}`,
+        });
+        ts.status = "ended";
+        break;
+      }
+    }
+
+    ts.transcript = transcript;
+    ts.currentTickRounds = THINK_TURNS_PER_TICK;
+
+    if (ts.status !== "ended") {
+      // Inject time message after 3 rounds
+      transcript.push({
+        kind: "thought",
+        text: injectThinkTimeMessage({
+          tick: fromTick,
+          epoch: world.epoch,
+          tickStarted: ts.tickStarted,
+          language,
+        }),
+      });
+    }
+
+    updatedThinkSessions.push(ts);
+  }
+
+  // Persist think session changes
+  for (const ts of updatedThinkSessions) {
+    if (ts.status === "ended") {
+      deleteThinkSession(worldId, ts.id);
+      const thinker = characters.find((c) => c.id === ts.characterId);
+      if (thinker) {
+        thinker.activeConversationIds = thinker.activeConversationIds.filter((id) => id !== ts.id);
+      }
+    } else {
+      saveThinkSession(ts);
+    }
+  }
+
   // ── Phase 4.5: Dialog protocol ──
   const dialogResult = await runDialogPhase({
     rawActions: actionsForExecution,
@@ -791,7 +911,7 @@ export async function tick(
         });
       } catch {
         return {
-          type: "wait" as const,
+          type: "look_around" as const,
           actorId: input.character.id,
           reasoning: `补救决策违规，回退等待：${input.rejectReason}`,
           selfImportance: 1,
@@ -831,6 +951,102 @@ export async function tick(
       deleteConversation(worldId, conv.id);
     } else {
       saveConversation(conv);
+    }
+  }
+
+  // ── Phase 4.5.1: Create think sessions for think actions ──
+  const newThinkSessions: ThinkSession[] = [];
+  for (const action of actionsForExecution) {
+    if (action.type === "think" && !action.skipExecution) {
+      action.skipExecution = true;
+      action.skipMemory = true;
+      const thinker = characters.find((c) => c.id === action.actorId);
+      if (thinker && !lockedCharacterIds.has(action.actorId)) {
+        const ts: ThinkSession = {
+          id: `think-${randomUUID().slice(0, 8)}`,
+          worldId,
+          characterId: action.actorId,
+          transcript: action.freeText
+            ? [{ kind: "thought", text: action.freeText }]
+            : [{ kind: "thought", text: "开始沉思" }],
+          tickStarted: fromTick,
+          currentTickRounds: 0,
+          status: "active",
+        };
+        newThinkSessions.push(ts);
+        thinker.activeConversationIds.push(ts.id);
+        lockedCharacterIds.add(action.actorId);
+      }
+    }
+  }
+
+  // Run first tick of thinking for new sessions (like new conversations)
+  for (const ts of newThinkSessions) {
+    const thinker = characters.find((c) => c.id === ts.characterId);
+    if (!thinker) continue;
+    const here = nodeById.get(thinker.locationId);
+    if (!here) continue;
+
+    const transcript: ThinkTurn[] = [...ts.transcript];
+
+    for (let round = 0; round < THINK_TURNS_PER_TICK; round++) {
+      let result;
+      try {
+        result = await llmThink({
+          self: thinker,
+          here,
+          transcript,
+          language,
+          tick: fromTick,
+          epoch: world.epoch,
+          tickStarted: ts.tickStarted,
+        });
+      } catch (err) {
+        log.error("llmThink 异常（新会话）", {
+          character: thinker.name,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        ts.status = "ended";
+        break;
+      }
+
+      if (result.kind === "turn") {
+        transcript.push(result.turn);
+      } else {
+        thinker.shortMemory.push({
+          id: `mem-${randomUUID().slice(0, 8)}`,
+          tick: fromTick,
+          importance: 3,
+          content: `我沉思了一番：${result.summary}`,
+        });
+        ts.status = "ended";
+        break;
+      }
+    }
+
+    ts.transcript = transcript;
+    ts.currentTickRounds = THINK_TURNS_PER_TICK;
+
+    if (ts.status !== "ended") {
+      transcript.push({
+        kind: "thought",
+        text: injectThinkTimeMessage({
+          tick: fromTick,
+          epoch: world.epoch,
+          tickStarted: ts.tickStarted,
+          language,
+        }),
+      });
+    }
+
+    // Persist
+    if (ts.status === "ended") {
+      const t = characters.find((c) => c.id === ts.characterId);
+      if (t) {
+        t.activeConversationIds = t.activeConversationIds.filter((id) => id !== ts.id);
+      }
+    } else {
+      saveThinkSession(ts);
     }
   }
 

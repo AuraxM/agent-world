@@ -248,6 +248,27 @@ export const conversations = sqliteTable(
   ],
 );
 
+export const thinkSessions = sqliteTable(
+  "think_sessions",
+  {
+    id: text("id").notNull(),
+    worldId: text("world_id")
+      .notNull()
+      .references(() => worlds.id, { onDelete: "cascade" }),
+    payloadJson: text("payload_json").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.worldId, t.id] }),
+    index("think_sessions_world_idx").on(t.worldId),
+  ],
+);
+
 export const notebookEntries = sqliteTable(
   "notebook_entries",
   {

@@ -177,11 +177,11 @@ describe("buildSystemPrompt", () => {
       worldName: "测试世界",
       nodes: [restaurant],
     });
-    // world rules
-    expect(sys).toContain("昼夜节律");
-    expect(sys).toContain("生理优先级");
-    expect(sys).toContain("反循环");
-    expect(sys).toContain("移动机制");
+    // world rules (immersive rewrite — check for updated section content)
+    expect(sys).toContain("作息习惯");
+    expect(sys).toContain("身体的感觉优先");
+    expect(sys).toContain("别在原地打转");
+    expect(sys).toContain("出门走动");
     // character-specific content should NOT be in system prompt (moved to user prompt)
     expect(sys).not.toContain("你的自我认知");
     expect(sys).not.toContain("偏外向");

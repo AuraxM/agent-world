@@ -60,6 +60,7 @@ export type StateChange =
   | { kind: "setLocation"; nodeId: string }
   | { kind: "adjustMood"; delta: number }
   | { kind: "adjustStress"; delta: number }
+  | { kind: "adjustSocialSatiety"; delta: number }
   | { kind: "setOngoingAction"; action: import("./types").OngoingAction }
   | { kind: "clearOngoingAction" }
   | { kind: "adjustMoney"; amount: number; reason: string; targetCharacterId?: string };

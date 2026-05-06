@@ -122,6 +122,9 @@ export function applyStateChange(
     case "adjustStress":
       c.emotion.stress = clamp(c.emotion.stress + sc.delta, 0, 4);
       break;
+    case "adjustSocialSatiety":
+      c.emotion.social_satiety = clamp(c.emotion.social_satiety + sc.delta, -4, 4);
+      break;
     case "setOngoingAction":
       c.currentAction = sc.action;
       break;

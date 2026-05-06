@@ -3,7 +3,7 @@
 const kissAction = {
   type: "kiss",
   duration: "instant",
-  guidance: "可以用来亲密互动时",
+  guidance: "情到深处、想给对方一个回应或安抚时，一个吻胜过千言万语",
   check(ctx) {
     return false;
   },
@@ -18,8 +18,13 @@ const kissAction = {
       return { memory: "我想亲吻对方但没找到人。" };
     }
     return {
-      memory: `我亲吻了 ${target.name}。`,
+      memory: `我亲吻了 ${target.name}，心里泛起一阵暖意。`,
       dialogRecord: `${ctx.self.name} 亲吻了 ${target.name}。`,
+      stateChanges: [
+        { kind: "adjustMood", delta: 2 },
+        { kind: "adjustStress", delta: -1 },
+        { kind: "adjustSocialSatiety", delta: 2 },
+      ],
     };
   },
   extraParams: {
@@ -32,7 +37,7 @@ const kissAction = {
 const caressAction = {
   type: "caress",
   duration: "instant",
-  guidance: "可以用来与对方温柔互动",
+  guidance: "想安抚对方的情绪、表达无声的关心时，轻柔的触碰比语言更温柔",
   check(ctx) {
     return false;
   },
@@ -47,8 +52,13 @@ const caressAction = {
       return { memory: "我想抚摸对方但没找到人。" };
     }
     return {
-      memory: `我抚摸了 ${target.name}。`,
+      memory: `我轻轻抚摸了 ${target.name}，彼此都放松了下来。`,
       dialogRecord: `${ctx.self.name} 抚摸了 ${target.name}。`,
+      stateChanges: [
+        { kind: "adjustMood", delta: 1 },
+        { kind: "adjustStress", delta: -1 },
+        { kind: "adjustSocialSatiety", delta: 1 },
+      ],
     };
   },
   extraParams: {
@@ -61,7 +71,7 @@ const caressAction = {
 const hugAction = {
   type: "hug",
   duration: "instant",
-  guidance: "可以用来安慰、告别或表达亲密",
+  guidance: "久别重逢、离别之际、或是对方难过时，一个拥抱能让人感到被在乎",
   check(ctx) {
     return false;
   },
@@ -76,8 +86,13 @@ const hugAction = {
       return { memory: "我想拥抱对方但没找到人。" };
     }
     return {
-      memory: `我拥抱了 ${target.name}。`,
+      memory: `我拥抱了 ${target.name}，感到彼此的连接更近了一些。`,
       dialogRecord: `${ctx.self.name} 拥抱了 ${target.name}。`,
+      stateChanges: [
+        { kind: "adjustMood", delta: 1 },
+        { kind: "adjustStress", delta: -1 },
+        { kind: "adjustSocialSatiety", delta: 2 },
+      ],
     };
   },
   extraParams: {

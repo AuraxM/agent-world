@@ -2,8 +2,8 @@
  * prompt.ts v2 单测：覆盖
  *  - qualifyVital 5 档定性 + urgency（新 0..16 范围）
  *  - timeOfDay 时段标签 + isSleepHour
- *  - buildSystemPrompt 含 MBTI 文字描述 / 昼夜节律 / 生理优先级 / 反循环 / 移动机制 关键字
- *  - buildUserPrompt 关键段渲染（连续行为 / 紧迫提醒 / 时间 / 情绪 / 卫生）
+ *  - buildSystemPrompt 含世界规则（沉浸式 rewrite）/ 地图 / 语言指令；角色专属内容已移至 user prompt
+ *  - buildUserPrompt 关键段渲染（连续行为 / 紧迫提醒 / 时间 / 情绪 / 卫生 / 提示与规则分层块）
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -26,6 +26,8 @@ import { DEFAULT_EPOCH_MS } from "../app/_lib/format";
 import type { AggregatedFacts } from "@/engine/facts";
 import type { Character, DialogTurn, MapNode, Memory } from "@/domain/types";
 import type { ObjectiveRelationKind } from "@/domain/enums";
+import { actionRegistry } from "@/domain/action-system";
+import { BUILTIN_ACTIONS } from "@/engine/actions-builtin";
 
 const TEST_EPOCH = DEFAULT_EPOCH_MS; // local-midnight epoch for deterministic tests
 
@@ -178,10 +180,10 @@ describe("buildSystemPrompt", () => {
       nodes: [restaurant],
     });
     // world rules (immersive rewrite — check for updated section content)
-    expect(sys).toContain("作息习惯");
-    expect(sys).toContain("身体的感觉优先");
-    expect(sys).toContain("别在原地打转");
-    expect(sys).toContain("出门走动");
+    expect(sys).toContain("你是这个小镇的居民");
+    expect(sys).toContain("饿了吃饭，困了睡觉");
+    expect(sys).not.toContain("LLM-as-NPC");
+    expect(sys).not.toContain("硬性规则");
     // character-specific content should NOT be in system prompt (moved to user prompt)
     expect(sys).not.toContain("你的自我认知");
     expect(sys).not.toContain("偏外向");
@@ -480,6 +482,47 @@ describe("buildUserPrompt", () => {
     expect(out).toContain("你的近期短期记忆");
     expect(out).not.toContain("你的日记忆");
     expect(out).not.toContain("你的周记忆");
+  });
+});
+
+describe("buildUserPrompt hint/rule layered blocks", () => {
+  // Register built-in actions so describeHints / describeRules can look up triggerHint / paramRule
+  actionRegistry.registerAll(BUILTIN_ACTIONS);
+
+  it("includes hint block before options", () => {
+    const options = [
+      { type: "eat", hint: "在老王饭馆吃点东西" },
+      { type: "speak", hint: "和店里的客人聊聊天" },
+      { type: "move", hint: "前往镇中心" },
+    ];
+    const prompt = buildUserPrompt({
+      character: baseCharacter,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options,
+      tick: 0,
+      epoch: TEST_EPOCH,
+      facts: emptyFacts,
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
+    });
+
+    // Hint block header
+    expect(prompt).toContain("## 你此刻能做的事");
+    expect(prompt).toContain("**eat**:");
+    expect(prompt).toContain("**speak**:");
+
+    // Rule block header
+    expect(prompt).toContain("## 调用规则（技术提示，不是叙事）");
+    expect(prompt).toContain("**speak**: 必填 target_id");
+    expect(prompt).toContain("**move**: 必填 target_node_id");
+
+    // Separator
+    expect(prompt).toContain("---");
+
+    // No old guidance bracket format in hint/rule blocks
+    expect(prompt).not.toContain("【");
   });
 });
 

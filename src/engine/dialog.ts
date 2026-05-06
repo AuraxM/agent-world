@@ -1006,6 +1006,9 @@ export async function runDialogPhase(
         );
         memoryWrites.push(makeMemory(conv.initiatorId, tick, maxImportance, `和 ${responder.name} 聊了：${summary}`));
         memoryWrites.push(makeMemory(conv.acceptorId, tick, maxImportance, `和 ${opener.name} 聊了：${summary}`));
+        const convDuration = tick - conv.tickStarted;
+        opener.emotion.social_satiety = clamp(opener.emotion.social_satiety + convDuration, -4, 4);
+        responder.emotion.social_satiety = clamp(responder.emotion.social_satiety + convDuration, -4, 4);
         dialogEvents.push({
           id: `evt-conv-${conv.id}`,
           worldId: opener.worldId, tick, category: "social", description: summary,

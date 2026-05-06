@@ -508,15 +508,15 @@ describe("buildUserPrompt hint/rule layered blocks", () => {
       allCharacters: [baseCharacter],
     });
 
-    // Hint block header
+    // Hint block: verify actual triggerHint content, not just formatting
     expect(prompt).toContain("## 你此刻能做的事");
-    expect(prompt).toContain("**eat**:");
-    expect(prompt).toContain("**speak**:");
+    expect(prompt).toContain("**eat**: 感到饥饿时使用");
+    expect(prompt).toContain("**speak**: 身边有人、想发起对话交流时使用。");
 
-    // Rule block header
+    // Rule block: verify actual paramRule content
     expect(prompt).toContain("## 调用规则（技术提示，不是叙事）");
-    expect(prompt).toContain("**speak**: 必填 target_id");
-    expect(prompt).toContain("**move**: 必填 target_node_id");
+    expect(prompt).toContain("**speak**: 必填 target_id（说话对象）+ free_text（说什么）。");
+    expect(prompt).toContain("**move**: 必填 target_node_id（目的地 ID，在地图中查找）+ reason（移动原因）。可选 arrival_action。");
 
     // Separator
     expect(prompt).toContain("---");

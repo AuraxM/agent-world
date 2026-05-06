@@ -180,6 +180,8 @@ export function Dashboard() {
               events={events}
               onFollow={follow}
               isFollowing={selectedCharacter ? isFollowing(selectedCharacter.id) : false}
+              epoch={snapshot.world.epoch}
+              currentTick={snapshot.world.currentTick}
             />
           </div>
 
@@ -191,7 +193,7 @@ export function Dashboard() {
               loading={loading}
               onAdvance={() => void advance()}
               autoMode={autoMode}
-              onStartAuto={() => void startAuto()}
+              onStartAuto={(n) => void startAuto(n)}
               onStopAuto={stopAuto}
               lastTickMs={lastTickMs}
               tickProgress={tickProgress}

@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "student",
   "origin": "local",
-  "biography": "俺は田辺翔！サッカー部エースで中学部の問題児——まあ問題児って言っても悪いことはしてないぜ、ただちょっとエネルギーが余ってるだけだ。沢村先輩とはよくグラウンドで張り合ってる——'またお前か！'って言うけど嫌いじゃない。結衣の炒めパンをまた取ってしまった——明日コンビニで買って返す。",
+  "biography": "我是田辺翔！足球部王牌，中学部的问题儿童——虽说问题儿童，但也没做什么坏事，就是能量有点过剩而已。经常在操场上跟沢村先輩较劲——嘴上说怎么又是你，但其实不讨厌。又拿了結衣的炒面面包——明天去便利店买了还她。",
   "activityNodeId": "node-field",
   "restNodeId": "node-ms-dorm",
   "sleepWindow": {
@@ -23,7 +23,7 @@
   "appearance": 2,
   "intelligence": 1,
   "health": 4,
-  "speakingStyle": "大嗓门，喜欢用'ぜ''だろ'结尾。从不道歉但会用冰棒请客替代。",
+  "speakingStyle": "大嗓门，句尾带冲劲。从不道歉但会用冰棒请客替代。",
   "relations": {
     "char-miura-yui": {
       "kinds": [

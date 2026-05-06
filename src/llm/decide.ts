@@ -153,6 +153,7 @@ async function callLLMWithRetry(
 
   const tools: ChatCompletionTool[] = [tool, buildRecallTool(), buildMemorizeTool()];
 
+  let lastResponseSnapshot = "(no response)";
   for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
     const response = await client.chat.completions.create({
       model: getModelNameForEntry(entryName),
@@ -161,9 +162,10 @@ async function callLLMWithRetry(
       tools,
       ...(extra as Record<string, unknown>),
     });
+    lastResponseSnapshot = llmResponseSnapshot(response);
 
     const msg = response.choices[0]?.message;
-    if (!msg) throw new Error("LLM 返回空 message");
+    if (!msg) throw new Error(`LLM 返回空 message。响应快照：${lastResponseSnapshot}`);
 
     // 保留 reasoning_content，追加为 assistant 消息
     messages.push(captureAssistantMsg(msg));
@@ -285,7 +287,7 @@ async function callLLMWithRetry(
     }
   }
 
-  throw new Error(`${fallbackLabel} ${MAX_TOOL_CALL_ROUNDS} 轮均未返回 tool_call`);
+  throw new Error(`${fallbackLabel} ${MAX_TOOL_CALL_ROUNDS} 轮均未返回 tool_call。最后响应：${lastResponseSnapshot}`);
 }
 
 async function callLLM(input: DecideInput): Promise<Action> {
@@ -365,7 +367,7 @@ function payloadToAction(actionType: string, p: Record<string, any>, actorId: st
 
 function waitFallback(input: DecideInput, reason: string): Action {
   return {
-    type: "wait",
+    type: "look_around",
     actorId: input.character.id,
     reasoning: `LLM 调用失败：${reason}`,
     selfImportance: 1,
@@ -374,10 +376,44 @@ function waitFallback(input: DecideInput, reason: string): Action {
 
 function errorMessage(err: unknown): string {
   if (err instanceof OpenAI.APIError) {
-    return `${err.constructor.name} status=${err.status}: ${err.message}`;
+    const parts = [`${err.constructor.name} status=${err.status}: ${err.message}`];
+    if ((err as any).error) parts.push(`body=${JSON.stringify((err as any).error).slice(0, 2000)}`);
+    return parts.join(" | ");
   }
   if (err instanceof Error) return err.message;
   return String(err);
+}
+
+/** 从 LLM response 中提取关键内容用于日志，最多保留 maxLen 字符。 */
+function llmResponseSnapshot(resp: any, maxLen = 2000): string {
+  if (!resp) return "(no response)";
+  try {
+    const choices = resp.choices;
+    if (!choices || choices.length === 0) return "(no choices)";
+    const msg = choices[0]?.message;
+    if (!msg) return `choices[0].message is null; finish_reason=${choices[0]?.finish_reason}; raw=${JSON.stringify(choices[0]).slice(0, maxLen)}`;
+    const parts: string[] = [];
+    if (msg.role) parts.push(`role=${msg.role}`);
+    if (msg.content) {
+      const c = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+      parts.push(`content=${c.slice(0, maxLen)}`);
+    }
+    if (msg.tool_calls) {
+      const calls = (msg.tool_calls as any[]).map((tc: any) => ({
+        name: tc.function?.name,
+        args: (tc.function?.arguments ?? "").slice(0, 500),
+      }));
+      parts.push(`tool_calls=${JSON.stringify(calls).slice(0, maxLen)}`);
+    }
+    if (msg.reasoning_content) {
+      parts.push(`reasoning=${(msg.reasoning_content as string).slice(0, 500)}`);
+    }
+    if ((msg as any).refusal) parts.push(`refusal=${(msg as any).refusal}`);
+    const result = parts.join(" | ");
+    return result.length > maxLen ? result.slice(0, maxLen) : result;
+  } catch {
+    return "(failed to serialize response)";
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -478,13 +514,6 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
   const extra: Record<string, unknown> = {};
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
-  dialogLog.info("LLM dialog_turn 请求", {
-    self: input.self.name,
-    peer: input.peer.name,
-    hasPendingAction: !!input.pendingAction,
-    dialogueActionCount: input.dialogueActions?.length ?? 0,
-  });
-
   const nowStr = formatCurrentTime(input.tick ?? 0, input.epoch ?? 0);
   const timeLine = language === "zh"
     ? `当前游戏时间：${nowStr}。`
@@ -497,6 +526,13 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     : language === "en"
       ? `You are an NPC in a role-playing engine. You are speaking with another person. ${timeLine} Respond naturally based on your personality, current situation, and conversation history. Do not repeat what the other person just said.\n\n${languageInstruction(language)}`
       : `あなたはロールプレイングエンジンの NPC です。他の人と会話しています。${timeLine} あなたの性格、現在の状況、会話の履歴に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。\n\n${languageInstruction(language)}`;
+
+  dialogLog.info("LLM dialog_turn 请求", {
+    self: input.self.name,
+    peer: input.peer.name,
+    hasPendingAction: !!input.pendingAction,
+    dialogueActionCount: input.dialogueActions?.length ?? 0,
+  });
 
   const messages: Array<Record<string, unknown>> = [
     { role: "system", content: systemPrompt },
@@ -518,7 +554,9 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
       if (!message) {
         const errMsg = "LLM 返回了空 message。请重试，调用相应的工具。";
         dialogLog.warn("LLM dialog_turn 返回空 message", {
-          self: input.self.name, round: round + 1,
+          self: input.self.name,
+          round: round + 1,
+          llmResponse: llmResponseSnapshot(response),
         });
         if (round < MAX_TOOL_CALL_ROUNDS - 1) {
           messages.push({ role: "user", content: errMsg });
@@ -545,6 +583,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
           self: input.self.name,
           round: round + 1,
           hasContent: hasText,
+          llmResponse: llmResponseSnapshot(response),
         });
         if (round < MAX_TOOL_CALL_ROUNDS - 1) {
           messages.push({ role: "user", content: feedback });
@@ -629,6 +668,26 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
             continue;
           }
 
+          const timeLabel = `${year}年${month}月${day}日 ${String(hour).padStart(2, "0")}:00`;
+          if (input.self.notebook.some((e: any) => e.scheduledTick === scheduledTick)) {
+            if (previousFails === 0) {
+              messages.push({ role: "tool", tool_call_id: t.id, content: `[${NBR}] ${timeLabel} 已经有约了。请选择其他时间。` });
+            } else {
+              messages.push({ role: "tool", tool_call_id: t.id, content: `[${NBR}] ${timeLabel} 仍有冲突，放弃记录。你可以继续对话或结束。` });
+            }
+            continue;
+          }
+
+          const TICKS_PER_HOUR = 5;
+          if (scheduledTick - (input.tick ?? 0) < TICKS_PER_HOUR) {
+            if (previousFails === 0) {
+              messages.push({ role: "tool", tool_call_id: t.id, content: `[${NBR}] ${timeLabel} 马上就要到了，不需要备忘。请选择更晚的时间。` });
+            } else {
+              messages.push({ role: "tool", tool_call_id: t.id, content: `[${NBR}] ${timeLabel} 仍太近了，放弃记录。你可以继续对话或结束。` });
+            }
+            continue;
+          }
+
           const entry: import("@/domain/types").NotebookEntry = {
             id: createEntryId(),
             scheduledTick,
@@ -637,7 +696,6 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
           };
           input.self.notebook.push(entry);
           saveNotebookEntry(input.self.worldId, input.self.id, entry);
-          const timeLabel = `${year}年${month}月${day}日 ${String(hour).padStart(2, "0")}:00`;
           messages.push({ role: "tool", tool_call_id: t.id, content: `已记录到记事本：${timeLabel} — ${free_text}` });
           // Also push a system line to the transcript so the LLM doesn't repeat the call
           input.transcript.push({
@@ -671,7 +729,11 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
           const jsonErr = e instanceof Error ? e.message : String(e);
           const feedback = `你调用了 ${name}，但 arguments 不是合法 JSON：\n\n\`\`\`json\n${t.function.arguments}\n\`\`\`\n\nJSON 解析错误：${jsonErr}\n\n请修正 JSON 格式后重试。`;
           dialogLog.warn("LLM dialog_turn JSON 解析失败", {
-            self: input.self.name, round: round + 1, tool: name, error: jsonErr,
+            self: input.self.name,
+            round: round + 1,
+            tool: name,
+            error: jsonErr,
+            rawArgs: t.function.arguments?.slice(0, 2000),
           });
           messages.push({ role: "user", content: feedback });
           hasError = true;
@@ -776,6 +838,12 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
         self: input.self.name,
         peer: input.peer.name,
         error: errMsg,
+        ...(err instanceof OpenAI.APIError
+          ? {
+              status: err.status,
+              errorBody: (err as any).error ? JSON.stringify((err as any).error).slice(0, 2000) : undefined,
+            }
+          : {}),
       });
       if (round < MAX_TOOL_CALL_ROUNDS - 1) {
         messages.push({ role: "user", content: `调用失败：${errMsg}\n\n请重试。` });
@@ -834,6 +902,7 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<{ s
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
   let lastError: string | undefined;
+  let lastResponseSnapshot = "(no response)";
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
@@ -849,19 +918,20 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<{ s
         tools: [tool],
         ...extra,
       });
+      lastResponseSnapshot = llmResponseSnapshot(response);
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.find(
         (c) => c.type === "function" && c.function.name === DIALOG_SUMMARY_TOOL_NAME,
       );
       if (!toolCall || toolCall.type !== "function") {
-        throw new Error("LLM 没有返回 dialog_summary tool_call");
+        throw new Error(`LLM 没有返回 dialog_summary tool_call。响应：${lastResponseSnapshot}`);
       }
 
       const parsed = JSON.parse((toolCall as any).function.arguments);
       const result = DialogSummarySchema.safeParse(parsed);
       if (!result.success) {
-        throw new Error(`DialogSummary 参数不符合 schema：${result.error.message}`);
+        throw new Error(`DialogSummary 参数不符合 schema：${result.error.message}。rawArgs：${(toolCall as any).function.arguments?.slice(0, 1000)}`);
       }
 
       summaryLog.info("LLM dialog_summarize 成功", {
@@ -879,6 +949,7 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<{ s
         turns: input.transcript.length,
         attempt,
         error: lastError,
+        llmResponse: lastResponseSnapshot,
       });
       if (attempt === 0) continue;
     }
@@ -888,6 +959,7 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<{ s
     responder: input.responderName,
     turns: input.transcript.length,
     lastError,
+    llmResponse: lastResponseSnapshot,
   });
   return { summary: `（摘要生成失败：双方聊了 ${input.transcript.length} 句）` };
 }
@@ -920,6 +992,7 @@ export async function llmMemoryCompress(args: {
 
   memoryLog.info("LLM memory_compress 请求");
 
+  let lastResponseSnapshot = "(no response)";
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
@@ -935,25 +1008,32 @@ export async function llmMemoryCompress(args: {
         tools: [tool],
         ...extra,
       });
+      lastResponseSnapshot = llmResponseSnapshot(response);
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.find(
         (c) => c.type === "function" && c.function.name === MEMORY_SUMMARY_TOOL_NAME,
       );
       if (!toolCall || toolCall.type !== "function") {
-        throw new Error("LLM 没有返回 memory_summary tool_call");
+        throw new Error(`LLM 没有返回 memory_summary tool_call。响应：${lastResponseSnapshot}`);
       }
 
       const parsed = JSON.parse(toolCall.function.arguments);
       const result = MemorySummarySchema.safeParse(parsed);
       if (!result.success) {
-        throw new Error(`MemorySummary 参数不符合 schema：${result.error.message}`);
+        throw new Error(`MemorySummary 参数不符合 schema：${result.error.message}。rawArgs：${toolCall.function.arguments.slice(0, 1000)}`);
       }
       return result.data.summary;
-    } catch {
+    } catch (err) {
+      memoryLog.warn("LLM memory_compress 失败", {
+        attempt,
+        error: err instanceof Error ? err.message : String(err),
+        llmResponse: lastResponseSnapshot,
+      });
       if (attempt === 0) continue;
     }
   }
+  memoryLog.error("LLM memory_compress 彻底失败", { llmResponse: lastResponseSnapshot });
   return "（摘要生成失败）";
 }
 
@@ -1012,6 +1092,7 @@ export async function llmAcceptDecide(
     requester: input.requesterName,
   });
 
+  let lastResponseSnapshot = "(no response)";
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
@@ -1027,23 +1108,24 @@ export async function llmAcceptDecide(
         tools: [tool],
         ...extra,
       });
+      lastResponseSnapshot = llmResponseSnapshot(response);
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.find(
         (c) => c.type === "function" && c.function.name === ACCEPT_TOOL_NAME,
       );
       if (!toolCall || toolCall.type !== "function") {
-        throw new Error("LLM 没有返回 accept_decision tool_call");
+        throw new Error(`LLM 没有返回 accept_decision tool_call。响应：${lastResponseSnapshot}`);
       }
 
       const parsed = JSON.parse(toolCall.function.arguments);
       const result = AcceptDecisionSchema.safeParse(parsed);
       if (!result.success) {
-        throw new Error(`AcceptDecision 参数不符合 schema：${result.error.message}`);
+        throw new Error(`AcceptDecision 参数不符合 schema：${result.error.message}。rawArgs：${toolCall.function.arguments.slice(0, 1000)}`);
       }
       // Validate type field
       if (result.data.action_type !== "accept_speak" && result.data.action_type !== "reject_speak") {
-        throw new Error(`非法 action_type：${result.data.action_type}`);
+        throw new Error(`非法 action_type：${result.data.action_type}。rawArgs：${toolCall.function.arguments.slice(0, 1000)}`);
       }
       return {
         type: result.data.action_type,
@@ -1051,10 +1133,17 @@ export async function llmAcceptDecide(
         reasoning: result.data.reasoning,
         selfImportance: result.data.self_importance,
       };
-    } catch {
+    } catch (err) {
+      acceptLog.warn("LLM accept_decision 失败", {
+        attempt,
+        self: input.character.name,
+        error: err instanceof Error ? err.message : String(err),
+        llmResponse: lastResponseSnapshot,
+      });
       if (attempt === 0) continue;
     }
   }
+  acceptLog.error("LLM accept_decision 彻底失败，默认拒绝", { llmResponse: lastResponseSnapshot });
   return { type: "reject_speak", targetId: input.requesterId, reasoning: "决策失败默认拒绝", selfImportance: 1 };
 }
 
@@ -1066,7 +1155,7 @@ export async function llmSalvageDecide(
   input: DecideInput & { rejectReason: string },
 ): Promise<Action> {
   if (!hasApiKey()) return {
-    type: "wait",
+    type: "look_around",
     actorId: input.character.id,
     reasoning: `补救决策失败（无 provider）：${input.rejectReason}`,
     selfImportance: 1,
@@ -1149,11 +1238,16 @@ export async function llmSalvageDecide(
           : undefined,
       };
     } catch (err) {
+      salvageLog.warn("LLM salvage 失败", {
+        attempt,
+        角色: input.character.name,
+        error: err instanceof Error ? err.message : String(err),
+      });
       if (attempt === 0) continue;
       lastAction = {
-        type: "wait",
+        type: "look_around",
         actorId: input.character.id,
-        reasoning: `补救决策违规，回退等待：${err instanceof Error ? err.message : String(err)}`,
+        reasoning: `补救决策违规，环顾四周：${err instanceof Error ? err.message : String(err)}`,
         selfImportance: 1,
       };
     }
@@ -1186,6 +1280,7 @@ export async function llmReflection(args: { prompt: string; language?: Language 
   const extra: Record<string, unknown> = {};
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
+  let lastResponseSnapshot = "(no response)";
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await client.chat.completions.create({
@@ -1198,16 +1293,25 @@ export async function llmReflection(args: { prompt: string; language?: Language 
         tools: [tool],
         ...extra,
       });
+      lastResponseSnapshot = llmResponseSnapshot(response);
       const message = response.choices[0]?.message;
       const tc = (message?.tool_calls ?? []).find(
         (c: any) => c.type === "function" && c.function.name === REFLECTION_TOOL_NAME,
       ) as any;
-      if (!tc) throw new Error("LLM 没有返回 reflection tool_call");
+      if (!tc) throw new Error(`LLM 没有返回 reflection tool_call。响应：${lastResponseSnapshot}`);
       const parsed = JSON.parse(tc.function.arguments);
       const result = ReflectionSchema.safeParse(parsed);
-      if (!result.success) throw new Error(`Reflection 参数不符合 schema：${result.error.message}`);
+      if (!result.success) throw new Error(`Reflection 参数不符合 schema：${result.error.message}。rawArgs：${tc.function.arguments.slice(0, 1000)}`);
       return result.data;
-    } catch { if (attempt === 0) continue; }
+    } catch (err) {
+      memoryLog.warn("LLM reflection 失败", {
+        attempt,
+        error: err instanceof Error ? err.message : String(err),
+        llmResponse: lastResponseSnapshot,
+      });
+      if (attempt === 0) continue;
+    }
   }
+  memoryLog.error("LLM reflection 彻底失败", { llmResponse: lastResponseSnapshot });
   return {};
 }

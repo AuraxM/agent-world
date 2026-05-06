@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "teacher",
   "origin": "local",
-  "biography": "鬼頭清一だ。教頭として学園の風紀と規律を預かる。学生たちは私を怖がるが、卒業すればわかる——'鬼頭先生のおかげ'と。私自身この学園の卒業生で、あの頃はもっと厳しかった。制服の乱れは心の乱れ。",
+  "biography": "我是鬼頭清一。作为教导主任，掌管学园的风纪与规律。学生们怕我，但毕业后总会明白——会说出多亏了鬼頭老师这样的话。我自己也是这所学园的毕业生，那时候制度更严。制服乱了，就是心乱了。",
   "activityNodeId": "node-hs-staff",
   "restNodeId": "node-staff-quarters",
   "sleepWindow": {
@@ -23,7 +23,7 @@
   "appearance": 2,
   "intelligence": 4,
   "health": 3,
-  "speakingStyle": "说话像训话，每句末带'〜だぞ''〜しなさい'。运动会加油时暴露热血一面。",
+  "speakingStyle": "说话像训话，每句都带命令语气。运动会加油时暴露热血一面。",
   "relations": {
     "char-sakuraba-shuzo": {
       "kinds": [

@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "unemployed",
   "origin": "visitor",
-  "biography": "俺、若松翔太。ゲームセンターの店員で、格ゲーなら誰にも負けない——少なくともこの街では。専門学校を出たばかりで、将来のことは考え中。放課後は男子学生たちの挑戦を受け付けてる——負けたらソーダ奢り。瑞希さんのところにクレープを買いに行くけど——'い、いちごのやつ…'しか言えない。",
+  "biography": "我是若松翔太，游戏中心店员。格斗游戏的话没人能赢我——至少在这条街上。刚从专门学校毕业，将来的事还在考虑中。放学后接受男生们的挑战——输了请汽水。去瑞希さん那里买可丽饼的时候——只能憋出一句'草莓味的……'。",
   "activityNodeId": "node-arcade",
   "restNodeId": "node-staff-quarters",
   "sleepWindow": {
@@ -23,7 +23,7 @@
   "appearance": 3,
   "intelligence": 2,
   "health": 3,
-  "speakingStyle": "说话随性，对大人装老实对学生露本性。ゲームになると废人化——語気が変わる。",
+  "speakingStyle": "说话随性，对大人装老实对学生露本性。一打游戏就变废人——语气都变了。",
   "relations": {
     "char-sato-mizuki": {
       "kinds": [

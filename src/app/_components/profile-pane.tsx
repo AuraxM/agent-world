@@ -2,7 +2,7 @@
 
 import { type ReactNode, useState } from "react";
 import type { Character, MapNode, Personality, WorldEvent } from "@/domain/types";
-import { formatActionWindow, vitalThreshold } from "../_lib/profile-format";
+import { formatActionWindow, formatScheduledTime, vitalThreshold } from "../_lib/profile-format";
 import { characterEmoji } from "../_lib/sprite";
 import { indexNodes } from "../_lib/world";
 
@@ -159,6 +159,8 @@ export function ProfilePane({
   events,
   onFollow,
   isFollowing,
+  epoch,
+  currentTick,
 }: {
   character: Character | null;
   nodes: MapNode[];
@@ -167,6 +169,8 @@ export function ProfilePane({
   events?: WorldEvent[];
   onFollow?: (id: string) => void;
   isFollowing?: boolean;
+  epoch: number;
+  currentTick: number;
 }) {
   const characterId = character?.id;
   const [profileTab, setProfileTab] = useState<"profile" | "monologue" | "relations" | "history">("profile");
@@ -176,6 +180,7 @@ export function ProfilePane({
   const [dailyExpanded, setDailyExpanded] = useState(false);
   const [longExpanded, setLongExpanded] = useState(false);
   const [impressionPopover, setImpressionPopover] = useState<{ targetId: string; x: number; y: number } | null>(null);
+  const [notebookExpanded, setNotebookExpanded] = useState(false);
   const [lastCharacterId, setLastCharacterId] = useState(characterId);
   if (lastCharacterId !== characterId) {
     setLastCharacterId(characterId);
@@ -186,6 +191,7 @@ export function ProfilePane({
     setDailyExpanded(false);
     setLongExpanded(false);
     setImpressionPopover(null);
+    setNotebookExpanded(false);
   }
 
   if (!character) {
@@ -223,6 +229,9 @@ export function ProfilePane({
   );
   const totalRelations = sortedRelations.length;
   const visibleRelations = relationsExpanded ? sortedRelations : sortedRelations.slice(0, 5);
+  const sortedNotebook = [...character.notebook].sort((a, b) => a.scheduledTick - b.scheduledTick);
+  const totalNotebook = sortedNotebook.length;
+  const visibleNotebook = notebookExpanded ? sortedNotebook : sortedNotebook.slice(0, 5);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -422,6 +431,32 @@ export function ProfilePane({
                   </div>
                 )}
               </>
+            )}
+          </section>
+
+          {/* 备忘记事本 */}
+          <section>
+            <SectionLabel
+              shown={Math.min(visibleNotebook.length, totalNotebook)}
+              total={totalNotebook}
+              expanded={notebookExpanded}
+              onToggle={() => setNotebookExpanded((v) => !v)}
+            >
+              备忘记事本
+            </SectionLabel>
+            {totalNotebook === 0 ? (
+              <p className="text-game-sm text-(--color-pixel-muted)">暂无记事</p>
+            ) : (
+              <ul className="space-y-1">
+                {visibleNotebook.map((e) => (
+                  <li key={e.id} className="text-game-sm text-(--color-pixel-fg) leading-snug">
+                    <span className="text-(--color-pixel-muted)">
+                      {formatScheduledTime(e.scheduledTick, epoch)}
+                    </span>
+                    {" "}{e.content}
+                  </li>
+                ))}
+              </ul>
             )}
           </section>
 

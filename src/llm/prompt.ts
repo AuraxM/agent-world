@@ -91,6 +91,13 @@ const INTELLIGENCE_LABELS: Record<number, string> = {
   4: "你头脑灵活，遇事容易想到不同的做法，做决定时会在 reasoning 中设想多种可能。",
 };
 
+const HEALTH_LABELS: Record<number, string> = {
+  1: "体弱",
+  2: "健康",
+  3: "健康",
+  4: "非常健康",
+};
+
 function describePersonality(p: Personality): string[] {
   return [
     `内外向(E/I)：${EI_LABELS[p.ei] ?? String(p.ei)}`,
@@ -737,6 +744,9 @@ export function buildCharacterStaticBlock(
   }
   lines.push(
     `- 思维特点：${INTELLIGENCE_LABELS[character.intelligence] ?? INTELLIGENCE_LABELS[2]}`,
+  );
+  lines.push(
+    `- 健康状况：${HEALTH_LABELS[character.health] ?? HEALTH_LABELS[2]}`,
   );
   if (character.speakingStyle) {
     lines.push(`- 说话风格：${character.speakingStyle}`);

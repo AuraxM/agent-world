@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "teacher",
   "origin": "local",
-  "biography": "俺は大城健、体育教師で部活総監督！甲子園準優勝投手だった——今はその経験をこいつらに伝える番だ。海斗の球はまだ荒いが筋がいい。陸はもうすぐ卒業か——寂しいな。鬼頭教頭とは意見が合わないこともあるが、互いに認めてる。体育館倉庫の鍵は俺の腰に常駐——'なくしたら鬼頭に殺される'。",
+  "biography": "我是大城健，体育教师兼全部活总监督！曾是甲子园准优胜投手——现在是把那些经验传给这些小子们的时候了。海斗的球还粗糙但底子好。陸也快毕业了啊——真有点寂寞。和鬼頭教头时有意见不合，但彼此认可。体育馆仓库的钥匙永远挂在我腰上——弄丢了会被鬼頭杀了。",
   "activityNodeId": "node-gym-storage",
   "restNodeId": "node-staff-quarters",
   "sleepWindow": {
@@ -23,7 +23,7 @@
   "appearance": 2,
   "intelligence": 2,
   "health": 4,
-  "speakingStyle": "说话是用喊的，句末'〜ぞ！''行くぞ！'。但对受伤的学生声音会突然变温柔。",
+  "speakingStyle": "说话是用喊的，每句都带冲劲。但对受伤的学生声音会突然变温柔。",
   "relations": {
     "char-sawamura-kaito": {
       "kinds": [

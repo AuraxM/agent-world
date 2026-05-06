@@ -1,6 +1,8 @@
 import type { OngoingAction } from "@/domain/types";
 import { TICKS_PER_HOUR } from "@/domain/enums";
 
+const MS_PER_TICK = (60 / TICKS_PER_HOUR) * 60 * 1000;
+
 /** Stat-bar color tier. Caller passes the thresholds — intentionally not a max-derived helper because vitals (0..16) and stress (0..4) use different cutoffs. */
 export function vitalThreshold(
   value: number,
@@ -27,4 +29,13 @@ export function formatActionWindow(action: OngoingAction): string {
     return `${action.description} (${step}/${total}步, t${action.startedAt}→t${action.endsAt})`;
   }
   return `${action.description} (t${action.startedAt}→t${action.endsAt})`;
+}
+
+/** 格式化记事本条目的预定时间，如 "第3日 14:00"。 */
+export function formatScheduledTime(tick: number, epoch: number): string {
+  const day = Math.floor(tick / (24 * TICKS_PER_HOUR));
+  const date = new Date(epoch + tick * MS_PER_TICK);
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
+  return `第${day}日 ${hh}:${mm}`;
 }

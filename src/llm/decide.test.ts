@@ -179,7 +179,8 @@ describe("llmDecide (OpenAI-compatible function calling)", () => {
 
   it("正常 tool_call 转换为 Action", async () => {
     const fake = makeFakeClient(async () =>
-      makeFakeCompletion("action_think", {
+      makeFakeCompletion("decide_action", {
+        action_type: "think",
         reasoning: "我偏内向，倾向先沉思再行动。",
         self_importance: 2,
       }),
@@ -195,23 +196,37 @@ describe("llmDecide (OpenAI-compatible function calling)", () => {
 
   it("speak tool_call 携带 target_id", async () => {
     const fake = makeFakeClient(async () =>
-      makeFakeCompletion("action_speak", {
+      makeFakeCompletion("decide_action", {
+        action_type: "speak",
         target_id: "char-other",
+        free_text: "你好！",
         reasoning: "我有计划性，决定和对方谈谈。",
         self_importance: 3,
       }),
     );
     __setLLMClientForTest(FAKE_PROVIDER_ID, fake);
 
-    const action = await llmDecide(baseInput());
+    const companion: typeof baseCtx.self = {
+      ...baseCtx.self,
+      id: "char-other",
+      name: "其他角色",
+    };
+    const input = {
+      ...baseInput(),
+      companions: [companion],
+      allCharacters: [baseCtx.self, companion],
+      ctx: { ...baseCtx, companions: [companion] },
+    };
+    const action = await llmDecide(input);
     expect(action.type).toBe("speak");
     expect(action.targetId).toBe("char-other");
     expect(action.selfImportance).toBe(3);
   });
 
-  it("tool_call 参数不符合 schema → wait fallback", async () => {
+  it("tool_call 参数不符合 schema → look_around fallback", async () => {
     const fake = makeFakeClient(async () =>
-      makeFakeCompletion("action_think", {
+      makeFakeCompletion("decide_action", {
+        action_type: "think",
         reasoning: "x",
         self_importance: 99, // invalid: not in 1-5
       }),
@@ -219,26 +234,26 @@ describe("llmDecide (OpenAI-compatible function calling)", () => {
     __setLLMClientForTest(FAKE_PROVIDER_ID, fake);
 
     const action = await llmDecide(baseInput());
-    expect(action.type).toBe("wait");
+    expect(action.type).toBe("look_around");
     expect(action.reasoning).toMatch(/LLM 调用失败/);
   });
 
-  it("API 抛错 → wait fallback，reasoning 含错误信息", async () => {
+  it("API 抛错 → look_around fallback，reasoning 含错误信息", async () => {
     const fake = makeFakeClient(async () => {
       throw new Error("network kaput");
     });
     __setLLMClientForTest(FAKE_PROVIDER_ID, fake);
 
     const action = await llmDecide(baseInput());
-    expect(action.type).toBe("wait");
+    expect(action.type).toBe("look_around");
     expect(action.reasoning).toContain("network kaput");
   });
 
-  it("无 active provider → 立即 wait fallback", async () => {
+  it("无 active provider → 立即 look_around fallback", async () => {
     vi.mocked(providers.getDefaultProviderId).mockReturnValue("missing");
     vi.mocked(providers.getProvider).mockReturnValue(undefined);
     const action = await llmDecide(baseInput());
-    expect(action.type).toBe("wait");
+    expect(action.type).toBe("look_around");
     expect(action.reasoning).toContain("没有激活的 LLM provider");
   });
 });

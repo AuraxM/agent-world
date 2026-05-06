@@ -122,13 +122,12 @@ const DEFAULT_DECIDE: DecideFn = async (input) => {
   return llmDecide(input);
 };
 
-function fallbackWait(c: Character): Action {
+function fallbackLookAround(c: Character): Action {
   return {
-    type: "wait",
+    type: "look_around",
     actorId: c.id,
-    reasoning: "（fallback）暂时没有想做的事。",
+    reasoning: "（fallback）LLM 决策失败，环顾四周获取当前状态。",
     selfImportance: 1,
-    skipExecution: true,
   };
 }
 
@@ -350,7 +349,7 @@ export async function tick(
   }
   const baseTime = timeOfDay(fromTick, world.epoch); // hour/day/period 全局；isSleepHour 在循环内逐角色算
   const decideFn = options.forceWait
-    ? async (input: DecideInput) => fallbackWait(input.character)
+    ? async (input: DecideInput) => fallbackLookAround(input.character)
     : (options.decide ?? DEFAULT_DECIDE);
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
@@ -607,8 +606,14 @@ export async function tick(
           upcomingNotebookText,
         });
       } catch (err) {
-        log.warn("角色决策失败", { 角色: c.name, error: err instanceof Error ? err.message : String(err) });
-        action = fallbackWait(c);
+        log.warn("角色决策失败", {
+          角色: c.name,
+          error: err instanceof Error ? err.message : String(err),
+          ...(err && typeof err === "object" && "status" in err
+            ? { apiStatus: (err as any).status, apiErrorBody: JSON.stringify((err as any).error).slice(0, 2000) }
+            : {}),
+        });
+        action = fallbackLookAround(c);
         action.reasoning = `LLM 调用失败：${
           err instanceof Error ? err.message : String(err)
         }`;
@@ -712,13 +717,19 @@ export async function tick(
       const idx = settled.indexOf(result);
       const c = characters[idx];
       if (c) {
-        log.error("决策任务异常", { 角色: c?.name ?? "未知", error: errMsg });
-        const waitAction = fallbackWait(c);
-        waitAction.reasoning = `决策任务异常：${errMsg}`;
-        actionsForExecution.push(waitAction);
+        log.error("决策任务异常", {
+          角色: c?.name ?? "未知",
+          error: errMsg,
+          ...(result.reason && typeof result.reason === "object" && "status" in result.reason
+            ? { apiStatus: (result.reason as any).status, apiErrorBody: JSON.stringify((result.reason as any).error).slice(0, 2000) }
+            : {}),
+        });
+        const lookAction = fallbackLookAround(c);
+        lookAction.reasoning = `决策任务异常：${errMsg}`;
+        actionsForExecution.push(lookAction);
         allDecisions.push({
           characterId: c.id,
-          action: waitAction,
+          action: lookAction,
           success: false,
         });
       }

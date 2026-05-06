@@ -38,6 +38,9 @@ import { actionRegistry } from "@/domain/action-system";
 import { actionTypeFromToolName } from "@/domain/schemas";
 import type { Action, Character, WorldEvent } from "@/domain/types";
 import type { DecideInput } from "./tick";
+import { createLogger } from "@/util/logger";
+
+const log = createLogger("character-placement");
 
 const FACTS_LOOKBACK_TICKS = 48;
 
@@ -47,9 +50,9 @@ export interface DecideForCharacterResult {
   events: WorldEvent[];
 }
 
-function fallbackWait(c: Character, reason: string): Action {
+function fallbackLookAround(c: Character, reason: string): Action {
   return {
-    type: "wait",
+    type: "look_around",
     actorId: c.id,
     reasoning: `LLM 调用失败：${reason}`,
     selfImportance: 1,
@@ -173,7 +176,7 @@ export async function decideForCharacter(
         "@/llm/client"
       );
       if (!hasApiKey()) {
-        action = fallbackWait(c, "没有激活的 LLM provider");
+        action = fallbackLookAround(c, "没有激活的 LLM provider");
       } else {
         const {
           buildPerActionSchema,
@@ -204,6 +207,7 @@ export async function decideForCharacter(
           nodes,
         });
 
+        let lastRespSnapshot = "(no response)";
         try {
           const config = getEntryConfig("character_placement");
           const client = getLLMClientForEntry("character_placement");
@@ -228,9 +232,22 @@ export async function decideForCharacter(
               tools,
               ...extra,
             });
+            lastRespSnapshot = resp ? JSON.stringify({
+              choices: resp.choices?.map((ch: any) => ({
+                finish_reason: ch.finish_reason,
+                message: {
+                  role: ch.message?.role,
+                  content: typeof ch.message?.content === "string" ? ch.message.content.slice(0, 2000) : ch.message?.content,
+                  tool_calls: ch.message?.tool_calls?.map((tc: any) => ({
+                    name: tc.function?.name,
+                    args: tc.function?.arguments?.slice(0, 500),
+                  })),
+                },
+              })),
+            }).slice(0, 4000) : "(no response)";
 
             const msg = resp.choices[0]?.message;
-            if (!msg) throw new Error("LLM 返回空 message");
+            if (!msg) throw new Error(`LLM 返回空 message。响应：${lastRespSnapshot}`);
 
             // 保留 reasoning_content（DeepSeek 要求回传）
             const assistantMsg: Record<string, unknown> = { role: "assistant", content: msg.content ?? "" };
@@ -256,7 +273,7 @@ export async function decideForCharacter(
           }
 
           if (!actionType || !p) {
-            throw new Error(`LLM ${MAX_ROUNDS} 轮均未返回 tool_call`);
+            throw new Error(`LLM ${MAX_ROUNDS} 轮均未返回 tool_call。最后响应：${lastRespSnapshot}`);
           }
 
           action = {
@@ -289,7 +306,12 @@ export async function decideForCharacter(
               : err instanceof Error
                 ? err.message
                 : String(err);
-          action = fallbackWait(c, msg);
+          log.warn("角色放置决策 LLM 失败", {
+            角色: c.name,
+            error: msg,
+            llmResponse: lastRespSnapshot,
+          });
+          action = fallbackLookAround(c, msg);
         }
       }
     } else {
@@ -314,7 +336,7 @@ export async function decideForCharacter(
       });
     }
   } catch (err) {
-    action = fallbackWait(
+    action = fallbackLookAround(
       c,
       err instanceof Error ? err.message : String(err),
     );

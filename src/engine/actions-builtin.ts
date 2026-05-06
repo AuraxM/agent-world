@@ -493,6 +493,13 @@ export const addNotebookEntryAction: ActionDefinition = {
       const nowStr = formatCurrentTime(ctx.tick, ctx.epoch);
       return `目标时间（${year}年${month}月${day}日 ${hour}:00）必须在当前时间之后。当前是 ${nowStr}。`;
     }
+    const timeFormat = `${year}年${month}月${day}日 ${hour}:00`;
+    if (ctx.self.notebook.some(e => e.scheduledTick === scheduledTick)) {
+      return `${timeFormat} 已经有约了。`;
+    }
+    if (scheduledTick - ctx.tick < TICKS_PER_HOUR) {
+      return `${timeFormat} 马上就要到了，不需要备忘。`;
+    }
     return null;
   },
   execute(ctx, input) {
@@ -531,6 +538,43 @@ export const addNotebookEntryAction: ActionDefinition = {
   usableInDialogue: true,
 };
 
+export const lookAroundAction: ActionDefinition = {
+  type: "look_around",
+  duration: "instant",
+  check(_ctx) { return true; },
+  hint(ctx) {
+    return `环顾四周（查看 ${ctx.here.name} 的情况）`;
+  },
+  validateParams() { return null; },
+  execute(ctx, _input) {
+    const lines: string[] = [];
+    lines.push(`我环顾四周。我在 ${ctx.here.name}。`);
+
+    if (ctx.companions.length === 0) {
+      lines.push("周围没有其他人。");
+    } else {
+      const parts = ctx.companions.map((c) => {
+        const action = c.currentAction;
+        if (action) {
+          return `${c.name}（正在${action.description}）`;
+        }
+        return `${c.name}（站在原地）`;
+      });
+      lines.push(`周围有：${parts.join("、")}。`);
+    }
+
+    const memory = lines.join("");
+    return {
+      memory,
+      event: {
+        category: "inner",
+        description: `${ctx.self.name} 环顾四周，观察周围情况。`,
+        intensity: 1,
+      },
+    };
+  },
+};
+
 export const BUILTIN_ACTIONS: ActionDefinition[] = [
   eatAction,
   batheAction,
@@ -543,4 +587,5 @@ export const BUILTIN_ACTIONS: ActionDefinition[] = [
   waitAction,
   giveAction,
   addNotebookEntryAction,
+  lookAroundAction,
 ];

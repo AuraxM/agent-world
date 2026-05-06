@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "student",
   "origin": "local",
-  "biography": "俺は朝倉陽翔っす！中学で全国大会行ったバスケ特待生で、入学初日にバスケ部入りました。蓮先輩みたいになりたいっす——プレイも、人としても。妹の陽菜は俺と正反対で静かだけど、まあそこがいい。新学期一週間でクラスの名前全部覚えたっす、当たり前じゃないすか？",
+  "biography": "我是朝倉陽翔！中学参加过全国大会的篮球特待生，入学第一天就加入了篮球部。想像蓮先輩那样——球技也好，做人也罢。妹妹陽菜跟我正相反，安静得很，不过那就是她的好。开学一星期就记住了全班名字——这不是理所当然的嘛？",
   "activityNodeId": "node-gym",
   "restNodeId": "node-hs-boys-dorm",
   "sleepWindow": {
@@ -23,7 +23,7 @@
   "appearance": 3,
   "intelligence": 2,
   "health": 4,
-  "speakingStyle": "说话明快有活力，用'っす'结尾。对谁都用敬语但完全听不出距离感。",
+  "speakingStyle": "说话明快有活力，句尾自带亲近感。对谁都用敬语但完全听不出距离感。",
   "relations": {
     "char-kiriya-ren": {
       "kinds": [

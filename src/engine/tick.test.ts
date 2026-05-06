@@ -262,13 +262,13 @@ describe("tick engine v0", () => {
     expect(innerHunger).toBeTruthy();
   });
 
-  it("LLM 决策异常时降级为 wait", async () => {
+  it("LLM 决策异常时降级为 look_around", async () => {
     const decide = async () => {
       throw new Error("boom");
     };
     const r = await tickModule.tick("test-world", { decide });
-    // 全员 wait，无异常抛出
-    expect(r.decisions.every((d) => d.action.type === "wait")).toBe(true);
+    // 全员 look_around，无异常抛出
+    expect(r.decisions.every((d) => d.action.type === "look_around")).toBe(true);
     expect(
       r.decisions.every((d) => d.action.reasoning.includes("LLM")),
     ).toBe(true);

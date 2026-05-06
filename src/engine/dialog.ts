@@ -132,6 +132,113 @@ export type SalvageDecideFn = (input: {
 }) => Promise<Action>;
 
 // ---------------------------------------------------------------------------
+// resolveRequestChains — chain-breaking before acceptDecide
+// ---------------------------------------------------------------------------
+
+interface ChainResult {
+  valid: Array<{ requester: string; target: string; freeText: string }>;
+  rejected: Array<{ requester: string; target: string; reason: string }>;
+}
+
+/**
+ * 纯函数：在 acceptDecide 之前对单向 speak 请求做链式截断。
+ *
+ * 规则：构建请求链（A→B→C→D），从头节点（不被任何人 target 的 requester）
+ * 开始遍历，每访问两个节点（形成一个 pair），截断下一跳的请求。
+ *
+ * A→B→C→D → valid: [A→B, C→D], rejected: [B→C]
+ * A→B, B→C   → valid: [A→B],        rejected: [B→C]
+ */
+export function resolveRequestChains(
+  pendingAcceptances: Array<{ requester: string; target: string; freeText: string }>,
+  charById: Map<string, Character>,
+): ChainResult {
+  if (pendingAcceptances.length <= 1) {
+    return { valid: [...pendingAcceptances], rejected: [] };
+  }
+
+  const valid: ChainResult["valid"] = [];
+  const rejected: ChainResult["rejected"] = [];
+  const consumed = new Set<string>();
+  const processed = new Set<string>();
+
+  // Build outgoing edges and target set
+  const outgoing = new Map<string, typeof pendingAcceptances>();
+  const isTarget = new Set<string>();
+  for (const pa of pendingAcceptances) {
+    if (!outgoing.has(pa.requester)) outgoing.set(pa.requester, []);
+    outgoing.get(pa.requester)!.push(pa);
+    isTarget.add(pa.target);
+  }
+
+  const allRequesters = [...new Set(pendingAcceptances.map((pa) => pa.requester))];
+  const heads = allRequesters.filter((r) => !isTarget.has(r));
+
+  function walk(nodeId: string, depth: number) {
+    const reqs = outgoing.get(nodeId);
+    if (!reqs || reqs.length === 0) return;
+
+    for (const req of reqs) {
+      const key = `${req.requester}->${req.target}`;
+      if (processed.has(key)) continue;
+      if (consumed.has(req.target)) continue;
+
+      if (depth % 2 === 0) {
+        if (consumed.has(req.requester)) continue;
+        valid.push(req);
+        processed.add(key);
+        consumed.add(req.requester);
+        consumed.add(req.target);
+        walk(req.target, depth + 1);
+      } else {
+        rejected.push({
+          requester: req.requester,
+          target: req.target,
+          reason: `${charById.get(req.target)!.name} 正在和别人聊天`,
+        });
+        processed.add(key);
+      }
+      break;
+    }
+  }
+
+  for (const head of heads) {
+    walk(head, 0);
+  }
+
+  // Handle remaining: cycles, detached nodes not reached from any head
+  for (const pa of pendingAcceptances) {
+    const key = `${pa.requester}->${pa.target}`;
+    if (processed.has(key)) continue;
+
+    if (consumed.has(pa.requester)) {
+      processed.add(key);
+      continue;
+    }
+
+    if (consumed.has(pa.target)) {
+      rejected.push({
+        requester: pa.requester,
+        target: pa.target,
+        reason: `${charById.get(pa.target)!.name} 正在和别人聊天`,
+      });
+      processed.add(key);
+      consumed.add(pa.requester);
+      continue;
+    }
+
+    // Both free
+    valid.push(pa);
+    processed.add(key);
+    consumed.add(pa.requester);
+    consumed.add(pa.target);
+    walk(pa.target, 1);
+  }
+
+  return { valid, rejected };
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -467,6 +574,9 @@ async function runOneTickDialog(
         convId: conv.id,
         error: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack?.slice(0, 500) : undefined,
+        ...(err && typeof err === "object" && "status" in err
+          ? { apiStatus: (err as any).status, apiErrorBody: JSON.stringify((err as any).error).slice(0, 2000) }
+          : {}),
       });
       return { transcript, ended: true };
     }
@@ -702,6 +812,21 @@ export async function runDialogPhase(
     autoFails: rawPairing.autoFails,
   };
   const salvageTasks: Array<() => Promise<{ actorId: string; action: Action }>> = [];
+
+  // ── Chain resolution: break request chains before acceptDecide ──
+  const chainResult = resolveRequestChains(pairing.pendingAcceptances, charById);
+  pairing.pendingAcceptances = chainResult.valid;
+  for (const cr of chainResult.rejected) {
+    // Only salvage if requester is not already in a conversation
+    if (!consumedActorIds.has(cr.requester)) {
+      consumedActorIds.add(cr.requester);
+      memoryWrites.push(makeMemory(cr.requester, tick, 1, `想找 ${charById.get(cr.target)!.name} 说话但她在和别人聊天`));
+      salvageTasks.push(() =>
+        input.salvageDecide({ character: charById.get(cr.requester)!, tick, rejectReason: cr.reason, language: input.language })
+          .then((action) => ({ actorId: cr.requester, action })),
+      );
+    }
+  }
 
   // Salvage speakers whose target is already in an ongoing conversation
   for (const mp of rawPairing.mutualPairs) {

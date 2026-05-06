@@ -199,11 +199,11 @@ export function tickFromCalendar(
  */
 export function formatCurrentTime(tick: Tick, epoch: number): string {
   const date = new Date(epoch + tick * MS_PER_TICK);
-  const y = date.getUTCFullYear();
-  const M = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(date.getUTCDate()).padStart(2, "0");
-  const hh = String(date.getUTCHours()).padStart(2, "0");
-  const mm = String(date.getUTCMinutes()).padStart(2, "0");
+  const y = date.getFullYear();
+  const M = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
   return `${y}年${M}月${d}日 ${hh}:${mm}`;
 }
 

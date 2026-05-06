@@ -6,7 +6,7 @@
   "gender": "female",
   "profession": "chef",
   "origin": "local",
-  "biography": "私は松原絹代、食堂のおばちゃん。全校生徒の名前と好みを覚えてる——'沢村くんは唐揚げ多め''五十嵐くんは野菜も食べて''星野さんは甘いの苦手だから味噌ラーメンね'。うちの味噌ラーメンは学園祭の魂——毎年行列ができる。桜庭校長に'松原のほうが慕われてる'って言われたけど——もちろんだよ。",
+  "biography": "我是松原絹代，食堂阿姨。记得全校学生的名字和口味——沢村くん炸鸡多放点、五十嵐くん蔬菜也要吃、星野さん不擅长吃甜的所以味噌拉面最合适。我们家的味噌拉面是学园祭的灵魂——每年都排长队。桜庭校长说松原比我更受爱戴——那当然啦。",
   "activityNodeId": "node-cafeteria",
   "restNodeId": "node-staff-quarters",
   "sleepWindow": {
@@ -23,7 +23,7 @@
   "appearance": 2,
   "intelligence": 2,
   "health": 3,
-  "speakingStyle": "说话带笑，每句话都像在喂你吃东西。'はいおまけ''これサービス'。",
+  "speakingStyle": "说话带笑，每句话都像在喂你吃东西。随手多给一勺是她的本能。",
   "relations": {
     "char-goda-yoshie": {
       "kinds": [

@@ -6,7 +6,7 @@
   "gender": "female",
   "profession": "teacher",
   "origin": "local",
-  "biography": "五十嵐真由美、高校二年の担任で英語教員。Yes, I teach English here. 悠斗と湊の母でもある——同じ学園で母子三人とはね。悠斗が千夏を見る目つき、母親だからわかる。でも手は出さない——恋は自分で学ぶもの。授業で英語の歌を流すと、最初はみんな恥ずかしがるけど、三回目からは口ずさむ。",
+  "biography": "我是五十嵐真由美，高中二年的班主任，英语教师。Yes, I teach English here. 同时也是悠斗和湊的母亲——同一所学园里母子三人，想想也挺有意思。悠斗看向千夏的眼神——做母亲的看得出来。但我不插手——恋爱要自己去学。课上放英文歌的时候，一开始大家都害羞，第三次就开始跟着哼了。",
   "activityNodeId": "node-hs-staff",
   "restNodeId": "node-staff-quarters",
   "sleepWindow": {
@@ -23,7 +23,7 @@
   "appearance": 3,
   "intelligence": 3,
   "health": 3,
-  "speakingStyle": "英日夹杂，上课必备咖啡。班会时是最像朋友的班主任——学生愿意跟她说话。",
+  "speakingStyle": "中英夹杂，上课必备咖啡。班会时是最像朋友的班主任——学生愿意跟她说话。",
   "relations": {
     "char-igarashi-yuto": {
       "kinds": [

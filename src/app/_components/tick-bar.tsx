@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { formatGameTime } from "../_lib/format";
 
 export function TickBar({
@@ -19,13 +20,14 @@ export function TickBar({
   loading: boolean;
   onAdvance: () => void;
   autoMode: { running: boolean; total: number; done: number } | null;
-  onStartAuto: () => void;
+  onStartAuto: (n: number) => void;
   onStopAuto: () => void;
   lastTickMs: number | null;
   tickProgress?: { done: number; total: number } | null;
   onOpenInject: () => void;
 }) {
   const auto = autoMode?.running ?? false;
+  const [tickCount, setTickCount] = useState(120);
 
   return (
     <footer className="flex items-center gap-2 px-4 bg-gradient-to-b from-(--chrome) to-(--chrome-hi) border-t-2 border-(--border) shadow-[inset_0_1px_0_var(--border-amber))]">
@@ -54,24 +56,39 @@ export function TickBar({
       </div>
 
       {/* Group 4: Auto */}
-      <div className="pr-3 border-r border-(--border)">
+      <div className="flex items-center gap-1 pr-3 border-r border-(--border)">
         {auto ? (
-          <button
-            type="button"
-            onClick={onStopAuto}
-            className="px-3 py-1 text-pixel-sm bg-(--danger) text-(--panel) border border-(--border) cursor-pointer hover:brightness-110"
-          >
-            停止 ⏹
-          </button>
+          <>
+            <span className="text-pixel-xs text-(--text-on-frame)">
+              {autoMode!.done}/{autoMode!.total}
+            </span>
+            <button
+              type="button"
+              onClick={onStopAuto}
+              className="px-3 py-1 text-pixel-sm bg-(--danger) text-(--panel) border border-(--border) cursor-pointer hover:brightness-110"
+            >
+              停止 ⏹
+            </button>
+          </>
         ) : (
-          <button
-            type="button"
-            onClick={onStartAuto}
-            disabled={loading}
-            className="px-3 py-1 text-pixel-sm bg-(--border-amber) text-(--text-on-frame) border border-(--border) cursor-pointer disabled:opacity-50 hover:brightness-110"
-          >
-            ⏵⏵ 自动 24h
-          </button>
+          <>
+            <input
+              type="number"
+              min={1}
+              max={9999}
+              value={tickCount}
+              onChange={(e) => setTickCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              className="w-16 px-2 py-1 text-pixel-sm bg-(--frame) text-(--text-on-frame) border border-(--border) text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            <button
+              type="button"
+              onClick={() => onStartAuto(tickCount)}
+              disabled={loading}
+              className="px-3 py-1 text-pixel-sm bg-(--border-amber) text-(--text-on-frame) border border-(--border) cursor-pointer disabled:opacity-50 hover:brightness-110"
+            >
+              ⏵⏵ 自动
+            </button>
+          </>
         )}
       </div>
 

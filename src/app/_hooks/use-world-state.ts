@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { WorldEvent, Action } from "@/domain/types";
-import { TICKS_PER_HOUR } from "@/domain/enums";
 import type { WorldSnapshot } from "../_lib/api";
 
 /** 通过 ?world=<id> 切换世界；未指定时回退到默认演示世界。 */
@@ -241,7 +240,7 @@ export function useWorldState(): UseWorldState {
   }, [refresh, worldId, snapshot?.characters.length]);
 
   const startAuto = useCallback(
-    async (n: number = 24 * TICKS_PER_HOUR) => {
+    async (n: number = 120) => {
       if (loadingRef.current || autoRunningRef.current) return;
       autoRunningRef.current = true;
       shouldStopRef.current = false;

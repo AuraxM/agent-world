@@ -6,7 +6,7 @@
   "gender": "male",
   "profession": "teacher",
   "origin": "local",
-  "biography": "我是桜庭周三，在这所学园做了十五年校长。每天早晨站在正门对每个学生说'おはよう'——这是一天最重要的仪式。恋爱、部活、考试、进路——都是青春の一部。我管的不是校规，是看着这些年轻人认真活着的日常。",
+  "biography": "我是桜庭周三，在这所学园做了十五年校长。每天早晨站在正门对每个学生说早安——这是一天最重要的仪式。恋爱、部活、考试、进路——都是青春的一部分。我管的不是校规，是看着这些年轻人认真活着的日常。",
   "activityNodeId": "node-gate",
   "restNodeId": "node-staff-quarters",
   "sleepWindow": {

@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import {
   pairSpeakRequests,
+  resolveRequestChains,
   runDialogPhase,
   type AcceptDecideFn,
   type TurnDecideFn,
@@ -165,6 +166,159 @@ describe("pairSpeakRequests", () => {
     const r3 = pairSpeakRequests([speakAction("a", "b", "   ")], chars);
     expect(r3.autoFails).toHaveLength(1);
     expect(r3.autoFails[0].reason).toBe("invalid_request");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveRequestChains unit tests
+// ---------------------------------------------------------------------------
+
+describe("resolveRequestChains", () => {
+  function chainChar(id: string): Character {
+    return makeChar(id, "n1");
+  }
+
+  it("single request passes through", () => {
+    const chars = [chainChar("a"), chainChar("b")];
+    const r = resolveRequestChains(
+      [{ requester: "a", target: "b", freeText: "hi" }],
+      new Map(chars.map((c) => [c.id, c])),
+    );
+    expect(r.valid).toHaveLength(1);
+    expect(r.valid[0]).toMatchObject({ requester: "a", target: "b" });
+    expect(r.rejected).toHaveLength(0);
+  });
+
+  it("empty array returns empty", () => {
+    const r = resolveRequestChains([], new Map());
+    expect(r.valid).toHaveLength(0);
+    expect(r.rejected).toHaveLength(0);
+  });
+
+  it("two-hop chain A→B, B→C → A→B valid, B→C rejected", () => {
+    const chars = [chainChar("a"), chainChar("b"), chainChar("c")];
+    const r = resolveRequestChains(
+      [
+        { requester: "a", target: "b", freeText: "hi" },
+        { requester: "b", target: "c", freeText: "hey" },
+      ],
+      new Map(chars.map((c) => [c.id, c])),
+    );
+    expect(r.valid).toHaveLength(1);
+    expect(r.valid[0]).toMatchObject({ requester: "a", target: "b" });
+    expect(r.rejected).toHaveLength(1);
+    expect(r.rejected[0]).toMatchObject({ requester: "b", target: "c" });
+  });
+
+  it("three-hop chain A→B, B→C, C→D → A→B valid, B→C rejected, C→D valid", () => {
+    const chars = [chainChar("a"), chainChar("b"), chainChar("c"), chainChar("d")];
+    const r = resolveRequestChains(
+      [
+        { requester: "a", target: "b", freeText: "h1" },
+        { requester: "b", target: "c", freeText: "h2" },
+        { requester: "c", target: "d", freeText: "h3" },
+      ],
+      new Map(chars.map((c) => [c.id, c])),
+    );
+    expect(r.valid).toHaveLength(2);
+    expect(r.valid[0]).toMatchObject({ requester: "a", target: "b" });
+    expect(r.valid[1]).toMatchObject({ requester: "c", target: "d" });
+    expect(r.rejected).toHaveLength(1);
+    expect(r.rejected[0]).toMatchObject({ requester: "b", target: "c" });
+  });
+
+  it("four-hop chain A→B, B→C, C→D, D→E → A→B valid, B→C rejected, C→D valid, D→E rejected", () => {
+    const chars = [chainChar("a"), chainChar("b"), chainChar("c"), chainChar("d"), chainChar("e")];
+    const r = resolveRequestChains(
+      [
+        { requester: "a", target: "b", freeText: "1" },
+        { requester: "b", target: "c", freeText: "2" },
+        { requester: "c", target: "d", freeText: "3" },
+        { requester: "d", target: "e", freeText: "4" },
+      ],
+      new Map(chars.map((c) => [c.id, c])),
+    );
+    expect(r.valid).toHaveLength(2);
+    expect(r.valid[0]).toMatchObject({ requester: "a", target: "b" });
+    expect(r.valid[1]).toMatchObject({ requester: "c", target: "d" });
+    expect(r.rejected).toHaveLength(2);
+    expect(r.rejected[0]).toMatchObject({ requester: "b", target: "c" });
+    expect(r.rejected[1]).toMatchObject({ requester: "d", target: "e" });
+  });
+
+  it("two independent chains processed separately", () => {
+    const chars = [chainChar("a"), chainChar("b"), chainChar("c"), chainChar("d")];
+    const r = resolveRequestChains(
+      [
+        { requester: "a", target: "b", freeText: "hi" },
+        { requester: "c", target: "d", freeText: "hey" },
+      ],
+      new Map(chars.map((c) => [c.id, c])),
+    );
+    expect(r.valid).toHaveLength(2);
+    expect(r.rejected).toHaveLength(0);
+  });
+
+  it("cycle A→B, B→A → one valid, other silently dropped (both end up in same conversation)", () => {
+    const chars = [chainChar("a"), chainChar("b")];
+    const r = resolveRequestChains(
+      [
+        { requester: "a", target: "b", freeText: "hi" },
+        { requester: "b", target: "a", freeText: "hey" },
+      ],
+      new Map(chars.map((c) => [c.id, c])),
+    );
+    // A→B is valid (both free), B→A is not rejected because B is consumed as target
+    // But B→A should not appear in valid either
+    expect(r.valid).toHaveLength(1);
+    expect(r.valid[0]).toMatchObject({ requester: "a", target: "b" });
+    // B→A not in rejected (B is in conversation with A, no salvage needed)
+    expect(r.rejected).toHaveLength(0);
+  });
+
+  it("branching A→B, A→C → only first valid for A, C remains free", () => {
+    const chars = [chainChar("a"), chainChar("b"), chainChar("c")];
+    const r = resolveRequestChains(
+      [
+        { requester: "a", target: "b", freeText: "hi" },
+        { requester: "a", target: "c", freeText: "hey" },
+      ],
+      new Map(chars.map((c) => [c.id, c])),
+    );
+    expect(r.valid).toHaveLength(1);
+    expect(r.valid[0].target).toBe("b");
+    expect(r.rejected).toHaveLength(0);
+  });
+
+  it("merging A→C, B→C → A→C valid, B→C rejected (C is A's target)", () => {
+    const chars = [chainChar("a"), chainChar("b"), chainChar("c")];
+    const r = resolveRequestChains(
+      [
+        { requester: "a", target: "c", freeText: "hi" },
+        { requester: "b", target: "c", freeText: "hey" },
+      ],
+      new Map(chars.map((c) => [c.id, c])),
+    );
+    expect(r.valid).toHaveLength(1);
+    expect(r.valid[0]).toMatchObject({ requester: "a", target: "c" });
+    expect(r.rejected).toHaveLength(1);
+    expect(r.rejected[0]).toMatchObject({ requester: "b", target: "c" });
+  });
+
+  it("mid-pattern: B is head, B→C valid, C→D rejected", () => {
+    const chars = [chainChar("b"), chainChar("c"), chainChar("d")];
+    const r = resolveRequestChains(
+      [
+        { requester: "b", target: "c", freeText: "hi" },
+        { requester: "c", target: "d", freeText: "hey" },
+      ],
+      new Map(chars.map((c) => [c.id, c])),
+    );
+    // B is head (not a target of anyone), B→C valid, C→D rejected
+    expect(r.valid).toHaveLength(1);
+    expect(r.valid[0]).toMatchObject({ requester: "b", target: "c" });
+    expect(r.rejected).toHaveLength(1);
+    expect(r.rejected[0]).toMatchObject({ requester: "c", target: "d" });
   });
 });
 

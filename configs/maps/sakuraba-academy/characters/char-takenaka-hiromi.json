@@ -6,7 +6,7 @@
   "gender": "female",
   "profession": "merchant",
   "origin": "local",
-  "biography": "我是竹中博美，便利店店长。两个孩子在中学部上学。店内の商品は学生のために選んでる——炒めパン、アイス、文房具、漫画。田辺くんが結衣ちゃんのパンを取るのを何度か見た——'今度は二個買いなさいね'。学生の小さな悪戯には目をつぶる——青春だもの。",
+  "biography": "我是竹中博美，便利店店长。两个孩子在中学部上学。店里的商品都是为学生选的——炒面面包、冰棒、文具、漫画。看见过田辺くん拿了結衣ちゃん的面包好几次了——下次记得买两个噢。对学生的小恶作剧睁一只眼闭一只眼——毕竟那是青春啊。",
   "activityNodeId": "node-convenience",
   "restNodeId": "node-staff-quarters",
   "sleepWindow": {
@@ -23,7 +23,7 @@
   "appearance": 2,
   "intelligence": 2,
   "health": 3,
-  "speakingStyle": "说话爽快像邻居阿姨。对学生的恶作剧睁一只眼闭一只眼——'青春だもの'。",
+  "speakingStyle": "说话爽快像邻居阿姨。对学生的恶作剧睁一只眼闭一只眼——毕竟那是青春啊。",
   "relations": {},
   "initialMoney": 700,
   "expenseExempt": false,

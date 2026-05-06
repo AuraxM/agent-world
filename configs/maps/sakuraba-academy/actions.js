@@ -3,7 +3,8 @@
 const kissAction = {
   type: "kiss",
   duration: "instant",
-  guidance: "情到深处、想给对方一个回应或安抚时，一个吻胜过千言万语",
+  triggerHint: "情到深处，想给对方回应或安抚时使用——一个吻胜过千言万语。",
+  paramRule: "必填 target_id（亲吻对象）。仅在对话中可用。",
   check(ctx) {
     return false;
   },
@@ -36,7 +37,8 @@ const kissAction = {
 const caressAction = {
   type: "caress",
   duration: "instant",
-  guidance: "想安抚对方的情绪、表达无声的关心时，轻柔的触碰比语言更温柔",
+  triggerHint: "想安抚对方情绪、表达无声的关心时使用——轻柔的触碰比语言更温柔。",
+  paramRule: "必填 target_id（抚摸对象）。仅在对话中可用。",
   check(ctx) {
     return false;
   },
@@ -68,7 +70,8 @@ const caressAction = {
 const hugAction = {
   type: "hug",
   duration: "instant",
-  guidance: "久别重逢、离别之际、或是对方难过时，一个拥抱能让人感到被在乎",
+  triggerHint: "久别重逢、离别之际、或是对方难过时使用——一个拥抱让人感到被在乎。",
+  paramRule: "必填 target_id（拥抱对象）。仅在对话中可用。",
   check(ctx) {
     return false;
   },

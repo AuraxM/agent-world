@@ -786,6 +786,9 @@ export function buildSelfImage(c: Character): string {
     `- 性格：${describePersonalityCompact(c.personality, c.intelligence)}`,
     `- 生平简介：${c.biography}`,
   ];
+  if (c.speakingStyle) {
+    lines.push(`- 说话风格：${c.speakingStyle}`);
+  }
   return lines.join("\n");
 }
 

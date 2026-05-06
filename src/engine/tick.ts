@@ -791,7 +791,7 @@ export async function tick(
         });
       } catch {
         return {
-          type: "wait" as const,
+          type: "look_around" as const,
           actorId: input.character.id,
           reasoning: `补救决策违规，回退等待：${input.rejectReason}`,
           selfImportance: 1,

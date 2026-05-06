@@ -1037,26 +1037,25 @@ export async function runDialogPhase(
 
   // ── Part 6: Assign finalActions ──
   for (const conv of activeConversations) {
-    const waitInit: Action = {
-      type: "wait", actorId: conv.initiatorId,
+    finalActionsMap.set(conv.initiatorId, {
+      type: "look_around", actorId: conv.initiatorId,
       reasoning: `正在和 ${charById.get(conv.acceptorId)!.name} 对话`,
       selfImportance: 2, skipExecution: true, skipMemory: true,
-    };
-    finalActionsMap.set(conv.initiatorId, waitInit);
+    });
     finalActionsMap.set(conv.acceptorId, {
-      type: "wait", actorId: conv.acceptorId,
+      type: "look_around", actorId: conv.acceptorId,
       reasoning: `正在和 ${charById.get(conv.initiatorId)!.name} 对话`,
       selfImportance: 2, skipExecution: true, skipMemory: true,
     });
   }
   for (const conv of endedConversations) {
     finalActionsMap.set(conv.initiatorId, {
-      type: "wait", actorId: conv.initiatorId,
+      type: "look_around", actorId: conv.initiatorId,
       reasoning: `刚和 ${charById.get(conv.acceptorId)!.name} 聊完`,
       selfImportance: 2, skipExecution: true, skipMemory: true,
     });
     finalActionsMap.set(conv.acceptorId, {
-      type: "wait", actorId: conv.acceptorId,
+      type: "look_around", actorId: conv.acceptorId,
       reasoning: `刚和 ${charById.get(conv.initiatorId)!.name} 聊完`,
       selfImportance: 2, skipExecution: true, skipMemory: true,
     });

@@ -562,7 +562,7 @@ function worldRules(): string {
 - you may write spoken content or action details in free_text。
 - reasoning 是你的内心独白，必须在其中显式引用一项你的性格特征（用文字描述，不要写数值）。这是硬性规则。
 - self_importance 1-5，决定这件事是否进入你的长期记忆。
-- 不要做超出当前可选行动范围的事；如果没有合适的，选 action_type="wait"。
+- 不要做超出当前可选行动范围的事；如果没有合适的，选 action_type="look_around"。
 
 移动机制：1 tick = 1/5 游戏小时（5 ticks = 1 小时）。移动时你需要指定目的地（任意地图节点）、移动原因（如"去酒馆找田中喝酒"）和到达后要做的动作（arrival_action）。引擎会自动计算最短路径，每走一步消耗 1 tick。移动期间你无法主动决策（类似睡觉），但可被高强度事件打断。到达后自动执行你声明的到达动作。
 

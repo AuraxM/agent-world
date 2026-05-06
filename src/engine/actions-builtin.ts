@@ -177,7 +177,7 @@ export const workAction: ActionDefinition = {
 export const thinkAction: ActionDefinition = {
   type: "think",
   duration: "instant",
-  guidance: "无急迫生理需求时整理思绪或做内心独白",
+  guidance: "社交满足不想说话或需要整理思绪时，独自沉思回顾记忆、整理印象",
   check(_ctx) {
     return true;
   },

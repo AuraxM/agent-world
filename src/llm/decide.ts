@@ -20,6 +20,8 @@ import {
   PROPOSE_DIALOGUE_ACTION_TOOL_NAME, ProposeDialogueActionSchema, ProposeDialogueActionToolSchema,
   RESPOND_DIALOGUE_ACTION_TOOL_NAME, RespondDialogueActionSchema, RespondDialogueActionToolSchema,
   NOTEBOOK_TOOL_NAME, NotebookSchema, NotebookToolSchema,
+  THINK_TOOL_NAME, ThinkTurnSchema, ThinkTurnToolSchema,
+  END_THINKING_TOOL_NAME, EndThinkingSchema, EndThinkingToolSchema,
   type AcceptDecisionPayload, type DialogTurnPayload, type DialogSummaryPayload,
 } from "@/domain/schemas";
 import type { Action, Character, DialogTurn, EndConversationPayload, MapNode, WorldEvent } from "@/domain/types";
@@ -37,8 +39,11 @@ import {
   buildSalvageContext,
   buildSystemPrompt,
   buildUserPrompt,
+  buildThinkPrompt,
+  injectThinkTimeMessage,
   languageInstruction,
 } from "./prompt";
+import type { ThinkTurn } from "@/domain/types";
 import { createLogger } from "@/util/logger";
 
 const decideLog = createLogger("llm-decide");
@@ -961,6 +966,239 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<{ s
     llmResponse: lastResponseSnapshot,
   });
   return { summary: `（摘要生成失败：双方聊了 ${input.transcript.length} 句）` };
+}
+
+// ---------------------------------------------------------------------------
+// Think session LLM entry
+// ---------------------------------------------------------------------------
+
+export interface ThinkTurnResult {
+  kind: "turn";
+  turn: ThinkTurn;
+}
+
+export interface ThinkEndResult {
+  kind: "end";
+  summary: string;
+}
+
+const THINK_TURNS_PER_TICK = 3;
+
+export async function llmThink(args: {
+  self: Character;
+  here: MapNode;
+  transcript: ThinkTurn[];
+  language?: Language;
+  tick: number;
+  epoch: number;
+  tickStarted: number;
+}): Promise<ThinkTurnResult | ThinkEndResult> {
+  if (!hasApiKey()) throw new Error("没有激活的 LLM provider");
+
+  const config = getEntryConfig("dialog_turn");
+  const client = getLLMClientForEntry("dialog_turn");
+  const language: Language = args.language ?? "zh";
+
+  const prompt = buildThinkPrompt({
+    self: args.self,
+    here: args.here,
+    transcript: args.transcript,
+    language,
+    tick: args.tick,
+    epoch: args.epoch,
+  });
+
+  const tools: ChatCompletionTool[] = [
+    {
+      type: "function",
+      function: { name: THINK_TOOL_NAME, description: "输出一段思考。", parameters: ThinkTurnToolSchema },
+    },
+    {
+      type: "function",
+      function: { name: END_THINKING_TOOL_NAME, description: "结束思考并写入总结。", parameters: EndThinkingToolSchema },
+    },
+    buildRecallTool(),
+    buildMemorizeTool(),
+    buildNotebookTool(),
+  ];
+
+  const extra: Record<string, unknown> = {};
+  if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
+
+  const systemPrompt = language === "zh"
+    ? `你是一个角色扮演引擎中的 NPC。你正在独自沉思。请根据你的性格和记忆自然地思考。\n\n${languageInstruction(language)}`
+    : language === "en"
+      ? `You are an NPC in a role-playing engine. You are in deep thought. Think naturally based on your personality and memories.\n\n${languageInstruction(language)}`
+      : `あなたはロールプレイングエンジンのNPCです。あなたは深く考え込んでいます。あなたの性格と記憶に基づいて自然に考えてください。\n\n${languageInstruction(language)}`;
+
+  const messages: Array<Record<string, unknown>> = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: prompt },
+  ];
+
+  for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
+    const response = await client.chat.completions.create({
+      model: getModelNameForEntry("dialog_turn"),
+      max_tokens: 1024,
+      messages: messages as any,
+      tools,
+      ...extra,
+    });
+
+    const message = response.choices[0]?.message;
+    if (!message) {
+      if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+        messages.push({ role: "user", content: "没有返回内容，请重试调用工具。" });
+        continue;
+      }
+      throw new Error("LLM 返回空 message");
+    }
+
+    const assistantMsg: Record<string, unknown> = { role: "assistant", content: message.content ?? "" };
+    if ((message as any).reasoning_content) assistantMsg.reasoning_content = (message as any).reasoning_content;
+    if (message.tool_calls) assistantMsg.tool_calls = message.tool_calls;
+    messages.push(assistantMsg);
+
+    const allToolCalls = (message.tool_calls ?? []).filter((c: any) => c.type === "function");
+    if (allToolCalls.length === 0) {
+      if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+        messages.push({ role: "user", content: "请调用 submit_think_turn 或 end_thinking 工具。" });
+        continue;
+      }
+      throw new Error("LLM 未返回 tool_call");
+    }
+
+    // Side-effect tools first (recall/memorize/notebook)
+    let hasSideEffect = false;
+    for (const tc of allToolCalls) {
+      const t = tc as any;
+      if (t.function.name === RECALL_TOOL_NAME) {
+        hasSideEffect = true;
+        let parsedArgs: unknown;
+        try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `recall JSON 解析失败。` });
+          continue;
+        }
+        const parseResult = RecallSchema.safeParse(parsedArgs);
+        if (!parseResult.success) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `recall 参数不符合要求。` });
+          continue;
+        }
+        const recallResult = handleRecall(parseResult.data.target_ids, args.self, []);
+        messages.push({ role: "tool", tool_call_id: t.id, content: recallResult });
+      } else if (t.function.name === MEMORIZE_TOOL_NAME) {
+        hasSideEffect = true;
+        let parsedArgs: unknown;
+        try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `memorize JSON 解析失败。` });
+          continue;
+        }
+        const parseResult = MemorizeSchema.safeParse(parsedArgs);
+        if (!parseResult.success) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `memorize 参数不符合要求。` });
+          continue;
+        }
+        handleMemorize(parseResult.data.target_id, parseResult.data.impression, args.self);
+        messages.push({ role: "tool", tool_call_id: t.id, content: "已记录。" });
+      } else if (t.function.name === NOTEBOOK_TOOL_NAME) {
+        hasSideEffect = true;
+        let parsedArgs: unknown;
+        try { parsedArgs = JSON.parse(t.function.arguments); } catch (e) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `add_notebook_entry JSON 解析失败。` });
+          continue;
+        }
+        const parseResult = NotebookSchema.safeParse(parsedArgs);
+        if (!parseResult.success) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `add_notebook_entry 参数不符合要求：${parseResult.error.message}。` });
+          continue;
+        }
+        const { year, month, day, hour, free_text } = parseResult.data;
+        const scheduledTick = tickFromCalendar(year, month, day, hour, args.epoch);
+        if (scheduledTick === null || scheduledTick <= args.tick) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: "日期无效或已过期，请重新设定。" });
+          continue;
+        }
+        const timeLabel = `${year}年${month}月${day}日 ${String(hour).padStart(2, "0")}:00`;
+        if (args.self.notebook.some((e) => e.scheduledTick === scheduledTick)) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `${timeLabel} 已经有约了。` });
+          continue;
+        }
+        const entry = {
+          id: createEntryId(),
+          scheduledTick,
+          content: free_text,
+          createdAt: args.tick,
+        };
+        args.self.notebook.push(entry);
+        saveNotebookEntry(args.self.worldId, args.self.id, entry);
+        messages.push({ role: "tool", tool_call_id: t.id, content: `已记录：${timeLabel} — ${free_text}` });
+      }
+    }
+    if (hasSideEffect) {
+      round = Math.max(0, round - 1);
+      continue;
+    }
+
+    // Main tool: submit_think_turn or end_thinking
+    let turnResult: ThinkTurnResult | null = null;
+    let endResult: ThinkEndResult | null = null;
+    let hasError = false;
+
+    for (const tc of allToolCalls) {
+      const t = tc as any;
+      const name = t.function.name;
+
+      let a: unknown;
+      try { a = JSON.parse(t.function.arguments); } catch (e) {
+        messages.push({ role: "user", content: `${name} JSON 解析失败。` });
+        hasError = true;
+        break;
+      }
+
+      if (name === THINK_TOOL_NAME) {
+        const result = ThinkTurnSchema.safeParse(a);
+        if (!result.success) {
+          messages.push({ role: "user", content: `submit_think_turn 参数不符合要求：${result.error.message}。` });
+          hasError = true;
+          break;
+        }
+        turnResult = {
+          kind: "turn",
+          turn: { kind: "thought", text: result.data.text, reasoning: result.data.reasoning },
+        };
+      } else if (name === END_THINKING_TOOL_NAME) {
+        const result = EndThinkingSchema.safeParse(a);
+        if (!result.success) {
+          messages.push({ role: "user", content: `end_thinking 参数不符合要求：${result.error.message}。` });
+          hasError = true;
+          break;
+        }
+        endResult = { kind: "end", summary: result.data.summary };
+      } else {
+        messages.push({ role: "user", content: `未知工具 "${name}"。请使用 submit_think_turn 或 end_thinking。` });
+        hasError = true;
+        break;
+      }
+    }
+
+    if (hasError) {
+      if (round < MAX_TOOL_CALL_ROUNDS - 1) continue;
+      throw new Error("LLM think 多轮均存在错误");
+    }
+
+    if (!turnResult && !endResult) {
+      if (round < MAX_TOOL_CALL_ROUNDS - 1) {
+        messages.push({ role: "user", content: "请调用 submit_think_turn 或 end_thinking。" });
+        continue;
+      }
+      throw new Error("LLM think 未返回 turn 或 end");
+    }
+
+    if (turnResult) return turnResult;
+    return endResult!;
+  }
+
+  throw new Error("think LLM 多轮均未返回 tool_call");
 }
 
 /**

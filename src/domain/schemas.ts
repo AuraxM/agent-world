@@ -368,6 +368,42 @@ export const EndConversationSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Think session tools
+// ---------------------------------------------------------------------------
+
+export const THINK_TOOL_NAME = "submit_think_turn";
+export const ThinkTurnSchema = z.object({
+  text: z.string().min(1).max(800),
+  reasoning: z.string().min(1).max(300).optional(),
+});
+export type ThinkTurnPayload = z.infer<typeof ThinkTurnSchema>;
+export const ThinkTurnToolSchema = {
+  type: "object" as const,
+  properties: {
+    text: { type: "string", description: "你的思考内容。" },
+    reasoning: { type: "string", description: "简短推理过程（可选）。" },
+  },
+  required: ["text"],
+  additionalProperties: false,
+};
+
+export const END_THINKING_TOOL_NAME = "end_thinking";
+export const EndThinkingSchema = z.object({
+  summary: z.string().min(1).max(500),
+  reasoning: z.string().min(1).max(300).optional(),
+});
+export type EndThinkingPayload = z.infer<typeof EndThinkingSchema>;
+export const EndThinkingToolSchema = {
+  type: "object" as const,
+  properties: {
+    summary: { type: "string", description: "这次思考的收获总结。" },
+    reasoning: { type: "string", description: "结束思考的理由（可选）。" },
+  },
+  required: ["summary"],
+  additionalProperties: false,
+};
+
+// ---------------------------------------------------------------------------
 // Unified action decision tool (replaces per-action tools)
 // ---------------------------------------------------------------------------
 

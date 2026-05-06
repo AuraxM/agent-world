@@ -388,6 +388,34 @@ export interface EndConversationPayload {
   closingLine?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Think session types
+// ---------------------------------------------------------------------------
+
+/** 思考单轮快照。 */
+export interface ThinkTurn {
+  kind: "thought";
+  text: string;
+  reasoning?: string;
+}
+
+/** 持久化思考会话实体。角色独自沉思，类似对话但只有自己。 */
+export interface ThinkSession {
+  id: string;
+  worldId: string;
+  characterId: string;
+  transcript: ThinkTurn[];
+  tickStarted: number;
+  currentTickRounds: number;
+  status: "active" | "ending" | "ended";
+}
+
+/** end_thinking tool 的 LLM 输出载荷。 */
+export interface EndThinkingPayload {
+  summary: string;
+  reasoning?: string;
+}
+
 /** 世界元信息。 */
 export interface World {
   id: string;

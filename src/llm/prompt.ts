@@ -106,7 +106,7 @@ function describePersonalityCompact(p: Personality, intelligence: number): strin
   const tf = p.tf >= 0 ? "F" : "T";
   const jp = p.jp >= 0 ? "J" : "P";
   const intel = INTELLIGENCE_LABELS[intelligence] ?? INTELLIGENCE_LABELS[2];
-  return `性格：${ei}${sn}${tf}${jp}，${intel}`;
+  return `${ei}${sn}${tf}${jp}，${intel}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -823,7 +823,7 @@ export function buildAcceptDecisionPrompt(args: {
 }): string {
   const { self, requesterName, freeText, here, peer, tick, epoch } = args;
   const language = args.language ?? "zh";
-  const t = timeOfDay(tick, epoch, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW);
+  
   const fatigue = qualifyVital(self.vitals.fatigue, "fatigue");
   const hunger = qualifyVital(self.vitals.hunger, "hunger");
 

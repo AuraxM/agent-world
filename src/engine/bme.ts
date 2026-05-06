@@ -17,8 +17,8 @@
  *   - getTierDailyIncome(bme, tier, mdc?) → 日收入
  *   - getTierInitialMoney(tier, mdc?) → 初始资金
  *   - getMoodDecayRate(tf)   → mood 回归速率
- *   - getSocialDecayRate(ei) → social_satiety 每日衰减
- *   - getSocialGainPerInteraction(ei) → 单次社交获得
+ *   - getSocialDecayPerTick(ei) → social_satiety 每 tick 衰减（独处时）
+ *   - getSocialGainPerDialogTick(ei) → social_satiety 每 tick 增益（对话中）
  *   - getSicknessBaseDuration(health) → 疾病基础持续天数
  */
 import type { Character } from "@/domain/types";
@@ -90,14 +90,24 @@ export function getMoodDecayRate(tf: number): number {
   return 1.0 / (3 + Math.abs(tf));
 }
 
-/** social_satiety 每日衰减 = 0.4 + (EI + 4) × 0.075 */
-export function getSocialDecayRate(ei: number): number {
-  return 0.4 + (ei + 4) * 0.075;
+/**
+ * 社交满足每 tick 衰减（独处/不在对话中时）。
+ * d(EI) = 0.024 + (EI + 4) × 0.0095
+ * 范围: 0.024 (最内向) ~ 0.100 (最外向)
+ */
+export function getSocialDecayPerTick(ei: number): number {
+  return 0.024 + (ei + 4) * 0.0095;
 }
 
-/** 每次社交获得 = 1.2 - |EI| × 0.1 */
-export function getSocialGainPerInteraction(ei: number): number {
-  return 1.2 - Math.abs(ei) * 0.1;
+/**
+ * 社交满足每 tick 增益（对话中）。
+ * 由平衡式 T·g = (120−T)·d 反推，保证目标日对话 tick 数 T(EI) 在 10~40。
+ * T(EI) = 10 + (EI + 4) × 3.75
+ */
+export function getSocialGainPerDialogTick(ei: number): number {
+  const T = 10 + (ei + 4) * 3.75;
+  const d = getSocialDecayPerTick(ei);
+  return d * (120 - T) / T;
 }
 
 /** 疾病基础持续天数 */

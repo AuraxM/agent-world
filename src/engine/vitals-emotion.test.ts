@@ -203,7 +203,6 @@ describe("evolveEmotions", () => {
       characters: [c],
       worldId: "w",
       tick: 10,
-      hasCompanions: new Map([["a", false]]),
     });
     expect(c.emotion.mood).toBe(2);
     rand.mockRestore();
@@ -219,7 +218,6 @@ describe("evolveEmotions", () => {
       characters: [c],
       worldId: "w",
       tick: 1,
-      hasCompanions: new Map([["a", false]]),
     });
     expect(c.emotion.mood).toBe(-3);
   });
@@ -234,30 +232,26 @@ describe("evolveEmotions", () => {
       characters: [c],
       worldId: "w",
       tick: 120,
-      hasCompanions: new Map([["a", false]]),
     });
     expect(c.emotion.stress).toBe(3);
   });
 
-  it("有伴则 social_satiety 偶数整小时 +gain（EI 驱动，mock random 防衰减）", () => {
+  it("evolveEmotions 不再修改 social_satiety（改由 tick.ts 按对话状态 per-tick 处理）", () => {
     const c = mkChar(
       "a",
       { hunger: 0, fatigue: 0, hygiene: 0 },
-      { mood: 0, stress: 0, social_satiety: 0 },
+      { mood: 0, stress: 0, social_satiety: 2 },
     );
-    const rand = vi.spyOn(Math, "random").mockReturnValue(1);
     evolveEmotions({
       characters: [c],
       worldId: "w",
       tick: 10,
-      hasCompanions: new Map([["a", true]]),
     });
-    // getSocialGainPerInteraction(ei=0) = 1.2 - 0 = 1.2
-    expect(c.emotion.social_satiety).toBe(1.2);
-    rand.mockRestore();
+    // social_satiety unchanged by evolveEmotions
+    expect(c.emotion.social_satiety).toBe(2);
   });
 
-  it("独处则 social_satiety 偶数 tick -1（封底 -4）", () => {
+  it("social_satiety 不受 evolveEmotions 影响（封底 -4 保持）", () => {
     const c = mkChar(
       "a",
       { hunger: 0, fatigue: 0, hygiene: 0 },
@@ -267,8 +261,8 @@ describe("evolveEmotions", () => {
       characters: [c],
       worldId: "w",
       tick: 2,
-      hasCompanions: new Map([["a", false]]),
     });
+    // social_satiety unchanged — per-tick logic now lives in tick.ts
     expect(c.emotion.social_satiety).toBe(-4);
   });
 
@@ -284,7 +278,6 @@ describe("evolveEmotions", () => {
       characters: [c],
       worldId: "w",
       tick: 40,
-      hasCompanions: new Map([["a", false]]),
     });
     expect(c.emotion.mood).toBe(-3);
     expect(evs.some((e) => /低落|出口/.test(e.description))).toBe(true);

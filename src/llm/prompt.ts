@@ -281,12 +281,20 @@ function describeEvents(events: WorldEvent[]): string {
 }
 
 function describeOptions(opts: ActionOption[]): string {
+  // Deduplicate guidance per type to avoid repeating the same advice for
+  // multi-option actions (e.g. move with different destinations).
+  const seenGuidance = new Set<string>();
   return opts
     .map((o, i) => {
       const meta: string[] = [`type=${o.type}`];
       if (o.targetId) meta.push(`target_id=${o.targetId}`);
       if (o.targetNodeId) meta.push(`target_node_id=${o.targetNodeId}`);
-      return `${i + 1}. (${meta.join(", ")}) ${o.hint}`;
+      let line = `${i + 1}. (${meta.join(", ")}) ${o.hint}`;
+      if (o.guidance && !seenGuidance.has(o.type)) {
+        seenGuidance.add(o.type);
+        line += ` 【${o.guidance}】`;
+      }
+      return line;
     })
     .join("\n");
 }
@@ -969,7 +977,8 @@ export function buildDialogTurnPrompt(args: {
         const extra = a.extraParams
           ? Object.keys(a.extraParams).filter(k => k !== "free_text").join(", ")
           : "";
-        return `- ${a.type}${extra ? ` (需要 ${extra})` : ""}`;
+        const guide = a.guidance ? ` — ${a.guidance}` : "";
+        return `- ${a.type}${extra ? ` (需要 ${extra})` : ""}${guide}`;
       })
       .join("\n");
     if (lang === "zh") {
@@ -1418,9 +1427,9 @@ export function buildMemoryCompressionPrompt(args: {
   const language = args.language ?? "zh";
 
   if (memories.length === 0) {
-    if (language === "zh") return `你是 ${characterName}。自从上次睡觉后，你没有值得记住的经历。调用 submit_memory_summary 返回"今天很平静，没什么特别的事。"`;
-    if (language === "en") return `You are ${characterName}. You had no notable experiences since you last slept. Call submit_memory_summary with "A quiet day with nothing much happening."`;
-    return `あなたは${characterName}です。前回の睡眠以降、特に記憶に残る出来事はありませんでした。submit_memory_summary で「今日は穏やかな一日だった」と返してください。`;
+    if (language === "zh") return `你是 ${characterName}。自从上次睡觉后，你没有值得记住的经历。直接输出你的总结。`;
+    if (language === "en") return `You are ${characterName}. You had no notable experiences since you last slept. Output your summary directly.`;
+    return `あなたは${characterName}です。前回の睡眠以降、特に記憶に残る出来事はありませんでした。要約を直接出力してください。`;
   }
 
   const memoryLines = memories
@@ -1432,20 +1441,20 @@ export function buildMemoryCompressionPrompt(args: {
 
 ${memoryLines}
 
-请用 2-5 句简体中文（第一人称"我"）总结这段清醒期间最主要的事情、与人互动和感受。调用 submit_memory_summary 工具返回你的摘要。`;
+请用 2-5 句简体中文（第一人称"我"）总结这段清醒期间最主要的事情、与人互动和感受。直接输出你的摘要。`;
   }
   if (language === "en") {
     return `You are ${characterName}, reviewing experiences since you last woke up. Here's what happened:
 
 ${memoryLines}
 
-Summarize the most important events, interactions, and feelings in 2-5 English sentences using first person. Call submit_memory_summary to return your summary.`;
+Summarize the most important events, interactions, and feelings in 2-5 English sentences using first person. Output your summary directly.`;
   }
   return `あなたは${characterName}です。前回起きてから今までの出来事を振り返っています：
 
 ${memoryLines}
 
-この間の主な出来事、人との交流、感情を日本語の第一人称で2〜5文にまとめてください。submit_memory_summary を呼び出して要約を返してください。`;
+この間の主な出来事、人との交流、感情を日本語の第一人称で2〜5文にまとめてください。要約を直接出力してください。`;
 }
 
 /**
@@ -1468,20 +1477,20 @@ export function buildWeeklyCompressionPrompt(args: {
 
 ${lines}
 
-请用 2-4 句简体中文（第一人称"我"）总结这一周最主要的生活变化、重要事件和情感起伏。调用 submit_memory_summary 工具返回你的摘要。`;
+请用 2-4 句简体中文（第一人称"我"）总结这一周最主要的生活变化、重要事件和情感起伏。直接输出你的摘要。`;
   }
   if (language === "en") {
     return `You are ${characterName}, reviewing your past week (7 days). Here are your daily summaries:
 
 ${lines}
 
-Summarize the key life changes, important events, and emotional shifts of this week in 2-4 English sentences using first person. Call submit_memory_summary to return your summary.`;
+Summarize the key life changes, important events, and emotional shifts of this week in 2-4 English sentences using first person. Output your summary directly.`;
   }
   return `あなたは${characterName}です。この一週間（7日間）を振り返っています：
 
 ${lines}
 
-この一週間の主な生活の変化、重要な出来事、感情の起伏を日本語の第一人称で2〜4文にまとめてください。submit_memory_summary を呼び出して要約を返してください。`;
+この一週間の主な生活の変化、重要な出来事、感情の起伏を日本語の第一人称で2〜4文にまとめてください。要約を直接出力してください。`;
 }
 
 /**

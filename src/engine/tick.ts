@@ -31,7 +31,7 @@ import { executeActions, applyStateChange } from "./execute";
 import { deriveAggregatedFacts, type AggregatedFacts } from "./facts";
 import { findPath } from "./pathfinding";
 import { dispatchPerception } from "./perception";
-import { decayVitals, evolveEmotions, checkSickness } from "./vitals-emotion";
+import { decayVitals, evolveEmotions, checkSickness, clamp } from "./vitals-emotion";
 import { cleanExpiredEntries, getTodayEntries, describeEntries } from "./notebook";
 import { DEFAULT_SLEEP_WINDOW, inSleepWindow, timeOfDay } from "@/llm/prompt";
 import {
@@ -47,6 +47,7 @@ import { loadAllCharacters, loadManifest, loadEconomyConfig } from "@/config/loa
 import { loadEvents } from "@/config/event-loader";
 import { getActiveEvents, type GlobalEventDef } from "@/domain/events";
 import type { Language } from "@/config/types";
+import { getSocialDecayPerTick, getSocialGainPerDialogTick } from "./bme";
 import { updateAllEconomicSnapshots } from "./economy";
 import type {
   Action,
@@ -281,15 +282,8 @@ export async function tick(
   const tAfterVitals = Date.now();
 
   // 2. emotion evolution
-  const hasCompanions = new Map<string, boolean>();
-  for (const c of characters) {
-    const peers = characters.filter(
-      (p) => p.id !== c.id && p.locationId === c.locationId,
-    );
-    hasCompanions.set(c.id, peers.length > 0);
-  }
   allEvents.push(
-    ...evolveEmotions({ characters, worldId, tick: fromTick, hasCompanions }),
+    ...evolveEmotions({ characters, worldId, tick: fromTick }),
   );
 
   // Low-money detection: generate inner events for characters in financial distress
@@ -841,6 +835,21 @@ export async function tick(
   }
 
   // ── End Phase 4.5 ──
+
+  // Phase 4.5.5: Per-tick social_satiety (g during conversation, d otherwise)
+  for (const c of characters) {
+    if (c.activeConversationIds.length > 0) {
+      c.emotion.social_satiety = clamp(
+        c.emotion.social_satiety + getSocialGainPerDialogTick(c.personality.ei),
+        -4, 4,
+      );
+    } else {
+      c.emotion.social_satiety = clamp(
+        c.emotion.social_satiety - getSocialDecayPerTick(c.personality.ei),
+        -4, 4,
+      );
+    }
+  }
 
   // Phase 4.6: Memory compression for characters going to sleep
   const sleepActionsForCompression = actionsForExecution.filter(a => a.type === "sleep");

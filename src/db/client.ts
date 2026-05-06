@@ -164,6 +164,9 @@ function ensureColumns(sqlite: Database.Database) {
   for (const [tableName, ddl] of CONVERSATIONS_TABLE_MIGRATION) {
     if (!haveEntryTables.has(tableName)) sqlite.exec(ddl);
   }
+  for (const [tableName, ddl] of NOTEBOOK_TABLE_MIGRATION) {
+    if (!haveEntryTables.has(tableName)) sqlite.exec(ddl);
+  }
 }
 
 /** Keep in sync with migrate.ts CHARACTERS_NEW_COLUMNS. */
@@ -229,6 +232,18 @@ const CONVERSATIONS_TABLE_MIGRATION: Array<[string, string]> = [
     PRIMARY KEY(world_id, id)
   )`,
   ],
+];
+
+const NOTEBOOK_TABLE_MIGRATION: Array<[string, string]> = [
+  ["notebook_entries", `CREATE TABLE IF NOT EXISTS notebook_entries (
+    world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
+    character_id TEXT NOT NULL,
+    id TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    PRIMARY KEY(world_id, character_id, id)
+  )`],
+  ["notebook_char_idx", `CREATE INDEX IF NOT EXISTS notebook_char_idx ON notebook_entries(world_id, character_id)`],
 ];
 
 function createDb() {

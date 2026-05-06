@@ -71,6 +71,8 @@ export interface ActionOption {
   hint: string;
   targetId?: string;
   targetNodeId?: string;
+  /** 向 LLM 说明何时该选择此 action 的指导文字（来自 ActionDefinition.guidance）。 */
+  guidance?: string;
 }
 
 // ---- ActionDefinition: the core interface ----
@@ -101,6 +103,9 @@ export interface ActionDefinition {
 
   /** 是否可在对话中发起。仅 instant 类 action 可设 true。 */
   usableInDialogue?: boolean;
+
+  /** 向 LLM 说明何时该选择此 action（而非仅说明怎么用）。例如 eat 的 guidance 是"饥饿时进食以维持生存"。 */
+  guidance?: string;
 }
 
 // ---- ActionRegistry ----
@@ -135,10 +140,10 @@ export class ActionRegistry {
       const hint = def.hint(ctx);
       if (Array.isArray(hint)) {
         for (const h of hint) {
-          opts.push({ type, hint: h.hint, targetId: h.targetId, targetNodeId: h.targetNodeId });
+          opts.push({ type, hint: h.hint, targetId: h.targetId, targetNodeId: h.targetNodeId, guidance: def.guidance });
         }
       } else {
-        opts.push({ type, hint });
+        opts.push({ type, hint, guidance: def.guidance });
       }
     }
     return opts;

@@ -15,12 +15,24 @@ interface ActionDefinition {
   hint(ctx: ActionContext): string | Array<{ hint: string; targetId?: string; targetNodeId?: string }>;
   execute(ctx: ActionContext, input: ActionInput): Outcome;
 
-  // Optional lifecycle hooks for multi-tick actions:
+  // Optional:
+  guidance?: string;               // when to choose this action (not just how)
   onTick?(ctx: ActionContext): Outcome | null;
   onComplete?(ctx: ActionContext): Outcome;
   onInterrupt?(ctx: ActionContext, reason: string): Outcome;
+  extraParams?: Record<string, unknown>;
+  extraRequired?: string[];
+  usableInDialogue?: boolean;
 }
 ```
+
+**`guidance`** (optional but recommended): a short string telling the LLM **when** to pick this action — not what it does (that's `hint`), but under what circumstances it's the right choice. Examples:
+- `eat`: "饥饿时进食以维持生存，优先于社交"
+- `sleep`: "作息窗口内回住所睡觉恢复疲劳，除非有强烈理由否则不应打破作息"
+- `give`: "身边有人向你求助、借钱或表达经济困难时给予金钱帮助"
+- Custom `brew_tea`: "想放松或招待客人时沏茶"
+
+This appears in the prompt alongside the action hint, helping the LLM make context-appropriate decisions.
 
 ### Lifecycle
 

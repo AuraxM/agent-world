@@ -3,6 +3,7 @@
 const kissAction = {
   type: "kiss",
   duration: "instant",
+  guidance: "可以用来亲密互动时",
   check(ctx) {
     return ctx.companions.length > 0;
   },
@@ -31,6 +32,7 @@ const kissAction = {
 const caressAction = {
   type: "caress",
   duration: "instant",
+  guidance: "可以用来与对方温柔互动",
   check(ctx) {
     return ctx.companions.length > 0;
   },
@@ -59,6 +61,7 @@ const caressAction = {
 const hugAction = {
   type: "hug",
   duration: "instant",
+  guidance: "可以用来安慰、告别或表达亲密",
   check(ctx) {
     return ctx.companions.length > 0;
   },

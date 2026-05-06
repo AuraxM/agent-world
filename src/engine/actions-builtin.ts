@@ -8,6 +8,7 @@ import { tickFromCalendar, formatCurrentTime, createEntryId, saveNotebookEntry, 
 export const eatAction: ActionDefinition = {
   type: "eat",
   duration: "instant",
+  guidance: "饥饿时进食以维持生存，优先于社交",
   check(ctx) {
     if (!ctx.here.tags.includes("dining")) return false;
     if (ctx.self.expenseExempt) return true;
@@ -45,6 +46,7 @@ export const eatAction: ActionDefinition = {
 export const batheAction: ActionDefinition = {
   type: "bathe",
   duration: "instant",
+  guidance: "卫生值高时洗浴保持清洁",
   check(ctx) {
     if (!ctx.here.tags.includes("bathing")) return false;
     if (ctx.self.expenseExempt) return true;
@@ -81,6 +83,7 @@ export const batheAction: ActionDefinition = {
 export const restAction: ActionDefinition = {
   type: "rest",
   duration: 5,
+  guidance: "非睡眠时段疲惫时休息恢复体力",
   check(ctx) {
     return ctx.here.tags.includes("residence") || ctx.here.privacy === "private";
   },
@@ -122,6 +125,7 @@ export const restAction: ActionDefinition = {
 export const workAction: ActionDefinition = {
   type: "work",
   duration: 5,
+  guidance: "在工作地点获取收入，通常每个白天工作若干次",
   check(ctx) {
     if (!ctx.facts.activityNodeId) return false;
     if (ctx.self.incomeLevel <= 0) return false;
@@ -174,6 +178,7 @@ export const workAction: ActionDefinition = {
 export const thinkAction: ActionDefinition = {
   type: "think",
   duration: "instant",
+  guidance: "无急迫生理需求时整理思绪或做内心独白",
   check(_ctx) {
     return true;
   },
@@ -197,6 +202,7 @@ export const thinkAction: ActionDefinition = {
 export const speakAction: ActionDefinition = {
   type: "speak",
   duration: "instant",
+  guidance: "身边有人时发起社交对话",
   check(ctx) {
     return ctx.companions.length > 0;
   },
@@ -234,6 +240,7 @@ export const speakAction: ActionDefinition = {
 export const sleepAction: ActionDefinition = {
   type: "sleep",
   duration: 8 * TICKS_PER_HOUR,
+  guidance: "作息窗口内回住所睡觉恢复疲劳，除非有强烈理由否则不应打破作息",
   check(ctx) {
     if (!ctx.isSleepHour) return false;
     return ctx.here.tags.includes("residence") || ctx.here.privacy === "private";
@@ -288,6 +295,7 @@ export const sleepAction: ActionDefinition = {
 export const moveAction: ActionDefinition = {
   type: "move",
   duration: 0, // engine computes from BFS path length
+  guidance: "需要改变位置时移动到目标节点（如回家休息、去餐馆吃饭、去工作地点）",
   check(_ctx) {
     return true;
   },
@@ -364,6 +372,7 @@ export const moveAction: ActionDefinition = {
 export const waitAction: ActionDefinition = {
   type: "wait",
   duration: 5,
+  guidance: "当前没有合适的行动时原地等待（兜底选项）",
   check(_ctx) {
     return true;
   },
@@ -403,6 +412,7 @@ export const waitAction: ActionDefinition = {
 export const giveAction: ActionDefinition = {
   type: "give",
   duration: "instant",
+  guidance: "身边有人向你求助、借钱或表达经济困难时给予金钱帮助",
   check(ctx) {
     if (ctx.self.money <= 0) return false;
     if (ctx.companions.length === 0) return false;
@@ -468,6 +478,7 @@ export const giveAction: ActionDefinition = {
 export const addNotebookEntryAction: ActionDefinition = {
   type: "add_notebook_entry",
   duration: "instant",
+  guidance: "与他人约定了未来的事项、或需要记住某个时间要做的事时添加记事",
   check(_ctx) { return true; },
   hint(ctx) {
     const nowStr = formatCurrentTime(ctx.tick, ctx.epoch);
@@ -541,6 +552,7 @@ export const addNotebookEntryAction: ActionDefinition = {
 export const lookAroundAction: ActionDefinition = {
   type: "look_around",
   duration: "instant",
+  guidance: "想了解周围环境或观察身边有哪些人时环顾四周",
   check(_ctx) { return true; },
   hint(ctx) {
     return `环顾四周（查看 ${ctx.here.name} 的情况）`;

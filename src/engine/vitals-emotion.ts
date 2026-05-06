@@ -22,8 +22,6 @@ import {
   characterBME,
   getMoodDecayRate,
   getSicknessBaseDuration,
-  getSocialDecayRate,
-  getSocialGainPerInteraction,
 } from "./bme";
 
 // ---- thresholds ----
@@ -344,12 +342,10 @@ export interface EmotionEvolutionInput {
   characters: Character[];
   worldId: string;
   tick: number;
-  /** Map of characterId → whether they have companions at the same node */
-  hasCompanions: Map<string, boolean>;
 }
 
 export function evolveEmotions(input: EmotionEvolutionInput): WorldEvent[] {
-  const { characters, worldId, tick, hasCompanions } = input;
+  const { characters, worldId, tick } = input;
   const inner: WorldEvent[] = [];
   const evenHour = isEvenHour(tick);
   const hourTick = isHourTick(tick);
@@ -370,19 +366,8 @@ export function evolveEmotions(input: EmotionEvolutionInput): WorldEvent[] {
       c.emotion.stress = Math.max(0, c.emotion.stress - 1);
     }
 
-    // social_satiety: personality-driven decay + gain
-    if (hourTick && evenHour) {
-      const decay = getSocialDecayRate(c.personality.ei);
-      const hasPeer = hasCompanions.get(c.id) ?? false;
-      if (hasPeer) {
-        const gain = getSocialGainPerInteraction(c.personality.ei);
-        c.emotion.social_satiety = clamp(c.emotion.social_satiety + gain, -4, 4);
-      }
-      // Probabilistic decay: roughly 1/decay per day, distributed across even hours
-      if (Math.random() < decay / 12) {
-        c.emotion.social_satiety = clamp(c.emotion.social_satiety - 1, -4, 4);
-      }
-    }
+    // social_satiety decay/gain is handled per-tick in tick.ts,
+    // so it can distinguish "in conversation" from "not in conversation".
 
     // throttled threshold reminders
     if (c.emotion.mood <= -3 && totalHours > 0 && totalHours % REMINDER_MOOD === 0 && hourTick) {

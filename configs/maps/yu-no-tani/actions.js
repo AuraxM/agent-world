@@ -13,6 +13,7 @@
  *     check(ctx: ActionContext): boolean;
  *     hint(ctx: ActionContext): string | Array<{ hint: string; targetId?: string; targetNodeId?: string }>;
  *     execute(ctx: ActionContext, input: ActionInput): Outcome;
+ *     guidance?: string;              // when to choose this action
  *     onTick?(ctx: ActionContext): Outcome | null;
  *     onComplete?(ctx: ActionContext): Outcome;
  *     onInterrupt?(ctx: ActionContext, reason: string): Outcome;
@@ -24,6 +25,7 @@
  *     {
  *       type: "brew_tea",
  *       duration: "instant",
+ *       guidance: "想放松身心或招待来客时沏茶品茗",
  *       check(ctx) { return ctx.here.tags.includes("indoor"); },
  *       hint(ctx) { return `在 ${ctx.here.name} 沏茶品茗`; },
  *       execute(ctx, _input) {

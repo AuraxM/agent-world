@@ -17,11 +17,10 @@ import {
   DIALOG_TURN_TOOL_NAME, DialogTurnSchema, DialogTurnToolSchema,
   DIALOG_SUMMARY_TOOL_NAME, DialogSummarySchema, DialogSummaryToolSchema,
   END_CONVERSATION_TOOL_NAME, EndConversationToolSchema, EndConversationSchema,
-  MEMORY_SUMMARY_TOOL_NAME, MemorySummarySchema, MemorySummaryToolSchema,
   PROPOSE_DIALOGUE_ACTION_TOOL_NAME, ProposeDialogueActionSchema, ProposeDialogueActionToolSchema,
   RESPOND_DIALOGUE_ACTION_TOOL_NAME, RespondDialogueActionSchema, RespondDialogueActionToolSchema,
   NOTEBOOK_TOOL_NAME, NotebookSchema, NotebookToolSchema,
-  type AcceptDecisionPayload, type DialogTurnPayload, type DialogSummaryPayload, type MemorySummaryPayload,
+  type AcceptDecisionPayload, type DialogTurnPayload, type DialogSummaryPayload,
 } from "@/domain/schemas";
 import type { Action, Character, DialogTurn, EndConversationPayload, MapNode, WorldEvent } from "@/domain/types";
 import type { Language } from "@/config/types";
@@ -978,15 +977,6 @@ export async function llmMemoryCompress(args: {
   const client = getLLMClientForEntry("memory_compress");
   const language: Language = args.language ?? "zh";
 
-  const tool: ChatCompletionTool = {
-    type: "function",
-    function: {
-      name: MEMORY_SUMMARY_TOOL_NAME,
-      description: "返回记忆摘要。",
-      parameters: MemorySummaryToolSchema,
-    },
-  };
-
   const extra: Record<string, unknown> = {};
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
@@ -1005,25 +995,15 @@ export async function llmMemoryCompress(args: {
           },
           { role: "user", content: args.prompt },
         ],
-        tools: [tool],
         ...extra,
       });
       lastResponseSnapshot = llmResponseSnapshot(response);
 
-      const message = response.choices[0]?.message;
-      const toolCall = message?.tool_calls?.find(
-        (c) => c.type === "function" && c.function.name === MEMORY_SUMMARY_TOOL_NAME,
-      );
-      if (!toolCall || toolCall.type !== "function") {
-        throw new Error(`LLM 没有返回 memory_summary tool_call。响应：${lastResponseSnapshot}`);
+      const content = response.choices[0]?.message?.content;
+      if (!content || !content.trim()) {
+        throw new Error(`LLM 返回了空内容。响应：${lastResponseSnapshot}`);
       }
-
-      const parsed = JSON.parse(toolCall.function.arguments);
-      const result = MemorySummarySchema.safeParse(parsed);
-      if (!result.success) {
-        throw new Error(`MemorySummary 参数不符合 schema：${result.error.message}。rawArgs：${toolCall.function.arguments.slice(0, 1000)}`);
-      }
-      return result.data.summary;
+      return content.trim();
     } catch (err) {
       memoryLog.warn("LLM memory_compress 失败", {
         attempt,

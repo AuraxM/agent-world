@@ -484,8 +484,8 @@ describe("runDialogPhase", () => {
     expect(result.dialogEvents).toHaveLength(2);
     expect(result.memoryWrites).toHaveLength(0);
 
-    // Wait action count: 2 conversations × 2 participants each = 4 wait
-    const waitActions = result.finalActions.filter((a) => a.type === "wait");
+    // Look-around placeholder count: 2 conversations × 2 participants each = 4
+    const waitActions = result.finalActions.filter((a) => a.type === "look_around");
     expect(waitActions.length).toBe(4);
   });
 
@@ -661,8 +661,8 @@ describe("runDialogPhase", () => {
     expect(result.updatedConversations).toHaveLength(2);
     expect(result.dialogEvents).toHaveLength(2);
     expect(result.memoryWrites).toHaveLength(0);
-    // 2 conversations × 2 participants each = 4 wait
-    const waitActions = result.finalActions.filter((a) => a.type === "wait");
+    // 2 conversations × 2 participants each = 4 look_around placeholders
+    const waitActions = result.finalActions.filter((a) => a.type === "look_around");
     expect(waitActions.length).toBe(4);
   });
 });

@@ -758,18 +758,17 @@ export function buildCharacterStaticBlock(
 // dialog prompt builders
 // ---------------------------------------------------------------------------
 
-export function buildSelfImage(c: Character, locationName?: string): string {
+export function buildSelfImage(c: Character): string {
   const lines: string[] = [
     "关于你自己：",
     `- 姓名：${c.name}`,
     `- 年龄：${c.age} 岁`,
     `- 性别：${c.gender === "male" ? "男" : c.gender === "female" ? "女" : "其他"}`,
     `- 职业：${PROFESSION_LABELS[c.profession] ?? c.profession}`,
-    `- 形象：${buildImage(c)}`,
+    `- 健康状况：${c.sickness ? "你生病了" : "健康"}`,
+    `- 性格：${describePersonalityCompact(c.personality, c.intelligence)}`,
+    `- 生平简介：${c.biography}`,
   ];
-  if (locationName) {
-    lines.push(`- 当前在：${locationName}`);
-  }
   return lines.join("\n");
 }
 
@@ -816,7 +815,7 @@ export function buildAcceptDecisionPrompt(args: {
 
   lines.push(`${requesterName} 想和你说话："${freeText}"`);
   lines.push("");
-  lines.push(buildSelfImage(self, here.name));
+  lines.push(buildSelfImage(self));
   lines.push("");
   lines.push(buildPeerImage(self, peer));
   lines.push("");
@@ -938,7 +937,7 @@ export function buildDialogTurnPrompt(args: {
   if (language === "zh") {
     lines.push(`你是 ${self.name}，正在和 ${peer.name} 对话。`);
     lines.push("");
-    lines.push(buildSelfImage(self, here.name));
+    lines.push(buildSelfImage(self));
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
@@ -954,7 +953,7 @@ export function buildDialogTurnPrompt(args: {
   } else if (language === "en") {
     lines.push(`You are ${self.name}, speaking with ${peer.name}.`);
     lines.push("");
-    lines.push(buildSelfImage(self, here.name));
+    lines.push(buildSelfImage(self));
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
@@ -970,7 +969,7 @@ export function buildDialogTurnPrompt(args: {
   } else {
     lines.push(`あなたは ${self.name} です。${peer.name} と会話しています。`);
     lines.push("");
-    lines.push(buildSelfImage(self, here.name));
+    lines.push(buildSelfImage(self));
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");

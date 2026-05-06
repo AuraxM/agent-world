@@ -7,7 +7,8 @@ import { rollWorkIncome } from "./economy";
 export const eatAction: ActionDefinition = {
   type: "eat",
   duration: "instant",
-  guidance: "饥饿时进食以维持生存，优先于社交",
+  triggerHint: "感到饥饿时使用，补充能量维持身体运转。",
+  paramRule: "可选 free_text。需在餐厅/食堂类地点。",
   check(ctx) {
     if (!ctx.here.tags.includes("dining")) return false;
     if (ctx.self.expenseExempt) return true;
@@ -45,7 +46,8 @@ export const eatAction: ActionDefinition = {
 export const batheAction: ActionDefinition = {
   type: "bathe",
   duration: "instant",
-  guidance: "卫生值高时洗浴保持清洁",
+  triggerHint: "感觉身体不干净时使用，保持个人卫生。",
+  paramRule: "可选 free_text。需在浴室/洗浴类地点。",
   check(ctx) {
     if (!ctx.here.tags.includes("bathing")) return false;
     if (ctx.self.expenseExempt) return true;
@@ -82,7 +84,8 @@ export const batheAction: ActionDefinition = {
 export const restAction: ActionDefinition = {
   type: "rest",
   duration: 5,
-  guidance: "非睡眠时段疲惫时休息恢复体力",
+  triggerHint: "疲惫但不在睡眠时段时使用，在住处或隐私空间短暂休息。",
+  paramRule: "无需额外参数。持续 5 ticks，可被打断。",
   check(ctx) {
     return ctx.here.tags.includes("residence") || ctx.here.privacy === "private";
   },
@@ -124,7 +127,8 @@ export const restAction: ActionDefinition = {
 export const workAction: ActionDefinition = {
   type: "work",
   duration: 5,
-  guidance: "在工作地点获取收入，通常每个白天工作若干次",
+  triggerHint: "在工作/学习地点、该干活时使用，赚取收入。",
+  paramRule: "可选 free_text。需在个人的活动节点。持续 5 ticks。",
   check(ctx) {
     if (!ctx.facts.activityNodeId) return false;
     if (ctx.self.incomeLevel <= 0) return false;
@@ -177,7 +181,8 @@ export const workAction: ActionDefinition = {
 export const thinkAction: ActionDefinition = {
   type: "think",
   duration: "instant",
-  guidance: "社交满足不想说话或需要整理思绪时，独自沉思回顾记忆、整理印象",
+  triggerHint: "想一个人静静、回顾记忆整理思绪时使用。",
+  paramRule: "可选 free_text（思考内容，越具体记忆质量越高）。",
   check(_ctx) {
     return true;
   },
@@ -201,7 +206,8 @@ export const thinkAction: ActionDefinition = {
 export const speakAction: ActionDefinition = {
   type: "speak",
   duration: "instant",
-  guidance: "身边有人时发起社交对话",
+  triggerHint: "身边有人、想发起对话交流时使用。",
+  paramRule: "必填 target_id（说话对象）+ free_text（说什么）。",
   check(ctx) {
     return ctx.companions.length > 0;
   },
@@ -239,7 +245,8 @@ export const speakAction: ActionDefinition = {
 export const sleepAction: ActionDefinition = {
   type: "sleep",
   duration: 8 * TICKS_PER_HOUR,
-  guidance: "作息窗口内回住所睡觉恢复疲劳，除非有强烈理由否则不应打破作息",
+  triggerHint: "进入作息窗口、该睡觉时使用，完成整段睡眠恢复精力。",
+  paramRule: "无需额外参数。仅作息窗口内可用，需在住处。",
   check(ctx) {
     if (!ctx.isSleepHour) return false;
     return ctx.here.tags.includes("residence") || ctx.here.privacy === "private";
@@ -294,7 +301,8 @@ export const sleepAction: ActionDefinition = {
 export const moveAction: ActionDefinition = {
   type: "move",
   duration: 0, // engine computes from BFS path length
-  guidance: "需要改变位置时移动到目标节点（如回家休息、去餐馆吃饭、去工作地点）",
+  triggerHint: "想要移动时使用。",
+  paramRule: "必填 target_node_id（目的地 ID，在地图中查找）+ reason（移动原因）。可选 arrival_action。",
   check(_ctx) {
     return true;
   },
@@ -371,7 +379,8 @@ export const moveAction: ActionDefinition = {
 export const giveAction: ActionDefinition = {
   type: "give",
   duration: "instant",
-  guidance: "身边有人向你求助、借钱或表达经济困难时给予金钱帮助",
+  triggerHint: "身边有人需要帮助，想给予金钱时使用。",
+  paramRule: "必填 target_id（给谁）+ amount（金额，正整数）。",
   check(_ctx) {
     return false;
   },
@@ -425,7 +434,8 @@ export const giveAction: ActionDefinition = {
 export const lookAroundAction: ActionDefinition = {
   type: "look_around",
   duration: 5,
-  guidance: "当前没有合适的行动时原地观察等待（兜底选项）",
+  triggerHint: "无事可做时四处看看。",
+  paramRule: "无需额外参数。始终可用，兜底选项。",
   check(_ctx) { return true; },
   hint(ctx) {
     return `环顾四周（查看 ${ctx.here.name} 的情况，原地停留 5 ticks）`;

@@ -1159,9 +1159,9 @@ export function buildSystemPrompt(args: {
 
   // 仅包含所有 NPC 共享的世界规则 + 地图 + 语言指令，100% 字节一致 → 跨角色 prompt cache 完全命中。
   const lines: string[] = [worldRules(), "", `你身处的世界：${worldName}。`];
+  lines.push("", languageInstruction(language));
   const mapGraph = describeMapGraph(nodes);
   if (mapGraph) lines.push("", mapGraph);
-  lines.push("", languageInstruction(language));
   return lines.join("\n");
 }
 

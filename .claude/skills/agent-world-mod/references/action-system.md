@@ -15,8 +15,11 @@ interface ActionDefinition {
   hint(ctx: ActionContext): string | Array<{ hint: string; targetId?: string; targetNodeId?: string }>;
   execute(ctx: ActionContext, input: ActionInput): Outcome;
 
+  // Required for LLM prompt:
+  triggerHint: string;             // one sentence: when to use this action ("在……时使用" pattern)
+  paramRule: string;               // one sentence: parameter requirements + conditions. Use 必填/可选/无需 tiers
+
   // Optional:
-  guidance?: string;               // when to choose this action (not just how)
   onTick?(ctx: ActionContext): Outcome | null;
   onComplete?(ctx: ActionContext): Outcome;
   onInterrupt?(ctx: ActionContext, reason: string): Outcome;
@@ -26,13 +29,17 @@ interface ActionDefinition {
 }
 ```
 
-**`guidance`** (optional but recommended): a short string telling the LLM **when** to pick this action — not what it does (that's `hint`), but under what circumstances it's the right choice. Examples:
-- `eat`: "饥饿时进食以维持生存，优先于社交"
-- `sleep`: "作息窗口内回住所睡觉恢复疲劳，除非有强烈理由否则不应打破作息"
-- `give`: "身边有人向你求助、借钱或表达经济困难时给予金钱帮助"
-- Custom `brew_tea`: "想放松或招待客人时沏茶"
+**`triggerHint`** (required): one sentence telling the LLM **when** to pick this action — the trigger condition, not what it does. Written in natural Chinese but information-dense. Use "在……时使用" sentence pattern. Examples:
+- `eat`: "感到饥饿时使用，补充能量维持身体运转。"
+- `speak`: "身边有人、想发起对话交流时使用。"
+- Custom `brew_tea`: "想放松或招待客人时沏茶。"
 
-This appears in the prompt alongside the action hint, helping the LLM make context-appropriate decisions.
+**`paramRule`** (required): one sentence describing parameter requirements and usage conditions. Use exactly three tiers: `必填` (must provide), `可选` (may provide), `无需额外参数` (no extra params). Include location/time constraints after the parameter listing. Examples:
+- `speak`: "必填 target_id（说话对象）+ free_text（说什么）。"
+- `eat`: "可选 free_text。需在餐厅/食堂类地点。"
+- `sleep`: "无需额外参数。仅作息窗口内可用，需在住处。"
+
+These two fields appear in the user prompt as paired blocks — hint block first ("你此刻能做的事"), rule block second ("调用规则") — with the same action name in bold (`**action**:`) for LLM association.
 
 ### Lifecycle
 

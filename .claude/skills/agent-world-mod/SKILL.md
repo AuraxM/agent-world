@@ -247,7 +247,7 @@ Custom actions extend what NPCs can do in a world. They're loaded at runtime via
 2. **Read the current state:**
    - The existing `actions.js` in the target map pack.
    - `src/engine/actions-builtin.ts` for reference implementations of the 9 built-in actions.
-3. **Draft** following `references/action-system.md`.
+3. **Draft** following `references/action-system.md`. Use `triggerHint` (when to use, "在……时使用" pattern) and `paramRule` (parameter requirements, 必填/可选/无需 tiers). Do NOT use the deprecated `guidance` field.
 4. **Wire it up:**
    - If no `actions.js` exists yet, create it with `module.exports = [ ... ]`.
    - If `manifest.json` lacks an `"actions"` field, add `"actions": "actions.js"`.
@@ -259,6 +259,10 @@ Custom actions extend what NPCs can do in a world. They're loaded at runtime via
    for (const d of arr) {
      if (!d.type || !d.duration || !d.check || !d.hint || !d.execute) {
        console.error('MISSING FIELD in:', d.type || JSON.stringify(d));
+     } else if (!d.triggerHint) {
+       console.error('MISSING triggerHint in:', d.type);
+     } else if (!d.paramRule) {
+       console.error('MISSING paramRule in:', d.type);
      } else {
        console.log('OK:', d.type, '(' + d.duration + ')');
      }
@@ -274,6 +278,8 @@ Custom actions extend what NPCs can do in a world. They're loaded at runtime via
 - `check()`: returns boolean. Gate on `ctx.here.tags`, `ctx.here.privacy`, `ctx.self.vitals`, `ctx.companions.length`, `ctx.isSleepHour`.
 - `hint()`: returns a string (single option) or an array of `{hint, targetId?, targetNodeId?}` (multiple sub-options).
 - `execute()`: returns an `Outcome` with at least `memory` (first-person string in the map pack's language).
+- `triggerHint`: required string — one sentence telling the LLM **when** to pick this action. Use "在……时使用" pattern. See action-system.md for examples.
+- `paramRule`: required string — one sentence of parameter requirements. Use 必填/可选/无需 tiers. Include location constraints.
 - Use `stateChanges` for side effects — never mutate `ctx.self` directly.
 - File must use CommonJS (`module.exports = [...]`), not ESM.
 - No imports or `require()` — the file runs in a bare `Function` constructor.

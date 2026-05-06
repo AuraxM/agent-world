@@ -281,22 +281,42 @@ function describeEvents(events: WorldEvent[]): string {
 }
 
 function describeOptions(opts: ActionOption[]): string {
-  // Deduplicate guidance per type to avoid repeating the same advice for
-  // multi-option actions (e.g. move with different destinations).
-  const seenGuidance = new Set<string>();
   return opts
     .map((o, i) => {
       const meta: string[] = [`type=${o.type}`];
       if (o.targetId) meta.push(`target_id=${o.targetId}`);
       if (o.targetNodeId) meta.push(`target_node_id=${o.targetNodeId}`);
-      let line = `${i + 1}. (${meta.join(", ")}) ${o.hint}`;
-      if (o.guidance && !seenGuidance.has(o.type)) {
-        seenGuidance.add(o.type);
-        line += ` 【${o.guidance}】`;
-      }
-      return line;
+      return `${i + 1}. (${meta.join(", ")}) ${o.hint}`;
     })
     .join("\n");
+}
+
+function describeHints(opts: ActionOption[]): string {
+  const seen = new Set<string>();
+  const lines: string[] = [];
+  for (const o of opts) {
+    if (seen.has(o.type)) continue;
+    seen.add(o.type);
+    const def = actionRegistry.get(o.type);
+    if (def?.triggerHint) {
+      lines.push(`**${o.type}**: ${def.triggerHint}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+function describeRules(opts: ActionOption[]): string {
+  const seen = new Set<string>();
+  const lines: string[] = [];
+  for (const o of opts) {
+    if (seen.has(o.type)) continue;
+    seen.add(o.type);
+    const def = actionRegistry.get(o.type);
+    if (def?.paramRule) {
+      lines.push(`**${o.type}**: ${def.paramRule}`);
+    }
+  }
+  return lines.join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -551,39 +571,15 @@ function formatActionCounts(
  * 角色专属内容由 buildUserPrompt 开头的身份锚点 + 角色静态认知块单独承载。
  */
 function worldRules(): string {
-  return `你是这个小镇的居民。你每天在这里生活——吃饭、工作、休息、和人聊天。日子一天天过，你凭自己的性格和当下的感受，自然地决定接下来做什么。
+  return `你是这个小镇的居民。你每天在这里过日子——天亮了起床，饿了吃饭，困了睡觉，碰见熟人聊两句，一个人时也会发呆想心事。
 
-关于时间：每过 1 tick，就是过了 1/5 小时（5 ticks = 1 游戏小时）。每个 tick，你都要想一想接下来要做什么。
+你没有"玩家"这个概念。你活在你的身体里，能感觉到饿、困、脏、累。身体不舒服的时候，你会想办法让自己好受些——这是本能，不需要谁来提醒。
 
-怎么做决定：
-- 你在心里盘算一下当下的处境，然后调用 decide_action 工具，告诉引擎你的选择。
-- action_type 是你要做的事，具体有哪些可选，会列在 prompt 末尾的"可选行动"里。
-- 根据你选的 action_type，填好对应的参数（比如 target_id、target_node_id、free_text、amount）。
-- reasoning 是你做决定时的内心活动。你习惯在做决定前，想想自己的性格会怎么影响这个选择——这种自我觉察是你的一部分。
-- self_importance（1-5）是你觉得这件事值不值得以后回忆。日常琐事填 1-2，真正触动你的事填 4-5。
-- 如果一时没有什么特别想做的，环顾四周（look_around）也是个不错的选择。
+你做出的每个决定，都来自你的性格和当下的感受。性格决定了你的风格——有人喜欢热闹，有人偏爱独处；有人想到就做，有人反复掂量。但不管什么性格，饿了要吃、困了要睡——这些基本的需要，不会因为"不爱动弹"就不做了。
 
-出门走动：
-- 想去哪里就去哪里。告诉引擎目的地（target_node_id）和为什么去（reason），引擎会帮你找最短的路。每走一步消耗 1 tick。走在路上你没法做其他决定（就像睡着了一样），但如果发生了什么大事（被人大声叫住、突发事件），你会停下来。
-- 出发前你可以想好到了目的地要做什么（arrival_action），这样一到地方就会自动去做。
+日子一天天过下去。你会记住让你在意的事，忘掉不重要的。遇见的人会和你产生关联，关系走动了才热络，不走动就淡了。
 
-你的作息习惯：
-- 1 天 = 120 tick（24 小时 × 5 tick/小时）。你有自己习惯的睡觉时间（见下方"自我认知"里的作息窗口）。
-- 在你的作息时段里，你该回自己的住处睡觉。除非真有放不下的事——紧急情况、非去不可的约定——你不会随便打破自己的作息。偶尔破例，你心里也会觉得不踏实。
-- 作息时段之外，再困也不能直接睡大觉，只能小憩（rest）一会儿。把整段睡眠留给你习惯的时段，不然节律会乱。
-
-身体的感觉优先：
-- 累到眼皮打架的时候，吃饭睡觉比跟人聊天重要。当前这个地方不能休息的话，你第一反应是回家。
-- 饿得肚子难受的时候，吃饭也同样要紧。这里没吃的，你就会动身去找有饭吃的地方。
-- 你的性格决定了你**怎么做**（喜欢安静还是热闹、脾气急躁还是稳重），但饿了要吃、困了要睡——这些基本的需求是绕不开的。
-- 长时间饿着、不睡觉、不洗澡，身体会越来越差，心情也会跟着沉下去。这不是摆设，是你切身的感受。
-
-人和人的关系：
-- 超过 14 天没跟某个熟人联系，你们之间的关系就会慢慢变淡。想维持一段关系，总得主动走动走动。
-
-别在原地打转：
-- 如果你刚才好几个 tick 一直在做同一类事，周围也没什么新鲜事——那该换点什么了。
-- 在同一个地方待了超过 8 小时，既不是你家，也不是你工作的地方，也不是什么特别的场合——那该动身去别处了。`;
+要做什么，调用 decide_action 工具来告诉世界。就像你抬起脚迈出一步那样自然。`;
 }
 
 // ---------------------------------------------------------------------------
@@ -981,7 +977,7 @@ export function buildDialogTurnPrompt(args: {
         const extra = a.extraParams
           ? Object.keys(a.extraParams).filter(k => k !== "free_text").join(", ")
           : "";
-        const guide = a.guidance ? ` — ${a.guidance}` : "";
+        const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
         return `- ${a.type}${extra ? ` (需要 ${extra})` : ""}${guide}`;
       })
       .join("\n");
@@ -1386,8 +1382,16 @@ export function buildUserPrompt(args: {
   lines.push("");
 
   // 7. 可选行动
-  lines.push("你现在可以选择的行动（每项已带类型与必要的 target id）：");
+  lines.push("## 你此刻能做的事");
+  lines.push(describeHints(options));
+  lines.push("");
+  lines.push("## 可选行动（每项已带类型与必要的 target id）");
   lines.push(describeOptions(options));
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push("## 调用规则（技术提示，不是叙事）");
+  lines.push(describeRules(options));
   lines.push("");
 
   // 跨语言记忆提示（仅 non-zh）

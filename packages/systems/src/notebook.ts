@@ -124,7 +124,7 @@ export function describeEntries(
   const allToday = entries.every(
     (e) => sameUTCDay(e.scheduledTick, currentTick, epoch),
   );
-  const label = allToday ? "今日待办" : "待办";
+  const label = allToday ? "今日约定的待办" : "约定的待办";
   return `${label}：\n${lines.join("\n")}`;
 }
 

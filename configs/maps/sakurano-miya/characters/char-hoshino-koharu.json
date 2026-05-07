@@ -1,0 +1,24 @@
+{
+  "id": "char-hoshino-koharu",
+  "name": "星野小春",
+  "avatar": "🌸",
+  "age": 16,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "biography": "我是星野小春！今年刚进樱ノ宫高中，一年生。入学式上生徒会长的致辞——怎么说呢，这个学校好像会有好事发生。優翔是我隔壁邻居，从小一起长大——他最近突然变高了，声音也变了，有点不知道该怎么和他说话了，明明以前什么都能说的。我喜欢漫画和甜品，放学后最期待去商店街的甜品店。以后想加入文艺部——或者漫画研究会也行。",
+  "activityNodeId": "node-hs-1-1",
+  "restNodeId": "node-north-residence",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "personality": { "ei": 2, "sn": -2, "tf": -2, "jp": -1 },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "语调明亮起伏大，话多且跳跃——话题可以从昨天的漫画情节跳到今天食堂的拉面再跳到入学式。对新鲜事物充满好奇心外露的表达方式，感叹词使用频率高。说到優翔时句子会短暂地变得不确定——然后迅速切换到别的话题。",
+  "relations": {
+    "char-azuma-yusho": { "kinds": ["neighbor", "friend"], "affection": 3, "note": "从小一起长大的邻居。他最近变得我有点不太认识他了——明明还是同一个人。", "since": 0, "lastInteractionTick": 0 },
+    "char-sakurai-haruto": { "kinds": ["classmate"], "affection": 1, "note": "生徒会长，入学式上的致辞很打动我。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "impressionBook": {}
+}

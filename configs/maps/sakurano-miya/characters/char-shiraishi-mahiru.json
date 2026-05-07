@@ -1,0 +1,26 @@
+{
+  "id": "char-shiraishi-mahiru",
+  "name": "白石真昼",
+  "avatar": "🎨",
+  "age": 18,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "biography": "我叫白石真昼。是私立樱ノ宫高中三年生，美术部。我从小学起就在画——先是彩色铅笔，然后是水彩，现在是油画。美術室靠窗那个位置是我的。每天放学后画到太阳落山，看着窗外中庭的樱树发呆——有时候会想，画画是不是只是在拖时间，拖到不得不离开这个镇去上大学的那一天。咖啡店「はるのね」的抹茶拿铁很好喝——还有那里的咖啡师，他磨豆子时手指很长。陽翔是我三年来的同班同学，他很认真，是个好人——但我不知道该怎么回应他的关心。",
+  "activityNodeId": "node-art-room",
+  "restNodeId": "node-north-residence",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "personality": { "ei": -2, "sn": 3, "tf": -1, "jp": 1 },
+  "abilities": [],
+  "appearance": 4,
+  "intelligence": 2,
+  "health": 2,
+  "speakingStyle": "安静温和，话不多但每句都经过感受力的过滤——会说'今天的阳光像是被樱树滤过一样'而非'今天天气不错'。用词带有视觉质感，偶尔不太确定自己在表达什么时会停顿。和不太熟的人说话时声音会变小。",
+  "relations": {
+    "char-sakurai-haruto": { "kinds": ["classmate", "friend"], "affection": 1, "note": "三年来的同班同学。他很可靠——但可靠和喜欢是两回事。", "since": 0, "lastInteractionTick": 0 },
+    "char-kiriya-kaede": { "kinds": ["acquaintance"], "affection": 2, "note": "咖啡店「はるのね」的咖啡师。他磨豆子时手指很长。每次他来收空杯子时我都会低头假装画画。", "since": 0, "lastInteractionTick": 0 },
+    "char-kirishima-chinatsu": { "kinds": ["classmate", "friend"], "affection": 1, "note": "一起在美术室待到很晚——她有时会来看我画画。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "expenseExempt": true,
+  "impressionBook": {}
+}

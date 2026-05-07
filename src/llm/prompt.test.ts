@@ -293,58 +293,9 @@ describe("buildUserPrompt", () => {
     expect(out).toContain("作息窗口：22:00–06:00");
   });
 
-  it("fatigue 高 + 不在 residence → 触发 ⚠ 紧迫提醒", () => {
+  it("决策优先级框架在 prompt 中渲染", () => {
     const out = buildUserPrompt({
-      character: {
-        ...baseCharacter,
-        vitals: { hunger: 0, fatigue: 14, hygiene: 0 },
-      },
-      here: restaurant,
-      companions: [],
-      perceived: [],
-      options: [{ type: "wait", hint: "等" }],
-      tick: 5,
-      epoch: TEST_EPOCH,
-      facts: { ...emptyFacts, restNodeId: "node-home", restNodeName: "我的家" },
-      nodes: [restaurant],
-      allCharacters: [baseCharacter],
-    });
-    expect(out).toContain("⚠");
-    expect(out).toContain("应优先 move 回 我的家");
-  });
-
-  it("fatigue 高 + 在 residence → 不触发 ⚠", () => {
-    const home: MapNode = {
-      ...restaurant,
-      id: "node-home",
-      name: "我的家",
-      tags: ["private", "indoor", "residence"],
-      privacy: "private",
-    };
-    const out = buildUserPrompt({
-      character: {
-        ...baseCharacter,
-        vitals: { hunger: 0, fatigue: 14, hygiene: 0 },
-      },
-      here: home,
-      companions: [],
-      perceived: [],
-      options: [{ type: "wait", hint: "等" }],
-      tick: 5,
-      epoch: TEST_EPOCH,
-      facts: { ...emptyFacts, restNodeId: "node-home", restNodeName: "我的家" },
-      nodes: [home],
-      allCharacters: [baseCharacter],
-    });
-    expect(out).not.toContain("⚠");
-  });
-
-  it("hygiene 高 + 不在 bathing → 触发 ⚠ 卫生紧迫", () => {
-    const out = buildUserPrompt({
-      character: {
-        ...baseCharacter,
-        vitals: { hunger: 0, fatigue: 0, hygiene: 14 },
-      },
+      character: baseCharacter,
       here: restaurant,
       companions: [],
       perceived: [],
@@ -355,8 +306,51 @@ describe("buildUserPrompt", () => {
       nodes: [restaurant],
       allCharacters: [baseCharacter],
     });
-    expect(out).toContain("⚠");
-    expect(out).toContain("澡堂");
+    expect(out).toContain("## 决策优先级");
+    expect(out).toContain("### 1. 生理需求");
+    expect(out).toContain("### 2. 履行约定");
+    expect(out).toContain("### 3. 社交适度");
+    expect(out).toContain("### 4. 自由行动");
+  });
+
+  it("行为规则包含必须和建议两层", () => {
+    const out = buildUserPrompt({
+      character: baseCharacter,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options: [{ type: "wait", hint: "等" }],
+      tick: 5,
+      epoch: TEST_EPOCH,
+      facts: emptyFacts,
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
+    });
+    expect(out).toContain("### 必须遵守");
+    expect(out).toContain("### 建议遵守");
+    expect(out).toContain("禁止连续两 tick 对同一个人 speak");
+    expect(out).toContain("生理需求");
+  });
+
+  it("notebook 待办在 prompt 中渲染且在决策优先级之后", () => {
+    const out = buildUserPrompt({
+      character: baseCharacter,
+      here: restaurant,
+      companions: [],
+      perceived: [],
+      options: [{ type: "wait", hint: "等" }],
+      tick: 5,
+      epoch: TEST_EPOCH,
+      facts: emptyFacts,
+      nodes: [restaurant],
+      allCharacters: [baseCharacter],
+      upcomingNotebookText: "约定的待办：\n- 1小时后 — 和张三约好开会",
+    });
+    expect(out).toContain("约定的待办：");
+    expect(out).toContain("和张三约好开会");
+    const notebookIdx = out.indexOf("约定的待办：");
+    const economyIdx = out.indexOf("你的经济状态：");
+    expect(notebookIdx).toBeLessThan(economyIdx);
   });
 
   it("连续行为段含 hours / lastAction with speak target / today counts / speak targets", () => {

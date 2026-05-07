@@ -1266,18 +1266,6 @@ function describeContinuity(
   return lines.join("\n");
 }
 
-function hereCanRest(here: MapNode): boolean {
-  return here.tags.includes("residence") || here.privacy === "private";
-}
-
-function hereCanEat(here: MapNode): boolean {
-  return here.tags.includes("dining");
-}
-
-function hereCanBathe(here: MapNode): boolean {
-  return here.tags.includes("bathing");
-}
-
 export function buildUserPrompt(args: {
   character: Character;
   here: MapNode;
@@ -1341,6 +1329,42 @@ export function buildUserPrompt(args: {
     lines.push("");
   }
 
+  // 0.7. 决策优先级（跨 tick 不变，放在缓存前缀区）
+  lines.push("## 决策优先级（严格遵守从上到下的顺序）");
+  lines.push("");
+  lines.push("### 1. 生理需求（最高优先）");
+  lines.push("当你感到明显饥饿、明显疲惫或明显不干净时，必须优先解决：");
+  lines.push("- 饥饿 → move 去用餐场所（dining 标签）eat");
+  lines.push("- 疲惫 → move 去休息场所（residence 标签或 private）rest/sleep");
+  lines.push("- 卫生 → move 去洗浴场所（bathing 标签）bathe");
+  lines.push("生理需求未解决之前，不要做其他事。");
+  lines.push("");
+  lines.push("### 2. 履行约定");
+  lines.push("记事本中如果有当前时段或即将到期的待办事项，优先赴约。");
+  lines.push("约定好的事不去做，就是不守信用。");
+  lines.push("");
+  lines.push("### 3. 社交适度");
+  lines.push("不要连续两 tick 对同一个人 speak。");
+  lines.push("如果你上一 tick 刚和某人说过话，这 tick 换个人或者做别的事。");
+  lines.push("");
+  lines.push("### 4. 自由行动");
+  lines.push("以上都不触发时，根据你的性格、目标、感知到的事件自由选择。");
+  lines.push("");
+
+  // 0.8. 行为规则（跨 tick 不变，放在缓存前缀区）
+  lines.push("## 行为规则");
+  lines.push("");
+  lines.push("### 必须遵守");
+  lines.push("- 生理需求（饿了吃、困了睡、脏了洗）是本能，不由性格左右。不论你是外向还是内向、勤快还是懒散，该吃饭时必须吃饭，该睡觉时必须睡觉。");
+  lines.push("- 禁止连续两 tick 对同一个人 speak。换个人说话，或者做别的事。");
+  lines.push("- 禁止编造不存在的约定、任务、计划或人物。只依据你的记忆和真实经历做判断。");
+  lines.push("- 记事本上有待办事项时，必须在当前时间段内规划执行。不可无故拖延。");
+  lines.push("");
+  lines.push("### 建议遵守");
+  lines.push("- 与人互动后产生了新印象或了解到重要信息时，调用 memorize 记录下来。");
+  lines.push("- 不确定对方是谁时，先 recall 查询，不要假装认识陌生人。");
+  lines.push("");
+
   // 1. 你的连续行为
   lines.push("你的连续行为：");
   lines.push(describeContinuity(facts, here.name, tick, nameMap));
@@ -1358,24 +1382,6 @@ export function buildUserPrompt(args: {
   lines.push(`- 饥饿：${hunger.phrase}`);
   lines.push(`- 疲惫：${fatigue.phrase}`);
   lines.push(`- 卫生：${hygiene.phrase}`);
-
-  // 生理状态引导：数值 > 8 时注入行动建议
-  const vitalGuidance: string[] = [];
-  if (character.vitals.hunger > 8) {
-    vitalGuidance.push("你最好去吃点东西，需要在用餐场所进行");
-  }
-  if (character.vitals.fatigue > 8) {
-    vitalGuidance.push("你最好去休息一下，需要在休息场所进行");
-  }
-  if (character.vitals.hygiene > 8) {
-    vitalGuidance.push("你最好去洗个澡，需要在洗浴场所进行");
-  }
-  if (vitalGuidance.length > 0) {
-    lines.push("");
-    for (const guidance of vitalGuidance) {
-      lines.push(guidance);
-    }
-  }
 
   // 3.1 情绪状态
   lines.push("你当前的情绪状态：");
@@ -1395,33 +1401,10 @@ export function buildUserPrompt(args: {
     lines.push("你有些寂寞，如果有合适的人在身边，不妨说说话。");
   }
 
-  // 3.2 紧迫提醒
-  const fatigueUrgent =
-    fatigue.urgency === "high" ||
-    fatigue.urgency === "critical" ||
-    fatigue.urgency === "fatal";
-  const hungerUrgent =
-    hunger.urgency === "high" ||
-    hunger.urgency === "critical" ||
-    hunger.urgency === "fatal";
-  const hygieneUrgent =
-    hygiene.urgency === "high" ||
-    hygiene.urgency === "critical" ||
-    hygiene.urgency === "fatal";
-  if (fatigueUrgent && !hereCanRest(here)) {
-    lines.push(
-      `⚠ 你过度疲惫但当前位置不能休息${
-        facts.restNodeName ? `，应优先 move 回 ${facts.restNodeName}` : "，应优先 move 回有床的住所"
-      }。`,
-    );
+  // 3.3 约定的待办
+  if (upcomingNotebookText && upcomingNotebookText.length > 0) {
+    lines.push(upcomingNotebookText, "");
   }
-  if (hungerUrgent && !hereCanEat(here)) {
-    lines.push("⚠ 你过度饥饿但当前位置不能进食，应优先 move 去用餐场所。");
-  }
-  if (hygieneUrgent && !hereCanBathe(here)) {
-    lines.push("⚠ 你身上很脏但当前位置不能洗浴，应优先 move 去澡堂或浴室。");
-  }
-  lines.push("");
 
   // Economic state
   if (!character.expenseExempt) {
@@ -1443,15 +1426,9 @@ export function buildUserPrompt(args: {
   if (companions.length > 0) {
     const names = companions.map(c => `${c.name}[${c.id}]`).join("、");
     lines.push(`同节点其他人物（共 ${companions.length} 人）：${names}`);
-    lines.push("如果你不熟悉其中某人，先调用 recall 查询你对TA的了解，再决定如何互动。不要假装认识陌生人。");
+    lines.push("如果你不熟悉其中某人，先调用 recall 查询你对TA的了解，再决定如何互动。");
     lines.push("");
   }
-
-  // 4.5. 行为规则
-  lines.push("## 行为规则");
-  lines.push("- 与人互动后产生了新印象或了解到重要信息时，调用 memorize 记录下来，不要只在心里想。");
-  lines.push("- 禁止编造不存在的约定、任务、计划或人物。只依据你的记忆和真实经历做判断。");
-  lines.push("");
 
   // 5. 感知事件 —— 无事件时整段省略
   if (perceived.length > 0) {
@@ -1505,11 +1482,6 @@ export function buildUserPrompt(args: {
       lines.push(line);
     }
     lines.push("");
-  }
-
-  // Notebook entries
-  if (upcomingNotebookText && upcomingNotebookText.length > 0) {
-    lines.push(upcomingNotebookText, "");
   }
 
   // 末尾仅保留提交指令；languageInstruction 已在 system 末尾提供，不再重复。

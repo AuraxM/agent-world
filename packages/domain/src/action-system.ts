@@ -13,10 +13,13 @@ export interface AggregatedFacts {
     freeText?: string;
     tick: Tick;
     success: boolean;
+    targetId?: string;
   };
   lastRestTick?: Tick;
   lastEatTick?: Tick;
   todayActionCounts: Partial<Record<string, number>>;
+  /** 今日 speak 的目标角色 ID → 次数（仅记录 speak 类型）。 */
+  todaySpeakTargets: Record<string, number>;
 }
 
 // ---- ActionInput: LLM tool-call params, passed to execute() ----

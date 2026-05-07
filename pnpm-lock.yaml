@@ -11,6 +11,9 @@ importers:
       '@agw/db':
         specifier: workspace:*
         version: link:packages/db
+      '@agw/systems':
+        specifier: workspace:*
+        version: link:packages/systems
       better-sqlite3:
         specifier: ^12.9.0
         version: 12.9.0
@@ -125,6 +128,18 @@ importers:
       '@agw/domain':
         specifier: workspace:*
         version: link:../domain
+
+  packages/systems:
+    dependencies:
+      '@agw/db':
+        specifier: workspace:*
+        version: link:../db
+      '@agw/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@agw/shared':
+        specifier: workspace:*
+        version: link:../shared
 
 packages:
 

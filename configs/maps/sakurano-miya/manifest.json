@@ -1,0 +1,9 @@
+{
+  "id": "sakurano-miya",
+  "name": "樱ノ宫",
+  "description": "丘陵地带的学园小镇。高中与大学共享一片樱花丘陵，商店街、河边道、神社——人与人之间早已相互认识。春天，百年垂樱满开，新的相遇在旧的羁绊中萌芽。",
+  "language": "zh",
+  "startDate": "2026-04-07T08:00:00",
+  "actions": "actions.js",
+  "events": "events.json"
+}

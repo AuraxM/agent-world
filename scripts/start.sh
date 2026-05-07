@@ -36,12 +36,12 @@ echo -e "${GREEN}  Dependencies OK${NC}"
 # ── 2. Database setup ──
 echo -e "${YELLOW}[2/4] Setting up database...${NC}"
 mkdir -p data
-tsx packages/db/src/migrate.ts
+pnpm exec tsx packages/db/src/migrate.ts
 echo -e "${GREEN}  Database OK${NC}"
 
 # ── 3. Seed ──
 echo -e "${YELLOW}[3/4] Seeding world...${NC}"
-tsx scripts/seed.ts
+pnpm exec tsx scripts/seed.ts
 echo -e "${GREEN}  Seed OK${NC}"
 
 # ── 4. Start services ──

@@ -93,7 +93,8 @@ export const llmDecide: DecideFn = async (input) => {
   }
 };
 
-const MAX_TOOL_CALL_ROUNDS = 3;
+const MAX_TOOL_CALL_ROUNDS = 5;
+// prompt 在 callLLMWithRetry 外构建一次，不随 round 重建 —— 避免 Map/Object 序列化顺序波动导致 cache miss
 
 /** 从 response message 提取 assistant 消息，保留 reasoning_content（DeepSeek 要求回传）。 */
 function captureAssistantMsg(msg: any): Record<string, unknown> {
@@ -344,6 +345,8 @@ async function callLLM(input: DecideInput): Promise<Action> {
     { role: "system", content: system },
     { role: "user", content: user },
   ];
+
+  decideLog.info("DECIDE_PROMPT", { prompt: { system, user }, character: input.character.name });
 
   const startMs = Date.now();
   decideLog.info("LLM decide 请求", {

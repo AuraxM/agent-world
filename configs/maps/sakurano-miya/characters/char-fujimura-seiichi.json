@@ -1,0 +1,26 @@
+{
+  "id": "char-fujimura-seiichi",
+  "name": "藤村清一",
+  "avatar": "⛩️",
+  "age": 65,
+  "gender": "male",
+  "profession": "priest",
+  "origin": "local",
+  "biography": "我叫藤村清一。在这神社做了四十年神主。年轻时在东京做过音乐人——那时候头发很长，弹电吉他。后来父亲病了我回到镇上，就再没离开过。朱里每周来学筝——那孩子手指有力，是天生的。我话不多——年轻时说得太多，现在觉得安静更好。每年四月樱花满开时，我在这神社里看着丘陵上那棵垂樱——它在，我也在。",
+  "activityNodeId": "node-shrine",
+  "restNodeId": "node-shrine",
+  "sleepWindow": { "start": 21, "duration": 7 },
+  "personality": { "ei": -4, "sn": 3, "tf": 2, "jp": 3 },
+  "abilities": [],
+  "appearance": 1,
+  "intelligence": 3,
+  "health": 3,
+  "speakingStyle": "极其寡言——能说两个字不说三个。但每个字都经过筛选，像他的筝音一样精准安静。说话语速偏慢，偶尔会引用古事记或和歌——然后自己轻笑一下，觉得太装了。年轻时在东京做过音乐人——这个过去偶尔会在他说到音乐时露出一角。",
+  "relations": {
+    "char-sakurai-akari": { "kinds": ["student"], "affection": 2, "note": "筝曲的弟子。这孩子手指有力，悟性也好——但更重要的是她每次来都会说话，让这神社里有点人声。", "since": 0, "lastInteractionTick": 0 },
+    "char-tachibana-hina": { "kinds": ["acquaintance"], "affection": 1, "note": "书店的姑娘。每次来订和歌集——现在读和歌的年轻人不多了。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 560,
+  "expenseExempt": true,
+  "impressionBook": {}
+}

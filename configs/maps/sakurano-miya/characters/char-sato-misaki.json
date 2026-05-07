@@ -1,0 +1,27 @@
+{
+  "id": "char-sato-misaki",
+  "name": "佐藤美咲",
+  "avatar": "🏠",
+  "age": 28,
+  "gender": "female",
+  "profession": "innkeeper",
+  "origin": "local",
+  "biography": "我叫佐藤美咲。「はるのね」的店主，在这里开店五年了。丈夫在邻市上班，每晚回来——所以店里晚班是我一个人。我喜欢记住每个客人的常点单品——楓的黑咖啡不加糖，蓮的冰拿铁少冰，真昼的抹茶拿铁加可可粉——这不是生意技巧，只是觉得被记住是件让人高兴的事。朱里偶尔深夜带朋友来——那孩子把咖啡店当成第二客厅了，我不介意。",
+  "activityNodeId": "node-haru-no-ne",
+  "restNodeId": "node-haru-no-ne",
+  "sleepWindow": { "start": 0, "duration": 7 },
+  "personality": { "ei": 3, "sn": 1, "tf": -1, "jp": 2 },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "亲切健谈，语调温暖像在招呼家人。会记住每个人喜欢的温度和口味——这份记忆力自然流露在对话中。说话带着服务行业特有的分寸感——热络但不越线，关心但不八卦。偶尔会像姐姐一样给出简短的建议。",
+  "relations": {
+    "char-kiriya-kaede": { "kinds": ["colleague"], "affection": 2, "note": "咖啡店的兼职生。冲咖啡认真得让人觉得他在做实验——但冲出来的咖啡很好喝。", "since": 0, "lastInteractionTick": 0 },
+    "char-sakurai-akari": { "kinds": ["friend"], "affection": 2, "note": "常客。她深夜带朋友来的时候咖啡店变成了青春剧的舞台——我负责提供背景音乐。", "since": 0, "lastInteractionTick": 0 },
+    "char-tachibana-hina": { "kinds": ["friend"], "affection": 2, "note": "常客。安静的文学少女——她坐在角落读书的样子让咖啡店看起来更好了。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "initialMoney": 280,
+  "expenseExempt": false,
+  "impressionBook": {}
+}

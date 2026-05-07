@@ -96,7 +96,7 @@ describe("describeEntries", () => {
       makeEntry(60, "another task"),
     ];
     const result = describeEntries(entries, 0, EPOCH);
-    expect(result).toContain("今日待办");
+    expect(result).toContain("今日约定的待办");
     expect(result).toContain("06:00 — a task");
     expect(result).toContain("12:00 — another task");
   });

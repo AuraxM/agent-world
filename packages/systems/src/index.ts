@@ -10,3 +10,4 @@ export * from "./actions";
 export * from "./actions-builtin";
 export * from "./execute";
 export * from "./events-builtin";
+export * from "./notebook";

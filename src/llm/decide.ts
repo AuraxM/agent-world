@@ -17,13 +17,14 @@ import {
   ACCEPT_TOOL_NAME, AcceptDecisionSchema, AcceptToolSchema,
   DIALOG_TURN_TOOL_NAME, DialogTurnSchema, DialogTurnToolSchema,
   DIALOG_SUMMARY_TOOL_NAME, DialogSummarySchema, DialogSummaryToolSchema,
+  DIALOG_PERSONAL_MEMORY_TOOL_NAME, DialogPersonalMemorySchema, DialogPersonalMemoryToolSchema,
   END_CONVERSATION_TOOL_NAME, EndConversationToolSchema, EndConversationSchema,
   PROPOSE_DIALOGUE_ACTION_TOOL_NAME, ProposeDialogueActionSchema, ProposeDialogueActionToolSchema,
   RESPOND_DIALOGUE_ACTION_TOOL_NAME, RespondDialogueActionSchema, RespondDialogueActionToolSchema,
   NOTEBOOK_TOOL_NAME, NotebookSchema, NotebookToolSchema,
   THINK_TOOL_NAME, ThinkTurnSchema, ThinkTurnToolSchema,
   END_THINKING_TOOL_NAME, EndThinkingSchema, EndThinkingToolSchema,
-  type AcceptDecisionPayload, type DialogTurnPayload, type DialogSummaryPayload,
+  type AcceptDecisionPayload, type DialogTurnPayload, type DialogSummaryPayload, type DialogPersonalMemoryPayload,
 } from "@/domain/schemas";
 import type { Action, Character, DialogTurn, EndConversationPayload, MapNode, WorldEvent } from "@/domain/types";
 import type { Language } from "@/config/types";
@@ -36,8 +37,8 @@ import type { ActionContext } from "@/engine/actions";
 import {
   buildAcceptDecisionPrompt,
   buildDialogSummaryPrompt,
+  buildDialogPersonalMemoryPrompt,
   buildDialogTurnPrompt,
-  buildSalvageContext,
   buildSystemPrompt,
   buildUserPrompt,
   buildThinkPrompt,
@@ -1020,6 +1021,118 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<{ s
 }
 
 // ---------------------------------------------------------------------------
+// Dialog personal memory — one character's reflection after a conversation
+// ---------------------------------------------------------------------------
+
+export interface DialogPersonalMemoryInput {
+  characterName: string;
+  characterId: string;
+  partnerName: string;
+  partnerId: string;
+  transcript: DialogTurn[];
+  language?: Language;
+}
+
+export async function llmDialogPersonalMemory(input: DialogPersonalMemoryInput): Promise<DialogPersonalMemoryPayload> {
+  if (!hasApiKey()) {
+    return { feeling: "（无 API key）", impression: "（无 API key）", topics: ["（无 API key）"] };
+  }
+
+  const config = getEntryConfig("dialog_personal_memory");
+  const client = getLLMClientForEntry("dialog_personal_memory");
+  const language: Language = input.language ?? "zh";
+
+  summaryLog.info("LLM dialog_personal_memory 请求", {
+    character: input.characterName,
+    partner: input.partnerName,
+    turns: input.transcript.length,
+  });
+
+  const prompt = buildDialogPersonalMemoryPrompt({
+    characterName: input.characterName,
+    characterId: input.characterId,
+    partnerName: input.partnerName,
+    partnerId: input.partnerId,
+    transcript: input.transcript,
+    language,
+  });
+
+  const tool: ChatCompletionTool = {
+    type: "function",
+    function: {
+      name: DIALOG_PERSONAL_MEMORY_TOOL_NAME,
+      description: "返回你对这次对话的个人记忆。",
+      parameters: DialogPersonalMemoryToolSchema,
+    },
+  };
+
+  const extra: Record<string, unknown> = {};
+  if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
+
+  let lastError: string | undefined;
+  let lastResponseSnapshot = "(no response)";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await client.chat.completions.create({
+        model: getModelNameForEntry("dialog_personal_memory"),
+        max_tokens: 2048,
+        messages: [
+          {
+            role: "system",
+            content: `你是 ${input.characterName}。请从你的视角回顾刚才的对话，记录你的心情、对对方的印象、以及聊到的主题。\n\n${languageInstruction(language)}`,
+          },
+          { role: "user", content: prompt },
+        ],
+        tools: [tool],
+        ...extra,
+      });
+      lastResponseSnapshot = llmResponseSnapshot(response);
+
+      const message = response.choices[0]?.message;
+      const toolCall = message?.tool_calls?.find(
+        (c) => c.type === "function" && c.function.name === DIALOG_PERSONAL_MEMORY_TOOL_NAME,
+      );
+      if (!toolCall || toolCall.type !== "function") {
+        throw new Error(`LLM 没有返回 dialog_personal_memory tool_call。响应：${lastResponseSnapshot}`);
+      }
+
+      const parsed = JSON.parse((toolCall as any).function.arguments);
+      const result = DialogPersonalMemorySchema.safeParse(parsed);
+      if (!result.success) {
+        throw new Error(`DialogPersonalMemory 参数不符合 schema：${result.error.message}。rawArgs：${(toolCall as any).function.arguments?.slice(0, 1000)}`);
+      }
+
+      summaryLog.info("LLM dialog_personal_memory 成功", {
+        character: input.characterName,
+        partner: input.partnerName,
+        turns: input.transcript.length,
+        attempt,
+      });
+      return result.data;
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      summaryLog.warn("LLM dialog_personal_memory 失败", {
+        character: input.characterName,
+        partner: input.partnerName,
+        turns: input.transcript.length,
+        attempt,
+        error: lastError,
+        llmResponse: lastResponseSnapshot,
+      });
+      if (attempt === 0) continue;
+    }
+  }
+  summaryLog.error("LLM dialog_personal_memory 彻底失败", {
+    character: input.characterName,
+    partner: input.partnerName,
+    turns: input.transcript.length,
+    lastError,
+    llmResponse: lastResponseSnapshot,
+  });
+  return { feeling: "（记忆生成失败）", impression: "（记忆生成失败）", topics: ["（记忆生成失败）"] };
+}
+
+// ---------------------------------------------------------------------------
 // Think session LLM entry
 // ---------------------------------------------------------------------------
 
@@ -1466,111 +1579,22 @@ export async function llmAcceptDecide(
 }
 
 /**
- * 补救轮决策：使用统一的 decide_action + 排除 speak 族。
- * 违规（仍输出 speak）→ 重试 1 次 → 仍违规抛异常让调用方 fallback wait。
+ * 补救轮：speak 请求被拒/失败后直接 fallback 到 look_around，不再走 LLM 决策。
  */
 export async function llmSalvageDecide(
   input: DecideInput & { rejectReason: string },
 ): Promise<Action> {
-  if (!hasApiKey()) return {
-    type: "look_around",
-    actorId: input.character.id,
-    reasoning: `补救决策失败（无 provider）：${input.rejectReason}`,
-    selfImportance: 1,
-  };
-
-  salvageLog.warn("补救轮触发", {
+  salvageLog.warn("补救轮 fallback look_around", {
     角色: input.character.name,
     reject_reason: input.rejectReason,
   });
 
-  const language = input.language;
-
-  const system = buildSystemPrompt({
-    worldName: input.worldName,
-    nodes: input.nodes,
-    language,
-  });
-  const user = buildUserPrompt({
-    character: input.character,
-    here: input.here,
-    companions: input.companions,
-    perceived: input.perceived,
-    options: input.options,
-    tick: input.tick,
-    epoch: input.epoch,
-    facts: input.facts,
-    language,
-    allCharacters: input.allCharacters,
-    nodes: input.nodes,
-    activeEventDefs: input.activeEventDefs,
-    upcomingNotebookText: input.upcomingNotebookText,
-  });
-  const salvageCtx = buildSalvageContext({ rejectReason: input.rejectReason });
-
-  const tool = buildDecideActionTool(input.ctx);
-
-  const messages: Array<Record<string, unknown>> = [
-    { role: "system", content: system },
-    { role: "user", content: user + "\n\n" + salvageCtx },
-  ];
-
-  let lastAction: Action | null = null;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const { actionType, data } = await callLLMWithRetry(
-        messages.map((m) => ({ ...m })), // shallow copy per attempt
-        tool,
-        "Salvage",
-        "salvage",
-        input.ctx,
-        input.allCharacters,
-      );
-
-      // Double-check: no speak family
-      if (actionType === "speak" || actionType === "accept_speak" || actionType === "reject_speak" || actionType === "leave_dialog") {
-        throw new Error(`补救轮违规：LLM 输出 ${actionType}`);
-      }
-
-      return {
-        type: actionType,
-        actorId: input.character.id,
-        targetId: data.target_id,
-        targetNodeId: data.target_node_id,
-        freeText: data.free_text,
-        amount: data.amount,
-        reasoning: data.reasoning,
-        emotionTag: data.emotion_tag,
-        selfImportance: data.self_importance,
-        changeType: data.change_type,
-        reason: data.reason,
-        arrivalAction: data.arrival_action
-          ? {
-              type: (data.arrival_action.action_type as string)?.startsWith("action_")
-                ? (data.arrival_action.action_type as string).slice("action_".length)
-                : data.arrival_action.action_type,
-              freeText: data.arrival_action.free_text,
-              targetId: data.arrival_action.target_id,
-              targetNodeId: data.arrival_action.target_node_id,
-            }
-          : undefined,
-      };
-    } catch (err) {
-      salvageLog.warn("LLM salvage 失败", {
-        attempt,
-        角色: input.character.name,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      if (attempt === 0) continue;
-      lastAction = {
-        type: "look_around",
-        actorId: input.character.id,
-        reasoning: `补救决策违规，环顾四周：${err instanceof Error ? err.message : String(err)}`,
-        selfImportance: 1,
-      };
-    }
-  }
-  return lastAction!;
+  return {
+    type: "look_around",
+    actorId: input.character.id,
+    reasoning: `补救轮直接环顾四周：${input.rejectReason}`,
+    selfImportance: 1,
+  };
 }
 
 // ---------------------------------------------------------------------------

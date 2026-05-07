@@ -20,7 +20,6 @@ const RELATION_CHANGE_TYPES = [
  *
  * - buildPerActionSchema() — 统一的 Zod 校验 schema（不含 action_type 字段，类型从 tool name 提取）
  * - buildActionTools() — 从 action registry + context 生成 ChatCompletionTool[]
- * - buildSalvageActionTools() — 同上但排除 speak 族（补救轮使用）
  */
 import { actionRegistry, type ActionDefinition } from "@/domain/action-system";
 import type { ActionContext } from "@/engine/actions";
@@ -101,19 +100,6 @@ export function buildActionTools(ctx: ActionContext) {
     });
   }
   return tools;
-}
-
-/** 补救轮工具列表：排除 speak 族。 */
-export function buildSalvageActionTools(ctx: ActionContext) {
-  return buildActionTools(ctx).filter((t) => {
-    const actionType = actionTypeFromToolName(t.function.name);
-    return (
-      actionType !== "speak" &&
-      actionType !== "accept_speak" &&
-      actionType !== "reject_speak" &&
-      actionType !== "leave_dialog"
-    );
-  });
 }
 
 /** Personality 校验：MBTI 4 维 [-4, 4] 整数。 */
@@ -353,6 +339,30 @@ export const DialogSummaryToolSchema = {
     },
   },
   required: ["summary"],
+  additionalProperties: false,
+};
+
+// Dialog personal memory — one character's reflection on a just-ended conversation
+export const DialogPersonalMemorySchema = z.object({
+  feeling: z.string().min(1).max(300),
+  impression: z.string().min(1).max(300),
+  topics: z.array(z.string()).min(1).max(10),
+});
+export type DialogPersonalMemoryPayload = z.infer<typeof DialogPersonalMemorySchema>;
+
+export const DIALOG_PERSONAL_MEMORY_TOOL_NAME = "submit_personal_memory";
+export const DialogPersonalMemoryToolSchema = {
+  type: "object" as const,
+  properties: {
+    feeling: { type: "string", description: "你在这次对话中的心情和感受。" },
+    impression: { type: "string", description: "对话后你对对方的喜恶、印象变化。" },
+    topics: {
+      type: "array",
+      items: { type: "string" },
+      description: "这次对话中聊到的主题列表。",
+    },
+  },
+  required: ["feeling", "impression", "topics"],
   additionalProperties: false,
 };
 

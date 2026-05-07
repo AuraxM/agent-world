@@ -338,16 +338,16 @@ export function qualifyVital(
   if (kind === "hunger") {
     if (value <= 0) return { phrase: "不饿", urgency: "none" };
     if (value < 5)
-      return { phrase: `略有饥饿感（${value} 小时未进食）`, urgency: "mild" };
+      return { phrase: `略有饥饿感`, urgency: "mild" };
     if (value < 10)
-      return { phrase: `明显饥饿（${value} 小时未进食）`, urgency: "moderate" };
+      return { phrase: `明显饥饿`, urgency: "moderate" };
     if (value < 14)
       return {
-        phrase: `肚子很难受（${value} 小时未进食），注意力开始分散`,
+        phrase: `肚子很难受，注意力开始分散`,
         urgency: "high",
       };
     return {
-      phrase: `极度饥饿（${value} 小时未进食），必须立刻进食`,
+      phrase: `极度饥饿，必须立刻进食`,
       urgency: "critical",
     };
   }
@@ -355,21 +355,21 @@ export function qualifyVital(
     if (value <= 0) return { phrase: "精神饱满", urgency: "none" };
     if (value < 5)
       return {
-        phrase: `略感疲倦（清醒了 ${value} 小时）`,
+        phrase: `略感疲倦`,
         urgency: "mild",
       };
     if (value < 10)
       return {
-        phrase: `明显疲惫（连续 ${value} 小时未休息）`,
+        phrase: `明显疲惫`,
         urgency: "moderate",
       };
     if (value < 14)
       return {
-        phrase: `困倦（连续 ${value} 小时未休息），眼皮在打架`,
+        phrase: `困倦，眼皮在打架`,
         urgency: "high",
       };
     return {
-      phrase: `非常疲惫（连续 ${value} 小时未休息），该考虑回家休息了`,
+      phrase: `非常疲惫，该考虑回家休息了`,
       urgency: "critical",
     };
   }
@@ -377,21 +377,21 @@ export function qualifyVital(
   if (value <= 0) return { phrase: "干净清爽", urgency: "none" };
   if (value < 5)
     return {
-      phrase: `略感不洁（${value} 小时未洗浴）`,
+      phrase: `略感不洁`,
       urgency: "mild",
     };
   if (value < 10)
     return {
-      phrase: `明显不干净（${value} 小时未洗浴）`,
+      phrase: `明显不干净`,
       urgency: "moderate",
     };
   if (value < 14)
     return {
-      phrase: `很脏了（${value} 小时未洗浴），自己都能闻到味道`,
+      phrase: `很脏了，自己都能闻到味道`,
       urgency: "high",
     };
   return {
-    phrase: `极其肮脏（${value} 小时未洗浴），难以忍受`,
+    phrase: `极其肮脏，难以忍受`,
     urgency: "critical",
   };
 }
@@ -801,7 +801,6 @@ export function buildPeerImage(self: Character, peer: Character): string {
     `- 职业：${PROFESSION_LABELS[peer.profession] ?? peer.profession}`,
     `- 形象：${buildImage(peer)}`,
   ];
-  lines.push(describeRelationBidirectional(self, peer.id));
   const impression = self.impressionBook[peer.id];
   if (impression && impression.trim().length > 0) {
     lines.push(`- 你对 TA 的印象：${impression}`);
@@ -1000,6 +999,24 @@ export function buildDialogTurnPrompt(args: {
     return "この会話で約束をした場合（例：特定の時間に一緒に何かをするなど）、add_notebook_entry を呼び出してノートに記録してください（year/month/day/hour でカレンダー時間を指定）。";
   }
 
+  function buildDialogueBehaviorRules(lang: Language): string {
+    if (lang === 'zh') {
+      return `## 重要行为规则
+- 与对方互动后，如果产生了新的印象或了解到重要信息，必须调用 memorize 记录，不要只在心里想。
+- 禁止编造不存在的约定、任务、计划或人物。只依据你的记忆和当前对话中真实发生的事情做判断。不记得的事就坦诚说不知道。
+- 如果你不熟悉或不认识对方，先调用 recall 查询你对TA的了解，再做出回应。不要假装认识陌生人。`;
+    }
+    if (lang === 'en') {
+      return `## Important Behavior Rules
+- After interacting, if you've formed new impressions or learned important information, you must call memorize to record it — don't just think about it.
+- Do not fabricate agreements, tasks, plans, or people that do not exist. Base your judgment only on your memories and what actually happened in this conversation. If you do not remember something, honestly say so.
+- If you're unfamiliar with or don't know the other person, call recall first to check what you know about them before responding. Don't pretend to know a stranger.`;
+    }
+    return `## 重要な行動ルール
+- 相手とやり取りした後、新しい印象や重要な情報を得た場合は、必ず memorize を呼び出して記録してください。考えるだけでは不十分です。
+- 存在しない約束、タスク、計画、人物をでっち上げないでください。自分の記憶とこの会話で実際に起こったことだけに基づいて判断してください。覚えていないことは正直に認めてください。
+- 相手のことをよく知らない、または知らない場合は、まず recall を呼び出して相手に関する情報を確認してから応答してください。知らない人を知っているふりをしないでください。`;
+  }
   function buildUpcomingBlock(lang: Language): string {
     if (!upcomingEntries || upcomingEntries.length === 0 || promptEpoch === undefined) return "";
     const MS_PER_TICK = (60 / 5) * 60 * 1000;
@@ -1026,6 +1043,7 @@ export function buildDialogTurnPrompt(args: {
     }
     lines.push("");
     lines.push(buildNotebookReminder("zh"));
+    lines.push(buildDialogueBehaviorRules("zh"));
     lines.push("");
     lines.push(buildDialogueActionsBlock("zh"));
     lines.push(buildPendingActionBlock("zh"));
@@ -1063,6 +1081,7 @@ export function buildDialogTurnPrompt(args: {
     }
     lines.push("");
     lines.push(buildNotebookReminder("en"));
+    lines.push(buildDialogueBehaviorRules("en"));
     lines.push("");
     lines.push(buildDialogueActionsBlock("en"));
     lines.push(buildPendingActionBlock("en"));
@@ -1098,6 +1117,7 @@ export function buildDialogTurnPrompt(args: {
     }
     lines.push("");
     lines.push(buildNotebookReminder("ja"));
+    lines.push(buildDialogueBehaviorRules("ja"));
     lines.push("");
     lines.push(buildDialogueActionsBlock("ja"));
     lines.push(buildPendingActionBlock("ja"));
@@ -1159,14 +1179,37 @@ export function buildDialogSummaryPrompt(args: {
 }
 
 /**
- * 补救轮 context 行。附加到主决策的 buildUserPrompt 末尾，
- * 告知 A 被拒/autoFail 后必须选非 speak 的行动。
+ * 对话个人记忆 prompt。从单个角色的视角回顾对话，
+ * 输出心情感受、对对方的印象、以及聊到的主题。
  */
-export function buildSalvageContext(args: {
-  rejectReason: string;
+export function buildDialogPersonalMemoryPrompt(args: {
+  characterName: string;
+  characterId: string;
+  partnerName: string;
+  partnerId: string;
+  transcript: DialogTurn[];
+  language?: Language;
 }): string {
-  return `⚠ ${args.rejectReason} 你不能再对任何人发起对话邀请。请选一个其他行动。`;
+  const { characterName, characterId, partnerName, partnerId, transcript } = args;
+  const language = args.language ?? "zh";
+
+  const history = transcript
+    .map((t) => {
+      const name = t.speakerId === characterId ? characterName : partnerName;
+      return `${name}：${t.line ?? ""}`;
+    })
+    .join("\n");
+
+  const instruction =
+    language === "zh"
+      ? `你是 ${characterName}。以下是你和 ${partnerName} 刚刚结束的一段对话记录。请从你的视角回顾这次对话，调用 submit_personal_memory 工具返回你的个人记忆。\n\n要求：\n- feeling：你在这段对话中的心情和感受\n- impression：对话后你对 ${partnerName} 的喜恶、印象变化\n- topics：你们聊到的主题列表\n\n对话记录：\n${history}`
+      : language === "en"
+        ? `You are ${characterName}. Below is the transcript of a conversation you just had with ${partnerName}. Review it from your perspective and call submit_personal_memory to return your personal memory.\n\nRequirements:\n- feeling: your mood and feelings during this conversation\n- impression: your impression of ${partnerName} after this conversation, any changes in likes/dislikes\n- topics: list of topics you discussed\n\nConversation:\n${history}`
+        : `あなたは ${characterName} です。以下は ${partnerName} と終えたばかりの会話の記録です。あなたの視点からこの会話を振り返り、submit_personal_memory を呼び出して個人の記憶を返してください。\n\n要件：\n- feeling：この会話中の気分と感情\n- impression：会話後の ${partnerName} に対する印象や好き・嫌いの変化\n- topics：話したトピックのリスト\n\n会話：\n${history}`;
+
+  return instruction;
 }
+
 
 export function buildSystemPrompt(args: {
   worldName: string;
@@ -1381,9 +1424,15 @@ export function buildUserPrompt(args: {
   if (companions.length > 0) {
     const names = companions.map(c => `${c.name}[${c.id}]`).join("、");
     lines.push(`同节点其他人物（共 ${companions.length} 人）：${names}`);
-    lines.push("如果你需要了解其中某人的信息，请调用 recall 工具查询。");
+    lines.push("如果你不熟悉其中某人，先调用 recall 查询你对TA的了解，再决定如何互动。不要假装认识陌生人。");
     lines.push("");
   }
+
+  // 4.5. 行为规则
+  lines.push("## 行为规则");
+  lines.push("- 与人互动后产生了新印象或了解到重要信息时，调用 memorize 记录下来，不要只在心里想。");
+  lines.push("- 禁止编造不存在的约定、任务、计划或人物。只依据你的记忆和真实经历做判断。");
+  lines.push("");
 
   // 5. 感知事件 —— 无事件时整段省略
   if (perceived.length > 0) {
@@ -1621,8 +1670,11 @@ export function buildThinkPrompt(args: {
     );
     if (timeStr) lines.push(`当前游戏时间：${timeStr}`);
     lines.push("");
-    lines.push("如果你的思考涉及对他人的印象或回忆，可以调用 recall 查询，或调用 memorize 记录新印象。");
-    lines.push("如果你想记住某个未来的约定或计划，可以调用 add_notebook_entry 记录。");
+    lines.push("这次沉思是你整理内心世界的重要时刻。请积极主动地使用以下工具审视自己：");
+    lines.push("- 用 recall 回忆你对他人的印象；如果对某人有了新的认识或改观，立刻调用 memorize 记录下来。");
+    lines.push("- 审视自己的喜好——喜欢什么、讨厌什么，如果想法有变化，调用 update_likes 更新。");
+    lines.push("- 审视自己的人生目标，如果目标有所调整或产生了新的想法，调用 update_goals 更新短期或长期目标。");
+    lines.push("- 有未来的约定或计划，调用 add_notebook_entry 记录到记事本。");
     lines.push("");
     lines.push(
       "调用 submit_think_turn 来输出一段思考（计为 1 轮）。如果想结束思考，调用 end_thinking 写入总结。",
@@ -1671,8 +1723,11 @@ export function buildThinkPrompt(args: {
     );
     if (timeStr) lines.push(`Current game time: ${timeStr}`);
     lines.push("");
-    lines.push("If your thoughts involve others, use recall to check impressions or memorize to record new ones.");
-    lines.push("To remember a future plan, use add_notebook_entry.");
+    lines.push("This reflection is an important moment to organize your inner world. Proactively use these tools:");
+    lines.push("- Use recall to check your impressions of others. If you've gained new insight about someone, immediately call memorize to record it.");
+    lines.push("- Re-examine your likes and dislikes — if your feelings have shifted, call update_likes to reflect the change.");
+    lines.push("- Re-examine your life goals — if your thinking has evolved, call update_goals to update your short-term or long-term goals.");
+    lines.push("- For future plans or agreements, call add_notebook_entry.");
     lines.push("");
     lines.push("Call submit_think_turn to output a thought. Call end_thinking to conclude and save a summary.");
     lines.push("");
@@ -1715,6 +1770,13 @@ export function buildThinkPrompt(args: {
     );
     if (timeStr) lines.push(`現在のゲーム時間：${timeStr}`);
     lines.push("");
+    lines.push("この内省は、自分の内面を整理する重要な時間です。以下のツールを積極的に活用してください：");
+    lines.push("- recall で他者への印象を振り返り、誰かについて新たな気づきがあれば、すぐに memorize で記録してください。");
+    lines.push("- 自分の好き嫌いを見つめ直し、気持ちに変化があれば update_likes で更新してください。");
+    lines.push("- 自分の人生の目標を再検討し、考えが変わったなら update_goals で短期・長期目標を更新してください。");
+    lines.push("- 将来の約束や計画があれば add_notebook_entry でノートに記録してください。");
+    lines.push("");
+
     lines.push("submit_think_turn を呼び出して思考を出力してください。終了する場合は end_thinking を呼び出してまとめを書いてください。");
     lines.push("");
     lines.push(buildSelfImage(self));

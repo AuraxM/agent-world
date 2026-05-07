@@ -10,6 +10,7 @@ const ALL_ENTRY_NAMES = [
   "salvage",
   "dialog_turn",
   "dialog_summarize",
+  "dialog_personal_memory",
   "accept_decision",
   "character_placement",
   "memory_compress",

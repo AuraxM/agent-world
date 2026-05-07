@@ -250,6 +250,7 @@ describe("tick engine v0", () => {
     sqlite.exec("DELETE FROM transactions");
     sqlite.exec("DELETE FROM conversations");
     sqlite.exec("DELETE FROM think_sessions");
+    sqlite.exec("DELETE FROM notebook_entries");
     sqlite.close();
   });
 

@@ -221,21 +221,27 @@ describe("evolveEmotions", () => {
     rand.mockRestore();
   });
 
-  it("每 tick stress 递减 1/120（日总量保持 -1）", () => {
+  it("每 tick stress 递增 1/120（日总量保持 +1）", () => {
     const c = mkChar(
       "a",
       { hunger: 0, fatigue: 0, hygiene: 0 },
-      { mood: 0, stress: 4, social_satiety: 0 },
+      { mood: 0, stress: 0, social_satiety: 0 },
     );
-    // 1 tick → stress -= 1/120
+    // 1 tick → stress += 1/120
     evolveEmotions({ characters: [c], worldId: "w", tick: 1 });
-    expect(c.emotion.stress).toBeCloseTo(4 - 1 / 120, 5);
+    expect(c.emotion.stress).toBeCloseTo(1 / 120, 5);
 
-    // 120 ticks → stress -= 1.0
+    // 120 ticks → stress += 1.0
     for (let t = 2; t <= 120; t++) {
       evolveEmotions({ characters: [c], worldId: "w", tick: t });
     }
-    expect(c.emotion.stress).toBeCloseTo(3, 5);
+    expect(c.emotion.stress).toBeCloseTo(1, 5);
+
+    // 480 ticks → stress capped at 4
+    for (let t = 121; t <= 480; t++) {
+      evolveEmotions({ characters: [c], worldId: "w", tick: t });
+    }
+    expect(c.emotion.stress).toBeCloseTo(4, 10);
   });
 
   it("evolveEmotions 不再修改 social_satiety（改由 tick.ts 按对话状态 per-tick 处理）", () => {

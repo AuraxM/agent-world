@@ -36,7 +36,7 @@ Code path: `decide.ts/llmDialogTurn` → `dialog.ts/runOneTickDialog` → `dialo
 import {
   runDialogPhase,
   type AcceptDecideFn, type TurnDecideFn,
-  type SummaryDecideFn, type SalvageDecideFn,
+  type SummaryDecideFn, type PersonalMemoryDecideFn, type SalvageDecideFn,
   type DialogueActionProposal, type DialogueActionResponse,
 } from "./dialog";
 import { actionRegistry, type ActionInput } from "@/domain/action-system";
@@ -62,6 +62,7 @@ const result = await runDialogPhase({
   acceptDecide,          // AcceptDecideFn mock
   turnDecide,            // TurnDecideFn mock ← where you control the action flow
   summaryDecide,         // SummaryDecideFn mock
+  personalMemoryDecide,  // PersonalMemoryDecideFn mock
   salvageDecide,         // SalvageDecideFn mock
   ongoingConversations,  // Conversation[] | undefined — for multi-tick tests
 });
@@ -93,6 +94,8 @@ const mockAccept = (result: "accept_speak" | "reject_speak" = "accept_speak"): A
   async ({ requesterId }) => ({ type: result, targetId: requesterId, reasoning: "ok", selfImportance: 2 });
 
 const mockSummary = (text = "一段闲聊"): SummaryDecideFn => async () => ({ summary: text });
+
+const mockPersonalMemory = (): PersonalMemoryDecideFn => async () => ({ feeling: "还行", impression: "印象一般", topics: ["闲聊"] });
 
 const mockSalvage = (): SalvageDecideFn =>
   async ({ character }) => ({ type: "wait" as any, actorId: character.id, reasoning: "等等", selfImportance: 2 });

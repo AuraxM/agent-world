@@ -80,6 +80,10 @@ export async function POST(request: Request) {
     db.delete(schema.eventsLog).where(eq(schema.eventsLog.worldId, worldId)).run();
     db.delete(schema.agentThoughts).where(eq(schema.agentThoughts.worldId, worldId)).run();
     db.delete(schema.snapshots).where(eq(schema.snapshots.worldId, worldId)).run();
+    db.delete(schema.transactions).where(eq(schema.transactions.worldId, worldId)).run();
+    db.delete(schema.conversations).where(eq(schema.conversations.worldId, worldId)).run();
+    db.delete(schema.thinkSessions).where(eq(schema.thinkSessions.worldId, worldId)).run();
+    db.delete(schema.notebookEntries).where(eq(schema.notebookEntries.worldId, worldId)).run();
     db.delete(schema.characters).where(eq(schema.characters.worldId, worldId)).run();
     db.delete(schema.nodes).where(eq(schema.nodes.worldId, worldId)).run();
     db.delete(schema.worlds).where(eq(schema.worlds.id, worldId)).run();

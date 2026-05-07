@@ -3,6 +3,9 @@ import { db, schema } from "@/db/client";
 import { eq, and } from "drizzle-orm";
 import type { NotebookEntry, Tick } from "@/domain/types";
 import { TICKS_PER_HOUR } from "@/domain/enums";
+import { createLogger } from "@/util/logger";
+
+const log = createLogger("notebook");
 
 const MS_PER_TICK = (60 / TICKS_PER_HOUR) * 60 * 1000; // 720000ms = 12min
 
@@ -67,8 +70,24 @@ export function cleanExpiredEntries(worldId: string, currentTick: Tick): void {
     .from(schema.notebookEntries)
     .where(eq(schema.notebookEntries.worldId, worldId))
     .all();
+  let cleaned = 0;
   for (const r of rows) {
-    const entry = JSON.parse(r.payloadJson) as NotebookEntry;
+    let entry: NotebookEntry;
+    try {
+      entry = JSON.parse(r.payloadJson) as NotebookEntry;
+    } catch {
+      // Corrupt payload — delete the row so it doesn't block future cleanups
+      db
+        .delete(schema.notebookEntries)
+        .where(and(
+          eq(schema.notebookEntries.worldId, r.worldId),
+          eq(schema.notebookEntries.characterId, r.characterId),
+          eq(schema.notebookEntries.id, r.id),
+        ))
+        .run();
+      cleaned++;
+      continue;
+    }
     if (entry.scheduledTick < currentTick) {
       db
         .delete(schema.notebookEntries)
@@ -78,7 +97,11 @@ export function cleanExpiredEntries(worldId: string, currentTick: Tick): void {
           eq(schema.notebookEntries.id, r.id),
         ))
         .run();
+      cleaned++;
     }
+  }
+  if (cleaned > 0) {
+    log.info("cleanExpiredEntries", { worldId, currentTick, cleaned });
   }
 }
 

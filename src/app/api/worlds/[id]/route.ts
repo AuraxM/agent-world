@@ -47,6 +47,10 @@ export async function DELETE(
   db.delete(schema.eventsLog).where(eq(schema.eventsLog.worldId, id)).run();
   db.delete(schema.agentThoughts).where(eq(schema.agentThoughts.worldId, id)).run();
   db.delete(schema.snapshots).where(eq(schema.snapshots.worldId, id)).run();
+  db.delete(schema.transactions).where(eq(schema.transactions.worldId, id)).run();
+  db.delete(schema.conversations).where(eq(schema.conversations.worldId, id)).run();
+  db.delete(schema.thinkSessions).where(eq(schema.thinkSessions.worldId, id)).run();
+  db.delete(schema.notebookEntries).where(eq(schema.notebookEntries.worldId, id)).run();
   db.delete(schema.characters).where(eq(schema.characters.worldId, id)).run();
   db.delete(schema.nodes).where(eq(schema.nodes.worldId, id)).run();
   db.delete(schema.worlds).where(eq(schema.worlds.id, id)).run();

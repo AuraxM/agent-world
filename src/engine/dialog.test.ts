@@ -10,6 +10,7 @@ import {
   type AcceptDecideFn,
   type TurnDecideFn,
   type SummaryDecideFn,
+  type PersonalMemoryDecideFn,
   type SalvageDecideFn,
   type AcceptDecideResult,
 } from "./dialog";
@@ -400,6 +401,10 @@ function mockSummary(text: string): SummaryDecideFn {
   return async () => ({ summary: text });
 }
 
+function mockPersonalMemory(feeling = "还行", impression = "印象一般", topics: string[] = ["闲聊"]): PersonalMemoryDecideFn {
+  return async () => ({ feeling, impression, topics });
+}
+
 function mockSalvage(actionType = "observe"): SalvageDecideFn {
   return async ({ character }) => ({
     type: actionType as any,
@@ -474,6 +479,7 @@ describe("runDialogPhase", () => {
       acceptDecide: mockAccept("accept_speak"),
       turnDecide: mockTurn("嗯嗯"),
       summaryDecide: mockSummary("一段愉快的闲聊"),
+      personalMemoryDecide: mockPersonalMemory(),
       salvageDecide: mockSalvage("observe"),
       ongoingConversations: [],
     });
@@ -517,6 +523,7 @@ describe("runDialogPhase", () => {
       acceptDecide: mockAccept("reject_speak"),
       turnDecide: mockTurn("x"),
       summaryDecide: mockSummary("x"),
+      personalMemoryDecide: mockPersonalMemory(),
       salvageDecide: mockSalvage("observe"),
       ongoingConversations: [],
     });
@@ -559,6 +566,7 @@ describe("runDialogPhase", () => {
       acceptDecide: mockAccept("reject_speak"),
       turnDecide: mockTurn("x"),
       summaryDecide: mockSummary("x"),
+      personalMemoryDecide: mockPersonalMemory(),
       salvageDecide: mockSalvage("observe"),
       ongoingConversations: [],
     });
@@ -604,6 +612,7 @@ describe("runDialogPhase", () => {
       acceptDecide: badAccept,
       turnDecide: mockTurn("x"),
       summaryDecide: mockSummary("x"),
+      personalMemoryDecide: mockPersonalMemory(),
       salvageDecide: mockSalvage("observe"),
       ongoingConversations: [],
     });
@@ -652,6 +661,7 @@ describe("runDialogPhase", () => {
       acceptDecide: mockAccept("accept_speak"),
       turnDecide: mockTurn("嗯"),
       summaryDecide: mockSummary("聊得不错"),
+      personalMemoryDecide: mockPersonalMemory(),
       salvageDecide: mockSalvage("wait"),
       ongoingConversations: [],
     });
@@ -691,6 +701,7 @@ describe("multi-tick conversation", () => {
       acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
       turnDecide: turnDecide as any,
       summaryDecide: async () => ({ summary: "摘要" }),
+      personalMemoryDecide: mockPersonalMemory(),
       salvageDecide: async () => ({ type: "wait", actorId: "x", reasoning: "", selfImportance: 1 }),
       ongoingConversations: [],
     });
@@ -728,6 +739,7 @@ describe("multi-tick conversation", () => {
       acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
       turnDecide: turnDecide as any,
       summaryDecide: async () => ({ summary: "ok" }),
+      personalMemoryDecide: mockPersonalMemory(),
       salvageDecide: async () => ({ type: "wait", actorId: "x", reasoning: "", selfImportance: 1 }),
       ongoingConversations: [conv],
     });
@@ -746,6 +758,7 @@ describe("multi-tick conversation", () => {
       acceptDecide: async () => ({ type: "accept_speak", targetId: "a", reasoning: "ok", selfImportance: 2 }),
       turnDecide: async () => mockTurn("a", "hi"),
       summaryDecide: async () => ({ summary: "summary" }),
+      personalMemoryDecide: mockPersonalMemory(),
       salvageDecide: async () => ({ type: "wait", actorId: "x", reasoning: "", selfImportance: 1 }),
       ongoingConversations: [conv],
     });

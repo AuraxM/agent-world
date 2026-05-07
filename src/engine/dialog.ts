@@ -124,6 +124,15 @@ export type SummaryDecideFn = (input: {
   language: Language;
 }) => Promise<{ summary: string; memorize?: Array<{ target_id: string; impression: string }> }>;
 
+export type PersonalMemoryDecideFn = (input: {
+  characterName: string;
+  characterId: string;
+  partnerName: string;
+  partnerId: string;
+  transcript: DialogTurn[];
+  language: Language;
+}) => Promise<{ feeling: string; impression: string; topics: string[] }>;
+
 export type SalvageDecideFn = (input: {
   character: Character;
   tick: number;
@@ -738,6 +747,7 @@ export interface RunDialogPhaseInput {
   acceptDecide: AcceptDecideFn;
   turnDecide: TurnDecideFn;
   summaryDecide: SummaryDecideFn;
+  personalMemoryDecide: PersonalMemoryDecideFn;
   salvageDecide: SalvageDecideFn;
   ongoingConversations: Conversation[];
 }
@@ -970,31 +980,53 @@ export async function runDialogPhase(
       const responder = charById.get(conv.acceptorId)!;
 
       if (conv.status === "ended") {
+        // Three concurrent LLM calls: summary + each character's personal memory
         let summary: string;
-        let memorize: Array<{ target_id: string; impression: string }> | undefined;
+        let openerMemory: { feeling: string; impression: string; topics: string[] } | null = null;
+        let responderMemory: { feeling: string; impression: string; topics: string[] } | null = null;
         try {
-          const result = await retryOnce(() =>
-            input.summaryDecide({
-              openerName: opener.name, openerId: conv.initiatorId,
-              responderName: responder.name, responderId: conv.acceptorId,
-              transcript: conv.transcript, language: input.language,
-            }),
-          );
-          summary = result.summary;
-          memorize = result.memorize;
+          const [summaryResult, openerMemResult, responderMemResult] = await Promise.all([
+            retryOnce(() =>
+              input.summaryDecide({
+                openerName: opener.name, openerId: conv.initiatorId,
+                responderName: responder.name, responderId: conv.acceptorId,
+                transcript: conv.transcript, language: input.language,
+              }),
+            ),
+            retryOnce(() =>
+              input.personalMemoryDecide({
+                characterName: opener.name, characterId: conv.initiatorId,
+                partnerName: responder.name, partnerId: conv.acceptorId,
+                transcript: conv.transcript, language: input.language,
+              }),
+            ),
+            retryOnce(() =>
+              input.personalMemoryDecide({
+                characterName: responder.name, characterId: conv.acceptorId,
+                partnerName: opener.name, partnerId: conv.initiatorId,
+                transcript: conv.transcript, language: input.language,
+              }),
+            ),
+          ]);
+          summary = summaryResult.summary;
+          if (summaryResult.memorize) {
+            for (const m of summaryResult.memorize) {
+              if (m.target_id === conv.acceptorId) opener.impressionBook[m.target_id] = m.impression.trim();
+              if (m.target_id === conv.initiatorId) responder.impressionBook[m.target_id] = m.impression.trim();
+            }
+          }
+          openerMemory = openerMemResult;
+          responderMemory = responderMemResult;
         } catch {
           summary = `（摘要生成失败：双方聊了 ${conv.transcript.length} 句）`;
         }
 
-        if (memorize) {
-          for (const m of memorize) {
-            if (m.target_id === conv.acceptorId) {
-              opener.impressionBook[m.target_id] = m.impression.trim();
-            }
-            if (m.target_id === conv.initiatorId) {
-              responder.impressionBook[m.target_id] = m.impression.trim();
-            }
-          }
+        // Apply personal memory impressions to impressionBook
+        if (openerMemory?.impression) {
+          opener.impressionBook[conv.acceptorId] = openerMemory.impression.trim();
+        }
+        if (responderMemory?.impression) {
+          responder.impressionBook[conv.initiatorId] = responderMemory.impression.trim();
         }
 
         const maxImportance = clamp(
@@ -1004,8 +1036,22 @@ export async function runDialogPhase(
           ),
           2, 4,
         );
-        memoryWrites.push(makeMemory(conv.initiatorId, tick, maxImportance, `和 ${responder.name} 聊了：${summary}`));
-        memoryWrites.push(makeMemory(conv.acceptorId, tick, maxImportance, `和 ${opener.name} 聊了：${summary}`));
+
+        // Write personal memories to each character's shortMemory
+        if (openerMemory) {
+          const topics = openerMemory.topics.length > 0 ? ` 主题：${openerMemory.topics.join("、")}。` : "";
+          memoryWrites.push(makeMemory(conv.initiatorId, tick, maxImportance,
+            `和 ${responder.name} 聊完了。心情：${openerMemory.feeling}。对 ${responder.name} 的印象：${openerMemory.impression}。${topics}`));
+        } else {
+          memoryWrites.push(makeMemory(conv.initiatorId, tick, maxImportance, `和 ${responder.name} 聊了：${summary}`));
+        }
+        if (responderMemory) {
+          const topics = responderMemory.topics.length > 0 ? ` 主题：${responderMemory.topics.join("、")}。` : "";
+          memoryWrites.push(makeMemory(conv.acceptorId, tick, maxImportance,
+            `和 ${opener.name} 聊完了。心情：${responderMemory.feeling}。对 ${opener.name} 的印象：${responderMemory.impression}。${topics}`));
+        } else {
+          memoryWrites.push(makeMemory(conv.acceptorId, tick, maxImportance, `和 ${opener.name} 聊了：${summary}`));
+        }
         dialogEvents.push({
           id: `evt-conv-${conv.id}`,
           worldId: opener.worldId, tick, category: "social", description: summary,

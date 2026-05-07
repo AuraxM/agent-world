@@ -7,7 +7,7 @@
  * 所有 LLM 决策函数均为 mock，用不同的 mock 策略模拟各种成功/失败场景。
  */
 import { describe, expect, it } from "vitest";
-import { runDialogPhase, type AcceptDecideFn, type TurnDecideFn, type SummaryDecideFn, type SalvageDecideFn, type DialogueActionProposal, type DialogueActionResponse } from "./dialog";
+import { runDialogPhase, type AcceptDecideFn, type TurnDecideFn, type SummaryDecideFn, type PersonalMemoryDecideFn, type SalvageDecideFn, type DialogueActionProposal, type DialogueActionResponse } from "./dialog";
 import { actionRegistry } from "@/domain/action-system";
 import { BUILTIN_ACTIONS } from "./actions-builtin";
 import type { Action, Character, DialogTurn, WorldEvent, Conversation } from "@/domain/types";
@@ -96,6 +96,10 @@ function mockSummary(text = "一段愉快的闲聊"): SummaryDecideFn {
   return async () => ({ summary: text });
 }
 
+function mockPersonalMemory(): PersonalMemoryDecideFn {
+  return async () => ({ feeling: "还行", impression: "印象一般", topics: ["闲聊"] });
+}
+
 function mockSalvage(): SalvageDecideFn {
   return async ({ character }) => ({
     type: "wait" as any,
@@ -174,6 +178,7 @@ async function runDialogPhaseWith(
   opts: {
     acceptDecide?: AcceptDecideFn;
     turnDecide?: TurnDecideFn;
+    personalMemoryDecide?: PersonalMemoryDecideFn;
     ongoingConversations?: Conversation[];
   } = {},
 ) {
@@ -189,6 +194,7 @@ async function runDialogPhaseWith(
     acceptDecide: opts.acceptDecide ?? mockAccept("accept_speak"),
     turnDecide: opts.turnDecide ?? mockTurnSimple("a", "嗯"),
     summaryDecide: mockSummary(),
+    personalMemoryDecide: opts.personalMemoryDecide ?? mockPersonalMemory(),
     salvageDecide: mockSalvage(),
     ongoingConversations: opts.ongoingConversations ?? [],
   });

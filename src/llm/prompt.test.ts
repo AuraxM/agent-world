@@ -12,7 +12,6 @@ import {
   buildDialogSummaryPrompt,
   buildMemoryCompressionPrompt,
   buildPeerImage,
-  buildSalvageContext,
   buildSelfImage,
   buildSystemPrompt,
   buildUserPrompt,
@@ -113,10 +112,16 @@ describe("qualifyVital", () => {
     expect(qualifyVital(16, "hygiene").urgency).toBe("critical");
   });
 
-  it("phrase 含具体小时数与定性词", () => {
-    expect(qualifyVital(15, "fatigue").phrase).toMatch(/非常疲惫.*15/);
-    expect(qualifyVital(8, "hunger").phrase).toMatch(/明显饥饿.*8/);
-    expect(qualifyVital(15, "hygiene").phrase).toMatch(/极其肮脏.*15/);
+  it("phrase 仅含定性描述，不暴露具体小时数", () => {
+    const fatigue = qualifyVital(15, "fatigue").phrase;
+    const hunger = qualifyVital(8, "hunger").phrase;
+    const hygiene = qualifyVital(15, "hygiene").phrase;
+    expect(fatigue).toBe("非常疲惫，该考虑回家休息了");
+    expect(fatigue).not.toMatch(/\d/);
+    expect(hunger).toBe("明显饥饿");
+    expect(hunger).not.toMatch(/\d/);
+    expect(hygiene).toBe("极其肮脏，难以忍受");
+    expect(hygiene).not.toMatch(/\d/);
   });
 });
 
@@ -873,16 +878,6 @@ describe("buildDialogSummaryPrompt", () => {
   });
 });
 
-describe("buildSalvageContext", () => {
-  it("includes reject reason and speak ban", () => {
-    const result = buildSalvageContext({
-      rejectReason: "乙 拒绝了你的对话请求。",
-    });
-    expect(result).toContain("乙 拒绝了你的对话请求。");
-    expect(result).toContain("不能再对任何人发起对话邀请");
-  });
-});
-
 describe("ACTION_NAMES speak label", () => {
   it("speak action type renders as raw type", () => {
     const out = buildUserPrompt({
@@ -1147,14 +1142,14 @@ describe("buildPeerImage", () => {
     emotion: { mood: -1, stress: 1, social_satiety: 0 },
   };
 
-  it("renders peer info with relation and impression", () => {
+  it("renders peer info with impression (no relation)", () => {
     const result = buildPeerImage(self, peer);
     expect(result).toContain("关于 乙");
     expect(result).toContain("年龄：42 岁");
     expect(result).toContain("性别：男");
     expect(result).toContain("职业：医生");
     expect(result).toContain("面容出众");
-    expect(result).toContain("同事");
+    expect(result).not.toContain("客观关系");
     expect(result).toContain("很健谈的一个医生");
   });
 

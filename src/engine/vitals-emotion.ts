@@ -7,7 +7,7 @@
  *   ~23h 到顶，与 24h 昼夜节律对齐；前 8h 不催，后 3h 强催。
  * - hygiene: +1 per even tick (0..16)
  * - mood: 每 tick 随机波动，波动幅度 = 0.5/(3+|TF|)，性格越极端越稳定
- * - stress: 每 tick -1/120 (封底 0)，每日总衰减量保持 -1
+ * - stress: 每 tick +1/120 (封顶 4)，每日自然累积 +1
  * - social_satiety: 由 tick.ts 按对话状态 per-tick 处理
  *
  * 越线提醒（节流）：
@@ -48,7 +48,7 @@ const REMINDER_MOOD = 8;
 const REMINDER_STRESS = 8;
 const REMINDER_SOCIAL_SATIETY_LOW = 8;
 
-const STRESS_DECAY_INTERVAL = 24;
+const STRESS_ACCUMULATE_INTERVAL = 24;
 
 export const VITALS_EMOTION_CONSTANTS = {
   VITAL_MAX,
@@ -58,7 +58,7 @@ export const VITALS_EMOTION_CONSTANTS = {
   FATIGUE_SEVERE,
   HYGIENE_MEDIUM,
   HYGIENE_SEVERE,
-  STRESS_DECAY_INTERVAL,
+  STRESS_ACCUMULATE_INTERVAL,
 } as const;
 
 // ---- helpers ----
@@ -356,8 +356,8 @@ export function evolveEmotions(input: EmotionEvolutionInput): WorldEvent[] {
     c.emotion.mood += (Math.random() - 0.5) * 2 * moodVolatility;
     c.emotion.mood = clamp(c.emotion.mood, -4, 4);
 
-    // stress: per-tick decay, total 1/day preserved
-    c.emotion.stress = Math.max(0, c.emotion.stress - 1 / (TICKS_PER_HOUR * STRESS_DECAY_INTERVAL));
+    // stress: per-tick accumulation, total +1/day
+    c.emotion.stress = Math.min(4, c.emotion.stress + 1 / (TICKS_PER_HOUR * STRESS_ACCUMULATE_INTERVAL));
 
     // social_satiety decay/gain is handled per-tick in tick.ts,
     // so it can distinguish "in conversation" from "not in conversation".

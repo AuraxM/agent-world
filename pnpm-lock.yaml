@@ -14,6 +14,9 @@ importers:
       '@agw/domain':
         specifier: workspace:*
         version: link:packages/domain
+      '@agw/llm':
+        specifier: workspace:*
+        version: link:packages/llm
       '@agw/shared':
         specifier: workspace:*
         version: link:packages/shared
@@ -125,6 +128,27 @@ importers:
 
   packages/domain:
     dependencies:
+      zod:
+        specifier: ^4.4.1
+        version: 4.4.3
+
+  packages/llm:
+    dependencies:
+      '@agw/db':
+        specifier: workspace:*
+        version: link:../db
+      '@agw/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@agw/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@agw/systems':
+        specifier: workspace:*
+        version: link:../systems
+      openai:
+        specifier: ^6.35.0
+        version: 6.36.0(zod@4.4.3)
       zod:
         specifier: ^4.4.1
         version: 4.4.3

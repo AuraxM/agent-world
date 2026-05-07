@@ -421,3 +421,6 @@ export interface World {
   createdAt: number;
   updatedAt: number;
 }
+
+/** UI / LLM language for a world. */
+export type Language = "zh" | "en" | "ja";

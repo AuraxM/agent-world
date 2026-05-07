@@ -17,6 +17,7 @@
   "dependencies": {
     "@agw/db": "workspace:*",
     "@agw/domain": "workspace:*",
+    "@agw/llm": "workspace:*",
     "@agw/shared": "workspace:*",
     "@agw/systems": "workspace:*",
     "better-sqlite3": "^12.9.0",

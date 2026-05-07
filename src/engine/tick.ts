@@ -76,34 +76,12 @@ import {
 import { loadThinkSessions, saveThinkSession, deleteThinkSession } from "./think-sessions";
 import type { ThinkSession, ThinkTurn } from "@/domain/types";
 import { injectThinkTimeMessage } from "@/llm/prompt";
+import { type DecideFn, type DecideInput } from "@agw/llm";
 
 const FACTS_LOOKBACK_TICKS = 48 * TICKS_PER_HOUR;
 const THINK_TURNS_PER_TICK = 3;
 
-export interface DecideInput {
-  character: Character;
-  /** 全图节点（世界静态，不随 tick 变）；用于 system prompt 的拓扑渲染，让 LLM 能规划多步路径。 */
-  nodes: MapNode[];
-  here: MapNode;
-  companions: Character[];
-  reachable: MapNode[];
-  perceived: WorldEvent[];
-  options: ActionOption[];
-  worldName: string;
-  tick: number;
-  epoch: number;
-  facts: AggregatedFacts;
-  language: Language;
-  /** ActionContext，供 decide.ts 生成 per-action tools。 */
-  ctx: import("@/domain/action-system").ActionContext;
-  /** 全量角色列表，用于用户 prompt 身份锚点的 workplace 关系解析。 */
-  allCharacters: Character[];
-  /** 当前 tick 生效的全局事件列表。 */
-  activeEventDefs: GlobalEventDef[];
-  upcomingNotebookText: string;
-}
-
-export type DecideFn = (input: DecideInput) => Promise<Action>;
+export type { DecideFn, DecideInput };
 
 export interface TickOptions {
   decide?: DecideFn;

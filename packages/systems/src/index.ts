@@ -12,3 +12,8 @@ export * from "./execute";
 export * from "./events-builtin";
 export * from "./notebook";
 export * from "./store";
+export * from "./character-maps";
+export * from "./relations";
+export * from "./tick-utils";
+export * from "./addCharacter";
+export * from "./createWorld";

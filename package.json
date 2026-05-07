@@ -15,6 +15,7 @@
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@agw/config": "workspace:*",
     "@agw/db": "workspace:*",
     "@agw/domain": "workspace:*",
     "@agw/llm": "workspace:*",

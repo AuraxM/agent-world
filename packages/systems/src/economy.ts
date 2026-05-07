@@ -1,12 +1,12 @@
 /**
  * 经济引擎：交易记录、收支快照、转账、余额检查。
  */
-import { db, schema } from "@/db/client";
+import { db, schema } from "@agw/db";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { TICKS_PER_HOUR } from "@agw/domain";
 import type { Character, EconomicSnapshot, Transaction } from "@agw/domain";
-import type { EconomyConfig } from "../../../src/config/types";
-import { DEFAULT_ECONOMY_CONFIG } from "../../../src/config/types";
+import type { EconomyConfig } from "@agw/config";
+import { DEFAULT_ECONOMY_CONFIG } from "@agw/config";
 import { createLogger } from "@agw/shared";
 const log = createLogger("economy");
 

@@ -1,6 +1,6 @@
 import type { ActionDefinition, StateChange } from "@agw/domain";
 import { TICKS_PER_HOUR } from "@agw/domain";
-import { DEFAULT_ECONOMY_CONFIG } from "../../../src/config/types";
+import { DEFAULT_ECONOMY_CONFIG } from "@agw/config";
 import { getEatCost, getBatheCost } from "./bme";
 import { rollWorkIncome } from "./economy";
 

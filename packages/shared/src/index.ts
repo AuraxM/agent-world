@@ -1,1 +1,1 @@
-export { createLogger } from "./logger";
+export { createLogger, __resetConfigForTest } from "./logger";

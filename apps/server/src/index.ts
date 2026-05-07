@@ -1,17 +1,32 @@
 import Fastify from "fastify";
+import cors from "@fastify/cors";
+import { worldRoutes } from "./routes/worlds.js";
+import { characterRoutes } from "./routes/characters.js";
+import { configRoutes } from "./routes/config.js";
+import { adminRoutes } from "./routes/admin.js";
 
-const app = Fastify({ logger: true });
+const port = parseInt(process.env.PORT ?? "3001", 10);
+const host = process.env.HOST ?? "0.0.0.0";
 
-app.get("/api/health", async () => ({ status: "ok" }));
+start();
 
-const start = async () => {
+async function start() {
+  const app = Fastify({ logger: true });
+
+  await app.register(cors, { origin: true });
+
+  await app.register(worldRoutes, { prefix: "/api/worlds" });
+  await app.register(characterRoutes, { prefix: "/api/worlds" });
+  await app.register(configRoutes, { prefix: "/api/configs" });
+  await app.register(adminRoutes, { prefix: "/api/admin" });
+
+  app.get("/api/health", async () => ({ status: "ok" }));
+
   try {
-    await app.listen({ port: 3001, host: "0.0.0.0" });
-    console.log("Server running on http://localhost:3001");
+    await app.listen({ port, host });
+    console.log(`Server running on http://localhost:${port}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
   }
-};
-
-start();
+}

@@ -1,1 +1,1 @@
-export { db, schema } from "@agw/db";
+export { db, schema, migrate } from "@agw/db";

@@ -10,8 +10,8 @@
     "lint": "pnpm -r lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:migrate": "tsx src/db/migrate.ts",
-    "db:reset": "tsx scripts/db-reset.ts && tsx src/db/migrate.ts",
+    "db:migrate": "tsx packages/db/src/migrate.ts",
+    "db:reset": "tsx scripts/db-reset.ts && tsx packages/db/src/migrate.ts",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {

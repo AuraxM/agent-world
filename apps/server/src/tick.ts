@@ -745,6 +745,17 @@ export async function tick(
 
       const transcript: ThinkTurn[] = [...ts.transcript];
 
+      // Inject time reminder before this tick's think rounds
+      transcript.push({
+        kind: "thought",
+        text: injectThinkTimeMessage({
+          tick: fromTick,
+          epoch: world.epoch,
+          tickStarted: ts.tickStarted,
+          language,
+        }),
+      });
+
       for (let round = 0; round < THINK_TURNS_PER_TICK; round++) {
         let result;
         try {
@@ -783,18 +794,6 @@ export async function tick(
 
       ts.transcript = transcript;
       ts.currentTickRounds = THINK_TURNS_PER_TICK;
-
-      if (ts.status !== "ended") {
-        transcript.push({
-          kind: "thought",
-          text: injectThinkTimeMessage({
-            tick: fromTick,
-            epoch: world.epoch,
-            tickStarted: ts.tickStarted,
-            language,
-          }),
-        });
-      }
 
       return ts;
     }),
@@ -984,6 +983,17 @@ export async function tick(
 
     const transcript: ThinkTurn[] = [...ts.transcript];
 
+    // Inject time reminder before this tick's think rounds
+    transcript.push({
+      kind: "thought",
+      text: injectThinkTimeMessage({
+        tick: fromTick,
+        epoch: world.epoch,
+        tickStarted: ts.tickStarted,
+        language,
+      }),
+    });
+
     for (let round = 0; round < THINK_TURNS_PER_TICK; round++) {
       let result;
       try {
@@ -1022,18 +1032,6 @@ export async function tick(
 
     ts.transcript = transcript;
     ts.currentTickRounds = THINK_TURNS_PER_TICK;
-
-    if (ts.status !== "ended") {
-      transcript.push({
-        kind: "thought",
-        text: injectThinkTimeMessage({
-          tick: fromTick,
-          epoch: world.epoch,
-          tickStarted: ts.tickStarted,
-          language,
-        }),
-      });
-    }
 
     // Persist
     if (ts.status === "ended") {

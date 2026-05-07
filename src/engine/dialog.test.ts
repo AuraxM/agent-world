@@ -708,9 +708,10 @@ describe("multi-tick conversation", () => {
     expect(turnCount).toBe(5);
     const conv = result.updatedConversations[0];
     expect(conv).toBeDefined();
-    const lastTurn = conv.transcript[conv.transcript.length - 1];
-    expect(lastTurn.speakerId).toBe("__system__");
-    expect(lastTurn.line).toContain("你们已经聊了");
+    // Time reminder is now injected before dialogue rounds (index 1, after opening line)
+    const timeReminder = conv.transcript[1];
+    expect(timeReminder.speakerId).toBe("__system__");
+    expect(timeReminder.line).toContain("你们已经聊了");
   });
 
   it("3+4 rule: end at 6th sentence gives extra round", async () => {

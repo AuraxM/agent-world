@@ -11,6 +11,12 @@ importers:
       '@agw/db':
         specifier: workspace:*
         version: link:packages/db
+      '@agw/domain':
+        specifier: workspace:*
+        version: link:packages/domain
+      '@agw/shared':
+        specifier: workspace:*
+        version: link:packages/shared
       '@agw/systems':
         specifier: workspace:*
         version: link:packages/systems

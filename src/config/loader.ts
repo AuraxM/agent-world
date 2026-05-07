@@ -101,8 +101,14 @@ export function loadAllMaps(): MapConfig[] {
   return listMapPackIds().map((id) => loadMap(id));
 }
 
-/** 按 id 在所有包中查找单个角色。 */
-export function loadCharacter(id: string): CharacterTemplate {
+/** 按 id 查找单个角色。可传 packId 限定搜索范围，避免跨 mod 同名 ID 碰撞。 */
+export function loadCharacter(id: string, packId?: string): CharacterTemplate {
+  if (packId) {
+    const chars = loadCharactersForMap(packId);
+    const found = chars.find((c) => c.id === id);
+    if (found) return found;
+    throw new Error(`character template not found: ${id} (pack: ${packId})`);
+  }
   for (const packId of listMapPackIds()) {
     const chars = loadCharactersForMap(packId);
     const found = chars.find((c) => c.id === id);

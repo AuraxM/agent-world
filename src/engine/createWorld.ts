@@ -78,7 +78,7 @@ export function createWorldFromConfig(
       throw new Error(`duplicate cast member: ${m.characterId}`);
     }
     seen.add(m.characterId);
-    const tpl = loadCharacter(m.characterId);
+    const tpl = loadCharacter(m.characterId, mapId);
     let loc = m.locationId;
     if (!loc) {
       // Locals prefer their home node

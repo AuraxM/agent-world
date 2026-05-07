@@ -215,6 +215,25 @@ describe("loadCharacter", () => {
     expect(() => loadCharacter("no-bio")).toThrow(/biography/);
   });
 
+  it("returns correct character when two packs share the same ID", () => {
+    writePack(
+      "first-pack",
+      { ...validManifest, id: "first-pack" },
+      { ...validMap, id: "first-pack" },
+      { "char-x": { ...validChar, id: "char-x", name: "先来的" } },
+    );
+    writePack(
+      "second-pack",
+      { ...validManifest, id: "second-pack" },
+      { ...validMap, id: "second-pack" },
+      { "char-x": { ...validChar, id: "char-x", name: "后来的" } },
+    );
+    // Without scope: alphabetically first pack wins
+    expect(loadCharacter("char-x").name).toBe("先来的");
+    // With scope: the requested pack is used
+    expect(loadCharacter("char-x", "second-pack").name).toBe("后来的");
+  });
+
   it("rejects character with out-of-range personality", () => {
     writePack("tiny", validManifest, validMap, {
       "bad": { ...validChar, personality: { ei: 9, sn: 0, tf: 0, jp: 0 } },

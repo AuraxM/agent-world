@@ -45,8 +45,8 @@ export function addCharacterToWorld(
     .get();
   if (!world) throw new Error(`world not found: ${worldId}`);
 
-  // 2. 角色模板存在性
-  const tpl = loadCharacter(characterId);
+  // 2. 角色模板存在性（限定当前世界的 mod pack，避免跨 mod 同名 ID 碰撞）
+  const tpl = loadCharacter(characterId, world.mapId);
 
   // 3. 角色尚未存在
   const existing = db

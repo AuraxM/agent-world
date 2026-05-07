@@ -127,10 +127,11 @@ export function loadWorld(worldId: string): LoadedWorld {
     }
   }
 
-  // Load notebook entries
+  // Load notebook entries, filtering out expired ones
   const notebookMap = loadNotebookEntries(worldId);
   for (const c of characters) {
-    c.notebook = notebookMap.get(c.id) ?? [];
+    const entries = notebookMap.get(c.id) ?? [];
+    c.notebook = entries.filter((e) => e.scheduledTick >= world.currentTick);
   }
 
   return { world, nodes, characters };

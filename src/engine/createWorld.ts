@@ -194,10 +194,14 @@ export function createWorldFromConfig(
           shortMemoryJson: "[]",
           longMemoryJson: "[]",
           impressionBookJson: JSON.stringify(m.tpl.impressionBook ?? {}),
-          shortTermGoalJson: null,
-          longTermGoalJson: null,
-          liked: "",
-          disliked: "",
+          shortTermGoalJson: m.tpl.shortTermGoal
+            ? JSON.stringify({ goal: m.tpl.shortTermGoal, updatedAt: now })
+            : null,
+          longTermGoalJson: m.tpl.longTermGoal
+            ? JSON.stringify({ goal: m.tpl.longTermGoal, updatedAt: now })
+            : null,
+          liked: m.tpl.liked ?? "",
+          disliked: m.tpl.disliked ?? "",
           relationsJson: JSON.stringify(m.tpl.relations),
           currentActionJson: null,
           createdAt: now,

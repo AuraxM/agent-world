@@ -286,7 +286,7 @@ describe("buildUserPrompt", () => {
       nodes: [restaurant],
       allCharacters: [baseCharacter],
     });
-    expect(out).toContain("2026年5月1日 星期五 05:00");
+    expect(out).toContain("第 0 日 05:00");
     expect(out).toContain("凌晨");
     expect(out).toContain("已是你的作息时段");
     expect(out).toContain("作息窗口：22:00–06:00");
@@ -966,12 +966,10 @@ describe("buildWeeklyCompressionPrompt", () => {
     const result = buildWeeklyCompressionPrompt({
       characterName: "测试",
       dailySummaries,
-      dailyTicks,
-      epoch: TEST_EPOCH,
     });
     expect(result).toContain("测试");
-    expect(result).toContain("2026年5月1日 星期五");
-    expect(result).toContain("2026年5月7日 星期四");
+    expect(result).toContain("第 1 天");
+    expect(result).toContain("第 7 天");
     expect(result).toContain("直接输出你的摘要");
   });
 

@@ -158,6 +158,10 @@ export const CharacterTemplateSchema: z.ZodType<CharacterTemplate> = z.object({
   initialMoney: z.number().int().min(0).optional(),
   expenseExempt: z.boolean().optional(),
   incomeMultiplier: z.number().min(0).optional(),
+  shortTermGoal: z.string().optional(),
+  longTermGoal: z.string().optional(),
+  liked: z.string().optional(),
+  disliked: z.string().optional(),
 });
 
 // 校验封闭枚举确实被引用（防止 enums.ts 改动后 schema 漏更新）。

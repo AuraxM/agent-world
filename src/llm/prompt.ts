@@ -946,8 +946,11 @@ export function buildDialogTurnPrompt(args: {
       if (t.speakerId === "__system__") {
         return `【${t.line ?? ""}】`;
       }
-      const name = t.speakerId === self.id ? "你" : peer.name;
-      return `${name}: ${t.line ?? ""}`;
+      if (t.speakerId === self.id) {
+        const inner = t.reasoning ? `（内心：${t.reasoning}）` : "";
+        return `你${inner}: ${t.line ?? ""}`;
+      }
+      return `${peer.name}: ${t.line ?? ""}`;
     })
     .join("\n");
 

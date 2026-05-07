@@ -66,6 +66,14 @@ export type CharacterTemplate = Omit<
   initialMoney?: number;
   incomeMultiplier?: number;
   expenseExempt?: boolean;
+  /** 初始短期目标文本（运行时包裹为 { goal, updatedAt }） */
+  shortTermGoal?: string;
+  /** 初始长期目标文本（运行时包裹为 { goal, updatedAt }） */
+  longTermGoal?: string;
+  /** 最喜欢的人或事 */
+  liked?: string;
+  /** 最讨厌的人或事 */
+  disliked?: string;
 };
 
 export interface SurvivalCosts {

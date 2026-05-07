@@ -177,10 +177,14 @@ export function addCharacterToWorld(
         shortMemoryJson: "[]",
         longMemoryJson: "[]",
         impressionBookJson: JSON.stringify(tpl.impressionBook ?? {}),
-        shortTermGoalJson: null,
-        longTermGoalJson: null,
-        liked: "",
-        disliked: "",
+        shortTermGoalJson: tpl.shortTermGoal
+          ? JSON.stringify({ goal: tpl.shortTermGoal, updatedAt: now })
+          : null,
+        longTermGoalJson: tpl.longTermGoal
+          ? JSON.stringify({ goal: tpl.longTermGoal, updatedAt: now })
+          : null,
+        liked: tpl.liked ?? "",
+        disliked: tpl.disliked ?? "",
         relationsJson: JSON.stringify(tpl.relations),
         currentActionJson: null,
         createdAt: now,

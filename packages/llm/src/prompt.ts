@@ -1405,6 +1405,7 @@ export function buildUserPrompt(args: {
   if (upcomingNotebookText && upcomingNotebookText.length > 0) {
     lines.push(upcomingNotebookText, "");
   }
+  lines.push("");
 
   // Economic state
   if (!character.expenseExempt) {

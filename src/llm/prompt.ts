@@ -988,7 +988,7 @@ export function buildDialogTurnPrompt(args: {
       })
       .join("\n");
     if (lang === "zh") {
-      return `\n你可以在此对话中发起的行为（调用 propose_dialogue_action，与 submit_dialog_turn 同时调用）：\n${actionList}\n`;
+      return `\n请积极发起互动行为，让对话更好地进行。\n你可以在此对话中发起的行为（调用 propose_dialogue_action，与 submit_dialog_turn 同时调用）：\n${actionList}\n`;
     }
     if (lang === "en") {
       return `\nActions you can propose during this dialogue (call propose_dialogue_action together with submit_dialog_turn):\n${actionList}\n`;
@@ -1041,9 +1041,6 @@ export function buildDialogTurnPrompt(args: {
       "请根据你的性格、当前情境和对话历史，自然地回应。",
       "不要重复对方刚说过的话。",
     );
-    if (tick !== undefined && promptEpoch !== undefined) {
-      lines.push(`当前游戏时间：${buildDialogTimeStr(tick, promptEpoch, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW, "zh")}`);
-    }
     lines.push("");
     lines.push(buildNotebookReminder("zh"));
     lines.push(buildDialogueBehaviorRules("zh"));
@@ -1079,9 +1076,6 @@ export function buildDialogTurnPrompt(args: {
       "Respond naturally based on your personality, current situation, and conversation history.",
       "Do not repeat what the other person just said.",
     );
-    if (tick !== undefined && promptEpoch !== undefined) {
-      lines.push(`Current game time: ${buildDialogTimeStr(tick, promptEpoch, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW, "en")}`);
-    }
     lines.push("");
     lines.push(buildNotebookReminder("en"));
     lines.push(buildDialogueBehaviorRules("en"));
@@ -1115,9 +1109,6 @@ export function buildDialogTurnPrompt(args: {
       "あなたの性格、現在の状況、会話の履歴に基づいて自然に応答してください。",
       "相手が今言ったことをそのまま繰り返さないでください。",
     );
-    if (tick !== undefined && promptEpoch !== undefined) {
-      lines.push(`現在のゲーム時間：${buildDialogTimeStr(tick, promptEpoch, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW, "ja")}`);
-    }
     lines.push("");
     lines.push(buildNotebookReminder("ja"));
     lines.push(buildDialogueBehaviorRules("ja"));
@@ -1595,9 +1586,7 @@ export function injectTimeMessage(args: {
 }): string {
   const { tick, epoch, tickStarted } = args;
   const language = args.language ?? "zh";
-  // Show the time after this round's conversation (tick+1), since the message is
-  // injected after turns complete and one tick's worth of game time has passed.
-  const displayTick = tick + 1;
+  const displayTick = tick;
   const t = timeOfDay(displayTick, epoch);
   const elapsedTicks = displayTick - tickStarted;
   const elapsedHours = Math.floor(elapsedTicks / TICKS_PER_HOUR);
@@ -1645,13 +1634,6 @@ export function buildThinkPrompt(args: {
     .map((t) => `你思考道：${t.text}`)
     .join("\n");
 
-  const t = tick !== undefined && promptEpoch !== undefined
-    ? timeOfDay(tick, promptEpoch, self.sleepWindow ?? DEFAULT_SLEEP_WINDOW)
-    : null;
-  const timeStr = t
-    ? `第 ${t.day} 日 ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`
-    : "";
-
   const fatigue = qualifyVital(self.vitals.fatigue, "fatigue");
   const hunger = qualifyVital(self.vitals.hunger, "hunger");
 
@@ -1671,7 +1653,6 @@ export function buildThinkPrompt(args: {
       "你正在独自沉思。这不是对外对话，而是你的内心活动。",
       "请根据你的性格、记忆和当前状态，自然地展开思考。",
     );
-    if (timeStr) lines.push(`当前游戏时间：${timeStr}`);
     lines.push("");
     lines.push("这次沉思是你整理内心世界的重要时刻。请积极主动地使用以下工具审视自己：");
     lines.push("- 用 recall 回忆你对他人的印象；如果对某人有了新的认识或改观，立刻调用 memorize 记录下来。");
@@ -1724,7 +1705,6 @@ export function buildThinkPrompt(args: {
       "You are in deep thought. This is not a conversation — it's your inner monologue.",
       "Think naturally based on your personality, memories, and current state.",
     );
-    if (timeStr) lines.push(`Current game time: ${timeStr}`);
     lines.push("");
     lines.push("This reflection is an important moment to organize your inner world. Proactively use these tools:");
     lines.push("- Use recall to check your impressions of others. If you've gained new insight about someone, immediately call memorize to record it.");
@@ -1771,7 +1751,6 @@ export function buildThinkPrompt(args: {
       "あなたは深く考え込んでいます。これは会話ではなく、心の中の独白です。",
       "自分の性格、記憶、現在の状態に基づいて自然に思考を展開してください。",
     );
-    if (timeStr) lines.push(`現在のゲーム時間：${timeStr}`);
     lines.push("");
     lines.push("この内省は、自分の内面を整理する重要な時間です。以下のツールを積極的に活用してください：");
     lines.push("- recall で他者への印象を振り返り、誰かについて新たな気づきがあれば、すぐに memorize で記録してください。");
@@ -1809,7 +1788,7 @@ export function injectThinkTimeMessage(args: {
 }): string {
   const { tick, epoch, tickStarted } = args;
   const language = args.language ?? "zh";
-  const displayTick = tick + 1;
+  const displayTick = tick;
   const t = timeOfDay(displayTick, epoch);
   const elapsedTicks = displayTick - tickStarted;
   const elapsedHours = Math.floor(elapsedTicks / TICKS_PER_HOUR);

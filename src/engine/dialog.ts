@@ -533,6 +533,13 @@ async function runOneTickDialog(
     TURNS_PER_TICK * 2 - (conv.currentTickRounds === 0 && hasExistingTurns ? 1 : 0);
   const sixthSentenceIndex = maxRounds - 1;
 
+  // Inject time reminder before this tick's dialogue rounds
+  transcript.push({
+    speakerId: "__system__",
+    kind: "say",
+    line: injectTimeMessage({ tick: currentTick, epoch, tickStarted: conv.tickStarted, language }),
+  });
+
   for (let round = 0; round < maxRounds; round++) {
     const speakerId =
       round % 2 === 0
@@ -697,19 +704,6 @@ async function runOneTickDialog(
         } catch {
           // ignore extra round failure
         }
-        // Inject time message after extra round
-        transcript.push({
-          speakerId: "__system__",
-          kind: "say",
-          line: injectTimeMessage({ tick: currentTick, epoch, tickStarted: conv.tickStarted, language }),
-        });
-      } else {
-        // End before 6th sentence — still inject time
-        transcript.push({
-          speakerId: "__system__",
-          kind: "say",
-          line: injectTimeMessage({ tick: currentTick, epoch, tickStarted: conv.tickStarted, language }),
-        });
       }
       return {
         transcript,
@@ -720,13 +714,6 @@ async function runOneTickDialog(
 
     transcript.push(result.turn);
   }
-
-  // After 6 sentences, inject time message
-  transcript.push({
-    speakerId: "__system__",
-    kind: "say",
-    line: injectTimeMessage({ tick: currentTick, epoch, tickStarted: conv.tickStarted, language }),
-  });
 
   return { transcript, ended: false };
 }

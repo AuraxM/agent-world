@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter @agw/server dev & pnpm --filter @agw/web dev",
-    "dev:server": "pnpm --filter @agw/server dev",
+    "dev": "DATABASE_URL=$(pwd)/data/agent-world.db AGENT_WORLD_CONFIGS_DIR=$(pwd)/configs pnpm --filter @agw/server dev & pnpm --filter @agw/web dev",
+    "dev:server": "DATABASE_URL=$(pwd)/data/agent-world.db AGENT_WORLD_CONFIGS_DIR=$(pwd)/configs pnpm --filter @agw/server dev",
     "dev:web": "pnpm --filter @agw/web dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",

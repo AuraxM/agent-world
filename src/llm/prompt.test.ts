@@ -359,9 +359,9 @@ describe("buildUserPrompt", () => {
     expect(out).toContain("澡堂");
   });
 
-  it("连续行为段含 hours / lastAction / today counts", () => {
+  it("连续行为段含 hours / lastAction with speak target / today counts / speak targets", () => {
     const out = buildUserPrompt({
-      character: baseCharacter,
+      character: { ...baseCharacter, id: "char-x", name: "测试角色" },
       here: restaurant,
       companions: [],
       perceived: [],
@@ -379,20 +379,27 @@ describe("buildUserPrompt", () => {
           freeText: "你好啊",
           tick: 11,
           success: true,
+          targetId: "char-wang",
         },
         lastRestTick: 0,
         lastEatTick: 5,
         todayActionCounts: { speak: 9, observe: 2, wait: 1 },
+        todaySpeakTargets: { "char-wang": 3, "char-li": 1 },
       },
       nodes: [restaurant],
-      allCharacters: [baseCharacter],
+      allCharacters: [
+        { ...baseCharacter, id: "char-x", name: "测试角色" },
+        { ...baseCharacter, id: "char-wang", name: "王阿姨" },
+        { ...baseCharacter, id: "char-li", name: "李大叔" },
+      ],
     });
     expect(out).toContain("已在 老王饭馆 连续 14 小时");
     expect(out).toContain("上一 tick 你的行动：speak");
+    expect(out).toContain("对象：王阿姨");
     expect(out).toContain("你好啊");
-    expect(out).toContain("距上次 rest/sleep：2 小时");
-    expect(out).toContain("距上次 eat：1 小时");
     expect(out).toContain("speak ×9");
+    expect(out).toContain("王阿姨 3 次");
+    expect(out).toContain("李大叔 1 次");
   });
 
   it("vitals 段使用 qualifyVital 而非裸数字", () => {

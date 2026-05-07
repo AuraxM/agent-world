@@ -1223,16 +1223,20 @@ function describeContinuity(
   facts: AggregatedFacts,
   hereName: string,
   currentTick: number,
+  nameMap: Map<string, string>,
 ): string {
   const lines: string[] = [];
   lines.push(`- 已在 ${hereName} 连续 ${facts.hoursAtCurrentLocation} 小时`);
 
   if (facts.lastAction) {
-    const { type, freeText, success } = facts.lastAction;
+    const { type, freeText, success, targetId } = facts.lastAction;
     const verb = getActionNames()[type] ?? type;
     const ok = success ? "" : "（未成功）";
     const detail = freeText ? `："${freeText.slice(0, 40)}"` : "";
-    lines.push(`- 上一 tick 你的行动：${verb}${ok}${detail}`);
+    const targetPart = type === "speak" && targetId
+      ? `，对象：${nameMap.get(targetId) ?? targetId}`
+      : "";
+    lines.push(`- 上一 tick 你的行动：${verb}${ok}${detail}${targetPart}`);
   } else {
     lines.push("- 上一 tick：（无历史，世界刚开始）");
   }
@@ -1249,6 +1253,15 @@ function describeContinuity(
   );
 
   lines.push(`- 今日累计：${formatActionCounts(facts.todayActionCounts)}`);
+
+  // Speak counts per target
+  const speakEntries = Object.entries(facts.todaySpeakTargets ?? {});
+  if (speakEntries.length > 0) {
+    const parts = speakEntries
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, count]) => `${nameMap.get(id) ?? id} ${count} 次`);
+    lines.push(`- 今日已对话：${parts.join("，")}`);
+  }
 
   return lines.join("\n");
 }
@@ -1330,7 +1343,7 @@ export function buildUserPrompt(args: {
 
   // 1. 你的连续行为
   lines.push("你的连续行为：");
-  lines.push(describeContinuity(facts, here.name, tick));
+  lines.push(describeContinuity(facts, here.name, tick, nameMap));
   lines.push("");
 
   // 2. 当前位置
@@ -1345,6 +1358,24 @@ export function buildUserPrompt(args: {
   lines.push(`- 饥饿：${hunger.phrase}`);
   lines.push(`- 疲惫：${fatigue.phrase}`);
   lines.push(`- 卫生：${hygiene.phrase}`);
+
+  // 生理状态引导：数值 > 8 时注入行动建议
+  const vitalGuidance: string[] = [];
+  if (character.vitals.hunger > 8) {
+    vitalGuidance.push("你最好去吃点东西，需要在用餐场所进行");
+  }
+  if (character.vitals.fatigue > 8) {
+    vitalGuidance.push("你最好去休息一下，需要在休息场所进行");
+  }
+  if (character.vitals.hygiene > 8) {
+    vitalGuidance.push("你最好去洗个澡，需要在洗浴场所进行");
+  }
+  if (vitalGuidance.length > 0) {
+    lines.push("");
+    for (const guidance of vitalGuidance) {
+      lines.push(guidance);
+    }
+  }
 
   // 3.1 情绪状态
   lines.push("你当前的情绪状态：");

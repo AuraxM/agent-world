@@ -43,3 +43,9 @@ export function updateWorldMapId(worldId: string, mapId: string): void {
   db.update(schema.worlds).set({ mapId, updatedAt: new Date() })
     .where(eq(schema.worlds.id, worldId)).run();
 }
+
+export function saveWorldMeta(worldId: string, mapId: string, tick: number): void {
+  db.update(schema.worlds).set({
+    mapId, currentTick: tick, updatedAt: new Date(),
+  }).where(eq(schema.worlds.id, worldId)).run();
+}

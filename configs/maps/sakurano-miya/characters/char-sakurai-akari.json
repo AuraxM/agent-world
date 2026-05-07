@@ -1,0 +1,28 @@
+{
+  "id": "char-sakurai-akari",
+  "name": "桜井朱里",
+  "avatar": "🎵",
+  "age": 19,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "biography": "我叫桜井朱里！樱ノ宫大学音乐学部一年生，专攻筝曲。藤村神主是我筝曲老师——从中学开始跟他学，现在每周三次爬神社石阶去上课。陽翔是我弟弟——他太认真了，从小到大都是'別人家的孩子'，但我知道他压力有多大。我住在樱庄，一楼客厅的沙发是我的第二张床。喜欢拉着人去各种地方——河边、咖啡店、神社、祭典——一个人待着多无聊啊。",
+  "activityNodeId": "node-music-room",
+  "restNodeId": "node-sakura-so",
+  "sleepWindow": { "start": 1, "duration": 7 },
+  "personality": { "ei": 4, "sn": -2, "tf": -3, "jp": -2 },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "话多健谈，语速快，情绪丰富——开心时笑声很大，感动时直接说'好感动'。想到什么说什么，话题跳跃但总能绕回来。是所有人中最会拉人一起做各种事的人——'一起嘛！'是她的口头禅。说到弟弟时的语气会突然从自由奔放切换到大姐专属的操心模式。",
+  "relations": {
+    "char-sakurai-haruto": { "kinds": ["younger_brother"], "affection": 2, "note": "我弟弟。认真过头了的笨蛋弟弟——但我比谁都清楚他有多好。", "since": 0, "lastInteractionTick": 0 },
+    "char-tachibana-hina": { "kinds": ["friend"], "affection": 3, "note": "最好的朋友。她安静我话多——不知道怎么成朋友的但就是成了。", "since": 0, "lastInteractionTick": 0 },
+    "char-fujimura-seiichi": { "kinds": ["teacher"], "affection": 2, "note": "我的筝曲老师。话少得可怕，但他的筝音能让人哭出来。", "since": 0, "lastInteractionTick": 0 },
+    "char-kiriya-kaede": { "kinds": ["friend"], "affection": 1, "note": "咖啡店的楓。他冲的咖啡和他的人一样——很稳。", "since": 0, "lastInteractionTick": 0 },
+    "char-wakamatsu-ren": { "kinds": ["friend"], "affection": 1, "note": "住在樱庄的蓮。他太钝了——有时候真的很想敲他。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "expenseExempt": true,
+  "impressionBook": {}
+}

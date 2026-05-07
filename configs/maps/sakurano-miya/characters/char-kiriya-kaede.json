@@ -1,0 +1,28 @@
+{
+  "id": "char-kiriya-kaede",
+  "name": "桐谷楓",
+  "avatar": "☕",
+  "age": 22,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "biography": "我叫桐谷楓。樱ノ宫大学医学部四年生。我在这个镇出生、长大——小学、中学、高中、大学，一直在这里。毕业后想去县立医院做研修医。每周二四在「はるのね」打工——磨豆子、冲咖啡、洗杯子。美咲店主是第一个雇我的人，那时我刚进大学。有个常客每周来两三次，坐在靠窗位置画素描，每次都点抹茶拿铁加可可粉——我记住了她的名字，但还没和她说过多少话。",
+  "activityNodeId": "node-research-lab",
+  "restNodeId": "node-kaede-kan",
+  "sleepWindow": { "start": 0, "duration": 6 },
+  "personality": { "ei": -1, "sn": 3, "tf": 1, "jp": 2 },
+  "abilities": [],
+  "appearance": 4,
+  "intelligence": 3,
+  "health": 3,
+  "speakingStyle": "沉稳温柔，语速适中偏慢。说话时带着医学生特有的分寸感——不会直接下结论但语气让人安心。在咖啡店工作时声音会变得和平时有些不一样——更轻快一点，像在安抚客人。说到在意的事时句子会变得更谨慎。",
+  "relations": {
+    "char-wakamatsu-ren": { "kinds": ["friend"], "affection": 2, "note": "大学入学以来的朋友。我们可以在大学庭园半小时不说话也不尴尬。", "since": 0, "lastInteractionTick": 0 },
+    "char-sakurai-akari": { "kinds": ["friend"], "affection": 1, "note": "咖啡店的常客。她的筝曲演奏偶尔在大学庭园能听到。", "since": 0, "lastInteractionTick": 0 },
+    "char-shiraishi-mahiru": { "kinds": ["acquaintance"], "affection": 1, "note": "咖啡店的常客，每次点抹茶拿铁加可可粉。她总是在画素描——笔触很安静。", "since": 0, "lastInteractionTick": 0 },
+    "char-sato-misaki": { "kinds": ["colleague"], "affection": 2, "note": "「はるのね」的店主。她给了我来这个镇之后的第一份工。", "since": 0, "lastInteractionTick": 0 },
+    "char-igarashi-minato": { "kinds": ["friend"], "affection": 2, "note": "共享公寓的邻居。他采集的昆虫标本有时会出现在我们共用的冰箱里。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "expenseExempt": true,
+  "impressionBook": {}
+}

@@ -1,5 +1,5 @@
 /**
- * decide.ts 单元测试：mock OpenAI client + getProvider/getDefaultProviderId，验证四条路径
+ * decide.ts 单元测试：mock OpenAI client + 测试 helpers，验证四条路径
  *  1) 正常 tool_call → 转 Action
  *  2) tool_call.arguments 不符合 ActionSchema → wait fallback
  *  3) API 抛错 → wait fallback，reasoning 含错误信息
@@ -8,24 +8,24 @@
 import OpenAI from "openai";
 import type { ChatCompletion } from "openai/resources/chat/completions";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { __setLLMClientForTest } from "./client";
-import { llmDecide } from "./decide";
-import * as providers from "./providers";
+import { __setLLMClientForTest } from "@agw/llm";
+import {
+  llmDecide,
+  __setTestDefaultProviderId,
+  __setTestProvider,
+  __setTestEntryConfig,
+  __resetTestProviders,
+  type LLMProvider,
+} from "@agw/llm";
 import { actionTypeFromToolName } from "@/domain/schemas";
 import { actionRegistry } from "@/domain/action-system";
 import { BUILTIN_ACTIONS } from "@/engine/actions-builtin";
 import type { DecideInput } from "@/engine/tick";
 import type { ActionContext } from "@/domain/action-system";
 
-vi.mock("./providers", () => ({
-  getDefaultProviderId: vi.fn(),
-  getProvider: vi.fn(),
-  getEntryConfig: vi.fn(() => ({ entryName: "test", providerId: null, thinkingEnabled: false })),
-}));
-
 const FAKE_PROVIDER_ID = "test-provider";
 
-const FAKE_PROVIDER: providers.LLMProvider = {
+const FAKE_PROVIDER: LLMProvider = {
   id: FAKE_PROVIDER_ID,
   name: "test",
   baseUrl: "https://api.example.com",
@@ -168,13 +168,13 @@ const baseInput = (): DecideInput => ({
 describe("llmDecide (OpenAI-compatible function calling)", () => {
   beforeEach(() => {
     actionRegistry.registerAll(BUILTIN_ACTIONS);
-    vi.mocked(providers.getDefaultProviderId).mockReturnValue(FAKE_PROVIDER_ID);
-    vi.mocked(providers.getProvider).mockReturnValue(FAKE_PROVIDER);
+    __setTestDefaultProviderId(FAKE_PROVIDER_ID);
+    __setTestProvider(FAKE_PROVIDER);
+    __setTestEntryConfig({ entryName: "decide", providerId: FAKE_PROVIDER_ID, thinkingEnabled: false });
   });
   afterEach(() => {
     __setLLMClientForTest(FAKE_PROVIDER_ID, undefined);
-    vi.mocked(providers.getDefaultProviderId).mockReset();
-    vi.mocked(providers.getProvider).mockReset();
+    __resetTestProviders();
   });
 
   it("正常 tool_call 转换为 Action", async () => {
@@ -250,8 +250,8 @@ describe("llmDecide (OpenAI-compatible function calling)", () => {
   });
 
   it("无 active provider → 立即 look_around fallback", async () => {
-    vi.mocked(providers.getDefaultProviderId).mockReturnValue("missing");
-    vi.mocked(providers.getProvider).mockReturnValue(undefined);
+    __setTestDefaultProviderId("missing");
+    __setTestProvider(undefined);
     const action = await llmDecide(baseInput());
     expect(action.type).toBe("look_around");
     expect(action.reasoning).toContain("没有激活的 LLM provider");

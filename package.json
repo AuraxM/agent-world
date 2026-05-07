@@ -3,17 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "db:migrate": "tsx src/db/migrate.ts",
-    "db:reset": "tsx scripts/db-reset.ts && tsx src/db/migrate.ts",
-    "seed": "tsx scripts/seed.ts",
+    "dev": "DATABASE_URL=$(pwd)/data/agent-world.db AGENT_WORLD_CONFIGS_DIR=$(pwd)/configs pnpm --filter @agw/server dev & pnpm --filter @agw/web dev",
+    "dev:server": "DATABASE_URL=$(pwd)/data/agent-world.db AGENT_WORLD_CONFIGS_DIR=$(pwd)/configs pnpm --filter @agw/server dev",
+    "dev:web": "pnpm --filter @agw/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:migrate": "tsx packages/db/src/migrate.ts",
+    "db:reset": "tsx scripts/db-reset.ts && tsx packages/db/src/migrate.ts",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@agw/config": "workspace:*",
+    "@agw/db": "workspace:*",
+    "@agw/domain": "workspace:*",
+    "@agw/llm": "workspace:*",
+    "@agw/shared": "workspace:*",
+    "@agw/systems": "workspace:*",
     "better-sqlite3": "^12.9.0",
     "drizzle-orm": "^0.45.2",
     "next": "16.2.4",
@@ -36,5 +43,8 @@
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild", "sharp", "unrs-resolver"]
   }
 }

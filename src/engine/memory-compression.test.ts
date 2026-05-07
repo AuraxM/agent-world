@@ -1,14 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { compressSleepMemories } from "./memory-compression";
+import { compressSleepMemories, __setTestMemoryCompress } from "@agw/llm";
 import type { Character } from "@/domain/types";
 import { DEFAULT_EPOCH_MS } from "@/app/_lib/format";
-
-// Mock the LLM module
-vi.mock("@/llm/decide", () => ({
-  llmMemoryCompress: vi.fn(),
-}));
-
-import { llmMemoryCompress } from "@/llm/decide";
 
 function makeCharacter(overrides: Partial<Character> = {}): Character {
   return {
@@ -48,12 +41,15 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
 }
 
 describe("compressSleepMemories", () => {
+  let mockSummarize: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSummarize = vi.fn();
+    __setTestMemoryCompress(mockSummarize);
   });
 
   it("compresses shortMemory into dailyMemory and clears shortMemory", async () => {
-    const mockSummarize = vi.mocked(llmMemoryCompress);
     mockSummarize.mockResolvedValue("今天在酒馆工作，和田中聊了天。");
 
     const c = makeCharacter({
@@ -75,7 +71,6 @@ describe("compressSleepMemories", () => {
   });
 
   it("compresses 7 daily memories into one weekly memory", async () => {
-    const mockSummarize = vi.mocked(llmMemoryCompress);
     mockSummarize
       .mockResolvedValueOnce("今天在酒馆工作。")
       .mockResolvedValueOnce("这一周主要在酒馆工作，认识了田中。");
@@ -106,8 +101,6 @@ describe("compressSleepMemories", () => {
   });
 
   it("skips compression when shortMemory has no real memories (only heuristic)", async () => {
-    const mockSummarize = vi.mocked(llmMemoryCompress);
-
     const c = makeCharacter({
       shortMemory: [
         { id: "m1", tick: 10, importance: 1, content: "[heuristic] 角色没有特别想做的事。" },
@@ -124,7 +117,6 @@ describe("compressSleepMemories", () => {
   });
 
   it("filters heuristic pseudo-memories from compression but includes real ones", async () => {
-    const mockSummarize = vi.mocked(llmMemoryCompress);
     mockSummarize.mockResolvedValue("今天在酒馆工作。");
 
     const c = makeCharacter({
@@ -144,7 +136,6 @@ describe("compressSleepMemories", () => {
   });
 
   it("keeps shortMemory intact when LLM call fails", async () => {
-    const mockSummarize = vi.mocked(llmMemoryCompress);
     mockSummarize.mockRejectedValue(new Error("Network error"));
 
     const originalMemories = [
@@ -163,7 +154,6 @@ describe("compressSleepMemories", () => {
   });
 
   it("only compresses memories since lastSleepTick", async () => {
-    const mockSummarize = vi.mocked(llmMemoryCompress);
     mockSummarize.mockResolvedValue("今天散了步。");
 
     const c = makeCharacter({

@@ -85,6 +85,7 @@ const emptyFacts: AggregatedFacts = {
   restNodeName: null,
   hoursAtCurrentLocation: 0,
   todayActionCounts: {},
+  todaySpeakTargets: {},
 };
 
 describe("qualifyVital", () => {

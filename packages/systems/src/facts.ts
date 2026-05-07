@@ -32,6 +32,7 @@ export interface AggregatedFacts {
     freeText?: string;
     tick: Tick;
     success: boolean;
+    targetId?: string;
   };
   /** 最近一次成功 rest 的 tick；从未则 undefined。 */
   lastRestTick?: Tick;
@@ -39,6 +40,8 @@ export interface AggregatedFacts {
   lastEatTick?: Tick;
   /** 最近一个游戏日（24h = TODAY_WINDOW ticks）内（不含本 tick）按 action type 计数。 */
   todayActionCounts: Partial<Record<string, number>>;
+  /** 今日 speak 的目标角色 ID → 次数（仅记录 speak 类型）。 */
+  todaySpeakTargets: Record<string, number>;
 }
 
 export interface DeriveFactsInput {
@@ -103,6 +106,16 @@ export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts 
       (todayActionCounts[t.action.type] ?? 0) + 1;
   }
 
+  // 今日 speak 目标计数
+  const todaySpeakTargets: Record<string, number> = {};
+  for (const t of recentThoughts) {
+    if (t.tick < cutoff) break;
+    if (t.action.type === "speak" && t.action.targetId) {
+      todaySpeakTargets[t.action.targetId] =
+        (todaySpeakTargets[t.action.targetId] ?? 0) + 1;
+    }
+  }
+
   // lastAction：优先用 character.lastThought（store.loadWorld 自动注入）；
   // fallback 用 recentThoughts[0]（兼容测试中 character 没 lastThought 的情况）。
   const head = character.lastThought ?? recentThoughts[0];
@@ -112,6 +125,7 @@ export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts 
         freeText: head.action.freeText,
         tick: head.tick,
         success: head.success,
+        targetId: head.action.targetId,
       }
     : undefined;
 
@@ -125,5 +139,6 @@ export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts 
     lastRestTick,
     lastEatTick,
     todayActionCounts,
+    todaySpeakTargets,
   };
 }

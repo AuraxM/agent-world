@@ -204,7 +204,7 @@ describe("deriveAggregatedFacts", () => {
     const stale = mkThought(5, mkAction("wait"));
     const fresh: AgentThought = mkThought(
       10,
-      mkAction("speak", { freeText: "你好" }),
+      mkAction("speak", { freeText: "你好", targetId: "char-y" }),
     );
 
     const facts = deriveAggregatedFacts({
@@ -220,7 +220,26 @@ describe("deriveAggregatedFacts", () => {
       freeText: "你好",
       tick: 10,
       success: true,
+      targetId: "char-y",
     });
+  });
+
+  it("todaySpeakTargets 统计今日 speak 目标", () => {
+    const thoughts: AgentThought[] = [
+      mkThought(10, mkAction("speak", { targetId: "alice" })),
+      mkThought(9, mkAction("speak", { targetId: "bob" })),
+      mkThought(8, mkAction("speak", { targetId: "alice" })),
+      mkThought(7, mkAction("eat")),
+    ];
+    const facts = deriveAggregatedFacts({
+      character: baseCharacter,
+      nodes: baseNodes,
+      currentTick: 11,
+      recentThoughts: thoughts,
+      activityNodeId: null,
+      restNodeId: null,
+    });
+    expect(facts.todaySpeakTargets).toEqual({ alice: 2, bob: 1 });
   });
 
   it("activityNodeId/restNodeId 找不到节点时 activityNodeName/restNodeName 为 null", () => {

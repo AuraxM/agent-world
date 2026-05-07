@@ -761,98 +761,85 @@ export async function tick(
   }
   const tAfterDecisions = Date.now();
 
-  // ── Phase 4.4: Think sessions (solo reasoning) ──
-  const updatedThinkSessions: ThinkSession[] = [];
+  // ── Phase 4.4 + 4.5: Think sessions and Dialog (concurrent, character sets disjoint) ──
 
-  for (const ts of ongoingThinkSessions) {
-    if (ts.status === "ended") continue;
+  const thinkSessionsPromise = Promise.all(
+    ongoingThinkSessions.map(async (ts) => {
+      if (ts.status === "ended") return ts;
 
-    const thinker = characters.find((c) => c.id === ts.characterId);
-    if (!thinker) {
-      ts.status = "ended";
-      updatedThinkSessions.push(ts);
-      continue;
-    }
-
-    const here = nodeById.get(thinker.locationId);
-    if (!here) {
-      ts.status = "ended";
-      updatedThinkSessions.push(ts);
-      continue;
-    }
-
-    const transcript: ThinkTurn[] = [...ts.transcript];
-
-    for (let round = 0; round < THINK_TURNS_PER_TICK; round++) {
-      let result;
-      try {
-        result = await llmThink({
-          self: thinker,
-          here,
-          transcript,
-          language,
-          tick: fromTick,
-          epoch: world.epoch,
-          tickStarted: ts.tickStarted,
-        });
-      } catch (err) {
-        log.error("llmThink 异常，思考被迫终止", {
-          character: thinker.name,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        ts.status = "ended";
-        break;
-      }
-
-      if (result.kind === "turn") {
-        transcript.push(result.turn);
-      } else {
-        // end_thinking
-        thinker.shortMemory.push({
-          id: `mem-${randomUUID().slice(0, 8)}`,
-          tick: fromTick,
-          importance: 3,
-          content: `我沉思了一番：${result.summary}`,
-        });
-        ts.status = "ended";
-        break;
-      }
-    }
-
-    ts.transcript = transcript;
-    ts.currentTickRounds = THINK_TURNS_PER_TICK;
-
-    if (ts.status !== "ended") {
-      // Inject time message after 3 rounds
-      transcript.push({
-        kind: "thought",
-        text: injectThinkTimeMessage({
-          tick: fromTick,
-          epoch: world.epoch,
-          tickStarted: ts.tickStarted,
-          language,
-        }),
-      });
-    }
-
-    updatedThinkSessions.push(ts);
-  }
-
-  // Persist think session changes
-  for (const ts of updatedThinkSessions) {
-    if (ts.status === "ended") {
-      deleteThinkSession(worldId, ts.id);
       const thinker = characters.find((c) => c.id === ts.characterId);
-      if (thinker) {
-        thinker.activeConversationIds = thinker.activeConversationIds.filter((id) => id !== ts.id);
+      if (!thinker) {
+        ts.status = "ended";
+        return ts;
       }
-    } else {
-      saveThinkSession(ts);
-    }
-  }
 
-  // ── Phase 4.5: Dialog protocol ──
-  const dialogResult = await runDialogPhase({
+      const here = nodeById.get(thinker.locationId);
+      if (!here) {
+        ts.status = "ended";
+        return ts;
+      }
+
+      const transcript: ThinkTurn[] = [...ts.transcript];
+
+      for (let round = 0; round < THINK_TURNS_PER_TICK; round++) {
+        let result;
+        try {
+          result = await llmThink({
+            self: thinker,
+            here,
+            transcript,
+            language,
+            tick: fromTick,
+            epoch: world.epoch,
+            tickStarted: ts.tickStarted,
+          });
+        } catch (err) {
+          log.error("llmThink 异常，思考被迫终止", {
+            character: thinker.name,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          ts.status = "ended";
+          break;
+        }
+
+        if (result.kind === "turn") {
+          transcript.push(result.turn);
+        } else {
+          // end_thinking
+          thinker.shortMemory.push({
+            id: `mem-${randomUUID().slice(0, 8)}`,
+            tick: fromTick,
+            importance: 3,
+            content: `我沉思了一番：${result.summary}`,
+          });
+          ts.summary = result.summary;
+          ts.status = "ended";
+          break;
+        }
+      }
+
+      ts.transcript = transcript;
+      ts.currentTickRounds = THINK_TURNS_PER_TICK;
+
+      if (ts.status !== "ended") {
+        // Inject time message after rounds
+        // Inject time message after 3 rounds
+        transcript.push({
+          kind: "thought",
+          text: injectThinkTimeMessage({
+            tick: fromTick,
+            epoch: world.epoch,
+            tickStarted: ts.tickStarted,
+            language,
+          }),
+        });
+      }
+
+      return ts;
+    }),
+  );
+
+  const dialogPromise = runDialogPhase({
     rawActions: actionsForExecution,
     characters,
     nodes,
@@ -921,6 +908,38 @@ export async function tick(
     ongoingConversations,
   });
 
+  const [updatedThinkSessions, dialogResult] = await Promise.all([
+    thinkSessionsPromise,
+    dialogPromise,
+  ]);
+
+  // Persist think session changes
+  for (const ts of updatedThinkSessions) {
+    if (ts.status === "ended") {
+      deleteThinkSession(worldId, ts.id);
+      const thinker = characters.find((c) => c.id === ts.characterId);
+      if (thinker) {
+        thinker.activeConversationIds = thinker.activeConversationIds.filter((id) => id !== ts.id);
+        const summary = ts.summary ?? "沉思结束";
+        allEvents.push({
+          id: `evt-${randomUUID().slice(0, 8)}`,
+          worldId,
+          tick: fromTick,
+          category: "inner",
+          description: summary,
+          participants: [ts.characterId],
+          source: "inner",
+          intensity: 2,
+          scope: "private",
+          audienceCharacterId: ts.characterId,
+          duration: 1,
+        });
+      }
+    } else {
+      saveThinkSession(ts);
+    }
+  }
+
   // Apply dialog results
   for (const mw of dialogResult.memoryWrites) {
     const c = characters.find((ch) => ch.id === mw.characterId);
@@ -976,6 +995,21 @@ export async function tick(
         newThinkSessions.push(ts);
         thinker.activeConversationIds.push(ts.id);
         lockedCharacterIds.add(action.actorId);
+
+        // Generate event for thinking start
+        allEvents.push({
+          id: `evt-${randomUUID().slice(0, 8)}`,
+          worldId,
+          tick: fromTick,
+          category: "inner",
+          description: action.freeText || "开始沉思",
+          participants: [action.actorId],
+          source: "inner",
+          intensity: 2,
+          scope: "private",
+          audienceCharacterId: action.actorId,
+          duration: 1,
+        });
       }
     }
   }
@@ -1019,6 +1053,7 @@ export async function tick(
           importance: 3,
           content: `我沉思了一番：${result.summary}`,
         });
+        ts.summary = result.summary;
         ts.status = "ended";
         break;
       }
@@ -1074,7 +1109,7 @@ export async function tick(
       sleepActionsForCompression.map(async (action) => {
         const c = characters.find(ch => ch.id === action.actorId);
         if (c) {
-          await compressSleepMemories(c, fromTick, language);
+          await compressSleepMemories(c, fromTick, world.epoch, language);
         }
       }),
     );

@@ -29,10 +29,28 @@
       "kinds": [
         "younger_sister"
       ],
+      "affection": 2,
+      "note": "姐姐很厉害，但我要做我自己。",
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-asakura-haruna": {
+      "kinds": [
+        "classmate"
+      ],
+      "affection": 2,
+      "note": "陽菜先輩的画有种野生的直觉——和姐姐不一样。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-miura-yui": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-ogata-umi": {
       "kinds": [
         "classmate"
       ],

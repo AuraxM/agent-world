@@ -74,14 +74,14 @@ describe("formatRelativeTime", () => {
 
   it("shows calendar date for different day", () => {
     const result = formatRelativeTime(130, 0, EPOCH);
-    expect(result).toBe("5月2日 02:00"); // May 2 02:00 UTC
+    expect(result).toBe("5月2日 周六 02:00"); // May 2 02:00 UTC
   });
 });
 
 describe("formatScheduledTime", () => {
   it("shows calendar date", () => {
     const result = formatScheduledTime(30, EPOCH);
-    expect(result).toBe("5月1日 06:00");
+    expect(result).toBe("5月1日 周五 06:00");
   });
 });
 

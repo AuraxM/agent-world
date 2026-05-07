@@ -50,6 +50,8 @@ export interface Outcome {
   };
   /** accept 后注入双方 transcript 的系统消息（如 "A 亲吻了 B"） */
   dialogRecord?: string;
+  /** accept 后写入接收方 shortMemory 的记忆文本（如 "A 亲吻了我"） */
+  targetMemory?: string;
 }
 
 // ---- StateChange: declarative side effects ----

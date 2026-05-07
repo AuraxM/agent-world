@@ -14,7 +14,7 @@
     "duration": 7
   },
   "personality": {
-    "ei": -4,
+    "ei": -2,
     "sn": 4,
     "tf": 3,
     "jp": 2
@@ -29,6 +29,8 @@
       "kinds": [
         "classmate"
       ],
+      "affection": 2,
+      "note": "她每次还作业时纸上有水泳部的消毒水味——这个观察不科学。",
       "since": 0,
       "lastInteractionTick": 0
     },

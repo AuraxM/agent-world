@@ -29,6 +29,15 @@
       "kinds": [
         "classmate"
       ],
+      "affection": 2,
+      "note": "个子也没多高凭什么那么拽——但上次他说了句加油。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-ogata-riku": {
+      "kinds": [
+        "classmate"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },

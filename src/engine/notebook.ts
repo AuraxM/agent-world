@@ -112,14 +112,17 @@ export function getNextHourEntries(
 
 // ── Time Formatting ──
 
-/** Format tick as human-readable calendar date (e.g. "5月3日 14:00"). */
+const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
+
+/** Format tick as human-readable calendar date (e.g. "5月3日 周五 14:00"). */
 function formatCalendarTime(tick: Tick, epoch: number): string {
   const date = new Date(epoch + tick * MS_PER_TICK);
   const M = date.getUTCMonth() + 1;
   const d = date.getUTCDate();
+  const w = WEEKDAY_NAMES[date.getUTCDay()];
   const hh = String(date.getUTCHours()).padStart(2, "0");
   const mm = String(date.getUTCMinutes()).padStart(2, "0");
-  return `${M}月${d}日 ${hh}:${mm}`;
+  return `${M}月${d}日 周${w} ${hh}:${mm}`;
 }
 
 /** True if two ticks fall on the same UTC calendar day. */
@@ -202,9 +205,10 @@ export function formatCurrentTime(tick: Tick, epoch: number): string {
   const y = date.getFullYear();
   const M = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
+  const w = WEEKDAY_NAMES[date.getDay()];
   const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");
-  return `${y}年${M}月${d}日 ${hh}:${mm}`;
+  return `${y}年${M}月${d}日 星期${w} ${hh}:${mm}`;
 }
 
 /** Create a unique notebook entry ID. */

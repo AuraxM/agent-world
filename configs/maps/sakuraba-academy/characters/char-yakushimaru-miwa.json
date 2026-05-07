@@ -43,6 +43,8 @@
       "kinds": [
         "teacher"
       ],
+      "affection": 2,
+      "note": "真昼在这里哭过两次——什么也没问，两次都给她泡了可可。",
       "since": 0,
       "lastInteractionTick": 0
     },

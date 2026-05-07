@@ -24,6 +24,7 @@ import {
 export async function compressSleepMemories(
   character: Character,
   currentTick: Tick,
+  epoch: number,
   language: Language,
 ): Promise<void> {
   const sinceTick = character.lastSleepTick ?? 0;
@@ -70,6 +71,8 @@ export async function compressSleepMemories(
       const prompt = buildWeeklyCompressionPrompt({
         characterName: character.name,
         dailySummaries: batch.map((m) => m.content),
+        dailyTicks: batch.map((m) => m.tick),
+        epoch,
         language,
       });
       weeklySummary = await llmMemoryCompress({ prompt, language });

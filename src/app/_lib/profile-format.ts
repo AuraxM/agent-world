@@ -31,11 +31,15 @@ export function formatActionWindow(action: OngoingAction): string {
   return `${action.description} (t${action.startedAt}→t${action.endsAt})`;
 }
 
-/** 格式化记事本条目的预定时间，如 "第3日 14:00"。 */
+/** 格式化记事本条目的预定时间，如 "2026年5月3日 星期六 14:00"。 */
 export function formatScheduledTime(tick: number, epoch: number): string {
-  const day = Math.floor(tick / (24 * TICKS_PER_HOUR));
   const date = new Date(epoch + tick * MS_PER_TICK);
+  const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
+  const y = date.getUTCFullYear();
+  const M = date.getUTCMonth() + 1;
+  const D = date.getUTCDate();
+  const w = WEEKDAY_NAMES[date.getUTCDay()];
   const hh = String(date.getUTCHours()).padStart(2, "0");
   const mm = String(date.getUTCMinutes()).padStart(2, "0");
-  return `第${day}日 ${hh}:${mm}`;
+  return `${y}年${M}月${D}日 星期${w} ${hh}:${mm}`;
 }

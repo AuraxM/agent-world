@@ -408,6 +408,7 @@ export interface ThinkSession {
   tickStarted: number;
   currentTickRounds: number;
   status: "active" | "ending" | "ended";
+  summary?: string;
 }
 
 /** end_thinking tool 的 LLM 输出载荷。 */

@@ -432,6 +432,10 @@ const SOCIAL_WORDS: Record<number, string> = {
   [4]: "社交过度",
 };
 
+function emoWord(value: number, words: Record<number, string>): string {
+  return words[Math.round(value)] ?? String(value);
+}
+
 // ---------------------------------------------------------------------------
 // image description (形象)
 // ---------------------------------------------------------------------------
@@ -464,9 +468,9 @@ export function buildImage(c: Character): string {
 
 export function describeEmotion(emotion: Emotion): string[] {
   return [
-    `心情：${MOOD_WORDS[emotion.mood] ?? String(emotion.mood)}`,
-    `压力：${STRESS_WORDS[emotion.stress] ?? String(emotion.stress)}`,
-    `社交满足：${SOCIAL_WORDS[emotion.social_satiety] ?? String(emotion.social_satiety)}`,
+    `心情：${emoWord(emotion.mood, MOOD_WORDS)}`,
+    `压力：${emoWord(emotion.stress, STRESS_WORDS)}`,
+    `社交满足：${emoWord(emotion.social_satiety, SOCIAL_WORDS)}`,
   ];
 }
 
@@ -866,9 +870,9 @@ export function buildAcceptDecisionPrompt(args: {
     lines.push("你当前的状态：");
     lines.push(`- 疲惫：${fatigue.phrase}`);
     lines.push(`- 饥饿：${hunger.phrase}`);
-    lines.push(`- 心情：${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
-    lines.push(`- 压力：${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
-    lines.push(`- 社交满足：${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
+    lines.push(`- 心情：${emoWord(self.emotion.mood, MOOD_WORDS)}`);
+    lines.push(`- 压力：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
+    lines.push(`- 社交满足：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
@@ -887,9 +891,9 @@ export function buildAcceptDecisionPrompt(args: {
     lines.push("Your current state:");
     lines.push(`- Fatigue: ${fatigue.phrase}`);
     lines.push(`- Hunger: ${hunger.phrase}`);
-    lines.push(`- Mood: ${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
-    lines.push(`- Stress: ${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
-    lines.push(`- Social: ${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
+    lines.push(`- Mood: ${emoWord(self.emotion.mood, MOOD_WORDS)}`);
+    lines.push(`- Stress: ${emoWord(self.emotion.stress, STRESS_WORDS)}`);
+    lines.push(`- Social: ${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
@@ -908,9 +912,9 @@ export function buildAcceptDecisionPrompt(args: {
     lines.push("あなたの現在の状態：");
     lines.push(`- 疲労：${fatigue.phrase}`);
     lines.push(`- 空腹：${hunger.phrase}`);
-    lines.push(`- 気分：${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
-    lines.push(`- ストレス：${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
-    lines.push(`- 社交満足度：${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
+    lines.push(`- 気分：${emoWord(self.emotion.mood, MOOD_WORDS)}`);
+    lines.push(`- ストレス：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
+    lines.push(`- 社交満足度：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
@@ -1035,6 +1039,11 @@ export function buildDialogTurnPrompt(args: {
     // 中部：角色信息（缓存前缀 — 跨轮次一致）
     lines.push(buildSelfImage(self));
     lines.push("");
+    lines.push("你当前的心理状态：");
+    lines.push(`- 心情：${emoWord(self.emotion.mood, MOOD_WORDS)}`);
+    lines.push(`- 压力：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
+    lines.push(`- 社交满足：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
+    lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
     lines.push(`当前地点：${here.name}`);
@@ -1066,6 +1075,11 @@ export function buildDialogTurnPrompt(args: {
 
     lines.push(buildSelfImage(self));
     lines.push("");
+    lines.push("Your current mental state:");
+    lines.push(`- Mood: ${emoWord(self.emotion.mood, MOOD_WORDS)}`);
+    lines.push(`- Stress: ${emoWord(self.emotion.stress, STRESS_WORDS)}`);
+    lines.push(`- Social: ${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
+    lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
     lines.push(`Current location: ${here.name}`);
@@ -1095,6 +1109,11 @@ export function buildDialogTurnPrompt(args: {
     lines.push("");
 
     lines.push(buildSelfImage(self));
+    lines.push("");
+    lines.push("あなたの現在の心理状態：");
+    lines.push(`- 気分：${emoWord(self.emotion.mood, MOOD_WORDS)}`);
+    lines.push(`- ストレス：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
+    lines.push(`- 社交満足度：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
@@ -1616,9 +1635,9 @@ export function buildThinkPrompt(args: {
     lines.push("你当前的状态：");
     lines.push(`- 饥饿：${hunger.phrase}`);
     lines.push(`- 疲惫：${fatigue.phrase}`);
-    lines.push(`- 心情：${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
-    lines.push(`- 压力：${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
-    lines.push(`- 社交满足：${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
+    lines.push(`- 心情：${emoWord(self.emotion.mood, MOOD_WORDS)}`);
+    lines.push(`- 压力：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
+    lines.push(`- 社交满足：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
 
     if (self.shortTermGoal || self.longTermGoal) {
@@ -1664,9 +1683,9 @@ export function buildThinkPrompt(args: {
     lines.push("Your current state:");
     lines.push(`- Hunger: ${hunger.phrase}`);
     lines.push(`- Fatigue: ${fatigue.phrase}`);
-    lines.push(`- Mood: ${MOOD_WORDS[self.emotion.mood] ?? String(self.emotion.mood)}`);
-    lines.push(`- Stress: ${STRESS_WORDS[self.emotion.stress] ?? String(self.emotion.stress)}`);
-    lines.push(`- Social: ${SOCIAL_WORDS[self.emotion.social_satiety] ?? String(self.emotion.social_satiety)}`);
+    lines.push(`- Mood: ${emoWord(self.emotion.mood, MOOD_WORDS)}`);
+    lines.push(`- Stress: ${emoWord(self.emotion.stress, STRESS_WORDS)}`);
+    lines.push(`- Social: ${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
 
     if (self.shortTermGoal || self.longTermGoal) {

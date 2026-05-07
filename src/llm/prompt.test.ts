@@ -281,7 +281,7 @@ describe("buildUserPrompt", () => {
       nodes: [restaurant],
       allCharacters: [baseCharacter],
     });
-    expect(out).toContain("第 0 日 05:00");
+    expect(out).toContain("2026年5月1日 星期五 05:00");
     expect(out).toContain("凌晨");
     expect(out).toContain("已是你的作息时段");
     expect(out).toContain("作息窗口：22:00–06:00");
@@ -922,7 +922,7 @@ describe("buildMemoryCompressionPrompt", () => {
     });
     expect(result).toContain("测试");
     expect(result).toContain("我在酒馆吃了一顿饭");
-    expect(result).toContain("submit_memory_summary");
+    expect(result).toContain("直接输出你的摘要");
   });
 
   it("zh: empty memories returns placeholder prompt", () => {
@@ -930,7 +930,7 @@ describe("buildMemoryCompressionPrompt", () => {
       characterName: "测试",
       memories: [],
     });
-    expect(result).toContain("submit_memory_summary");
+    expect(result).toContain("直接输出你的总结");
   });
 
   it("en: renders in English", () => {
@@ -940,7 +940,7 @@ describe("buildMemoryCompressionPrompt", () => {
       language: "en",
     });
     expect(result).toContain("You are Test");
-    expect(result).toContain("submit_memory_summary");
+    expect(result).toContain("Output your summary directly");
   });
 
   it("ja: renders in Japanese", () => {
@@ -950,7 +950,7 @@ describe("buildMemoryCompressionPrompt", () => {
       language: "ja",
     });
     expect(result).toContain("テスト");
-    expect(result).toContain("submit_memory_summary");
+    expect(result).toContain("要約を直接出力してください");
   });
 });
 
@@ -964,26 +964,32 @@ describe("buildWeeklyCompressionPrompt", () => {
     "在酒馆喝了几杯，和老板聊了天。",
     "去教堂祈祷，心情平静。",
   ];
+  // One day = 120 ticks, starting from TEST_EPOCH (2026-05-01 = Friday)
+  const dailyTicks = [0, 120, 240, 360, 480, 600, 720];
 
-  it("zh: includes all 7 daily summaries", () => {
+  it("zh: includes all 7 daily summaries with dates", () => {
     const result = buildWeeklyCompressionPrompt({
       characterName: "测试",
       dailySummaries,
+      dailyTicks,
+      epoch: TEST_EPOCH,
     });
     expect(result).toContain("测试");
-    expect(result).toContain("第 1 天");
-    expect(result).toContain("第 7 天");
-    expect(result).toContain("submit_memory_summary");
+    expect(result).toContain("2026年5月1日 星期五");
+    expect(result).toContain("2026年5月7日 星期四");
+    expect(result).toContain("直接输出你的摘要");
   });
 
   it("en: renders in English", () => {
     const result = buildWeeklyCompressionPrompt({
       characterName: "Test",
       dailySummaries,
+      dailyTicks,
+      epoch: TEST_EPOCH,
       language: "en",
     });
     expect(result).toContain("You are Test");
-    expect(result).toContain("submit_memory_summary");
+    expect(result).toContain("Output your summary directly");
   });
 });
 

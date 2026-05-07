@@ -36,6 +36,15 @@
       "kinds": [
         "classmate"
       ],
+      "affection": 1,
+      "note": "老是找我麻烦——但没空搭理女生——大概吧。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-ogata-riku": {
+      "kinds": [
+        "classmate"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }

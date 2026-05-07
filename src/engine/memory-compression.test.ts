@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { compressSleepMemories } from "./memory-compression";
 import type { Character } from "@/domain/types";
+import { DEFAULT_EPOCH_MS } from "@/app/_lib/format";
 
 // Mock the LLM module
 vi.mock("@/llm/decide", () => ({
@@ -63,7 +64,7 @@ describe("compressSleepMemories", () => {
       lastSleepTick: 0,
     });
 
-    await compressSleepMemories(c, 120, "zh");
+    await compressSleepMemories(c, 120, DEFAULT_EPOCH_MS, "zh");
 
     expect(c.shortMemory).toEqual([]);
     expect(c.dailyMemory).toHaveLength(1);
@@ -95,7 +96,7 @@ describe("compressSleepMemories", () => {
       lastSleepTick: 100,
     });
 
-    await compressSleepMemories(c, 960, "zh");
+    await compressSleepMemories(c, 960, DEFAULT_EPOCH_MS, "zh");
 
     expect(c.shortMemory).toEqual([]);
     expect(c.dailyMemory).toHaveLength(1); // 7 old compressed + 1 new = 1 total (7 removed, 1 added)
@@ -114,7 +115,7 @@ describe("compressSleepMemories", () => {
       lastSleepTick: 0,
     });
 
-    await compressSleepMemories(c, 120, "zh");
+    await compressSleepMemories(c, 120, DEFAULT_EPOCH_MS, "zh");
 
     expect(c.shortMemory).toEqual([]);
     expect(c.dailyMemory).toHaveLength(0);
@@ -134,7 +135,7 @@ describe("compressSleepMemories", () => {
       lastSleepTick: 0,
     });
 
-    await compressSleepMemories(c, 120, "zh");
+    await compressSleepMemories(c, 120, DEFAULT_EPOCH_MS, "zh");
 
     expect(mockSummarize).toHaveBeenCalledTimes(1);
     const promptArg = mockSummarize.mock.calls[0][0].prompt;
@@ -154,7 +155,7 @@ describe("compressSleepMemories", () => {
       lastSleepTick: 0,
     });
 
-    await compressSleepMemories(c, 120, "zh");
+    await compressSleepMemories(c, 120, DEFAULT_EPOCH_MS, "zh");
 
     expect(c.shortMemory).toEqual(originalMemories);
     expect(c.dailyMemory).toHaveLength(0);
@@ -174,7 +175,7 @@ describe("compressSleepMemories", () => {
       lastSleepTick: 100,
     });
 
-    await compressSleepMemories(c, 120, "zh");
+    await compressSleepMemories(c, 120, DEFAULT_EPOCH_MS, "zh");
 
     expect(mockSummarize).toHaveBeenCalledTimes(1);
     const promptArg = mockSummarize.mock.calls[0][0].prompt;

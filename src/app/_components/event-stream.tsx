@@ -5,15 +5,8 @@ import type { Character, MapNode, WorldEvent } from "@/domain/types";
 import { formatHHMM } from "../_lib/format";
 import { EventCard } from "./event-card";
 
-type Filter = "all" | "action" | "inner" | "social" | "other";
+type Filter = "dialogue" | "thinking" | "other";
 type Density = "sparse" | "medium" | "dense";
-
-const FILTER_CATEGORIES: Record<Exclude<Filter, "all">, string[]> = {
-  action: ["action"],
-  inner: ["inner"],
-  social: ["social", "quest", "burst"],
-  other: ["time", "env", "system"],
-};
 
 const DENSITY_LIMITS: Record<Density, number> = {
   sparse: 2,
@@ -22,10 +15,8 @@ const DENSITY_LIMITS: Record<Density, number> = {
 };
 
 const FILTER_LABELS: Record<Filter, string> = {
-  all: "全部",
-  action: "行动",
-  inner: "独白",
-  social: "互动",
+  dialogue: "对话",
+  thinking: "思考",
   other: "其他",
 };
 
@@ -48,7 +39,7 @@ export function EventStream({
   onSelectCharacter: (c: Character) => void;
   onFollow: (id: string) => void;
 }) {
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>("dialogue");
   const [density, setDensity] = useState<Density>(() => {
     try {
       return (localStorage.getItem("agent-world.stream-density") as Density) ?? "medium";
@@ -82,10 +73,13 @@ export function EventStream({
       );
     }
 
-    // Category filter
-    if (filter !== "all") {
-      const cats = FILTER_CATEGORIES[filter];
-      evs = evs.filter((ev) => cats.includes(ev.category));
+    // Filter by type
+    if (filter === "dialogue") {
+      evs = evs.filter((ev) => ev.dialogTranscript && ev.dialogTranscript.length > 0);
+    } else if (filter === "thinking") {
+      evs = evs.filter((ev) => ev.category === "inner");
+    } else {
+      evs = evs.filter((ev) => !(ev.dialogTranscript && ev.dialogTranscript.length > 0) && ev.category !== "inner");
     }
 
     return evs;
@@ -138,7 +132,7 @@ export function EventStream({
         )}
 
         <div className="flex items-center gap-1 ml-auto">
-          {(["all", "action", "inner", "social", "other"] as Filter[]).map((f) => (
+          {(["dialogue", "thinking", "other"] as Filter[]).map((f) => (
             <button
               key={f}
               type="button"
@@ -168,7 +162,7 @@ export function EventStream({
       <div className="flex-1 overflow-y-auto pixel-scroll px-6 py-4">
         {groups.length === 0 ? (
           <p className="text-body-md text-(--text-on-frame-muted) text-center mt-20">
-            {filter !== "all" ? "此分类暂无事件" : "尚无事件…"}
+            此分类暂无事件
           </p>
         ) : (
           groups.map((group) => (

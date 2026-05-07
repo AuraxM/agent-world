@@ -43,6 +43,16 @@
       "kinds": [
         "classmate"
       ],
+      "affection": 1,
+      "note": "每次发试卷都多传一份给他——他实验课后总是在睡。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-onodera-wakana": {
+      "kinds": [
+        "classmate",
+        "friend"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     },

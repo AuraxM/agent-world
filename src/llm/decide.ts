@@ -54,7 +54,7 @@ const summaryLog = createLogger("llm-summary");
 const salvageLog = createLogger("llm-salvage");
 const memoryLog = createLogger("llm-memory");
 
-const MAX_OUTPUT_TOKENS = 4096;
+const MAX_OUTPUT_TOKENS = 16384;
 
 export const llmDecide: DecideFn = async (input) => {
   if (!hasApiKey()) {
@@ -471,6 +471,8 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     epoch: input.epoch,
   });
 
+  dialogLog.info("DIALOG_PROMPT", { prompt, speaker: input.self.name, peer: input.peer.name });
+
   const tools: ChatCompletionTool[] = [
     {
       type: "function",
@@ -551,7 +553,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     try {
       const response = await client.chat.completions.create({
         model: getModelNameForEntry("dialog_turn"),
-        max_tokens: 1024,
+        max_tokens: 4096,
         messages: messages as any,
         tools,
         ...extra,
@@ -804,7 +806,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
             kind: "turn",
             turn: {
               speakerId: input.self.id,
-              kind: result.data.kind,
+              kind: "say",
               line: result.data.line,
               reasoning: result.data.reasoning,
             },
@@ -960,7 +962,7 @@ export async function llmDialogSummarize(input: DialogSummaryInput): Promise<{ s
     try {
       const response = await client.chat.completions.create({
         model: getModelNameForEntry("dialog_summarize"),
-        max_tokens: 512,
+        max_tokens: 2048,
         messages: [
           {
             role: "system",
@@ -1057,6 +1059,8 @@ export async function llmThink(args: {
     epoch: args.epoch,
   });
 
+  dialogLog.info("THINK_PROMPT", { prompt, speaker: args.self.name });
+
   const tools: ChatCompletionTool[] = [
     {
       type: "function",
@@ -1090,7 +1094,7 @@ export async function llmThink(args: {
   for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
     const response = await client.chat.completions.create({
       model: getModelNameForEntry("dialog_turn"),
-      max_tokens: 1024,
+      max_tokens: 4096,
       messages: messages as any,
       tools,
       ...extra,
@@ -1321,7 +1325,7 @@ export async function llmMemoryCompress(args: {
     try {
       const response = await client.chat.completions.create({
         model: getModelNameForEntry("memory_compress"),
-        max_tokens: 512,
+        max_tokens: 2048,
         messages: [
           {
             role: "system",
@@ -1411,7 +1415,7 @@ export async function llmAcceptDecide(
     try {
       const response = await client.chat.completions.create({
         model: getModelNameForEntry("accept_decision"),
-        max_tokens: 512,
+        max_tokens: 2048,
         messages: [
           {
             role: "system",
@@ -1578,5 +1582,5 @@ function buildUpdateLikesTool(): ChatCompletionTool {
 }
 
 function buildUpdateGoalsTool(): ChatCompletionTool {
-  return { type: "function", function: { name: UPDATE_GOALS_TOOL_NAME, description: "更新你的短期或长期目标。", parameters: UpdateGoalsToolSchema } };
+  return { type: "function", function: { name: UPDATE_GOALS_TOOL_NAME, description: "更新你的短期或长期的人生目标。", parameters: UpdateGoalsToolSchema } };
 }

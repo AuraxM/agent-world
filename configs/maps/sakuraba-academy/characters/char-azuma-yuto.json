@@ -29,12 +29,28 @@
       "kinds": [
         "classmate"
       ],
+      "affection": 2,
+      "note": "先輩帮我调了望远镜焦距——那一刻我就知道了。",
       "since": 0,
       "lastInteractionTick": 0
     },
     "char-igarashi-minato": {
       "kinds": [
         "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-hoshino-koharu": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-nonaka-toshiki": {
+      "kinds": [
+        "student"
       ],
       "since": 0,
       "lastInteractionTick": 0

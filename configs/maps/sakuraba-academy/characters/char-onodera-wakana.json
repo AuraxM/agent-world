@@ -29,6 +29,23 @@
       "kinds": [
         "classmate"
       ],
+      "affection": 2,
+      "note": "传闻比真人难搞——但他弹琴闭上眼睛的那一刻是认真的。",
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-hoshino-koharu": {
+      "kinds": [
+        "classmate",
+        "friend"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-kiriya-kaede": {
+      "kinds": [
+        "classmate"
+      ],
       "since": 0,
       "lastInteractionTick": 0
     }

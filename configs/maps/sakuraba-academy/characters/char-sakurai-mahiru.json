@@ -30,6 +30,8 @@
         "classmate",
         "friend"
       ],
+      "affection": 2,
+      "note": "从小在身边，给我的是太阳一样的温度。",
       "since": 0,
       "lastInteractionTick": 0
     },
@@ -38,6 +40,8 @@
         "classmate",
         "friend"
       ],
+      "affection": 2,
+      "note": "他站在另一个方向看着我，温度不一样。",
       "since": 0,
       "lastInteractionTick": 0
     },

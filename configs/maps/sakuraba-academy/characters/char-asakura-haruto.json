@@ -32,6 +32,20 @@
       "since": 0,
       "lastInteractionTick": 0
     },
+    "char-miura-kenta": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
+    "char-toudou-chinatsu": {
+      "kinds": [
+        "classmate"
+      ],
+      "since": 0,
+      "lastInteractionTick": 0
+    },
     "char-asakura-haruna": {
       "kinds": [
         "older_brother"

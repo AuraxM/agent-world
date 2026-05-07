@@ -30,6 +30,8 @@
         "classmate",
         "friend"
       ],
+      "affection": 3,
+      "note": "从小学起就喜欢她，但开不了口。",
       "since": 0,
       "lastInteractionTick": 0
     },

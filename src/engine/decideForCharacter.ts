@@ -227,7 +227,7 @@ export async function decideForCharacter(
           for (let round = 0; round < MAX_ROUNDS; round++) {
             const resp = await client.chat.completions.create({
               model,
-              max_tokens: 4096,
+              max_tokens: 16384,
               messages: messages as any,
               tools,
               ...extra,

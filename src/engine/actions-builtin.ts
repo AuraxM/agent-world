@@ -412,6 +412,7 @@ export const giveAction: ActionDefinition = {
     const actual = Math.min(Math.max(1, Math.floor(requested)), ctx.self.money);
     return {
       memory: `我给了 ${target.name} ${actual} 金钱。`,
+      targetMemory: `${ctx.self.name} 给了我 ${actual} 金钱。`,
       event: {
         category: "social",
         description: `${ctx.self.name} 给了 ${target.name} ${actual} 金钱。`,
@@ -462,7 +463,7 @@ export const lookAroundAction: ActionDefinition = {
     return {
       memory,
       event: {
-        category: "inner",
+        category: "action",
         description: `${ctx.self.name} 环顾四周，观察周围情况。`,
         intensity: 1,
       },

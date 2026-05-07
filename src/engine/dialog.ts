@@ -455,14 +455,6 @@ function executeDialogueAction(
               const received = -sc.amount;
               if (received > 0) {
                 tgtChar.money += received;
-                pushMemo(tgtChar, {
-                  id: `mem-${randomUUID().slice(0, 8)}`,
-                  tick,
-                  importance: 4,
-                  content: outcome.dialogRecord
-                    ? outcome.dialogRecord.replace(actor.name, `${actor.name}（对方）`)
-                    : `${actor.name} 给我执行了 ${actionType}。`,
-                });
               }
             }
           }
@@ -478,6 +470,14 @@ function executeDialogueAction(
       importance: 3,
       content: outcome.memory,
     });
+    if (outcome.targetMemory) {
+      pushMemo(target, {
+        id: `mem-${randomUUID().slice(0, 8)}`,
+        tick,
+        importance: 3,
+        content: outcome.targetMemory,
+      });
+    }
     return outcome.dialogRecord;
   } catch {
     return undefined;

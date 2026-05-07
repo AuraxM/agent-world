@@ -12,7 +12,7 @@
       "visibleFromParent": false,
       "shortcuts": [],
       "isEntry": false,
-      "x": 0, "y": 0, "w": 36, "h": 30,
+      "x": 0, "y": 0, "w": 40, "h": 30,
       "spriteKey": "park"
     },
     {
@@ -459,7 +459,7 @@
       "capacity": 30,
       "privacy": "public",
       "visibleFromParent": true,
-      "shortcuts": ["node-gate", "node-uni-gate"],
+      "shortcuts": ["node-gate", "node-uni-gate", "node-shop-street"],
       "isEntry": false,
       "x": 8, "y": 22, "w": 4, "h": 2,
       "spriteKey": "town"
@@ -473,7 +473,7 @@
       "capacity": 30,
       "privacy": "public",
       "visibleFromParent": true,
-      "shortcuts": ["node-station"],
+      "shortcuts": ["node-station", "node-shrine-entrance"],
       "isEntry": false,
       "x": 6, "y": 24, "w": 12, "h": 4,
       "spriteKey": "town"

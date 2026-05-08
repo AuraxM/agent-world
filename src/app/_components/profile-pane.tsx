@@ -364,13 +364,26 @@ export function ProfilePane({
             </div>
           </div>
 
-          {/* 生平简介 */}
-          {character.biography && (
-            <section className="border-2 border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2) p-2">
-              <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">生平</div>
-              <p className="text-game-sm leading-relaxed text-(--color-pixel-fg) italic">
-                &ldquo;{character.biography}&rdquo;
-              </p>
+          {/* 个人档案 */}
+          {character.personalProfile && (character.personalProfile.past || character.personalProfile.present) && (
+            <section className="border-2 border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2) p-2 space-y-2">
+              <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">个人档案</div>
+              {character.personalProfile.past && (
+                <div>
+                  <div className="text-game-xs text-(--color-pixel-muted) mb-0.5">过往经历</div>
+                  <p className="text-game-sm leading-relaxed text-(--color-pixel-fg) italic">
+                    &ldquo;{character.personalProfile.past}&rdquo;
+                  </p>
+                </div>
+              )}
+              {character.personalProfile.present && (
+                <div>
+                  <div className="text-game-xs text-(--color-pixel-muted) mb-0.5">当前状况</div>
+                  <p className="text-game-sm leading-relaxed text-(--color-pixel-fg) italic">
+                    &ldquo;{character.personalProfile.present}&rdquo;
+                  </p>
+                </div>
+              )}
             </section>
           )}
 

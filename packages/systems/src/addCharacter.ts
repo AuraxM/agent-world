@@ -165,7 +165,7 @@ export function addCharacterToWorld(
         incomeLevel,
         expenseExempt,
         incomeMultiplier,
-        biography: tpl.biography,
+        personalProfileJson: JSON.stringify(tpl.personalProfile),
         origin: tpl.origin,
         locationId: entryNodeId!,
         personalityJson: JSON.stringify(tpl.personality),

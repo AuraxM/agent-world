@@ -142,7 +142,10 @@ export const CharacterTemplateSchema: z.ZodType<CharacterTemplate> = z.object({
   age: z.number().int().min(1).max(120),
   gender: z.enum(GENDERS),
   profession: z.enum(PROFESSIONS),
-  biography: z.string().min(1),
+  personalProfile: z.object({
+    past: z.string().min(1),
+    present: z.string(),
+  }),
   origin: z.enum(CHARACTER_ORIGINS),
   activityNodeId: z.string().min(1).nullable().optional(),
   restNodeId: z.string().min(1).nullable().optional(),

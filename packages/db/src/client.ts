@@ -69,7 +69,7 @@ const CORE_TABLE_DDLS = [
     income_level INTEGER NOT NULL DEFAULT 0,
     expense_exempt INTEGER NOT NULL DEFAULT 0,
     income_multiplier REAL NOT NULL DEFAULT 1.0,
-    biography TEXT NOT NULL DEFAULT '',
+    personal_profile_json TEXT NOT NULL DEFAULT '{"past":"","present":""}',
     origin TEXT NOT NULL DEFAULT 'local',
     location_id TEXT NOT NULL,
     personality_json TEXT NOT NULL,
@@ -184,6 +184,7 @@ const CHAR_MIGRATIONS: Array<[string, string]> = [
   ["gender", "ALTER TABLE characters ADD COLUMN gender TEXT NOT NULL DEFAULT 'male'"],
   ["profession", "ALTER TABLE characters ADD COLUMN profession TEXT NOT NULL DEFAULT 'farmer'"],
   ["biography", "ALTER TABLE characters ADD COLUMN biography TEXT NOT NULL DEFAULT ''"],
+  ["personal_profile_json", `ALTER TABLE characters ADD COLUMN personal_profile_json TEXT NOT NULL DEFAULT '{"past":"","present":""}'`],
   ["origin", "ALTER TABLE characters ADD COLUMN origin TEXT NOT NULL DEFAULT 'local'"],
   ["money", "ALTER TABLE characters ADD COLUMN money INTEGER NOT NULL DEFAULT 0"],
   ["income_level", "ALTER TABLE characters ADD COLUMN income_level INTEGER NOT NULL DEFAULT 0"],
@@ -272,6 +273,19 @@ function createDb() {
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
   ensureColumns(sqlite);
+
+  // Data migration: copy legacy biography into personal_profile_json.past
+  const charCols = sqlite
+    .prepare(`PRAGMA table_info(characters)`)
+    .all() as { name: string }[];
+  const hasBiography = charCols.some((c) => c.name === "biography");
+  const hasProfile = charCols.some((c) => c.name === "personal_profile_json");
+  if (hasBiography && hasProfile) {
+    sqlite.exec(
+      `UPDATE characters SET personal_profile_json = json_object('past', biography, 'present', '') WHERE biography IS NOT NULL AND biography != '' AND personal_profile_json = '{"past":"","present":""}'`
+    );
+  }
+
   return drizzle(sqlite, { schema });
 }
 

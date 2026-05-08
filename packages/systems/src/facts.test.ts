@@ -42,7 +42,7 @@ const baseCharacter: Character = {
   age: 25,
   gender: "other",
   profession: "student",
-  biography: "一个测试角色。",
+  personalProfile: { past: "一个测试角色。", present: "" },
   origin: "local" as const,
   locationId: "node-here",
   personality: { ei: 0, sn: 0, tf: 0, jp: 0 },

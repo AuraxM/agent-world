@@ -50,7 +50,7 @@ function makeTableSQL() {
       age INTEGER NOT NULL DEFAULT 30,
       gender TEXT NOT NULL DEFAULT 'male',
       profession TEXT NOT NULL DEFAULT 'farmer',
-      biography TEXT NOT NULL DEFAULT '',
+      personal_profile_json TEXT NOT NULL DEFAULT '{"past":"","present":""}',
       origin TEXT NOT NULL DEFAULT 'local',
       location_id TEXT NOT NULL,
       money INTEGER NOT NULL DEFAULT 0,

@@ -110,9 +110,11 @@ export type TurnDecideFn = (input: {
   tick: number;
   epoch?: number;
   upcomingEntries?: import("@/domain/types").NotebookEntry[];
+  previousMessages?: Array<Record<string, unknown>>;
+  previousTranscriptLength?: number;
 }) => Promise<
-  | { kind: "turn"; turn: DialogTurn; proposeAction?: DialogueActionProposal; respondToAction?: DialogueActionResponse }
-  | { kind: "end"; payload: EndConversationPayload; respondToAction?: DialogueActionResponse }
+  | { kind: "turn"; turn: DialogTurn; proposeAction?: DialogueActionProposal; respondToAction?: DialogueActionResponse; messages?: Array<Record<string, unknown>>; transcriptLength?: number }
+  | { kind: "end"; payload: EndConversationPayload; respondToAction?: DialogueActionResponse; messages?: Array<Record<string, unknown>>; transcriptLength?: number }
 >;
 
 export type SummaryDecideFn = (input: {
@@ -513,6 +515,10 @@ async function runOneTickDialog(
   const acceptor = chars.get(conv.acceptorId)!;
   const transcript: DialogTurn[] = [...conv.transcript];
 
+  // Initialize shared LLM context if not present
+  if (!conv.sharedMessages) conv.sharedMessages = [];
+  if (conv.sharedMessagesTranscriptLength === undefined) conv.sharedMessagesTranscriptLength = 0;
+
   // Find the last real speaker (skip __system__ time messages)
   let lastRealSpeakerId = conv.initiatorId;
   for (let i = transcript.length - 1; i >= 0; i--) {
@@ -581,6 +587,8 @@ async function runOneTickDialog(
         tick: currentTick,
         epoch,
         upcomingEntries,
+        previousMessages: conv.sharedMessages,
+        previousTranscriptLength: conv.sharedMessagesTranscriptLength,
       }));
     } catch (err) {
       log.error("turnDecide 异常，对话被迫终止", {
@@ -635,6 +643,14 @@ async function runOneTickDialog(
       };
     }
 
+    // ── Save shared LLM context ──
+    if (result.messages) {
+      conv.sharedMessages = result.messages;
+    }
+    if (result.transcriptLength !== undefined) {
+      conv.sharedMessagesTranscriptLength = result.transcriptLength;
+    }
+
     if (result.kind === "end") {
       const isSixthSentence = round === sixthSentenceIndex;
       if (result.payload.closingLine) {
@@ -675,7 +691,16 @@ async function runOneTickDialog(
             tick: currentTick,
             epoch,
             upcomingEntries,
+            previousMessages: conv.sharedMessages,
+            previousTranscriptLength: conv.sharedMessagesTranscriptLength,
           });
+          // Save extra round context too
+          if (extraResult.messages) {
+            conv.sharedMessages = extraResult.messages;
+          }
+          if (extraResult.transcriptLength !== undefined) {
+            conv.sharedMessagesTranscriptLength = extraResult.transcriptLength;
+          }
           if (extraResult.kind === "turn") {
             transcript.push(extraResult.turn);
           }

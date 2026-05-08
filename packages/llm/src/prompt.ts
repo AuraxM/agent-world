@@ -107,12 +107,12 @@ function describePersonality(p: Personality): string[] {
 }
 
 function describePersonalityCompact(p: Personality, intelligence: number): string {
-  const ei = p.ei >= 0 ? "E" : "I";
-  const sn = p.sn >= 0 ? "N" : "S";
-  const tf = p.tf >= 0 ? "F" : "T";
-  const jp = p.jp >= 0 ? "J" : "P";
+  const ei = EI_LABELS[p.ei] ?? String(p.ei);
+  const sn = SN_LABELS[p.sn] ?? String(p.sn);
+  const tf = TF_LABELS[p.tf] ?? String(p.tf);
+  const jp = JP_LABELS[p.jp] ?? String(p.jp);
   const intel = INTELLIGENCE_LABELS[intelligence] ?? INTELLIGENCE_LABELS[2];
-  return `${ei}${sn}${tf}${jp}，${intel}`;
+  return `${ei}、${sn}、${tf}、${jp}，${intel}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -744,7 +744,10 @@ export function buildCharacterStaticBlock(
     lines.push(`- 你的休息处：${restNode.name} [${restNode.id}]`);
   }
   lines.push(`- 作息窗口：${formatSleepWindow(sleepWindow)}`);
-  lines.push(`- 生平简介：${character.biography}`);
+  lines.push(`- 过往经历：${character.personalProfile.past}`);
+  if (character.personalProfile.present) {
+    lines.push(`- 当前状况：${character.personalProfile.present}`);
+  }
   lines.push("- 性格特征（用文字描述，**禁止在 reasoning 里写数值**）：");
   for (const s of describePersonality(character.personality)) {
     lines.push(`  · ${s}`);
@@ -784,7 +787,7 @@ export function buildSelfImage(c: Character): string {
     `- 职业：${PROFESSION_LABELS[c.profession] ?? c.profession}`,
     `- 健康状况：${c.sickness ? "你生病了" : "健康"}`,
     `- 性格：${describePersonalityCompact(c.personality, c.intelligence)}`,
-    `- 生平简介：${c.biography}`,
+    `- 过往经历：${c.personalProfile.past}`,
   ];
   if (c.speakingStyle) {
     lines.push(`- 说话风格：${c.speakingStyle}`);
@@ -917,6 +920,50 @@ export function buildAcceptDecisionPrompt(args: {
   return lines.join("\n");
 }
 
+export function buildDialogSystemPrompt(language: Language): string {
+  const inst = languageInstruction(language);
+  if (language === "zh") {
+    return `你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。请根据你的性格、当前情境和对话历史，自然地回应。不要重复对方刚说过的话。
+
+${inst}
+
+如果你们在这次对话中达成了约定（比如约好某个时间一起做什么事），请记得调用 add_notebook_entry 记录到你的记事本中（用 year/month/day/hour 指定日历时间）。
+
+## 重要行为规则
+- 与对方互动后，如果产生了新的印象或了解到重要信息，必须调用 memorize 记录，不要只在心里想。
+- 禁止编造不存在的约定、任务、计划或人物。只依据你的记忆和当前对话中真实发生的事情做判断。不记得的事就坦诚说不知道。
+- 如果你不熟悉或不认识对方，先调用 recall 查询你对TA的了解，再做出回应。不要假装认识陌生人。
+
+现在轮到你说话。请根据你的性格自然地回应，不要重复对方刚说过的话。调用 submit_dialog_turn：kind="say" 并填写 line。如果想结束对话，请调用 end_conversation。`;
+  }
+  if (language === "en") {
+    return `You are an NPC in a role-playing engine. You are speaking with another person. Respond naturally based on your personality, current situation, and conversation history. Do not repeat what the other person just said.
+
+${inst}
+
+If you and the other person reach an agreement in this conversation (e.g., to meet or do something together at a specific time), remember to call add_notebook_entry to record it in your notebook (use year/month/day/hour for the calendar time).
+
+## Important Behavior Rules
+- After interacting, if you've formed new impressions or learned important information, you must call memorize to record it — don't just think about it.
+- Do not fabricate agreements, tasks, plans, or people that do not exist. Base your judgment only on your memories and what actually happened in this conversation. If you do not remember something, honestly say so.
+- If you're unfamiliar with or don't know the other person, call recall first to check what you know about them before responding. Don't pretend to know a stranger.
+
+It's your turn. Respond naturally based on your personality — do not repeat what the other person just said. Call submit_dialog_turn with kind="say" and line. If you want to end the conversation, call end_conversation.`;
+  }
+  return `あなたはロールプレイングエンジンの NPC です。他の人と会話しています。あなたの性格、現在の状況、会話の履歴に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。
+
+${inst}
+
+この会話で約束をした場合（例：特定の時間に一緒に何かをするなど）、add_notebook_entry を呼び出してノートに記録してください（year/month/day/hour でカレンダー時間を指定）。
+
+## 重要な行動ルール
+- 相手とやり取りした後、新しい印象や重要な情報を得た場合は、必ず memorize を呼び出して記録してください。考えるだけでは十分ではありません。
+- 存在しない約束、タスク、計画、人物をでっち上げないでください。自分の記憶とこの会話で実際に起こったことだけに基づいて判断してください。覚えていないことは正直に認めてください。
+- 相手のことをよく知らない、または知らない場合は、まず recall を呼び出して相手に関する情報を確認してから応答してください。知らない人を知っているふりをしないでください。
+
+あなたの番です。自分の性格に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。submit_dialog_turn で kind="say" を呼び出し line を入力してください。会話を終了する場合は end_conversation を呼び出してください。`;
+}
+
 /**
  * 对话单轮 prompt。speaker 基于 transcript 历史输出下一句话或结束对话。
  */
@@ -990,30 +1037,6 @@ export function buildDialogTurnPrompt(args: {
     return `\nこの会話中に提案できるアクション（propose_dialogue_action を submit_dialog_turn と同時に呼び出してください）：\n${actionList}\n`;
   }
 
-  function buildNotebookReminder(lang: Language): string {
-    if (lang === "zh") return "如果你们在这次对话中达成了约定（比如约好某个时间一起做什么事），请记得调用 add_notebook_entry 记录到你的记事本中（用 year/month/day/hour 指定日历时间）。";
-    if (lang === "en") return "If you and the other person reach an agreement in this conversation (e.g., to meet or do something together at a specific time), remember to call add_notebook_entry to record it in your notebook (use year/month/day/hour for the calendar time).";
-    return "この会話で約束をした場合（例：特定の時間に一緒に何かをするなど）、add_notebook_entry を呼び出してノートに記録してください（year/month/day/hour でカレンダー時間を指定）。";
-  }
-
-  function buildDialogueBehaviorRules(lang: Language): string {
-    if (lang === 'zh') {
-      return `## 重要行为规则
-- 与对方互动后，如果产生了新的印象或了解到重要信息，必须调用 memorize 记录，不要只在心里想。
-- 禁止编造不存在的约定、任务、计划或人物。只依据你的记忆和当前对话中真实发生的事情做判断。不记得的事就坦诚说不知道。
-- 如果你不熟悉或不认识对方，先调用 recall 查询你对TA的了解，再做出回应。不要假装认识陌生人。`;
-    }
-    if (lang === 'en') {
-      return `## Important Behavior Rules
-- After interacting, if you've formed new impressions or learned important information, you must call memorize to record it — don't just think about it.
-- Do not fabricate agreements, tasks, plans, or people that do not exist. Base your judgment only on your memories and what actually happened in this conversation. If you do not remember something, honestly say so.
-- If you're unfamiliar with or don't know the other person, call recall first to check what you know about them before responding. Don't pretend to know a stranger.`;
-    }
-    return `## 重要な行動ルール
-- 相手とやり取りした後、新しい印象や重要な情報を得た場合は、必ず memorize を呼び出して記録してください。考えるだけでは不十分です。
-- 存在しない約束、タスク、計画、人物をでっち上げないでください。自分の記憶とこの会話で実際に起こったことだけに基づいて判断してください。覚えていないことは正直に認めてください。
-- 相手のことをよく知らない、または知らない場合は、まず recall を呼び出して相手に関する情報を確認してから応答してください。知らない人を知っているふりをしないでください。`;
-  }
   function buildUpcomingBlock(lang: Language): string {
     if (!upcomingEntries || upcomingEntries.length === 0 || promptEpoch === undefined) return "";
     const MS_PER_TICK = (60 / 5) * 60 * 1000;
@@ -1029,26 +1052,6 @@ export function buildDialogTurnPrompt(args: {
   }
 
   if (language === "zh") {
-    // 头部：指令（缓存前缀）
-    lines.push(
-      "你是一个角色扮演引擎中的 NPC。你正在和另一个人对话。",
-      "请根据你的性格、当前情境和对话历史，自然地回应。",
-      "不要重复对方刚说过的话。",
-    );
-    lines.push("");
-    lines.push(buildNotebookReminder("zh"));
-    lines.push(buildDialogueBehaviorRules("zh"));
-    lines.push("");
-    lines.push(buildDialogueActionsBlock("zh"));
-    lines.push(buildPendingActionBlock("zh"));
-    lines.push(buildUpcomingBlock("zh"));
-    lines.push("");
-    lines.push(
-      "现在轮到你说话。请根据你的性格自然地回应，不要重复对方刚说过的话。调用 submit_dialog_turn：kind=\"say\" 并填写 line。如果想结束对话，请调用 end_conversation。",
-    );
-    lines.push("");
-
-    // 中部：角色信息（缓存前缀 — 跨轮次一致）
     lines.push(buildSelfImage(self));
     lines.push("");
     lines.push("你当前的心理状态：");
@@ -1060,29 +1063,13 @@ export function buildDialogTurnPrompt(args: {
     lines.push("");
     lines.push(`当前地点：${here.name}`);
     lines.push("");
-
-    // 尾部：对话记录（每轮变化）
+    lines.push(buildDialogueActionsBlock("zh"));
+    lines.push(buildPendingActionBlock("zh"));
+    lines.push(buildUpcomingBlock("zh"));
+    lines.push("");
     lines.push("对话记录：");
     lines.push(history || "(尚未开始)");
   } else if (language === "en") {
-    lines.push(
-      "You are an NPC in a role-playing engine. You are speaking with another person.",
-      "Respond naturally based on your personality, current situation, and conversation history.",
-      "Do not repeat what the other person just said.",
-    );
-    lines.push("");
-    lines.push(buildNotebookReminder("en"));
-    lines.push(buildDialogueBehaviorRules("en"));
-    lines.push("");
-    lines.push(buildDialogueActionsBlock("en"));
-    lines.push(buildPendingActionBlock("en"));
-    lines.push(buildUpcomingBlock("en"));
-    lines.push("");
-    lines.push(
-      "It's your turn. Respond naturally based on your personality — do not repeat what the other person just said. Call submit_dialog_turn with kind=\"say\" and line. If you want to end the conversation, call end_conversation.",
-    );
-    lines.push("");
-
     lines.push(buildSelfImage(self));
     lines.push("");
     lines.push("Your current mental state:");
@@ -1094,28 +1081,13 @@ export function buildDialogTurnPrompt(args: {
     lines.push("");
     lines.push(`Current location: ${here.name}`);
     lines.push("");
-
+    lines.push(buildDialogueActionsBlock("en"));
+    lines.push(buildPendingActionBlock("en"));
+    lines.push(buildUpcomingBlock("en"));
+    lines.push("");
     lines.push("Conversation:");
     lines.push(history || "(not yet started)");
   } else {
-    lines.push(
-      "あなたはロールプレイングエンジンの NPC です。他の人と会話しています。",
-      "あなたの性格、現在の状況、会話の履歴に基づいて自然に応答してください。",
-      "相手が今言ったことをそのまま繰り返さないでください。",
-    );
-    lines.push("");
-    lines.push(buildNotebookReminder("ja"));
-    lines.push(buildDialogueBehaviorRules("ja"));
-    lines.push("");
-    lines.push(buildDialogueActionsBlock("ja"));
-    lines.push(buildPendingActionBlock("ja"));
-    lines.push(buildUpcomingBlock("ja"));
-    lines.push("");
-    lines.push(
-      "あなたの番です。自分の性格に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。submit_dialog_turn で kind=\"say\" を呼び出し line を入力してください。会話を終了する場合は end_conversation を呼び出してください。",
-    );
-    lines.push("");
-
     lines.push(buildSelfImage(self));
     lines.push("");
     lines.push("あなたの現在の心理状態：");
@@ -1127,9 +1099,187 @@ export function buildDialogTurnPrompt(args: {
     lines.push("");
     lines.push(`現在地：${here.name}`);
     lines.push("");
+    lines.push(buildDialogueActionsBlock("ja"));
+    lines.push(buildPendingActionBlock("ja"));
+    lines.push(buildUpcomingBlock("ja"));
+    lines.push("");
 
     lines.push("会話の記録：");
     lines.push(history || "(まだ始まっていません)");
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * 对话后续轮次的简短 catch-up prompt。
+ * 仅在角色已有 previousMessages 时使用——不再重复人格/状态/地点等首轮信息，
+ * 只追加本轮新出现的 transcript 条目和状态变化。
+ */
+export function buildDialogTurnFollowup(args: {
+  self: Character;
+  peer: Character;
+  newTranscriptEntries: DialogTurn[];
+  language?: Language;
+  pendingAction?: import("@/domain/types").DialogueActionRequest;
+  dialogueActions?: import("@/domain/action-system").ActionDefinition[];
+  upcomingEntries?: import("@/domain/types").NotebookEntry[];
+  tick?: number;
+  epoch?: number;
+}): string {
+  const { self, peer, newTranscriptEntries, pendingAction, dialogueActions, upcomingEntries, tick: promptTick, epoch: promptEpoch } = args;
+  const language = args.language ?? "zh";
+
+  const history = newTranscriptEntries
+    .map((t) => {
+      if (t.speakerId === "__system__") {
+        return `【${t.line ?? ""}】`;
+      }
+      if (t.speakerId === self.id) {
+        const inner = t.reasoning ? `（内心：${t.reasoning}）` : "";
+        return `你${inner}: ${t.line ?? ""}`;
+      }
+      return `${peer.name}: ${t.line ?? ""}`;
+    })
+    .join("\n");
+
+  const lines: string[] = [];
+
+  if (language === "zh") {
+    lines.push("（对方说了一些新的话，轮到你回应了）");
+    lines.push("");
+    if (history) {
+      lines.push("对话记录更新：");
+      lines.push(history);
+      lines.push("");
+    }
+    if (pendingAction) {
+      const requesterName = pendingAction.requesterId === self.id ? "你" : peer.name;
+      const params = pendingAction.params;
+      const detail = params.amount
+        ? ` 金额：${params.amount}💰`
+        : params.free_text
+          ? ` "${params.free_text}"`
+          : "";
+      lines.push(`⚠️ 对方发起的交互：${requesterName} 想对你执行「${pendingAction.actionType}」。${detail}`);
+      lines.push("你可以同时调用 submit_dialog_turn + respond_to_dialogue_action（接受 accept 或拒绝 reject），或仅说话不理睬。");
+      lines.push("");
+    }
+    if (dialogueActions && dialogueActions.length > 0) {
+      const actionList = dialogueActions
+        .map((a) => {
+          const extra = a.extraParams
+            ? Object.keys(a.extraParams).filter(k => k !== "free_text").join(", ")
+            : "";
+          const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
+          return `- ${a.type}${extra ? ` (需要 ${extra})` : ""}${guide}`;
+        })
+        .join("\n");
+      lines.push(`你可以发起的行为（调用 propose_dialogue_action，与 submit_dialog_turn 同时调用）：\n${actionList}`);
+      lines.push("");
+    }
+    if (upcomingEntries && upcomingEntries.length > 0 && promptEpoch !== undefined) {
+      const MS_PER_TICK = (60 / 5) * 60 * 1000;
+      const entryLines = upcomingEntries.map((e) => {
+        const date = new Date(promptEpoch + e.scheduledTick * MS_PER_TICK);
+        const hh = String(date.getUTCHours()).padStart(2, "0");
+        const mm = String(date.getUTCMinutes()).padStart(2, "0");
+        return `${hh}:${mm} — ${e.content}`;
+      });
+      lines.push(`你未来一小时内的待办：${entryLines.join("; ")}`);
+      lines.push("");
+    }
+    lines.push("请继续对话。调用 submit_dialog_turn 来说出你的下一句话，或调用 end_conversation 结束对话。");
+  } else if (language === "en") {
+    lines.push("(The other person said something new — it's your turn to respond)");
+    lines.push("");
+    if (history) {
+      lines.push("Conversation update:");
+      lines.push(history);
+      lines.push("");
+    }
+    if (pendingAction) {
+      const requesterName = pendingAction.requesterId === self.id ? "you" : peer.name;
+      const params = pendingAction.params;
+      const detail = params.amount
+        ? ` amount: ${params.amount}💰`
+        : params.free_text
+          ? ` "${params.free_text}"`
+          : "";
+      lines.push(`⚠️ Pending interaction: ${requesterName} wants to perform "${pendingAction.actionType}" on you.${detail}`);
+      lines.push("You can call submit_dialog_turn + respond_to_dialogue_action (accept or reject) together, or just speak to ignore it.");
+      lines.push("");
+    }
+    if (dialogueActions && dialogueActions.length > 0) {
+      const actionList = dialogueActions
+        .map((a) => {
+          const extra = a.extraParams
+            ? Object.keys(a.extraParams).filter(k => k !== "free_text").join(", ")
+            : "";
+          const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
+          return `- ${a.type}${extra ? ` (needs ${extra})` : ""}${guide}`;
+        })
+        .join("\n");
+      lines.push(`Actions you can propose (call propose_dialogue_action together with submit_dialog_turn):\n${actionList}`);
+      lines.push("");
+    }
+    if (upcomingEntries && upcomingEntries.length > 0 && promptEpoch !== undefined) {
+      const MS_PER_TICK = (60 / 5) * 60 * 1000;
+      const entryLines = upcomingEntries.map((e) => {
+        const date = new Date(promptEpoch + e.scheduledTick * MS_PER_TICK);
+        const hh = String(date.getUTCHours()).padStart(2, "0");
+        const mm = String(date.getUTCMinutes()).padStart(2, "0");
+        return `${hh}:${mm} — ${e.content}`;
+      });
+      lines.push(`Your upcoming tasks in the next hour: ${entryLines.join("; ")}`);
+      lines.push("");
+    }
+    lines.push("Continue the conversation. Call submit_dialog_turn to say your next line, or end_conversation to end the conversation.");
+  } else {
+    lines.push("（相手が新しいことを言いました。あなたの応答番です）");
+    lines.push("");
+    if (history) {
+      lines.push("会話の更新：");
+      lines.push(history);
+      lines.push("");
+    }
+    if (pendingAction) {
+      const requesterName = pendingAction.requesterId === self.id ? "あなた" : peer.name;
+      const params = pendingAction.params;
+      const detail = params.amount
+        ? ` 金額：${params.amount}💰`
+        : params.free_text
+          ? ` "${params.free_text}"`
+          : "";
+      lines.push(`⚠️ 相手からのアクション：${requesterName} があなたに「${pendingAction.actionType}」を実行しようとしています。${detail}`);
+      lines.push("submit_dialog_turn + respond_to_dialogue_action（accept または reject）を同時に呼び出すか、発言だけして無視することもできます。");
+      lines.push("");
+    }
+    if (dialogueActions && dialogueActions.length > 0) {
+      const actionList = dialogueActions
+        .map((a) => {
+          const extra = a.extraParams
+            ? Object.keys(a.extraParams).filter(k => k !== "free_text").join(", ")
+            : "";
+          const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
+          return `- ${a.type}${extra ? ` (${extra}が必要)` : ""}${guide}`;
+        })
+        .join("\n");
+      lines.push(`提案できるアクション（propose_dialogue_action を submit_dialog_turn と同時に呼び出してください）：\n${actionList}`);
+      lines.push("");
+    }
+    if (upcomingEntries && upcomingEntries.length > 0 && promptEpoch !== undefined) {
+      const MS_PER_TICK = (60 / 5) * 60 * 1000;
+      const entryLines = upcomingEntries.map((e) => {
+        const date = new Date(promptEpoch + e.scheduledTick * MS_PER_TICK);
+        const hh = String(date.getUTCHours()).padStart(2, "0");
+        const mm = String(date.getUTCMinutes()).padStart(2, "0");
+        return `${hh}:${mm} — ${e.content}`;
+      });
+      lines.push(`今後1時間以内の予定：${entryLines.join("; ")}`);
+      lines.push("");
+    }
+    lines.push("会話を続けてください。submit_dialog_turn で次のセリフを言うか、end_conversation で会話を終了してください。");
   }
 
   return lines.join("\n");
@@ -1199,6 +1349,40 @@ export function buildDialogPersonalMemoryPrompt(args: {
 }
 
 
+function decisionPriorityAndRules(): string {
+  return `## 决策优先级（严格遵守从上到下的顺序）
+
+### 1. 生理需求（最高优先）
+当你感到明显饥饿、明显疲惫或明显不干净时，必须优先解决：
+- 饥饿 → move 去用餐场所（dining 标签）eat
+- 疲惫 → move 去休息场所（residence 标签或 private）rest/sleep
+- 卫生 → move 去洗浴场所（bathing 标签）bathe
+生理需求未解决之前，不要做其他事。
+
+### 2. 履行约定
+记事本中如果有当前时段或即将到期的待办事项，优先赴约。
+约定好的事不去做，就是不守信用。
+
+### 3. 社交适度
+不要连续两 tick 对同一个人 speak。
+如果你上一 tick 刚和某人说过话，这 tick 换个人或者做别的事。
+
+### 4. 自由行动
+以上都不触发时，根据你的性格、目标、感知到的事件自由选择。
+
+## 行为规则
+
+### 必须遵守
+- 生理需求（饿了吃、困了睡、脏了洗）是本能，不由性格左右。不论你是外向还是内向、勤快还是懒散，该吃饭时必须吃饭，该睡觉时必须睡觉。
+- 禁止连续两 tick 对同一个人 speak。换个人说话，或者做别的事。
+- 禁止编造不存在的约定、任务、计划或人物。只依据你的记忆和真实经历做判断。
+- 记事本上有待办事项时，必须在当前时间段内规划执行。不可无故拖延。
+
+### 建议遵守
+- 与人互动后产生了新印象或了解到重要信息时，调用 memorize 记录下来。
+- 不确定对方是谁时，先 recall 查询，不要假装认识陌生人。`;
+}
+
 export function buildSystemPrompt(args: {
   worldName: string;
   nodes: MapNode[];
@@ -1212,6 +1396,7 @@ export function buildSystemPrompt(args: {
   lines.push("", languageInstruction(language));
   const mapGraph = describeMapGraph(nodes);
   if (mapGraph) lines.push("", mapGraph);
+  lines.push("", decisionPriorityAndRules());
   return lines.join("\n");
 }
 
@@ -1328,42 +1513,6 @@ export function buildUserPrompt(args: {
     if (character.longTermGoal) lines.push(`长期目标：${character.longTermGoal.goal}`);
     lines.push("");
   }
-
-  // 0.7. 决策优先级（跨 tick 不变，放在缓存前缀区）
-  lines.push("## 决策优先级（严格遵守从上到下的顺序）");
-  lines.push("");
-  lines.push("### 1. 生理需求（最高优先）");
-  lines.push("当你感到明显饥饿、明显疲惫或明显不干净时，必须优先解决：");
-  lines.push("- 饥饿 → move 去用餐场所（dining 标签）eat");
-  lines.push("- 疲惫 → move 去休息场所（residence 标签或 private）rest/sleep");
-  lines.push("- 卫生 → move 去洗浴场所（bathing 标签）bathe");
-  lines.push("生理需求未解决之前，不要做其他事。");
-  lines.push("");
-  lines.push("### 2. 履行约定");
-  lines.push("记事本中如果有当前时段或即将到期的待办事项，优先赴约。");
-  lines.push("约定好的事不去做，就是不守信用。");
-  lines.push("");
-  lines.push("### 3. 社交适度");
-  lines.push("不要连续两 tick 对同一个人 speak。");
-  lines.push("如果你上一 tick 刚和某人说过话，这 tick 换个人或者做别的事。");
-  lines.push("");
-  lines.push("### 4. 自由行动");
-  lines.push("以上都不触发时，根据你的性格、目标、感知到的事件自由选择。");
-  lines.push("");
-
-  // 0.8. 行为规则（跨 tick 不变，放在缓存前缀区）
-  lines.push("## 行为规则");
-  lines.push("");
-  lines.push("### 必须遵守");
-  lines.push("- 生理需求（饿了吃、困了睡、脏了洗）是本能，不由性格左右。不论你是外向还是内向、勤快还是懒散，该吃饭时必须吃饭，该睡觉时必须睡觉。");
-  lines.push("- 禁止连续两 tick 对同一个人 speak。换个人说话，或者做别的事。");
-  lines.push("- 禁止编造不存在的约定、任务、计划或人物。只依据你的记忆和真实经历做判断。");
-  lines.push("- 记事本上有待办事项时，必须在当前时间段内规划执行。不可无故拖延。");
-  lines.push("");
-  lines.push("### 建议遵守");
-  lines.push("- 与人互动后产生了新印象或了解到重要信息时，调用 memorize 记录下来。");
-  lines.push("- 不确定对方是谁时，先 recall 查询，不要假装认识陌生人。");
-  lines.push("");
 
   // 1. 你的连续行为
   lines.push("你的连续行为：");
@@ -1617,6 +1766,47 @@ export function injectTimeMessage(args: {
 // Think session prompt
 // ---------------------------------------------------------------------------
 
+export function buildThinkSystemPrompt(language: Language): string {
+  const inst = languageInstruction(language);
+  if (language === "zh") {
+    return `你是一个角色扮演引擎中的 NPC。你正在独自沉思。请根据你的性格和记忆自然地思考。
+
+${inst}
+
+这次沉思是你整理内心世界的重要时刻。请积极主动地使用以下工具审视自己：
+- 用 recall 回忆你对他人的印象；如果对某人有了新的认识或改观，立刻调用 memorize 记录下来。
+- 审视自己的喜好——喜欢什么、讨厌什么，如果想法有变化，调用 update_likes 更新。
+- 审视自己的人生目标，如果目标有所调整或产生了新的想法，调用 update_goals 更新短期或长期目标。
+- 有未来的约定或计划，调用 add_notebook_entry 记录到记事本。
+
+调用 submit_think_turn 来输出一段思考（计为 1 轮）。如果想结束思考，调用 end_thinking 写入总结。`;
+  }
+  if (language === "en") {
+    return `You are an NPC in a role-playing engine. You are in deep thought. Think naturally based on your personality and memories.
+
+${inst}
+
+This reflection is an important moment to organize your inner world. Proactively use these tools:
+- Use recall to check your impressions of others. If you've gained new insight about someone, immediately call memorize to record it.
+- Re-examine your likes and dislikes — if your feelings have shifted, call update_likes to reflect the change.
+- Re-examine your life goals — if your thinking has evolved, call update_goals to update your short-term or long-term goals.
+- For future plans or agreements, call add_notebook_entry.
+
+Call submit_think_turn to output a thought (counts as 1 turn). Call end_thinking to conclude and save a summary.`;
+  }
+  return `あなたはロールプレイングエンジンのNPCです。あなたは深く考え込んでいます。あなたの性格と記憶に基づいて自然に考えてください。
+
+${inst}
+
+この内省は、自分の内面を整理する重要な時間です。以下のツールを積極的に活用してください：
+- recall で他者への印象を振り返り、誰かについて新たな気づきがあれば、すぐに memorize で記録してください。
+- 自分の好き嫌いを見つめ直し、気持ちに変化があれば update_likes で更新してください。
+- 自分の人生の目標を再検討し、考えが変わったなら update_goals で短期・長期目標を更新してください。
+- 将来の約束や計画があれば add_notebook_entry でノートに記録してください。
+
+submit_think_turn を呼び出して思考を出力してください（1ターンとしてカウント）。終了する場合は end_thinking を呼び出してまとめを書いてください。`;
+}
+
 export function buildThinkPrompt(args: {
   self: Character;
   here: MapNode;
@@ -1624,8 +1814,9 @@ export function buildThinkPrompt(args: {
   language?: Language;
   tick?: number;
   epoch?: number;
+  allCharacters?: Character[];
 }): string {
-  const { self, here, transcript, tick, epoch: promptEpoch } = args;
+  const { self, here, transcript, tick, epoch: promptEpoch, allCharacters } = args;
   const language = args.language ?? "zh";
 
   const history = transcript
@@ -1639,29 +1830,15 @@ export function buildThinkPrompt(args: {
     .filter(m => !m.content.includes("[heuristic]"))
     .slice(-6)
     .map(m => `- ${m.content}`).join("\n");
+  const nameMap = new Map((allCharacters ?? []).map(c => [c.id, c.name]));
   const impressions = Object.entries(self.impressionBook)
     .filter(([, v]) => v && v.length > 0)
     .slice(0, 10)
-    .map(([id, text]) => `- ${id}: ${text}`).join("\n");
+    .map(([id, text]) => `- ${nameMap.get(id) ?? id}: ${text}`).join("\n");
 
   const lines: string[] = [];
 
   if (language === "zh") {
-    lines.push(
-      "你正在独自沉思。这不是对外对话，而是你的内心活动。",
-      "请根据你的性格、记忆和当前状态，自然地展开思考。",
-    );
-    lines.push("");
-    lines.push("这次沉思是你整理内心世界的重要时刻。请积极主动地使用以下工具审视自己：");
-    lines.push("- 用 recall 回忆你对他人的印象；如果对某人有了新的认识或改观，立刻调用 memorize 记录下来。");
-    lines.push("- 审视自己的喜好——喜欢什么、讨厌什么，如果想法有变化，调用 update_likes 更新。");
-    lines.push("- 审视自己的人生目标，如果目标有所调整或产生了新的想法，调用 update_goals 更新短期或长期目标。");
-    lines.push("- 有未来的约定或计划，调用 add_notebook_entry 记录到记事本。");
-    lines.push("");
-    lines.push(
-      "调用 submit_think_turn 来输出一段思考（计为 1 轮）。如果想结束思考，调用 end_thinking 写入总结。",
-    );
-    lines.push("");
     lines.push(buildSelfImage(self));
     lines.push("");
     lines.push(`当前地点：${here.name}（${here.description || "无描述"}）`);
@@ -1699,19 +1876,6 @@ export function buildThinkPrompt(args: {
     lines.push("你的思考记录：");
     lines.push(history || "（刚开始思考）");
   } else if (language === "en") {
-    lines.push(
-      "You are in deep thought. This is not a conversation — it's your inner monologue.",
-      "Think naturally based on your personality, memories, and current state.",
-    );
-    lines.push("");
-    lines.push("This reflection is an important moment to organize your inner world. Proactively use these tools:");
-    lines.push("- Use recall to check your impressions of others. If you've gained new insight about someone, immediately call memorize to record it.");
-    lines.push("- Re-examine your likes and dislikes — if your feelings have shifted, call update_likes to reflect the change.");
-    lines.push("- Re-examine your life goals — if your thinking has evolved, call update_goals to update your short-term or long-term goals.");
-    lines.push("- For future plans or agreements, call add_notebook_entry.");
-    lines.push("");
-    lines.push("Call submit_think_turn to output a thought. Call end_thinking to conclude and save a summary.");
-    lines.push("");
     lines.push(buildSelfImage(self));
     lines.push("");
     lines.push(`Current location: ${here.name} (${here.description || ""})`);
@@ -1745,20 +1909,6 @@ export function buildThinkPrompt(args: {
     lines.push("Your thoughts so far:");
     lines.push(history || "(just started)");
   } else {
-    lines.push(
-      "あなたは深く考え込んでいます。これは会話ではなく、心の中の独白です。",
-      "自分の性格、記憶、現在の状態に基づいて自然に思考を展開してください。",
-    );
-    lines.push("");
-    lines.push("この内省は、自分の内面を整理する重要な時間です。以下のツールを積極的に活用してください：");
-    lines.push("- recall で他者への印象を振り返り、誰かについて新たな気づきがあれば、すぐに memorize で記録してください。");
-    lines.push("- 自分の好き嫌いを見つめ直し、気持ちに変化があれば update_likes で更新してください。");
-    lines.push("- 自分の人生の目標を再検討し、考えが変わったなら update_goals で短期・長期目標を更新してください。");
-    lines.push("- 将来の約束や計画があれば add_notebook_entry でノートに記録してください。");
-    lines.push("");
-
-    lines.push("submit_think_turn を呼び出して思考を出力してください。終了する場合は end_thinking を呼び出してまとめを書いてください。");
-    lines.push("");
     lines.push(buildSelfImage(self));
     lines.push("");
     lines.push(`現在地：${here.name}`);
@@ -1775,6 +1925,34 @@ export function buildThinkPrompt(args: {
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Think 后续轮次的简短 catch-up prompt。
+ * 仅在角色已有 previousMessages 时使用——不再重复人格/状态/记忆等首轮信息，
+ * 只追加本轮新产生的 think transcript 条目。
+ */
+export function buildThinkFollowup(args: {
+  self: Character;
+  newTranscriptEntries: import("@/domain/types").ThinkTurn[];
+  language?: Language;
+  tick?: number;
+  epoch?: number;
+}): string {
+  const { self, newTranscriptEntries } = args;
+  const language = args.language ?? "zh";
+
+  const history = newTranscriptEntries
+    .map((t) => `你思考道：${t.text}`)
+    .join("\n");
+
+  if (language === "zh") {
+    return `（继续沉思）\n\n思考记录更新：\n${history}\n\n请继续你的沉思。调用 submit_think_turn 输出思考内容，或调用 end_thinking 结束思考。`;
+  }
+  if (language === "en") {
+    return `(Continue your contemplation)\n\nThought record update:\n${history}\n\nContinue your contemplation. Call submit_think_turn to output your thoughts, or end_thinking to end the session.`;
+  }
+  return `（熟考を続けてください）\n\n思考記録の更新：\n${history}\n\n熟考を続けてください。submit_think_turn で思考内容を出力するか、end_thinking でセッションを終了してください。`;
 }
 
 /** think session 时间提示（3 轮完成后注入）。 */

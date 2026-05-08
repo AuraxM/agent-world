@@ -59,7 +59,7 @@ const validChar = {
   gender: "male" as const,
   profession: "farmer" as const,
   origin: "local" as const,
-  biography: "私はテストキャラクターです。",
+  personalProfile: { past: "私はテストキャラクターです。", present: "" },
   personality: { ei: 0, sn: 0, tf: 0, jp: 0 },
   abilities: [],
   appearance: 2,
@@ -209,10 +209,10 @@ describe("loadCharacter", () => {
     expect(() => loadCharacter("nope")).toThrow(/character template not found/);
   });
 
-  it("rejects character with missing biography", () => {
-    const { biography: _, ...noBio } = validChar;
+  it("rejects character with missing personalProfile", () => {
+    const { personalProfile: _, ...noBio } = validChar;
     writePack("tiny", validManifest, validMap, { "no-bio": noBio });
-    expect(() => loadCharacter("no-bio")).toThrow(/biography/);
+    expect(() => loadCharacter("no-bio")).toThrow(/personalProfile/);
   });
 
   it("returns correct character when two packs share the same ID", () => {

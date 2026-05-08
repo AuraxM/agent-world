@@ -767,6 +767,9 @@ export async function tick(
             tick: fromTick,
             epoch: world.epoch,
             tickStarted: ts.tickStarted,
+            previousMessages: ts.sharedMessages,
+            previousTranscriptLength: ts.sharedMessagesTranscriptLength,
+            allCharacters: characters,
           });
         } catch (err) {
           log.error("llmThink 异常，思考被迫终止", {
@@ -776,6 +779,9 @@ export async function tick(
           ts.status = "ended";
           break;
         }
+
+        if (result.messages) ts.sharedMessages = result.messages;
+        if (result.transcriptLength !== undefined) ts.sharedMessagesTranscriptLength = result.transcriptLength;
 
         if (result.kind === "turn") {
           transcript.push(result.turn);
@@ -952,6 +958,8 @@ export async function tick(
           tickStarted: fromTick,
           currentTickRounds: 0,
           status: "active",
+          sharedMessages: [],
+          sharedMessagesTranscriptLength: 0,
         };
         newThinkSessions.push(ts);
         thinker.activeConversationIds.push(ts.id);
@@ -1005,6 +1013,9 @@ export async function tick(
           tick: fromTick,
           epoch: world.epoch,
           tickStarted: ts.tickStarted,
+          previousMessages: ts.sharedMessages,
+          previousTranscriptLength: ts.sharedMessagesTranscriptLength,
+          allCharacters: characters,
         });
       } catch (err) {
         log.error("llmThink 异常（新会话）", {
@@ -1014,6 +1025,9 @@ export async function tick(
         ts.status = "ended";
         break;
       }
+
+      if (result.messages) ts.sharedMessages = result.messages;
+      if (result.transcriptLength !== undefined) ts.sharedMessagesTranscriptLength = result.transcriptLength;
 
       if (result.kind === "turn") {
         transcript.push(result.turn);

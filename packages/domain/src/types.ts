@@ -178,8 +178,13 @@ export interface Character {
   incomeLevel: number;
   /** 免生存开销（未成年人 age<18 / 纯旅游型外来者）。 */
   expenseExempt: boolean;
-  /** 第一人称生平简介，CoC 车卡风格。 */
-  biography: string;
+  /** 角色个人档案。 */
+  personalProfile: {
+    /** 过往不同人生阶段的经历概述（第一人称）。内容随年龄而异。 */
+    past: string;
+    /** 当前个人信息简介（第一人称）：居住状况、日常节奏、当前关切。 */
+    present: string;
+  };
   locationId: string;
   personality: Personality;
   vitals: Vitals;
@@ -380,6 +385,11 @@ export interface Conversation {
   pendingExtraRound?: boolean;
   /** 对话中一方发起的双人交互 action，等待对方回应 */
   pendingAction?: DialogueActionRequest;
+  /** 共享的 LLM messages 上下文，按产生时间顺序排列（含 tool_calls、tool 结果、
+   *  reasoning_content）。双方轮流追加，保证前缀稳定以最大化 prompt cache 命中率。 */
+  sharedMessages?: Array<Record<string, unknown>>;
+  /** 上次保存 sharedMessages 时 transcript 的长度，用于计算增量。 */
+  sharedMessagesTranscriptLength?: number;
 }
 
 /** end_conversation tool 的 LLM 输出载荷。 */
@@ -409,6 +419,10 @@ export interface ThinkSession {
   currentTickRounds: number;
   status: "active" | "ending" | "ended";
   summary?: string;
+  /** 共享的 LLM messages 上下文，按时间顺序排列。保证前缀稳定以最大化 cache 命中率。 */
+  sharedMessages?: Array<Record<string, unknown>>;
+  /** 上次保存 sharedMessages 时 transcript 的长度，用于计算增量。 */
+  sharedMessagesTranscriptLength?: number;
 }
 
 /** 世界元信息。 */

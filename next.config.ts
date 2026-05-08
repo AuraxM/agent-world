@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  experimental: {
+    // 禁用代理超时（默认30s不够SSE tick用：LLM决策多轮tool call可能 > 30s）
+    // https://github.com/vercel/next.js/blob/HEAD/packages/next/src/server/lib/router-utils/proxy-request.ts
+    proxyTimeout: 600_000, // 10 分钟
+  },
 };
 
 export default nextConfig;

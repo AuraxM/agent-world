@@ -29,7 +29,7 @@ function mkChar(
     age: 30,
     gender: "male" as const,
     profession: "farmer" as const,
-    biography: "テスト",
+    personalProfile: { past: "テスト", present: "" },
     origin: "local" as const,
     locationId: "node-here",
     personality: { ei: 0, sn: 0, tf: 0, jp: 0 },

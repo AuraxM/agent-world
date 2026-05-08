@@ -66,7 +66,7 @@ export function migrate(dbUrl?: string) {
       income_level INTEGER NOT NULL DEFAULT 0,
       expense_exempt INTEGER NOT NULL DEFAULT 0,
       income_multiplier REAL NOT NULL DEFAULT 1.0,
-      biography TEXT NOT NULL DEFAULT '',
+      personal_profile_json TEXT NOT NULL DEFAULT '{"past":"","present":""}',
       origin TEXT NOT NULL DEFAULT 'local',
       location_id TEXT NOT NULL,
       personality_json TEXT NOT NULL,
@@ -189,6 +189,7 @@ export function migrate(dbUrl?: string) {
     { name: "gender", ddl: "ALTER TABLE characters ADD COLUMN gender TEXT NOT NULL DEFAULT 'male'" },
     { name: "profession", ddl: "ALTER TABLE characters ADD COLUMN profession TEXT NOT NULL DEFAULT 'farmer'" },
     { name: "biography", ddl: "ALTER TABLE characters ADD COLUMN biography TEXT NOT NULL DEFAULT ''" },
+    { name: "personal_profile_json", ddl: `ALTER TABLE characters ADD COLUMN personal_profile_json TEXT NOT NULL DEFAULT '{"past":"","present":""}'` },
     { name: "origin", ddl: "ALTER TABLE characters ADD COLUMN origin TEXT NOT NULL DEFAULT 'local'" },
     { name: "money", ddl: "ALTER TABLE characters ADD COLUMN money INTEGER NOT NULL DEFAULT 0" },
     { name: "income_level", ddl: "ALTER TABLE characters ADD COLUMN income_level INTEGER NOT NULL DEFAULT 0" },
@@ -234,6 +235,18 @@ export function migrate(dbUrl?: string) {
     }
   });
   tx();
+
+  // Data migration: copy legacy biography into personal_profile_json.past
+  const charCols = sqlite
+    .prepare(`PRAGMA table_info(characters)`)
+    .all() as { name: string }[];
+  const hasBiography = charCols.some((c) => c.name === "biography");
+  const hasProfile = charCols.some((c) => c.name === "personal_profile_json");
+  if (hasBiography && hasProfile) {
+    sqlite.exec(
+      `UPDATE characters SET personal_profile_json = json_object('past', biography, 'present', '') WHERE biography IS NOT NULL AND biography != '' AND personal_profile_json = '{"past":"","present":""}'`
+    );
+  }
 
   const tables = sqlite
     .prepare(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`)

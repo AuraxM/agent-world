@@ -11,7 +11,7 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     age: 25,
     gender: "male",
     profession: "merchant",
-    biography: "测试。",
+    personalProfile: { past: "测试。", present: "" },
     origin: "local",
     locationId: "node-home",
     personality: { ei: 0, sn: 0, tf: 0, jp: 0 },

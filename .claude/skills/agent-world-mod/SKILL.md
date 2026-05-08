@@ -106,14 +106,14 @@ A character template is a **location-agnostic** identity. Runtime state (locatio
 
 **所有文本字段必须使用 manifest 声明的 `language` 书写。** 文化背景≠输出语言——日式小镇设定不等于角色说日语。
 
-受此约束的字段：`biography`、`speakingStyle`、`relations[*].note`、`impressionBook` 的值。
+受此约束的字段：`personalProfile.past`、`personalProfile.present`、`speakingStyle`、`relations[*].note`、`impressionBook` 的值。
 
 **允许例外：**
 - 角色名、地名、专有名词可保留原文或音译（如"鸟居""味噌""月読命""の店"）
 - 单一外来词在中文句子中自然出现是允许的（如"她是我的 senpai"）
 
 **禁止：**
-- 完整的外语句子出现在 biography 中（如 `「この校舎で四十年教えたのよ」`）
+- 完整的外语句子出现在 personalProfile 中（如 `「この校舎で四十年教えたのよ」`）
 - 外语段落或对话引用——应翻译为 pack 语言 + 用描述传达原语言感受
   - ❌ `她说「ここは私の家です」`
   - ✅ `她用日语说这里就是她的家`
@@ -136,7 +136,7 @@ A character template is a **location-agnostic** identity. Runtime state (locatio
 5. **刚抵达** — 叙事上最近几周才到，无固定住所，关系 ≤2？→ `"visitor"`
 6. **其他** — 默认 `"local"`（有自己住宅和收入来源就是 local）
 
-**⚠️ "移住者悖论"：** biography 写"我从XX搬来"不代表角色是 visitor。只要已定居、有自己的住宅、在此经营 ≥1 年，就是 `local`——"移住"只是背景故事，不影响引擎 spawn 逻辑。这个错误已经造成月露谷 4 个角色站在巴士站而不是自己家。
+**⚠️ "移住者悖论"：** personalProfile.past 写"我从XX搬来"不代表角色是 visitor。只要已定居、有自己的住宅、在此经营 ≥1 年，就是 `local`——"移住"只是背景故事，不影响引擎 spawn 逻辑。这个错误已经造成月露谷 4 个角色站在巴士站而不是自己家。
 
 **Personality restraint.** Keep most dims modest (0..±2). Strong values (|3|–|4|) should be storyline-load-bearing. Aim for 1–2 strong dims per character.
 

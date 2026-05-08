@@ -88,7 +88,7 @@ export const characters = sqliteTable(
     sicknessJson: text("sickness_json"),
     activeConversationIdsJson: text("active_conversation_ids_json").notNull().default("[]"),
     speakingStyle: text("speaking_style"),
-    biography: text("biography").notNull().default(""),
+    personalProfileJson: text("personal_profile_json").notNull().default('{"past":"","present":""}'),
     origin: text("origin").notNull().default("local"),
     locationId: text("location_id").notNull(),
     personalityJson: text("personality_json").notNull(),

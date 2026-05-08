@@ -184,7 +184,7 @@ export function createWorldFromConfig(
           health: m.tpl.health,
           sicknessJson: null,
           speakingStyle: m.tpl.speakingStyle ?? null,
-          biography: m.tpl.biography,
+          personalProfileJson: JSON.stringify(m.tpl.personalProfile),
           origin: m.tpl.origin,
           locationId: m.locationId,
           personalityJson: JSON.stringify(m.tpl.personality),

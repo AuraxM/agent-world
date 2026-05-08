@@ -37,7 +37,7 @@ const baseCharacter: Character = {
   age: 25,
   gender: "male",
   profession: "merchant",
-  biography: "一个普通的测试角色。",
+  personalProfile: { past: "一个普通的测试角色。", present: "" },
   origin: "local" as const,
   locationId: "node-here",
   personality: { ei: 2, sn: 0, tf: 0, jp: 0 },
@@ -293,18 +293,10 @@ describe("buildUserPrompt", () => {
     expect(out).toContain("作息窗口：22:00–06:00");
   });
 
-  it("决策优先级框架在 prompt 中渲染", () => {
-    const out = buildUserPrompt({
-      character: baseCharacter,
-      here: restaurant,
-      companions: [],
-      perceived: [],
-      options: [{ type: "wait", hint: "等" }],
-      tick: 5,
-      epoch: TEST_EPOCH,
-      facts: emptyFacts,
+  it("决策优先级框架在 system prompt 中渲染", () => {
+    const out = buildSystemPrompt({
+      worldName: "测试世界",
       nodes: [restaurant],
-      allCharacters: [baseCharacter],
     });
     expect(out).toContain("## 决策优先级");
     expect(out).toContain("### 1. 生理需求");
@@ -313,18 +305,10 @@ describe("buildUserPrompt", () => {
     expect(out).toContain("### 4. 自由行动");
   });
 
-  it("行为规则包含必须和建议两层", () => {
-    const out = buildUserPrompt({
-      character: baseCharacter,
-      here: restaurant,
-      companions: [],
-      perceived: [],
-      options: [{ type: "wait", hint: "等" }],
-      tick: 5,
-      epoch: TEST_EPOCH,
-      facts: emptyFacts,
+  it("行为规则包含必须和建议两层（在 system prompt 中）", () => {
+    const out = buildSystemPrompt({
+      worldName: "测试世界",
       nodes: [restaurant],
-      allCharacters: [baseCharacter],
     });
     expect(out).toContain("### 必须遵守");
     expect(out).toContain("### 建议遵守");
@@ -1091,12 +1075,12 @@ describe("buildSelfImage", () => {
     gender: "male",
     profession: "doctor",
     appearance: 3,
-    biography: "出生于小镇，毕业于医学院。",
+    personalProfile: { past: "出生于小镇，毕业于医学院。", present: "" },
     personality: { ei: 2, sn: -1, tf: 1, jp: -1 },
     intelligence: 3,
   };
 
-  it("renders name, age, gender, profession, health, personality, and biography (no appearance, no location)", () => {
+  it("renders name, age, gender, profession, health, personality, and personalProfile (no appearance, no location)", () => {
     const result = buildSelfImage(char);
     expect(result).toContain("关于你自己");
     expect(result).toContain("姓名：甲");
@@ -1106,7 +1090,7 @@ describe("buildSelfImage", () => {
     expect(result).not.toContain("相貌端正");
     expect(result).toContain("健康状况：健康");
     expect(result).toContain("性格：");
-    expect(result).toContain("生平简介：出生于小镇，毕业于医学院。");
+    expect(result).toContain("过往经历：出生于小镇，毕业于医学院。");
     expect(result).not.toContain("当前在");
   });
 

@@ -1,0 +1,24 @@
+{
+  "id": "ouran-academy",
+  "name": "樱兰学园",
+  "description": "私立樱兰学园，都市近郊。樱花坂道尽头，制服之下的欲望在社团、网络与私密空间里暗流涌动。",
+  "language": "zh",
+  "startDate": "2026-05-11T08:00:00",
+  "actions": "actions.js",
+  "economy": {
+    "survivalCosts": { "eat": 15, "bathe": 10 },
+    "professionIncomes": {
+      "high": { "min": 80, "max": 120 },
+      "medium": { "min": 40, "max": 70 },
+      "low": { "min": 10, "max": 30 },
+      "none": { "min": 0, "max": 0 }
+    },
+    "wealthTiers": [100, 500, 2000],
+    "balanceThresholds": {
+      "positive": [10, 50, 150, 400],
+      "negative": [0.1, 0.3, 0.6, 1.0]
+    },
+    "tierMultipliers": { "high": 1.5, "medium": 1.0, "low": 0.6, "none": 0 },
+    "mdc": 20
+  }
+}

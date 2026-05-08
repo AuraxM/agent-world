@@ -1,21 +1,27 @@
 /**
- * Example actions.js for a hypothetical map pack.
+ * Example actions.js for a hypothetical scene.
  *
  * Export an array of ActionDefinition objects.
  * They are registered into the global ActionRegistry at world-load time.
  * Any type name that matches a built-in action will override it for this world.
  *
- * Interface (see src/domain/action-system.ts):
+ * Interface (see backend/src/domain/action-system.ts):
  *
  *   interface ActionDefinition {
  *     type: string;
  *     duration: "instant" | number;
+ *     triggerHint: string;     // when to use ("在……时使用" pattern)
+ *     paramRule: string;       // 必填/可选/无需 + location/time constraints
  *     check(ctx: ActionContext): boolean;
  *     hint(ctx: ActionContext): string | Array<{ hint: string; targetId?: string; targetNodeId?: string }>;
  *     execute(ctx: ActionContext, input: ActionInput): Outcome;
+ *     validateParams?(input: ActionInput, ctx: ActionContext): string | null;
  *     onTick?(ctx: ActionContext): Outcome | null;
  *     onComplete?(ctx: ActionContext): Outcome;
  *     onInterrupt?(ctx: ActionContext, reason: string): Outcome;
+ *     extraParams?: Record<string, unknown>;
+ *     extraRequired?: string[];
+ *     usableInDialogue?: boolean;
  *   }
  */
 
@@ -24,6 +30,8 @@ module.exports = [
   {
     type: "hot_spring_bathe",
     duration: "instant",
+    triggerHint: "感到疲惫或卫生指标偏高，且当前位于户外温泉时使用，放松身心并恢复清洁。",
+    paramRule: "可选 free_text（描述泡汤过程或心情）。仅在含 bathing + outdoor 标签的节点可用。",
     check(ctx) {
       return ctx.here.tags.includes("bathing") && ctx.here.tags.includes("outdoor");
     },
@@ -55,6 +63,8 @@ module.exports = [
   {
     type: "meditate",
     duration: 4,
+    triggerHint: "压力较高、需要独处整理思绪时使用，持续 4 个 tick，期间会被高强度事件打断。",
+    paramRule: "可选 free_text（冥想的主题或意图）。需在私密节点或带 quiet 标签的节点。",
     check(ctx) {
       return ctx.here.privacy === "private" || ctx.here.tags.includes("quiet");
     },
@@ -122,6 +132,15 @@ module.exports = [
   {
     type: "greet",
     duration: "instant",
+    triggerHint: "想发起对话或寒暄时使用——会向目标发起 dialog request，对方接受后进入对话。",
+    paramRule: "必填 target_id（打招呼对象）+ 可选 free_text（具体说什么）。需当前节点非 private。",
+    validateParams(input, ctx) {
+      if (!input.target_id) return "greet 需要指定 target_id（打招呼对象）";
+      if (!ctx.companions.find(function(c) { return c.id === input.target_id; })) {
+        return "target_id=\"" + input.target_id + "\" 不在身边，无法打招呼";
+      }
+      return null;
+    },
     check(ctx) {
       return ctx.companions.length > 0 && ctx.here.privacy !== "private";
     },

@@ -1,14 +1,12 @@
-# Map config schema (`configs/maps/<id>.json`)
+# Map config schema (`backend/scenes/<scene-id>/map.json`)
 
-A map is a tree of nodes plus light metadata. Validated by `MapConfigSchema` in `src/config/schemas.ts`.
+A map is a tree of nodes plus light metadata. Validated by `MapConfigSchema` in `backend/src/config/schemas.ts`. The `name`, `description`, `language`, etc. live in the sibling `manifest.json` — `map.json` itself only carries `id` and `nodes`.
 
 ## Top-level shape
 
 ```jsonc
 {
-  "id": "morning-town",          // string, kebab-case, must match filename stem
-  "name": "晨曦小镇",            // human-readable; shown in UI
-  "description": "依山而建...",  // optional
+  "id": "morning-town",          // string, kebab-case, must match scene id
   "nodes": [ /* MapNodeConfig[] */ ]
 }
 ```
@@ -41,7 +39,7 @@ A map is a tree of nodes plus light metadata. Validated by `MapConfigSchema` in 
 - **Tree integrity:** every non-root `parentId` must point to another node id in the same file. No cycles.
 - **Unique ids** within the file.
 
-## Vocabulary (closed sets — see `src/domain/enums.ts`)
+## Vocabulary (closed sets — see `backend/src/domain/enums.ts`)
 
 ### `tags` (any subset of NODE_TAGS)
 
@@ -61,7 +59,7 @@ A map is a tree of nodes plus light metadata. Validated by `MapConfigSchema` in 
 | `bathing`     | bath / shower facility               | unlocks `bathe`                |
 | `quiet`       | quiet space (library, monastery)     | unlocks `meditate`             |
 
-Use 1–3 tags per node; they affect which actions are available (see `src/engine/actions.ts`). `private` privacy alone also unlocks `rest`/`sleep`/`groom`/`meditate`, so a private bedroom usually doesn't need `quiet`.
+Use 1–3 tags per node; they affect which actions are available (see `backend/src/systems/actions.ts`). `private` privacy alone also unlocks `rest`/`sleep`/`groom`/`meditate`, so a private bedroom usually doesn't need `quiet`.
 
 ### `privacy`
 
@@ -84,9 +82,9 @@ Travel during a non-zero cost is implemented as a multi-tick `OngoingAction` —
 
 ## Layout fields (optional but recommended)
 
-`x, y, w, h` are integer grid coordinates inside the **parent** node's canvas. Used by `src/app/_components/map-stage.tsx` for rendering. If you omit them, the dashboard falls back to an automatic layout — fine, but loses spatial intuition.
+`x, y, w, h` are integer grid coordinates inside the **parent** node's canvas. Used by `frontend/src/components/map-stage.tsx` for rendering. If you omit them, the dashboard falls back to an automatic layout — fine, but loses spatial intuition.
 
-`spriteKey` should match a `--palette-<key>-*` set in `src/app/globals.css`. Existing keys: `town, school, classroom, playground, restaurant, park, home-cool, home-warm`. Reuse before inventing.
+`spriteKey` should match a `--palette-<key>-*` set in `frontend/src/styles/globals.css`. Existing keys: `town, school, classroom, playground, restaurant, park, home-cool, home-warm`. Reuse before inventing.
 
 ## Patterns
 
@@ -102,4 +100,4 @@ Travel during a non-zero cost is implemented as a multi-tick `OngoingAction` —
 - Forgetting any `bathing` node — `hygiene` becomes a permanent ⚠ for everyone.
 - Pointing `parentId` at a node defined later in the array. (Order doesn't matter for validation, but it makes diff review easier to put parents before children.)
 - Mixing `privacy: "private"` with `visibleFromParent: true` — usually wrong; private spaces shouldn't broadcast.
-- Inventing tags. The enum is closed; add to `enums.ts` first if needed.
+- Inventing tags. The enum is closed; add to `backend/src/domain/enums.ts` first if needed.

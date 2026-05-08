@@ -5,19 +5,20 @@ description: Use when the user asks to create, design, add, or modify a map, sce
 
 # Agent-world mod development
 
-This project drives an LLM-NPC simulation from config files under `configs/`. A **mod** (map pack) bundles everything a world needs:
+This is a two-project monorepo (`frontend/` + `backend/`, see `CLAUDE.md`). The simulation engine lives in `backend/` and reads all world content from `backend/scenes/<scene-id>/`. A **mod** (scene / map pack) bundles everything a world needs:
 
 ```
-configs/maps/<pack-id>/
-├── manifest.json              # id, name, description, language, optional actions path
+backend/scenes/<scene-id>/
+├── manifest.json              # id, name, description, language, optional actions/events/economy
 ├── map.json                   # pure node tree (id + nodes, no name/description at top level)
 ├── characters/                # character templates
 │   ├── char-alice.json
 │   └── char-bob.json
-└── actions.js                 # custom action definitions (optional, CommonJS)
+├── actions.js                 # custom action definitions (optional, CommonJS)
+└── events.js                  # custom event definitions (optional, CommonJS)
 ```
 
-The runtime engine reads all of these through `src/config/loader.ts` (Zod-validated JSON) and `src/config/mod-loader.ts` (runtime JS evaluation for actions). Every change must round-trip through validation or the world won't seed.
+The scenes directory can be relocated via `AGENT_WORLD_SCENES_DIR` (defaults to `<cwd>/scenes`, which from the backend means `backend/scenes/`). The runtime engine reads everything through `backend/src/config/loader.ts` (Zod-validated JSON) and `backend/src/config/mod-loader.ts` (runtime JS evaluation for actions). Every change must round-trip through validation or the world won't seed.
 
 ## When to use which reference
 
@@ -47,13 +48,13 @@ A map is a tree of nodes — locations characters can be in. Each node has tags 
    - What bathing facility fits (公共浴池 / 家中浴室 / 河边温泉…)
    - **Language** (`"zh"` | `"en"` | `"ja"`) — REQUIRED. Ask explicitly; do not default.
 2. **Read the current state:**
-   - `configs/maps/` for existing pack IDs and names.
-   - `src/domain/enums.ts` for `NODE_TAGS` — the only source of truth for valid tags.
+   - `backend/scenes/` for existing scene IDs and names.
+   - `backend/src/domain/enums.ts` for `NODE_TAGS` — the only source of truth for valid tags.
 3. **Draft the JSON** following `references/map-schema.md`. Include examples in `references/examples/map.json`.
-4. **Validate:**
+4. **Validate** (run from repo root; the validator imports backend's Zod schemas via relative paths and uses backend's `node_modules`):
    ```bash
-   npx tsx .claude/skills/agent-world-mod/scripts/validate.ts configs/maps/<pack-id>/manifest.json
-   npx tsx .claude/skills/agent-world-mod/scripts/validate.ts configs/maps/<pack-id>/map.json
+   pnpm --dir backend exec tsx ../.claude/skills/agent-world-mod/scripts/validate.ts ../backend/scenes/<scene-id>/manifest.json
+   pnpm --dir backend exec tsx ../.claude/skills/agent-world-mod/scripts/validate.ts ../backend/scenes/<scene-id>/map.json
    ```
 
 ### Hard invariants (the validator will reject otherwise)
@@ -63,7 +64,7 @@ A map is a tree of nodes — locations characters can be in. Each node has tags 
 - Exactly 1 root (`parentId: null`).
 - Every non-root `parentId` must reference another node in the same file.
 - Node ids are unique within the file.
-- `tags` and `privacy` come from closed enums in `src/domain/enums.ts`.
+- `tags` and `privacy` come from closed enums in `backend/src/domain/enums.ts`.
 - `travelCost` is optional, integer ≥ 0. Default 0 = free movement.
 - The map.json top level has `id` and `nodes` only — no `name` or `description` (those are in manifest.json).
 
@@ -81,13 +82,13 @@ A character template is a **location-agnostic** identity. Runtime state (locatio
    - `sleepWindow` — defaults to `{start: 22, duration: 8}` if omitted.
    - Target relations to existing characters.
 2. **Read the current state:**
-   - `configs/maps/<pack-id>/characters/` for existing character IDs and names.
-   - `src/domain/enums.ts` for `PROFESSIONS`, `CHARACTER_ORIGINS`, `OBJECTIVE_RELATION_KINDS`, `GENDERS`.
+   - `backend/scenes/<scene-id>/characters/` for existing character IDs and names.
+   - `backend/src/domain/enums.ts` for `PROFESSIONS`, `CHARACTER_ORIGINS`, `OBJECTIVE_RELATION_KINDS`, `GENDERS`.
 3. **Draft the JSON** following `references/character-schema.md`.
 4. **Validate origin before saving** — run the origin decision tree below against the completed template. A wrong origin is the #1 cause of "character spawns at bus stop instead of their own home."
 5. **Validate JSON:**
    ```bash
-   npx tsx .claude/skills/agent-world-mod/scripts/validate.ts configs/maps/<pack-id>/characters/char-name.json
+   pnpm --dir backend exec tsx ../.claude/skills/agent-world-mod/scripts/validate.ts ../backend/scenes/<scene-id>/characters/char-name.json
    ```
 
 ### Hard invariants
@@ -148,7 +149,7 @@ A character template is a **location-agnostic** identity. Runtime state (locatio
 
 - **Names in Chinese, ids in kebab-case English** (e.g., `"char-zhangmo"`, `"node-restaurant"`).
 - `avatar`: a single emoji is fine.
-- `spriteKey`: match existing CSS palette tokens in `src/app/globals.css` (`town, school, classroom, playground, restaurant, park, home-cool, home-warm`). Reuse before inventing.
+- `spriteKey`: match existing CSS palette tokens in `frontend/src/styles/globals.css` (`town, school, classroom, playground, restaurant, park, home-cool, home-warm`). Reuse before inventing.
 
 ### 口吻差异化（Speaking style diversity）
 
@@ -200,7 +201,7 @@ A character template is a **location-agnostic** identity. Runtime state (locatio
 
 角色创建时必须保证收支可持续。**禁止拍脑袋写 `initialMoney`**——要么省略让引擎按公式计算，要么严格使用以下公式。
 
-**核心公式（与 `src/engine/bme.ts` 一致）：**
+**核心公式（与 `backend/src/systems/bme.ts` 一致）：**
 
 `MDC`（每日最低生存成本）= `economy.mdc ?? 20`（取 manifest economy 配置或默认 20）
 
@@ -245,19 +246,19 @@ Custom actions extend what NPCs can do in a world. They're loaded at runtime via
    - **Effects**: vitals changes? mood/stress? location? dialog?
    - Should the LLM supply `free_text` or pick a `target`?
 2. **Read the current state:**
-   - The existing `actions.js` in the target map pack.
-   - `src/engine/actions-builtin.ts` for reference implementations of the 9 built-in actions.
+   - The existing `actions.js` in the target scene.
+   - `backend/src/systems/actions-builtin.ts` for reference implementations of the built-in actions.
 3. **Draft** following `references/action-system.md`. Use `triggerHint` (when to use, "在……时使用" pattern) and `paramRule` (parameter requirements, 必填/可选/无需 tiers). Do NOT use the deprecated `guidance` field.
 4. **Wire it up:**
    - If no `actions.js` exists yet, create it with `module.exports = [ ... ]`.
    - If `manifest.json` lacks an `"actions"` field, add `"actions": "actions.js"`.
-5. **Validate:**
+5. **Validate** (require path is relative to repo root):
    ```bash
    node -e "
-   const defs = require('./configs/maps/<pack-id>/actions.js');
+   const defs = require('./backend/scenes/<scene-id>/actions.js');
    const arr = Array.isArray(defs) ? defs : (defs.default || []);
    for (const d of arr) {
-     if (!d.type || !d.duration || !d.check || !d.hint || !d.execute) {
+     if (!d.type || d.duration === undefined || !d.check || !d.hint || !d.execute) {
        console.error('MISSING FIELD in:', d.type || JSON.stringify(d));
      } else if (!d.triggerHint) {
        console.error('MISSING triggerHint in:', d.type);
@@ -277,10 +278,11 @@ Custom actions extend what NPCs can do in a world. They're loaded at runtime via
 - `duration`: `"instant"` or a positive integer. Do NOT use `0` (reserved for `move`).
 - `check()`: returns boolean. Gate on `ctx.here.tags`, `ctx.here.privacy`, `ctx.self.vitals`, `ctx.companions.length`, `ctx.isSleepHour`.
 - `hint()`: returns a string (single option) or an array of `{hint, targetId?, targetNodeId?}` (multiple sub-options).
-- `execute()`: returns an `Outcome` with at least `memory` (first-person string in the map pack's language).
+- `execute()`: returns an `Outcome` with at least `memory` (first-person string in the scene's language). Optional `targetMemory` (third-person string written into a target's `shortMemory`) and `dialogRecord` (system-message line injected into both parties' transcript) are useful for social actions like `hug` / `kiss`.
 - `triggerHint`: required string — one sentence telling the LLM **when** to pick this action. Use "在……时使用" pattern. See action-system.md for examples.
 - `paramRule`: required string — one sentence of parameter requirements. Use 必填/可选/无需 tiers. Include location constraints.
-- Use `stateChanges` for side effects — never mutate `ctx.self` directly.
+- `validateParams?(input, ctx)`: optional — return `null` if params are valid, otherwise a string error fed back to the LLM for retry. Use this to catch missing `target_id`/`target_node_id` or out-of-range targets before executing.
+- Use `stateChanges` for side effects — never mutate `ctx.self` directly. Available kinds include `resetVital` / `adjustVital` (`hunger`/`fatigue`/`hygiene`), `setLocation`, `adjustMood`, `adjustStress`, `adjustSocialSatiety`, `setOngoingAction`, `clearOngoingAction`, and `adjustMoney` (with `amount`, `reason`, optional `targetCharacterId`).
 - File must use CommonJS (`module.exports = [...]`), not ESM.
 - No imports or `require()` — the file runs in a bare `Function` constructor.
 
@@ -295,20 +297,30 @@ The manifest.json ties everything together and controls world creation.
   "description": "深山幽谷...",           // optional but recommended
   "language": "zh",                       // "zh" | "en" | "ja" — REQUIRED
   "startDate": "2026-05-03T08:00:00",    // optional ISO 8601 for initial world clock
-  "actions": "actions.js"                 // optional, path relative to pack directory
+  "actions": "actions.js",                // optional, path relative to scene directory
+  "events": "events.js",                  // optional, custom event definitions
+  "economy": {                            // optional override of global economy config
+    "survivalCosts": { "eat": 10, "bathe": 4 },
+    "professionIncomes": { "high": {...}, "medium": {...}, "low": {...}, "none": {...} },
+    "wealthTiers": [100, 500, 2000],
+    "balanceThresholds": { "positive": [...], "negative": [...] },
+    "tierMultipliers": { "high": 1.5, "medium": 1.0, "low": 0.6, "none": 0 },
+    "mdc": 20
+  }
 }
 ```
 
 ### Manifest invariants
 
-- `id` must be unique across all map packs.
+- `id` must be unique across all scenes and must equal the scene directory name.
 - `language` is required and must be one of `"zh"`, `"en"`, `"ja"`.
 - `startDate` must be valid ISO 8601 if present.
-- `actions` must point to an existing file if present.
+- `actions` / `events` must point to an existing file if present.
+- `economy`, when supplied, overrides the engine defaults — see `EconomyConfigSchema` in `backend/src/config/schemas.ts`. Omit it to inherit defaults.
 
 ### After creating a mod, tell the user how to test:
 
-1. **Create a world** via `POST /api/worlds` with `mapId: "<pack-id>"` and a `cast` array of character IDs.
+1. **Create a world** via `POST /api/worlds` with `mapId: "<scene-id>"` and a `cast` array of character IDs.
 2. **Run ticks** — the engine auto-loads the map, characters, and custom actions.
 3. **Watch logs** — character decisions and action executions appear in the tick output.
 4. **Inject mid-run** via `POST /api/worlds/:id/characters` to add characters to a running world.
@@ -344,4 +356,4 @@ Use 1–3 tags per node. `privacy: "private"` alone also unlocks `rest`/`sleep`,
 
 ## When something doesn't fit
 
-If the user's request can't be expressed in the current schema (e.g. "add a stamina stat", "inventories", "weather system"), STOP. Don't invent fields the validator will reject. Suggest extending `src/domain/types.ts` + `src/db/schema.ts` + `src/config/schemas.ts` first, then adding config fields.
+If the user's request can't be expressed in the current schema (e.g. "add a stamina stat", "inventories", "weather system"), STOP. Don't invent fields the validator will reject. Suggest extending `backend/src/domain/types.ts` + `backend/src/db/schema.ts` + `backend/src/config/schemas.ts` first, then adding config fields.

@@ -1,13 +1,15 @@
 /**
- * 用项目内的 Zod schema 校验一份地图或角色 JSON 文件。
+ * 用项目内的 Zod schema 校验一份 manifest / 地图 / 角色 JSON 文件。
  *
- * 用法：
- *   tsx .claude/skills/agent-world-config/scripts/validate.ts <path>
+ * 用法（从仓库根目录运行——通过 `pnpm --dir backend exec` 让脚本继承 backend 的 node_modules）：
  *
- * 自动按文件所在目录推断格式：
- *   - configs/maps 或 path 中含 "map" → MapConfigSchema
- *   - configs/characters 或 path 中含 "character" → CharacterTemplateSchema
- *   - 否则尝试两种 schema，给出更接近的错误集
+ *   pnpm --dir backend exec tsx ../.claude/skills/agent-world-mod/scripts/validate.ts <path>
+ *
+ * 自动按文件路径/文件名推断格式：
+ *   - basename 是 manifest.json 或含 "manifest" → ManifestSchema
+ *   - 路径含 backend/scenes/<id>/characters/，或文件名含 "character"/"char" → CharacterTemplateSchema
+ *   - 路径含 backend/scenes/，或文件名含 "map" → MapConfigSchema
+ *   - 否则三种都试，给出最接近的错误集
  *
  * 退出码：0 = 通过，1 = 失败。
  */
@@ -17,32 +19,38 @@ import {
   CharacterTemplateSchema,
   ManifestSchema,
   MapConfigSchema,
-} from "@/config/schemas";
+} from "../../../../backend/src/config/schemas";
 
 function fail(msg: string): never {
   console.error(msg);
   process.exit(1);
 }
 
-function inferKind(filePath: string): "map" | "character" | "manifest" | "unknown" {
+type Kind = "map" | "character" | "manifest" | "unknown";
+
+function inferKind(filePath: string): Kind {
   const norm = filePath.replace(/\\/g, "/");
   const base = path.basename(norm);
   if (base === "manifest.json" || /manifest/i.test(base)) {
     return "manifest";
   }
   if (
-    /\/configs\/characters\//.test(norm) ||
-    /character|char/i.test(base)
+    /\/scenes\/[^/]+\/characters\//.test(norm) ||
+    /character|^char-/i.test(base)
   ) {
     return "character";
   }
-  if (/\/configs\/maps\//.test(norm) || /map/i.test(base)) {
+  if (
+    /\/scenes\//.test(norm) ||
+    base === "map.json" ||
+    /map/i.test(base)
+  ) {
     return "map";
   }
   return "unknown";
 }
 
-function main() {
+function main(): void {
   const arg = process.argv[2];
   if (!arg) fail("usage: validate.ts <path-to-json>");
   if (!existsSync(arg)) fail(`file not found: ${arg}`);
@@ -69,6 +77,7 @@ function main() {
               },
             ]
           : [
+              { name: "ManifestSchema", schema: ManifestSchema },
               { name: "MapConfigSchema", schema: MapConfigSchema },
               {
                 name: "CharacterTemplateSchema",
@@ -91,10 +100,11 @@ function main() {
       process.exit(1);
     }
   }
-  // unknown kind, both failed
-  console.error(`✗ ${arg} matches neither ManifestSchema, MapConfigSchema nor CharacterTemplateSchema`);
   console.error(
-    "tip: place the file under configs/maps/ or configs/characters/, or pass an explicit path",
+    `✗ ${arg} matches none of ManifestSchema / MapConfigSchema / CharacterTemplateSchema`,
+  );
+  console.error(
+    "tip: place the file under backend/scenes/<scene-id>/, or use a recognizable filename (manifest.json / map.json / char-*.json).",
   );
   process.exit(1);
 }

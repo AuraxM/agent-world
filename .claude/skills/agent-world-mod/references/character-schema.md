@@ -1,6 +1,6 @@
-# Character template schema (`configs/characters/<id>.json`)
+# Character template schema (`backend/scenes/<scene-id>/characters/<id>.json`)
 
-A character template is a **location-agnostic** identity definition. Where the character starts and what their hunger / fatigue / hygiene / mood are at game-start are decided by the cast spec at world creation, not by this file. Validated by `CharacterTemplateSchema` in `src/config/schemas.ts`.
+A character template is a **location-agnostic** identity definition. Where the character starts and what their hunger / fatigue / hygiene / mood are at game-start are decided by the cast spec at world creation, not by this file. Validated by `CharacterTemplateSchema` in `backend/src/config/schemas.ts`.
 
 ## Top-level shape
 
@@ -26,7 +26,15 @@ A character template is a **location-agnostic** identity definition. Where the c
   "intelligence": 2,           // 1-4, 思维活跃度
   "health": 2,                 // 1-4, 健康/体质
   "speakingStyle": "说话...",  // optional; generated from other attributes
-  "relations": { ... }        // map of other character id → relation
+  "relations": { ... },       // map of other character id → relation
+  "impressionBook": { ... },  // optional; map of charId → first-person impression note
+  "shortTermGoal": "...",     // optional; current preoccupation, written first-person
+  "longTermGoal": "...",      // optional; multi-year arc, written first-person
+  "liked": "甜食、雨天...",   // optional; preferences as a comma-list or short prose
+  "disliked": "迟到、争吵...", // optional; aversions as a comma-list or short prose
+  "initialMoney": 280,        // optional; see economy section, prefer omitting
+  "expenseExempt": false,     // optional; see economy section
+  "incomeMultiplier": 1.0     // optional; defaults to 1.0
 }
 ```
 
@@ -63,7 +71,7 @@ Map of `targetCharacterId → relation`. Each relation:
 }
 ```
 
-### `OBJECTIVE_RELATION_KINDS` (closed enum, see `src/domain/enums.ts`)
+### `OBJECTIVE_RELATION_KINDS` (closed enum, see `backend/src/domain/enums.ts`)
 
 | group          | kinds                                                                                  | engine constraint                |
 | -------------- | -------------------------------------------------------------------------------------- | -------------------------------- |
@@ -81,7 +89,7 @@ Integer in `[-4, 4]`. Maps to qualitative phrases in prompts (`-4`=极厌恶 …
 
 A's relation to B is independent from B's relation to A. Crushes / unrequited feelings are usually one-sided. Family is usually mutual. **Don't enforce symmetry** — let each character speak for themselves.
 
-Only include relations to characters that actually exist in `configs/characters/`. The validator does NOT cross-reference this; the runtime tolerates orphan relation keys but the LLM ignores them.
+Only include relations to characters that actually exist in `backend/scenes/<scene-id>/characters/`. The validator does NOT cross-reference this; the runtime tolerates orphan relation keys but the LLM ignores them.
 
 ## `activityNodeId` and `restNodeId`
 
@@ -98,7 +106,7 @@ Required. Integer 1-120.
 Required. One of `"male"`, `"female"`, `"other"`.
 
 ### `profession`
-Required. Must be one of the 23 `PROFESSIONS` enum values (see `src/domain/enums.ts`):
+Required. Must be one of the 23 `PROFESSIONS` enum values (see `backend/src/domain/enums.ts`):
 - 农业与采集: `farmer`, `rancher`, `fisherman`, `lumberjack`, `hunter`
 - 餐饮与食品: `chef`, `baker`, `brewer`
 - 手工与制造: `blacksmith`, `carpenter`, `tailor`
@@ -187,7 +195,7 @@ Example (`language: "zh"`):
 
 ## Avatars
 
-Single-emoji `avatar` is the easiest — used by `src/app/_lib/sprite.ts` as a render fallback. Pick an emoji that signals the character's energy at a glance.
+Single-emoji `avatar` is the easiest — used by `frontend/src/lib/sprite.ts` as a render fallback. Pick an emoji that signals the character's energy at a glance.
 
 ## Base attributes (`appearance`, `intelligence`, `health`)
 
@@ -238,6 +246,35 @@ Optional boolean. If `true`, character is exempt from survival costs (eat/bathe)
 ### `incomeMultiplier`
 
 Optional number ≥ 0. 收入倍率，默认 1.0。用于调整个体收入（如半职=0.5，加班=1.5）。一般不设。
+
+### `impressionBook`
+
+Optional. Map of `targetCharacterId → string`. First-person impression notes the character carries about specific others — read by the LLM when reasoning about that target. Use for nuanced impressions that don't fit `relations[*].note` (which is more about objective history). Defaults to `{}`.
+
+```jsonc
+"impressionBook": {
+  "char-tanaka": "他笑得很大声，但我感觉那是装出来的。",
+  "char-suzuki": "她总能在我说错话之前打断我，奇怪的是我并不觉得讨厌。"
+}
+```
+
+Only include entries for characters that meaningfully shape this character's behavior — don't mass-fill.
+
+### `shortTermGoal` / `longTermGoal`
+
+Both optional, both first-person prose in the scene's language.
+
+- `shortTermGoal` — current preoccupation; what the character is trying to do this week or this month. Concrete, time-bounded.
+- `longTermGoal` — multi-year arc; identity-level direction. May be vague or unresolved.
+
+These appear in the LLM context to keep behavior coherent across ticks. Omit if the character is genuinely drifting — don't fabricate goals.
+
+### `liked` / `disliked`
+
+Both optional, short prose or comma-list strings. Surfaced to the LLM as preference signal. Use specifics over generics:
+
+- ✅ `"甜豆腐脑、晴天午后、修旧家具"`
+- ❌ `"美食、好天气"` (too generic)
 
 ## Character creation order
 

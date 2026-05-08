@@ -1,6 +1,6 @@
 # Action System API Reference
 
-Full interface definitions from `src/domain/action-system.ts`. These are the canonical types — the runtime engine expects exactly these shapes.
+Full interface definitions from `backend/src/domain/action-system.ts`. These are the canonical types — the runtime engine expects exactly these shapes.
 
 ## ActionDefinition
 
@@ -20,6 +20,7 @@ interface ActionDefinition {
   paramRule: string;               // one sentence: parameter requirements + conditions. Use 必填/可选/无需 tiers
 
   // Optional:
+  validateParams?(input: ActionInput, ctx: ActionContext): string | null;
   onTick?(ctx: ActionContext): Outcome | null;
   onComplete?(ctx: ActionContext): Outcome;
   onInterrupt?(ctx: ActionContext, reason: string): Outcome;
@@ -41,6 +42,21 @@ interface ActionDefinition {
 
 These two fields appear in the user prompt as paired blocks — hint block first ("你此刻能做的事"), rule block second ("调用规则") — with the same action name in bold (`**action**:`) for LLM association.
 
+**`validateParams`** (optional): runs after the LLM picks this action, before `execute()`. Return `null` to accept; return a string to reject — the engine feeds the string back to the LLM for retry (max 3 rounds per turn). Use it to:
+- Catch a missing `target_id` / `target_node_id` even when `extraRequired` is satisfied (e.g. companion has since left).
+- Reject targets that are out of range (`ctx.companions.find(...)` returns `undefined`).
+- Enforce action-specific preconditions that aren't expressible in `check()` (which gates *availability*, not parameter validity).
+
+Example:
+```js
+validateParams(input, ctx) {
+  if (!input.target_id) return "hug 需要指定 target_id（拥抱对象）";
+  const target = ctx.companions.find(c => c.id === input.target_id);
+  if (!target) return `target_id="${input.target_id}" 不在身边，无法拥抱`;
+  return null;
+}
+```
+
 ### Lifecycle
 
 - **instant action**: `check()` → `execute()` → done
@@ -58,6 +74,7 @@ The world snapshot passed to all action callbacks.
 interface ActionContext {
   worldId: string;           // current world ID
   tick: number;              // current game tick
+  epoch: number;             // monotonic epoch counter (used by interrupt arbitration)
   self: Character;           // the acting character
   here: MapNode;             // current location node
   companions: Character[];   // other characters at the same node
@@ -71,9 +88,10 @@ interface ActionContext {
 
 ```
 .id, .name, .origin, .profession, .gender, .age, .personality (ei/sn/tf/jp),
-.vitals { hunger, fatigue, hygiene } (all integers, typically 0–20),
+.vitals { hunger, fatigue, hygiene, socialSatiety } (all integers, typically 0–20),
 .emotion { mood, stress } (integers),
 .locationId, .restNodeId, .activityNodeId,
+.money,
 .relations[{ targetId, kinds[], affection, since, lastInteractionTick }],
 .shortMemory[{ content, tick, importance }],
 .ongoingAction { type, startedAt, endsAt, targetId, targetNodeId, freeText } | null
@@ -91,15 +109,19 @@ interface ActionContext {
 ### AggregatedFacts (ctx.facts)
 
 ```
-.hoursAtNode          — how many hours (real time) the character has been at current node
-.lastActionType       — the previous tick's action type
-.lastRestTick         — tick of last rest action
-.lastEatTick          — tick of last eat action
-.todayActionCounts    — Map<string, number> of action type → count today
-.activityNodeId       — character's configured activity node (workplace)
-.restNodeId           — character's configured rest node (home)
-.hasEatenAtHere       — whether character has eaten at current node today
+.activityNodeId             — character's configured activity node (workplace), or null
+.activityNodeName           — display name of the activity node, or null
+.restNodeId                 — character's configured rest node (home), or null
+.restNodeName               — display name of the rest node, or null
+.hoursAtCurrentLocation     — how many real-time hours the character has been at the current node
+.lastAction?                — the previous action: { type, freeText?, tick, success, targetId? }
+.lastRestTick?              — tick of last rest action (undefined if none today)
+.lastEatTick?               — tick of last eat action (undefined if none today)
+.todayActionCounts          — Partial<Record<string, number>> of action type → count today
+.todaySpeakTargets          — Record<targetId, count> of today's speak targets
 ```
+
+`lastAction.success` reflects whether `validateParams` accepted the previous attempt — useful for actions that want to react to a recent failure (e.g. "I tried to hug them but they weren't there").
 
 ## ActionInput
 
@@ -111,13 +133,14 @@ interface ActionInput {
   target_node_id?: string;     // target map node ID
   free_text?: string;          // free-form text from LLM
   reason?: string;             // reason for the action (used by move)
+  amount?: number;             // numeric amount (used by economy actions, e.g. trade/give_money)
   arrival_action?: {           // what to do upon arrival (used by move)
     action_type: string;
     free_text?: string;
     target_id?: string;
     target_node_id?: string;
   };
-  [key: string]: unknown;      // extensible
+  [key: string]: unknown;      // extensible — declare new params via extraParams + extraRequired
 }
 ```
 
@@ -127,7 +150,7 @@ Returned by `execute()`, `onTick()`, `onComplete()`, and `onInterrupt()`.
 
 ```typescript
 interface Outcome {
-  memory: string;              // stored in character's shortMemory (required)
+  memory: string;              // stored in actor's shortMemory (required, first-person)
   event?: {                    // optional world event
     category: EventCategory;   // "action" | "social" | "inner" | "time" | "env" | "burst" | "quest" | "system"
     description: string;
@@ -135,12 +158,18 @@ interface Outcome {
     scope?: EventScope;        // "private" | "node" | "parent" | "children" | "global"
   };
   stateChanges?: StateChange[];  // declarative side effects
-  dialogRequest?: {              // triggers dialog protocol
+  dialogRequest?: {              // triggers dialog protocol (recipient must accept)
     targetId: string;
     openingLine: string;
   };
+  /** System-message line injected into BOTH parties' transcript after recipient accepts. Use for visible social actions performed mid-dialogue (hug, kiss). */
+  dialogRecord?: string;
+  /** First-person memory written into the TARGET's shortMemory. Use when an action visibly affects another character (e.g. "A 拥抱了我"). */
+  targetMemory?: string;
 }
 ```
+
+`targetMemory` and `dialogRecord` only apply when there is a meaningful recipient (typically `input.target_id`). For solo actions like `eat` or `meditate` they are unused.
 
 ## StateChange
 
@@ -153,18 +182,22 @@ type StateChange =
   | { kind: "setLocation"; nodeId: string }
   | { kind: "adjustMood"; delta: number }
   | { kind: "adjustStress"; delta: number }
+  | { kind: "adjustSocialSatiety"; delta: number }
   | { kind: "setOngoingAction"; action: OngoingAction }
-  | { kind: "clearOngoingAction" };
+  | { kind: "clearOngoingAction" }
+  | { kind: "adjustMoney"; amount: number; reason: string; targetCharacterId?: string };
 ```
 
 ### Usage notes
 
-- `resetVital` sets the vital to 0 (fresh). Use for eating (resets hunger), bathing (resets hygiene), sleeping (resets fatigue).
+- `resetVital` sets the vital to 0 (fresh). Use for eating (resets hunger), bathing (resets hygiene), sleeping (resets fatigue). Note: there is no `resetVital` for `socialSatiety` — use `adjustSocialSatiety`.
 - `adjustVital` changes the vital by `delta` (can be negative to reduce, positive to increase fatigue/hunger/hygiene).
 - `setLocation` teleports the character to a new node. The engine handles pathfinding for `move` actions separately; use this only for instant teleport effects.
 - `adjustMood` / `adjustStress` change emotion values. Positive delta on mood = happier; positive delta on stress = more stressed.
+- `adjustSocialSatiety` changes the social-satiety vital. Positive delta after meaningful interaction (`hug`, `speak`); negative delta after isolation. Independent of mood/stress.
 - `setOngoingAction` marks the character as busy for N ticks. Must include the full `OngoingAction` object: `{ type, startedAt, endsAt, targetId?, targetNodeId?, freeText? }`.
 - `clearOngoingAction` removes the ongoing action marker. Called automatically on completion; use manually only for early termination.
+- `adjustMoney` changes the actor's money by `amount` (can be negative). `reason` is a short human-readable string for the ledger (e.g. `"buy_meal"`, `"sold_eggs"`). Pass `targetCharacterId` for transfers — the engine applies the inverse to the target. Money never goes below 0; the engine clamps and surfaces a soft failure event.
 
 ## EventCategory (valid values)
 

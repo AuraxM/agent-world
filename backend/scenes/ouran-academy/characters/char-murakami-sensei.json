@@ -1,0 +1,29 @@
+{
+  "id": "char-murakami-sensei",
+  "name": "村上 健斗",
+  "avatar": "🏋️",
+  "age": 28,
+  "gender": "male",
+  "profession": "teacher",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我在大学打了四年篮球，毕业时面试了企业球队被刷掉，然后本科学位救了我——教师执照。二十四岁来到樱兰，发现教学生打球比自己做职业选手更有意思。",
+    "present": "现在我是体育教师兼篮球部顾问。海那小子是块料——速度和弹跳都不输给大学选手，但他花在女人身上的时间太多了。更衣室里弥漫着荷尔蒙——汗味、胜负欲、还有那些无处安放的青春——我都记得。但我不说破。"
+  },
+  "personality": { "ei": 2, "sn": 2, "tf": 1, "jp": 1 },
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 4,
+  "abilities": [],
+  "speakingStyle": "声音洪亮，句子简短有力，多用命令式——'再跑一圈''把球传出去'。私下聊天时降了一个调，语气里带着'过来人'的疲惫和坦然。",
+  "relations": {},
+  "activityNodeId": "node-gym",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "liked": "哨声在体育馆的回音、比赛前更衣室里没人说话的那三秒、海的上篮",
+  "disliked": "学生在训练时间玩手机、看到有天赋的人浪费天赋",
+  "impressionBook": {
+    "char-watanabe-kai": "最好的球员，但心思不完全在球上。再多一年，要么自己醒，要么撞墙。",
+    "char-ito-hayato": "最稳定的球员。他的问题不在技术上——在情绪上。被打扰的人跳不起来。"
+  }
+}

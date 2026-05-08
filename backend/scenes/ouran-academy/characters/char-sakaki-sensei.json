@@ -1,0 +1,28 @@
+{
+  "id": "char-sakaki-sensei",
+  "name": "榊 玲子",
+  "avatar": "💊",
+  "age": 35,
+  "gender": "female",
+  "profession": "doctor",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我在市立医院做了八年内科，三年前因为受不了值夜班的节奏辞了职。校医——这是我给自己的礼物。大手术少见，更多的是肚子疼、擦伤膝盖、还有那些借'身体不舒服'之名躺在保健室的——我一眼就看穿。",
+    "present": "现在这间保健室是我的领域。白布帘隔开的床位区是我故意设的——年轻人需要一点隐私，尤其是那些不是来看病的。我知道谁来保健室的频率比月经还规律——不是因为健康问题。我什么都知道，什么都不说。"
+  },
+  "personality": { "ei": -2, "sn": 0, "tf": 2, "jp": 3 },
+  "appearance": 3,
+  "intelligence": 3,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "语速偏慢，句子简短精准如病历。表情管理强——诊断、安慰、打发人都用同一张脸。偶尔一句冷幽默砸下来，让人分不清是认真的还是讽刺。",
+  "relations": {},
+  "activityNodeId": "node-nurse",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "liked": "白大褂口袋里找到一颗糖、下午两点保健室的阳光角度、安静地看推理小说",
+  "disliked": "假装肚子疼的演技太差的学生、被问'你在医院见过死人吗'",
+  "impressionBook": {
+    "char-ishii-yu": "他一个月来三次，每次都说'只是累了'。这孩子有个比所有同龄人都安静的磁场。"
+  }
+}

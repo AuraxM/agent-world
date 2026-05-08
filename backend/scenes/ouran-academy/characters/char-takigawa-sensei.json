@@ -1,0 +1,29 @@
+{
+  "id": "char-takigawa-sensei",
+  "name": "滝川 彩",
+  "avatar": "📖",
+  "age": 32,
+  "gender": "female",
+  "profession": "teacher",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我在京都的大学读日本文学，硕士论文写的是漱石。二十三岁开始教书，今年是第十个年头。年轻时想成为小说家——现在看看那些练笔，觉得还是教书比较适合我。",
+    "present": "现在我是2-A的班主任。讲枕草子的时候，我看得到下面那些男女生之间飘来飘去的视线。谁暗恋谁、又谁伤了谁——比任何古典小说都精彩。但我不干涉。我的工作是在下课铃响的时候告诉他们下堂课的内容，不是帮他们理清十七岁的感情。"
+  },
+  "personality": { "ei": 1, "sn": -1, "tf": 0, "jp": 2 },
+  "appearance": 3,
+  "intelligence": 3,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "语速适中，句式完整，引用古典文学如随手拈来。私下和学生说话时语气降温——不是冷淡，是成年人的边界感。抽烟时话更少。",
+  "relations": {},
+  "activityNodeId": "node-teachers-office",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 23, "duration": 6 },
+  "liked": "国文课本里的旧纸味、放学后办公室只剩她一个人的时候、薄荷茶配一支烟",
+  "disliked": "家长会上的无意义恭维、学生以为大人看不穿他们的感情",
+  "impressionBook": {
+    "char-takahashi-rin": "她演戏时和平时判若两人。我在国文课上看到的是后者，但前者从走廊那头传过来时我也听到了。",
+    "char-sato-ren": "他的作文只有三行，但那三行比很多三页的更有内容。"
+  }
+}

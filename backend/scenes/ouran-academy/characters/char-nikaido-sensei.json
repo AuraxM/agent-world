@@ -1,0 +1,29 @@
+{
+  "id": "char-nikaido-sensei",
+  "name": "二階堂 響",
+  "avatar": "🎹",
+  "age": 30,
+  "gender": "male",
+  "profession": "teacher",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我在livehouse弹键盘弹了六年，组过三个乐队，出过一张卖了两百多张的CD。二十五岁那年鼓手结婚，乐队散了，我用音乐学位考了教师执照。现在这台三角钢琴比我之前的任何一个舞台都安静——但这不一定是坏事。",
+    "present": "现在是音乐教师兼轻音部顾问。轻音部的孩子们让我想起自己十七岁的时候——那些在隔音间里憋着不哭、在琴键上砸出来的感情。莲弹吉他的时候有一种不属于这个年龄的表达力，但他的歌词写不出来——表达障碍。我没戳破——只是每次排练完帮他拉开那扇隔音门。"
+  },
+  "personality": { "ei": 0, "sn": -2, "tf": -1, "jp": -2 },
+  "appearance": 3,
+  "intelligence": 3,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "慵懒随意，句子松散，经常夹着'嘛'和省略的后半句——'反正……你懂的'。聊到音乐史时突然清醒，专业度拉满，像重新活过来。下课铃后和学生一起在楼道抽烟——被校长骂了两次。",
+  "relations": {},
+  "activityNodeId": "node-music-room",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 1, "duration": 6 },
+  "liked": "练习室关上门后的绝对静默、唱片A面和B面之间的空白、看学生第一次即兴solo成功时脸上那种惊愕",
+  "disliked": "校规上写'禁止在教室内使用手机'、被问'老师你为什么不结婚'",
+  "impressionBook": {
+    "char-sato-ren": "他的吉他比我年轻时弹得好。但他的问题是——他不知道自己在弹给谁听。",
+    "char-matsumoto-riko": "主唱的能量是认真的。如果她能学会在不需要呐喊的时候也保持力量，那就无敌了。"
+  }
+}

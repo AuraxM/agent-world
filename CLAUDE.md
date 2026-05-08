@@ -2,97 +2,122 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Repository Structure (DO NOT MODIFY ROOT package.json)
+
+This monorepo deliberately contains TWO independent projects:
+- `frontend/` — Vite + React SPA (own package.json, own pnpm-lock.yaml)
+- `backend/`  — Fastify Node service (own package.json, own pnpm-lock.yaml)
+
+The root `package.json` is intentionally **thin**: it holds convenience scripts only.
+**DO NOT**:
+- Add dependencies/devDependencies to the root package.json.
+- Make the root a pnpm workspace.
+- Generate a root pnpm-lock.yaml.
+- Cross-import code between frontend/ and backend/ (use codegen for shared types — see backend/scripts/generate-types.ts).
+
+If you need a tool that runs at the root, write it as a zero-dependency Node script in `scripts/`.
+
 ## Commands
 
 ```bash
-pnpm dev              # Full stack: Fastify server (port 3001) + Next.js web (port 3000)
-pnpm dev:server       # Server only (hot reload via tsx watch)
-pnpm dev:web          # Next.js dev server only
-pnpm test             # Vitest run (single pass)
-pnpm test:watch       # Vitest in watch mode
-pnpm lint             # ESLint across all packages
-pnpm build            # Build all workspace packages
-pnpm db:migrate       # Run Drizzle migrations
-pnpm db:reset         # Reset DB + re-migrate
-pnpm seed             # Seed data via scripts/seed.ts
+# From repo root (orchestrator scripts):
+pnpm install:all      # Install deps in both frontend/ and backend/
+pnpm dev              # Run frontend (:3000) + backend (:3001) concurrently
+pnpm dev:frontend     # Frontend only
+pnpm dev:backend      # Backend only
+pnpm test             # Run backend tests then frontend tests sequentially
+pnpm test:frontend    # Frontend tests only
+pnpm test:backend     # Backend tests only
+pnpm lint             # Lint both
+pnpm build            # Build both
+pnpm gen:types        # Regenerate frontend/src/types/api.generated.ts
+pnpm check:types-fresh # CI guard: fail if codegen output is stale
+pnpm db:migrate       # Drizzle migrations on backend/data/agent-world.db
+pnpm db:reset         # Reset DB then re-migrate
+pnpm seed             # Seed data via backend/scripts/seed.ts
+
+# Or work in a subproject directly:
+cd frontend && pnpm dev
+cd backend  && pnpm dev
 ```
 
-Tests are in `src/**/*.test.ts` and `packages/*/src/**/*.test.ts`. Vitest uses `globals: false` — import `describe`/`it`/`expect` explicitly. `TZ=UTC` is set in vitest config.
+Tests in `backend/src/**/*.test.ts` and `frontend/src/**/*.test.ts`. Vitest in both uses `globals: false` — import `describe`/`it`/`expect` explicitly. Both set `TZ=UTC`.
 
-Environment variables: `DATABASE_URL` (path to SQLite db), `AGENT_WORLD_CONFIGS_DIR` (path to `configs/`), `PORT`/`HOST` for the Fastify server, `API_URL` for Next.js rewrite proxy target.
+Environment variables (backend): `DATABASE_URL`, `AGENT_WORLD_SCENES_DIR`, `PORT`, `HOST`. See `backend/.env.example`.
+Environment variables (frontend): `VITE_API_URL` (Vite dev proxy + prod runtime). See `frontend/.env.example`.
 
 ## Architecture
 
-This is a **pnpm monorepo** for a multi-agent simulation where LLM-powered NPCs inhabit configurable maps and make autonomous decisions each tick.
+This is a co-located but **logically independent** two-project layout. `frontend/` and `backend/` each have their own `package.json` / `pnpm-lock.yaml` / `node_modules` / tooling, and could be split into separate repos with no code changes. The root holds only convenience scripts.
 
-### Package structure
+### Top-level layout
 
-| Package | Purpose |
-|---------|---------|
-| `@agw/domain` | Core types (`Character`, `Action`, `MapNode`, `WorldEvent`, etc.), enums, Zod schemas for LLM tool calls, `ActionRegistry` |
-| `@agw/systems` | Engine systems: vitals/emotion decay, pathfinding (BFS), perception dispatch, action execution, facts aggregation, economy |
-| `@agw/llm` | LLM integration: OpenAI-compatible client, decision loop, dialogue protocol, think sessions, memory compression, prompts |
-| `@agw/config` | Map/character config loaders with Zod validation from `configs/maps/<pack-id>/` |
-| `@agw/db` | Drizzle ORM + SQLite (better-sqlite3) — schema, repositories, migrations |
-| `@agw/shared` | Logger utility |
-| `@agw/server` (`apps/server/`) | Fastify API on port 3001: CRUD for worlds, characters, configs; tick execution |
-| `@agw/web` (`src/`) | Next.js 16 admin dashboard with react-force-graph-2d node visualization |
+```
+frontend/   Vite + React SPA (port 3000)
+backend/    Fastify + engine (port 3001)
+docs/       Specs and plans
+scripts/    Root-level utilities (run-parallel.mjs only — zero deps)
+```
 
-### Map/character configs
+### Frontend (`frontend/`)
 
-Each map pack lives in `configs/maps/<pack-id>/`:
-- `manifest.json` — metadata, language (`zh`/`en`/`ja`), economy config, optional `actions` reference
-- `map.json` — nodes with parent/child hierarchy, tags, privacy, shortcuts, entry points
-- `characters/*.json` — NPC templates with MBTI personality, profession, vitals, relations, biography
-- `events.json` (optional) — scheduled/triggered world events
-- `actions.js` (optional) — custom `ActionDefinition` array, registered into the global `actionRegistry`
+- Vite + React 19 + react-router-dom v7. Two routes: `/` and `/admin`.
+- Components, hooks, libs in `frontend/src/{components,hooks,lib}/`.
+- Talks to backend via `/api/*` (Vite dev proxy in dev, `VITE_API_URL` direct in prod).
+- Shared types come from `frontend/src/types/api.generated.ts` — regenerated by `pnpm gen:types`. **Do not hand-edit this file**.
 
-The `@agw/config` loader validates all JSON against Zod schemas. `AGENT_WORLD_CONFIGS_DIR` env var sets the configs root.
+### Backend (`backend/`)
+
+Single flat Node project. Module boundaries enforced by ESLint (`no-restricted-paths`).
+
+```
+backend/src/
+  domain/    Types, enums, zod schemas, ActionRegistry — bottom layer
+  shared/    Logger and tiny utilities (depends on domain only)
+  db/        Drizzle ORM, repositories, migrations (depends on domain, shared)
+  config/    Scene loaders (read backend/scenes/<id>/) (depends on domain, shared)
+  systems/   Engine systems: vitals/emotion, pathfinding, perception, actions,
+             facts, economy, layout, notebook, store (depends on domain, shared, db, config)
+  llm/       OpenAI integration: prompts, decide, dialog, think, memory compression
+             (depends on domain, shared, config, db, systems)
+  server/    Fastify entry + tick orchestration + HTTP routes (top layer — may
+             import any module)
+backend/scenes/<scene-id>/   Map packs (manifest, map, characters, events, actions.js)
+backend/data/agent-world.db  SQLite database
+backend/scripts/             Dev utilities (seed, db-reset, generate-types,
+                             check-types-fresh, etc.)
+```
+
+### Type sharing
+
+`backend/src/domain/{types,enums}.ts` is the single source of truth. The codegen pipeline (`backend/scripts/generate-types.ts`) runs `tsc --emitDeclarationOnly`, strips inter-file imports, concatenates, and appends `export const` runtime values from `enums.ts`. Output: `frontend/src/types/api.generated.ts` (committed to git as the API contract). Drift is caught by `pnpm check:types-fresh`.
 
 ### Core tick flow
 
-`tick()` in `apps/server/src/tick.ts` orchestrates each simulation step:
+`tick()` in `backend/src/server/tick.ts` orchestrates each simulation step. The flow is unchanged from before the refactor — see file for details:
+1. Vitals decay → inner events
+2. Emotion evolution
+3. Perception dispatch
+4. Concurrent LLM decisions
+5. Ongoing action processing
+6. Dialogue / think sessions
+7. Action execution via `ActionRegistry`
+8. Relations, economy, sleep memory compression
+9. Persistence + 24h snapshots
 
-1. **Vitals decay** (hunger, fatigue, hygiene) — produce inner events
-2. **Emotion evolution** — mood/stress/social_satiety drift
-3. **Perception dispatch** — each NPC sees events visible at their location (privacy/scope-based)
-4. **Concurrent LLM decisions** — each free NPC calls `decide_action` tool (with `recall`/`memorize` sub-tools). Characters in ongoing conversations or think sessions are locked and skip normal decisions.
-5. **Ongoing action processing** — move step-by-step along BFS paths; sleep with interrupt thresholds
-6. **Dialogue phase** — `speak` actions trigger accept/reject → multi-turn LLM conversation protocol
-7. **Think sessions** — `think` actions create solo reflection sessions with configurable turns per tick
-8. **Action execution** — via `ActionRegistry`, applying state changes, writing memories, generating WorldEvents
-9. **Relation management, economy snapshots, sleep memory compression**
-10. **Persistence** — events, thoughts, character state, conversations, think sessions, snapshots (every 24 game hours)
+### Action / scene system
 
-### Action system
-
-`ActionRegistry` (global singleton) holds `ActionDefinition` instances. Each definition has:
-- `check(ctx)` — is the action available now?
-- `hint(ctx)` — description for the LLM prompt
-- `execute(ctx, input)` — produce `Outcome` (memory + optional event + state changes)
-- `validateParams(input, ctx)` — validate LLM-provided params; return error string or null
-- `onTick`/`onComplete`/`onInterrupt` — lifecycle hooks for ongoing actions
-- `usableInDialogue` — whether it can be proposed inside a conversation
-- `triggerHint` / `paramRule` — prompt-building metadata
-
-Built-in actions are in `packages/systems/src/actions-builtin.ts`. Mod actions are loaded from `configs/maps/<pack-id>/actions.js`.
+Built-in actions in `backend/src/systems/actions-builtin.ts`. Mod actions loaded from `backend/scenes/<scene>/actions.js`. Loaders in `backend/src/config/{loader,mod-loader,event-loader}.ts`. Env var: `AGENT_WORLD_SCENES_DIR`.
 
 ### LLM integration
 
-`@agw/llm` uses OpenAI-compatible API. Multiple named entry points (`decide`, `dialog_turn`, `dialog_summarize`, `memory_compress`, `accept_decision`, `dialog_personal_memory`) can each route to different providers configured in the `llm_providers` / `llm_entry_configs` DB tables. Clients are cached globally per providerId.
+`backend/src/llm/` uses an OpenAI-compatible API. Multiple named entry points (`decide`, `dialog_turn`, `dialog_summarize`, `memory_compress`, `accept_decision`, `dialog_personal_memory`) can route to different providers configured in the `llm_providers` / `llm_entry_configs` DB tables. Tool-calling is mandatory; pure-text responses trigger re-prompting (max 3 rounds). DeepSeek `reasoning_content` is preserved across rounds. Fallback action on any LLM failure: `look_around`.
 
-Key LLM patterns:
-- **Tool-calling**: All decisions go through function calling. The LLM must call a tool — pure text responses trigger re-prompting (max 3 rounds).
-- **Thinking/reasoning**: DeepSeek `reasoning_content` is preserved across tool-call rounds.
-- **Context building**: System + user prompts include personality, vitals, emotion, memories, relations, perceptions, notebook entries.
-- **Fallback**: On any LLM failure, `look_around` is the safe default action.
-
-### Key domain constants
+### Key domain constants (game)
 
 - 1 tick = 1/5 game hour (`TICKS_PER_HOUR = 5`)
 - Short memory FIFO: 50 entries
-- Sleep duration: 40 ticks (8 game hours)
-- Nap duration: 20 ticks (4 game hours)
+- Sleep duration: 40 ticks (8h); nap: 20 ticks (4h)
 - Max LLM tool-call rounds: 3
 - LLM timeout: 30s, max 1 retry
 - Facts lookback: 48 game hours

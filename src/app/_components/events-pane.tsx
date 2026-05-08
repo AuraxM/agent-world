@@ -75,6 +75,7 @@ export function EventsPane({
                 {hasTranscript && isExpanded && (
                   <div className="mt-2 p-2 bg-(--color-pixel-bg-subtle) rounded border border-(--color-pixel-border-light) text-game-sm">
                     {ev.dialogTranscript!.map((turn: any, i: number) => {
+                      if (!turn) return null;
                       const speakerName =
                         charById.get(turn.speakerId)?.name ?? turn.speakerId;
                       return (

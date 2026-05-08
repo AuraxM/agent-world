@@ -29,10 +29,10 @@ export function EventCard({
   const important = event.intensity >= 3;
   const hasTranscript = event.dialogTranscript && event.dialogTranscript.length > 0;
   const transcriptMsgCount = hasTranscript
-    ? event.dialogTranscript!.filter((t) => t.speakerId !== "__system__").length
+    ? event.dialogTranscript!.filter((t) => t && t.speakerId !== "__system__").length
     : 0;
   const dialogueSpeakers = hasTranscript
-    ? [...new Set(event.dialogTranscript!.filter(t => t.speakerId !== "__system__").map(t => t.speakerId))]
+    ? [...new Set(event.dialogTranscript!.filter(t => t && t.speakerId !== "__system__").map(t => t.speakerId))]
         .map(id => charById.get(id))
         .filter(Boolean) as Character[]
     : [];
@@ -133,6 +133,7 @@ export function EventCard({
           {expanded && (
             <div className="mt-2 p-3 bg-(--panel) border border-(--border-amber) rounded space-y-1">
               {event.dialogTranscript!.map((turn, i) => {
+                if (!turn) return null;
                 if (turn.speakerId === "__system__") {
                   return (
                     <div key={i} className="flex items-center gap-2 my-2">

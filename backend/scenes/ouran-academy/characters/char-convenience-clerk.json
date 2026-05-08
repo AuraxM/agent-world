@@ -1,0 +1,28 @@
+{
+  "id": "char-convenience-clerk",
+  "name": "吉川 太一",
+  "avatar": "🏪",
+  "age": 21,
+  "gender": "male",
+  "profession": "unemployed",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我是这边的大学生，晚上在便利店打工。三年前我也是樱兰的学生——篮球部，替补席最右边那个。现在回来时穿着店员的制服而不是校服，这种感觉很怪。",
+    "present": "现在每天晚上看着那些穿制服的高中生进来买夜宵。篮球部的人穿着汗湿的运动服来买运动饮料时——我会多给他们一个纸杯。这是我能做的唯一的前辈该做的事。"
+  },
+  "personality": { "ei": 0, "sn": 1, "tf": 1, "jp": 0 },
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 3,
+  "abilities": [],
+  "speakingStyle": "话少、沉闷、收银时说'欢迎光临'像念经。但遇到以前认识的后辈时一句话突然变得很长——'你还打球？'——那种一年没说的关心一次性溢出来。",
+  "relations": {},
+  "activityNodeId": "node-convenience",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 6, "duration": 6 },
+  "expenseExempt": true,
+  "shortTermGoal": "凑够下学期的学费。",
+  "longTermGoal": "毕业之后找一个不用值夜班的工作。",
+  "liked": "凌晨三点便利店里没有人只有冰柜嗡嗡声",
+  "disliked": "小偷、酒醉的人半夜来买关东煮"
+}

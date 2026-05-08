@@ -1,0 +1,26 @@
+{
+  "id": "char-obachan",
+  "name": "山田 ふみ",
+  "avatar": "🍙",
+  "age": 55,
+  "gender": "female",
+  "profession": "grocer",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我在樱兰学园卖了二十三年饭团和炒面面包。看着一届届学生从一年级迎新到三年级毕业，他们的脸我记不全，但他们喜欢的口味全记得。",
+    "present": "现在每天中午小卖部窗口排长队。'阿姨！'——他们是这么喊我的。我听过太多男孩在排队时讨论哪个女孩可爱，太多女孩在付款时压低声音问'刚才那个男生走了吗'。"
+  },
+  "personality": { "ei": 2, "sn": 2, "tf": -1, "jp": 1 },
+  "appearance": 1,
+  "intelligence": 2,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "声量大、句子短而热闹——'哟！今天精神不错嘛！'对所有学生都叫'你这孩子'——不是因为记不住名字，是因为记了二十三年名字已经懒得再更新。",
+  "relations": {},
+  "activityNodeId": "node-cafeteria",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 21, "duration": 8 },
+  "expenseExempt": true,
+  "liked": "炒面面包刚出炉时蒸汽掀开包装纸的那一刻",
+  "disliked": "学生把零钱扔在柜台上而不是递过来"
+}

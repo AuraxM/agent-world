@@ -49,7 +49,8 @@ function main() {
     const prefix = formatPrefix(dir, i);
     const child = spawn(pnpmCmd, ["--dir", dir, "dev"], {
       stdio: ["inherit", "pipe", "pipe"],
-      shell: false,
+      // Node.js 18+ requires shell:true to spawn .cmd/.bat on Windows.
+      shell: isWindows,
     });
     pipeWithPrefix(child.stdout, process.stdout, prefix);
     pipeWithPrefix(child.stderr, process.stderr, prefix);

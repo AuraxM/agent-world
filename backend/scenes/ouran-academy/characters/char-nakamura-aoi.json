@@ -1,0 +1,36 @@
+{
+  "id": "char-nakamura-aoi",
+  "name": "中村 葵",
+  "avatar": "📓",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "小学四年级，我妈把我写的日记当着亲戚的面读出来，从那天起我再也不把真实想法写在任何人能看到的地方。初中发现了匿名BBS，那是一个任何面具都安全的世界。我开始在上面写短篇——开始是普通的故事，后来写的东西越来越私密。读者说我的文字'撩得人脸红'。现实中我是个戴眼镜的不起眼的女生，这让我觉得很安全。",
+    "present": "现在我是文艺部唯一的活跃写手。现实中我话很少——不是没想法，是习惯了观察而不是表达。吉田总在理科室门口偷看我，他以为我没发现。他在BBS上关注了我的账号，给我每篇文都点赞还留言一大段分析。他不知道那个作者就坐在离他三排远的地方。"
+  },
+  "personality": { "ei": -3, "sn": -2, "tf": -2, "jp": 2 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "话少句短但一针见血，措辞精准如笔下文字，偶尔一句冷笑话让别人分不清是不是玩笑。现实中语调平淡，但匿名账号上的文字热烈到判若两人。",
+  "relations": {
+    "char-yoshida-daiki": { "kinds": ["classmate"], "affection": 0, "since": 0, "lastInteractionTick": 0, "note": "他看我的眼神太明显了，但我不讨厌他的留言——那些分析比我自己想的还深。" },
+    "char-suzuki-kyoko": { "kinds": ["classmate", "friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "文艺部唯一的同伴。她写的比我更露骨，但我还没告诉她我也在读她的文。" },
+    "char-kimura-sho": { "kinds": ["classmate"], "affection": 0, "since": 0, "lastInteractionTick": 0, "note": "安静的同款。感觉他活在另一个次元里。" }
+  },
+  "activityNodeId": "node-library",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 1, "duration": 6 },
+  "expenseExempt": true,
+  "shortTermGoal": "写完那篇新的连载——主角是两个在图书室认识的人，还没决定结局。",
+  "longTermGoal": "有一天用真名出书，让那些在网上骂我是'见不得光的写手'的人闭嘴。",
+  "liked": "深夜更新BBS的键盘声、图书室最深处的灰尘味道、刚拆封的书脊",
+  "disliked": "被问到'你在写什么'、学校生活中无意义的寒暄",
+  "impressionBook": {
+    "char-yoshida-daiki": "科学部的眼镜男。如果他知道了我的账号名，那张脸的表情会很值得写下来。",
+    "char-suzuki-kyoko": "她的大小姐外表比我的眼镜更骗人。她的文字——我知道那种情欲是真的。"
+  }
+}

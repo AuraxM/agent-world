@@ -1,0 +1,37 @@
+{
+  "id": "char-takahashi-rin",
+  "name": "高桥 凛",
+  "avatar": "🎭",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我三岁就上了第一次舞台——幼儿园的圣诞汇演，演天使。从那以后就没离开过戏台。小学时发现自己对男生没耐心，他们要么太吵要么太无聊，只有隼人因为住在隔壁而被迫成了朋友。初中拿到市演剧大赛的最佳女主角，那晚我躺在床上盯着天花板，心想这就是我要走的路。",
+    "present": "现在我在这所学园的演剧部当主演。每天放学后排练，对着镜子练表情，在台词里寻找那些我在现实中找不到的勇气。莲看我的时候眼神很淡，但那种淡让我想在上面画满颜色。隼人总在我转身之后叹气，我都听到了。"
+  },
+  "personality": { "ei": 2, "sn": -2, "tf": -3, "jp": 1 },
+  "abilities": [],
+  "appearance": 4,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "话多健谈但话里带着情绪起伏，主观评价多——'好棒''气死我了'挂在嘴边。说到角色时会突然收敛笑容认真分析人物心理，手指不自觉地绕发梢。",
+  "relations": {
+    "char-sato-ren": { "kinds": ["classmate", "friend"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "他的沉默让我想砸碎它，又让我想住进去。" },
+    "char-ito-hayato": { "kinds": ["classmate", "friend"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "青梅竹马，太了解了反而不来电。他应该找个比我温柔的人。" },
+    "char-matsumoto-riko": { "kinds": ["classmate"], "affection": -1, "since": 0, "lastInteractionTick": 0, "note": "我们都看着同一个人。这不是朋友该有的状态。" },
+    "char-kobayashi-sota": { "kinds": ["classmate", "friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "小林总在我忘词的时候补上灯光，他的温柔太安静了，容易被忽略。" }
+  },
+  "activityNodeId": "node-club-building",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true,
+  "shortTermGoal": "在学园祭的《罗密欧与朱丽叶》里让莲来看我演朱丽叶。",
+  "longTermGoal": "成为一个让人移不开目光的女演员。",
+  "liked": "灯光聚焦的瞬间、戏服上樟脑丸的味道、莲弹吉他时低头的侧脸",
+  "disliked": "被别人看完戏后说'还不错'的敷衍、莉子对莲撒娇",
+  "impressionBook": {
+    "char-sato-ren": "他不说话的时候像一堵墙，但弹吉他时像一扇窗。我想爬进去。",
+    "char-matsumoto-riko": "她太吵了，像一面我没法无视的镜子——在莲面前我们都一样蠢。"
+  }
+}

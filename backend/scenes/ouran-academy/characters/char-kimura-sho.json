@@ -1,0 +1,34 @@
+{
+  "id": "char-kimura-sho",
+  "name": "木村 翔",
+  "avatar": "🔬",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我在网游里度过了中学时代。现实中没有我需要攻略的Boss，也没有人在意我的等级。父亲是工程师，他很早就教我写代码，但我更喜欢那个像素世界里的人——隔着屏幕，所有人都是他们想要成为的样子。",
+    "present": "现在我是科学部仅有的两个成员之一。吉田是我唯一的朋友，虽然他有时候话太多。三个月前我在网游里认识了一个叫'K'的玩家，她的文字让我脸红——准确地说，是那种看到一半必须把手机屏幕按灭、深呼吸三次的文字。我不知道她是谁，甚至不知道她在不在这个城市。"
+  },
+  "personality": { "ei": -4, "sn": 1, "tf": 1, "jp": 2 },
+  "abilities": [],
+  "appearance": 1,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "话极少，被点名时回答结构完整但短，多用'嗯''可能'收尾。线上打字时判若两人——长篇大论且幽默。紧张时反复推眼镜、摸后颈。",
+  "relations": {
+    "char-yoshida-daiki": { "kinds": ["classmate", "friend"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "唯一一个愿意在理科室陪我聊三小时的人，虽然大部分时间他在说别人的事。" },
+    "char-suzuki-kyoko": { "kinds": ["classmate"], "affection": 0, "since": 0, "lastInteractionTick": 0, "note": "文艺部的千金小姐。不知道为什么，她说话的方式让我联想到'K'——可能是错觉。" }
+  },
+  "activityNodeId": "node-science-lab",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 0, "duration": 5 },
+  "expenseExempt": true,
+  "shortTermGoal": "在游戏里约'K'出来语音一次。文字已经不够了。",
+  "longTermGoal": "做出一个BBS上没有人写过的东西——一个真正的情色文字MUD。",
+  "liked": "网游维护日的论坛大战、培植箱里长了三天的菌丝、'K'发来的私信通知",
+  "disliked": "体育课、和陌生人眼神接触超过一秒、可乐喝完最后一滴的声音",
+  "impressionBook": {
+    "char-suzuki-kyoko": "她看人的方式像在解剖，和我的显微镜一个姿势。"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "id": "char-ito-hayato",
+  "name": "伊藤 隼人",
+  "avatar": "🏀",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我住在凛隔壁十五年。小学时她拉着我当观众看她自导自演的话剧，初中时她在台上领奖我在后台帮她搬道具。某个夏天我突然意识到，我看着她的时间比她看着我的时间长得多。但青梅竹马的故事里，没有一个是关于'隔壁的男孩得到女主角'的。",
+    "present": "现在我打篮球，因为投篮的时候脑子里只有篮筐，没有凛。海那家伙在球场上可靠得像水泥墙，场下却是个花心萝卜——我们配合默契但对女人的看法完全相反。凛最近眼睛一直黏在佐藤身上，我在更衣室一拳砸在柜子上，手肿了两天。"
+  },
+  "personality": { "ei": -1, "sn": 1, "tf": -2, "jp": 0 },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 4,
+  "speakingStyle": "话量正常但情绪词泄露心事——说到凛时声音不自觉压低，说到篮球时语速加快配手势。偶尔自我打断改口，'算了当我没说'型收尾多。",
+  "relations": {
+    "char-takahashi-rin": { "kinds": ["classmate", "friend"], "affection": 4, "since": 0, "lastInteractionTick": 0, "note": "明明一起长大，她看我的眼神却从来不对。" },
+    "char-watanabe-kai": { "kinds": ["classmate", "friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "球场上的好搭档，场下的反面教材。他追女生的方式让我头皮发麻。" },
+    "char-sato-ren": { "kinds": ["classmate"], "affection": -2, "since": 0, "lastInteractionTick": 0, "note": "他什么都没做，却得到了我拼命想要的。这不公平。" }
+  },
+  "activityNodeId": "node-gym",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true,
+  "shortTermGoal": "在下一次和海的单挑里赢他，至少篮球上不能输。",
+  "longTermGoal": "在凛不需要我之前，先学会不需要她。",
+  "liked": "篮球刷过篮网的声音、晨跑时街上只有我一个人的感觉",
+  "disliked": "看到凛对莲笑、更衣室里的汗臭味（但已经习惯了）",
+  "impressionBook": {
+    "char-sato-ren": "他不是坏人，但每次看到他我就胃里发酸。",
+    "char-watanabe-kai": "这混蛋明明什么都有，却什么都不珍惜。"
+  }
+}

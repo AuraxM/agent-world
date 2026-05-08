@@ -1,0 +1,37 @@
+{
+  "id": "char-matsumoto-riko",
+  "name": "松本 莉子",
+  "avatar": "🎤",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从幼儿园开始就是班上最大声的那个。老师说我有'领导力'，我妈说我是'不懂得收敛'。初中加入轻音部当主唱，第一次在全校面前演出时，话筒回授尖叫的那一瞬间，我找到了活着的感觉。",
+    "present": "现在我是轻音部主唱。莲弹吉他时完全沉浸的样子让我的歌词自动从嘴里流出来。凛也喜欢莲——她不肯认，但那眼神谁都看得出来。我们明明都是轻音部的人，凛是演剧部的，凭什么每次排练她都坐在第一排盯着莲看？每次看到她那个专注的眼神我就想摔话筒。"
+  },
+  "personality": { "ei": 4, "sn": -1, "tf": -2, "jp": -2 },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "话多音量足，想到哪说到哪，节奏松散但热情饱满。'超——'是口头禅，说到莲时音量自动降低一半。笑点低，但生气时整个房间都能感觉到。",
+  "relations": {
+    "char-sato-ren": { "kinds": ["classmate", "friend"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "他在台上solo时我的声音也会跟着颤抖。但他好像完全感觉不到——无论是我还是凛。" },
+    "char-takahashi-rin": { "kinds": ["classmate"], "affection": -2, "since": 0, "lastInteractionTick": 0, "note": "情敌。她演戏时那些含情脉脉的台词分明是对莲说的，别以为我看不出来。" },
+    "char-sato-mayu": { "kinds": ["classmate", "friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "莲的妹妹，贝斯手贝斯弹得不错但我跟她搞好关系的原因只有一半是音乐。" },
+    "char-tanaka-shota": { "kinds": ["classmate", "friend"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "鼓手，太爱撩女生但鼓点倒是稳得像节拍器。" }
+  },
+  "activityNodeId": "node-club-building",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true,
+  "shortTermGoal": "写一首能在学园祭上唱给莲听的新歌。",
+  "longTermGoal": "让乐队在livehouse出道。",
+  "liked": "麦克风触电感、排练后冰镇汽水灌进喉咙的刺、莲调弦时歪头的角度",
+  "disliked": "凛的'偶然'出现在排练室、沉默的尴尬、被当成小孩",
+  "impressionBook": {
+    "char-takahashi-rin": "她太漂亮又太会演了。分不清她对莲是认真的还是又一个角色扮演。",
+    "char-sato-ren": "他可能真的不知道有人在喜欢他。那种迟钝比故意的冷淡更让人抓狂。"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "id": "char-sato-ren",
+  "name": "佐藤 莲",
+  "avatar": "🎸",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小和妹妹真由一起长大，父母在东京工作，我们跟着祖母在这个街区住了十年。七岁开始弹吉他，最初是因为电视上看到摇滚乐队，后来发现待在音乐里的时候不需要和任何人说话。初中是那种在教室角落看窗外的人，不是讨厌别人，只是没什么非说不可的话。",
+    "present": "现在每天放学后去部室楼练吉他。真由说我是'天然呆'，我不太明白——我只是不觉得需要把每一个想法都说出来。凛总在排练时直勾勾地看着我，莉子会大声喊我的名字然后跑过来。我不知道该怎么回应，索性不回应。"
+  },
+  "personality": { "ei": -3, "sn": 1, "tf": 2, "jp": 1 },
+  "abilities": [],
+  "appearance": 4,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "话少句短，被动应答，不主动展开话题。偶尔开口时句子结构严谨偏逻辑，情绪词汇少。弹吉他时手指会不自觉地比划和弦。",
+  "relations": {
+    "char-sato-mayu": { "kinds": ["older_brother"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "我妹妹，有点吵，但我不讨厌。" },
+    "char-takahashi-rin": { "kinds": ["classmate", "friend"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "演剧部的主演，总来找我说话，我不讨厌她的声音。" },
+    "char-matsumoto-riko": { "kinds": ["classmate", "friend"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "轻音部主唱，嗓门很大，但吉他solo时她会安静下来。" }
+  },
+  "activityNodeId": "node-club-building",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "expenseExempt": true,
+  "shortTermGoal": "把新写的那首曲子完成。",
+  "longTermGoal": "也许有一天让吉他比说话更能表达我。",
+  "liked": "深夜练琴、旧吉他弦的触感、真由做的厚蛋烧",
+  "disliked": "被人反复问'你在想什么'、人多又吵的空间",
+  "impressionBook": {
+    "char-takahashi-rin": "她演戏时眼睛会亮起来，和平时不一样。那种变化让我好奇。"
+  }
+}

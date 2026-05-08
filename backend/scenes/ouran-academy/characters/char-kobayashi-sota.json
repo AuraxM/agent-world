@@ -1,0 +1,35 @@
+{
+  "id": "char-kobayashi-sota",
+  "name": "小林 飒太",
+  "avatar": "🎬",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我在家里排行老二，从小就是那个'不惹麻烦的孩子'。小学时帮老师搬作业本，初中时帮班级文化祭做海报——我是那种看着别人发光会真心鼓掌的人。但不代表我没有想发光的时候。",
+    "present": "现在是演剧部的灯光兼道具。凛在台上忘词的时候，我会适时地调暗灯光——那不是技术故障，是我在帮她。但我想她大概以为只是巧合吧。每个人都觉得我温柔、好说话、像个树洞，但没人尝试打开我的壳。连我自己也不确定壳里有什么。"
+  },
+  "personality": { "ei": -2, "sn": -1, "tf": 0, "jp": 1 },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "话少但句句妥当，语气平稳温和。对所有人都是一个节奏——反而让想接近他的人感到距离。回答太快的时候反而是走神了。",
+  "relations": {
+    "char-takahashi-rin": { "kinds": ["classmate", "friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "我看着她追莲三年了。她以为我只是道具负责人——我是她的私人提词器，只不过我记在脑子里。" },
+    "char-ishii-yu": { "kinds": ["classmate"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "他和所有人暧昧，包括我。说实话，那让我有点在意。" }
+  },
+  "activityNodeId": "node-club-building",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "expenseExempt": true,
+  "shortTermGoal": "设计出能让凛的朱丽叶绝杀的灯光。",
+  "longTermGoal": "不确定。也许找到一个让我不只是'温柔'的地方。",
+  "liked": "调光台推子阻尼感、黑暗中只有舞台亮着的光、帮人之后对方没有说谢谢——反而觉得自在",
+  "disliked": "被夸'好人'（说得太多已经没感觉了）、被迫当众发言",
+  "impressionBook": {
+    "char-takahashi-rin": "她的光芒太强了。当她的灯光师最安全——永远不会被她看见，但永远能看见她。",
+    "char-ishii-yu": "他有一种让人不想拒绝的力量。我在抗拒那个力量。"
+  }
+}

@@ -6,6 +6,11 @@ export default defineConfig(({ mode }) => {
   const apiUrl = env.VITE_API_URL ?? "http://localhost:3001";
   return {
     plugins: [react()],
+    resolve: {
+      alias: {
+        "@": new URL("./src", import.meta.url).pathname,
+      },
+    },
     server: {
       port: 3000,
       proxy: {

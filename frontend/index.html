@@ -1,13 +1,20 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN" class="h-full antialiased" suppressHydrationWarning>
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Agent World</title>
+    <title>agent-world · 月ノ谷</title>
+    <meta name="description" content="LLM-as-NPC 模拟世界 · 北海道の村" />
+    <script>
+      try {
+        var t = localStorage.getItem("agent-world.theme") || "light";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (_) {}
+    </script>
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="h-full flex flex-col overflow-hidden">
+    <div id="root" class="h-full flex flex-col overflow-hidden"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

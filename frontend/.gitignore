@@ -5,3 +5,10 @@ coverage/
 *.log
 .env
 .env.local
+
+# tsc -b project-references emit artifacts
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js
+vitest.config.d.ts
+vitest.config.js

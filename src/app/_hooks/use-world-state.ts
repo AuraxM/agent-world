@@ -6,7 +6,7 @@ import type { WorldEvent, Action } from "@/domain/types";
 import type { WorldSnapshot } from "../_lib/api";
 
 /** 通过 ?world=<id> 切换世界；未指定时回退到默认演示世界。 */
-const DEFAULT_WORLD_ID = "world-yu-no-tani";
+const DEFAULT_WORLD_ID: string | null = null;
 
 interface DecisionEvent {
   characterId: string;
@@ -67,6 +67,11 @@ export function useWorldState(): UseWorldState {
   const [templates, setTemplates] = useState<Array<{ id: string; name: string; avatar: string | null }>>([]);
 
   const refresh = useCallback(async () => {
+    if (!worldId) {
+      setLoading(false);
+      loadingRef.current = false;
+      return;
+    }
     loadingRef.current = true;
     try {
       const [snapRes, evRes] = await Promise.all([

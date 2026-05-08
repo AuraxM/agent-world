@@ -12,30 +12,40 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/db/client";
 import { createWorldFromConfig, type CastMember } from "@/engine/createWorld";
 
-const WORLD_ID = "world-yu-no-tani";
-const MAP_ID = "yu-no-tani";
+const WORLD_ID = "world-sakuradai";
+const MAP_ID = "sakuradai-high-school";
 
 const CAST: CastMember[] = [
-  // --- 本地人 (15) ---
-  { characterId: "char-yumori-kosuke", locationId: "node-ryokan-quarters" },
-  { characterId: "char-ogawa-saori", locationId: "node-ryokan-quarters" },
-  { characterId: "char-nakamura-yuto", locationId: "node-cafe-quarters" },
-  { characterId: "char-yamada-takafumi", locationId: "node-carpenter-house" },
-  { characterId: "char-tanimura-kinuyo", locationId: "node-store-quarters" },
-  { characterId: "char-matsuoka-sayo", locationId: "node-izakaya-quarters" },
-  { characterId: "char-suzuki-kazuo", locationId: "node-souvenir-shop-quarters" },
-  { characterId: "char-tanaka-yayoi", locationId: "node-tailor-quarters" },
-  { characterId: "char-tazaki-mamoru", locationId: "node-caretaker-house" },
-  { characterId: "char-sato-haru", locationId: "node-old-house" },
-  { characterId: "char-guji-masayuki", locationId: "node-priest-house" },
-  { characterId: "char-kishita-michiko", locationId: "node-clinic-quarters" },
-  { characterId: "char-yoshida-eiichi", locationId: "node-bus-stop" },
-  { characterId: "char-okubo-kenta", locationId: "node-farmhouse" },
-  { characterId: "char-okubo-miwa", locationId: "node-farmhouse" },
-  // --- 外来客 (2, 已融入) ---
-  { characterId: "char-shiraishi-aoi", locationId: "node-pottery-quarters" },
-  { characterId: "char-nogami-takashi", locationId: "node-annex-quarters" },
-  // 候选池 (mid-game 投放): char-wakamatsu-ren, char-takahashi-ema, char-yamane-kazuma
+  // --- 教职员工 (4) ---
+  { characterId: "char-moriyama-kenichi", locationId: "node-classroom-2a" },
+  { characterId: "char-oki-yoko", locationId: "node-sakuradai-clinic" },
+  { characterId: "char-kitagawa-shizuka", locationId: "node-library" },
+  { characterId: "char-yoshida-genji", locationId: "node-school-building-1f" },
+  // --- 小镇居民 (6) ---
+  { characterId: "char-matsushita-kohei", locationId: "node-bakery" },
+  { characterId: "char-kimura-takashi", locationId: "node-ramen-shop" },
+  { characterId: "char-tanabe-master", locationId: "node-pure-cafe" },
+  { characterId: "char-fujiwara-sensei", locationId: "node-sakuradai-clinic" },
+  { characterId: "char-inagaki-guji", locationId: "node-sakuradai-shrine" },
+  { characterId: "char-ishii-mayu", locationId: "node-convenience-store" },
+  // --- 三年级 (5) ---
+  { characterId: "char-tanaka-kakeru", locationId: "node-classroom-3a" },
+  { characterId: "char-sato-mafu", locationId: "node-club-student-council" },
+  { characterId: "char-takahashi-ren", locationId: "node-club-art" },
+  { characterId: "char-suzuki-kanon", locationId: "node-club-brass" },
+  { characterId: "char-yamada-kaito", locationId: "node-classroom-3a" },
+  // --- 二年级 (6) ---
+  { characterId: "char-nakamura-yui", locationId: "node-library" },
+  { characterId: "char-kobayashi-hayate", locationId: "node-sports-ground" },
+  { characterId: "char-ito-kotomi", locationId: "node-classroom-2a" },
+  { characterId: "char-watanabe-daichi", locationId: "node-game-center" },
+  { characterId: "char-saito-sakura", locationId: "node-classroom-2a" },
+  { characterId: "char-matsumoto-riku", locationId: "node-club-literature" },
+  // --- 一年级 (4) ---
+  { characterId: "char-takahashi-mio", locationId: "node-classroom-1a" },
+  { characterId: "char-ito-haruto", locationId: "node-gymnasium" },
+  { characterId: "char-nakamura-kaede", locationId: "node-club-art" },
+  { characterId: "char-yoshida-yuki", locationId: "node-club-brass" },
 ];
 
 function main() {
@@ -43,7 +53,7 @@ function main() {
 
   const r = createWorldFromConfig({
     worldId: WORLD_ID,
-    name: "汤之谷",
+    name: "桜台高校",
     mapId: MAP_ID,
     cast: CAST,
   });

@@ -3,10 +3,11 @@ node_modules/
 .env
 .env.local
 .DS_Store
-# Old SQLite databases that may have been left at root pre-refactor:
-agent-world.db
-agent-world.db-shm
-agent-world.db-wal
+# Old SQLite databases that may have been left at root pre-refactor
+# (leading slash so it doesn't shadow backend/data/agent-world.db):
+/agent-world.db
+/agent-world.db-shm
+/agent-world.db-wal
 # Build output (each subproject also has its own .gitignore):
 dist/
 .next/
@@ -17,3 +18,8 @@ tsconfig.tsbuildinfo
 data/
 # Claude Code local settings (per-machine, not shared)
 .claude/settings.local.json
+# Claude Code worktrees (per-machine sandboxes)
+.claude/worktrees/
+# Top-level git worktrees + skill-runtime state (per-machine):
+.worktrees/
+.superpowers/

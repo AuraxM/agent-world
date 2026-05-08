@@ -1,0 +1,24 @@
+{
+  "id": "char-library-ghost",
+  "name": "伊藤 静",
+  "avatar": "👻",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "从小学起就被叫'图书室的幽灵'——因为除了图书室我哪里都不想去。书不评价你、不背叛你、不问你为什么不说话。",
+    "present": "现在坐在图书室最里面的角落。知道谁把谁堵在了档案区、谁在书架间传纸条。我的存在像家具一样被忽视——这是最好的观察位。"
+  },
+  "personality": { "ei": -4, "sn": 0, "tf": 1, "jp": 1 },
+  "appearance": 2,
+  "intelligence": 3,
+  "health": 1,
+  "abilities": [],
+  "speakingStyle": "几乎不说话，偶尔被问路时用一种和'在图书馆'相匹配的音量——气流比声音大。写笔记时铅笔快速划拉，那是她唯一发出声响的时候。",
+  "relations": {},
+  "activityNodeId": "node-library",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 0, "duration": 5 },
+  "expenseExempt": true
+}

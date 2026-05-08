@@ -1,0 +1,26 @@
+{
+  "id": "char-class-president",
+  "name": "佐藤 真司",
+  "avatar": "👔",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "当了十一年班长。管人不是目的，被夸奖'真可靠'才是。最近对一个不能说的人产生了某种不能说出口的在意。",
+    "present": "现在每天早上把黑板擦干净。讲台左边第一支粉笔是给她的——她习惯左手写字。没有人注意到这个细节，除了我。"
+  },
+  "personality": { "ei": -1, "sn": 0, "tf": -1, "jp": 3 },
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "说话周正、敬语到位，像在念早会致辞。私下说话时突然结巴——尤其是和比自己大的人说话时。推眼镜的次数是全班第一。",
+  "relations": {
+    "char-takigawa-sensei": { "kinds": ["student"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "她说的每句话我都写在值日日志里。她抽烟时站在走廊尽头，我假装走了另一个方向——其实我全部看到了。" }
+  },
+  "activityNodeId": "node-teachers-office",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true
+}

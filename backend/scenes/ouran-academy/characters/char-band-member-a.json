@@ -1,0 +1,26 @@
+{
+  "id": "char-band-member-a",
+  "name": "小野 由佳",
+  "avatar": "🎹",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "学钢琴学了十二年，但更喜欢合成器——因为可以制造现实里没有的声音。",
+    "present": "现在在轻音部弹键盘，站在最旁边。但乐队合奏时每个人都在同一个频率——那种感觉很治愈。"
+  },
+  "personality": { "ei": -1, "sn": -1, "tf": -1, "jp": 1 },
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "话少话软，常被其他人的音量淹没。说到音乐时手指在空中比划键盘位置，整个人突然有了骨架。",
+  "relations": {
+    "char-tanaka-shota": { "kinds": ["classmate", "friend"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "他撩人像打鼓——节奏永远在变。我知道他心里有别人，但我喜欢在他旁边弹键盘。" }
+  },
+  "activityNodeId": "node-club-building",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true
+}

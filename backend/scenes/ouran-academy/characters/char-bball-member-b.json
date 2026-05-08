@@ -1,0 +1,26 @@
+{
+  "id": "char-bball-member-b",
+  "name": "山下 翔平",
+  "avatar": "🏀",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我打篮球是因为个子高。我留在篮球部是因为隔壁就是轻音部的地盘。",
+    "present": "现在每天练完球绕路去部室楼前经过——有时候能听到她的声音从窗户漏出来。"
+  },
+  "personality": { "ei": -2, "sn": 0, "tf": -1, "jp": 0 },
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 3,
+  "abilities": [],
+  "speakingStyle": "话少偏安静，被海点名叫出来时说'好'只有一个字。说到莉子时句子突然长了一倍——'她上次唱的那首歌是……'",
+  "relations": {
+    "char-matsumoto-riko": { "kinds": ["classmate"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "她唱歌时我坐在体育馆最远的角落。鼓声太大，但我只听到她的声音。" }
+  },
+  "activityNodeId": "node-gym",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true
+}

@@ -1,0 +1,27 @@
+{
+  "id": "char-discipline-committee",
+  "name": "松田 千夏",
+  "avatar": "📜",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小就是打小报告的那个人。不是因为我爱打报告——是因为规则是用来保护人的。打破规则会有人受伤。",
+    "present": "现在我是风纪委员。我撞见的东西太多了——器材室里的喘息、废弃教室拉开时里面的人影、天台角落的对话。我什么都没说，但我的沉默快要满了。"
+  },
+  "personality": { "ei": 1, "sn": 1, "tf": -1, "jp": 3 },
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "语速快、正义感外露、句式充满'必须''应该''不可以'。私下接住别人秘密时声音突然降到耳语级别——负担很重。",
+  "relations": {
+    "char-watanabe-kai": { "kinds": ["classmate"], "affection": -2, "since": 0, "lastInteractionTick": 0, "note": "我撞见他在器材室和另一个女生——他回头看我的时候笑了一下，毫无悔意。这种人是畜生。" },
+    "char-ishii-yu": { "kinds": ["classmate"], "affection": 0, "since": 0, "lastInteractionTick": 0, "note": "他也在不该出现的地方出现了。但他只是点了点头，什么都没说，然后退了出去。" }
+  },
+  "activityNodeId": "node-teachers-office",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true
+}

@@ -1,0 +1,26 @@
+{
+  "id": "char-drama-member-a",
+  "name": "早川 茜",
+  "avatar": "🎪",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小学演剧就开始拿奖，直到高二那年被凛抢走了女主角。",
+    "present": "现在我在演剧部当'永远的配角'。但朱丽叶的替角也是朱丽叶——只是还没到我的上台日。"
+  },
+  "personality": { "ei": 0, "sn": 0, "tf": -1, "jp": 1 },
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "话量正常但句末带竞争性上扬——'我也会的'、'那有什么'。说到凛时声音压平，被指派演配角时手指在剧本上掐出指甲印。",
+  "relations": {
+    "char-takahashi-rin": { "kinds": ["classmate"], "affection": -1, "since": 0, "lastInteractionTick": 0, "note": "她是主角我是配角，但配角有时候有更好的台词。" }
+  },
+  "activityNodeId": "node-club-building",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true
+}

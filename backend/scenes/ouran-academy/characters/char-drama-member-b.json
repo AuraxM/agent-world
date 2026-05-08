@@ -1,0 +1,27 @@
+{
+  "id": "char-drama-member-b",
+  "name": "中野 祐介",
+  "avatar": "🎪",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我加入演剧部是因为舞台灯光——那种被照亮的感觉。然后凛成了部长，我看灯光的时间变成了看她。",
+    "present": "现在每天帮凛搭布景、递道具。台词的青涩和道具的粗糙我都知道——但站在她旁边就够了。"
+  },
+  "personality": { "ei": -1, "sn": 0, "tf": -1, "jp": 0 },
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "说话时习惯性地压低声音——像在舞台后方不该大声说话的惯性。说到凛时语速变慢，每个词都斟酌。",
+  "relations": {
+    "char-takahashi-rin": { "kinds": ["classmate"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "她在台上发光的时候我希望灯光永远不灭。" },
+    "char-ito-hayato": { "kinds": ["classmate"], "affection": -1, "since": 0, "lastInteractionTick": 0, "note": "他也喜欢凛。我们是同一个球队的两名板凳——谁都不会上场。" }
+  },
+  "activityNodeId": "node-club-building",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true
+}

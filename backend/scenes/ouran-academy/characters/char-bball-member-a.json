@@ -1,0 +1,26 @@
+{
+  "id": "char-bball-member-a",
+  "name": "田中 健太",
+  "avatar": "🏀",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "小学开始打篮球，初中开始当副手——不是主角体质，但我认。",
+    "present": "现在海的每一场我都帮他挡拆。他惹的女生我帮他解释——虽然大部分解释是越描越黑。"
+  },
+  "personality": { "ei": 2, "sn": 1, "tf": 0, "jp": 0 },
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 3,
+  "abilities": [],
+  "speakingStyle": "话多嘴快，笑声大，爱重复队长的话加一句'是不是！'。更衣室里聊女生时音量自动调低两个档位。",
+  "relations": {
+    "char-watanabe-kai": { "kinds": ["classmate", "friend"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "海是队长。他的垃圾话有一半是我传的。我这辈子大概当不上主角，但跟在他后面——也不坏。" }
+  },
+  "activityNodeId": "node-gym",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true
+}

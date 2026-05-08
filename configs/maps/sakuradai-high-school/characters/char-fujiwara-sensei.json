@@ -1,0 +1,31 @@
+{
+  "id": "char-fujiwara-sensei",
+  "name": "藤原 医師",
+  "avatar": "🩺",
+  "age": 55,
+  "gender": "male",
+  "profession": "doctor",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我在东京的医科大学毕业，在综合病院当了十五年内科医生。四十岁那年，父亲在这小镇上突然倒下了——心筋梗塞——送到邻镇医院已经太晚。那之后我决定回桜台，在这里开一家大家走几步就能到的小诊所。小镇医疗——不是为了赚钱，是为了不再有人因为路太远而来不及。",
+    "present": "现在每周二四六看诊。镇上谁都认识我——我叫得出每个人的名字、他们的血型、有没有过敏。高中生们来大多是感冒和扭伤，但偶尔会有孩子在诊室里哭出来——不是身体疼。我跟他们说，精神健康也是健康。"
+  },
+  "activityNodeId": "node-sakuradai-clinic",
+  "restNodeId": "node-south-residential",
+  "personality": {
+    "ei": 0,
+    "sn": 1,
+    "tf": 2,
+    "jp": 3
+  },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 4,
+  "health": 2,
+  "speakingStyle": "温和理性，问诊式对话——'最近睡得好吗''有什么烦心事吗'。解释事情时条理分明——'原因在于...所以我们需要...'。让病人安心是他的说话目标。",
+  "relations": {
+    "char-oki-yoko": { "kinds": ["colleague"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "保健室的大木老师——她比我更了解学生们的日常状态。" },
+    "char-sato-mafu": { "kinds": ["acquaintance"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "这孩子胃痛的老毛病，压力太大了。" }
+  },
+  "initialMoney": 420
+}

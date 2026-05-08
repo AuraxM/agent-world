@@ -1,0 +1,34 @@
+{
+  "id": "char-moriyama-kenichi",
+  "name": "森山 健一",
+  "avatar": "👨‍🏫",
+  "age": 42,
+  "gender": "male",
+  "profession": "teacher",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我在隔壁县长大。大学读了国文学科，毕业后先在一所私立高中教了五年书，三十岁那年调到了桜台高校。结婚、生子、买房子——人生好像就这样安定下来了。妻子前年调去了东京的分公司，我们现在是周末夫妻。事情总有不如预期的时候，但教室里的孩子们让我觉得一切都还在轨道上。",
+    "present": "现在是二年级的班主任，教国語。每天早上坐电车通勤，批改作文到深夜。班里最近有不少孩子心事重重的样子——高二是一个微妙的年纪。我尽量做那个他们愿意来谈的人，不主动追问，但门一直开着。"
+  },
+  "activityNodeId": "node-classroom-2a",
+  "restNodeId": "node-takahashi-house",
+  "personality": {
+    "ei": 1,
+    "sn": -1,
+    "tf": 2,
+    "jp": 3
+  },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "话量适中，声音沉稳。说话有条理，先总后分——'这件事有三点要注意'。偶尔引用夏目漱石，然后自嘲'老头子又在说古文了'。",
+  "relations": {
+    "char-oki-yoko": { "kinds": ["colleague"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "保健室的葉子老师，经常一起讨论学生的问题。" },
+    "char-kitagawa-shizuka": { "kinds": ["colleague"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "图书馆的北川老师，安静但什么都看在眼里。" },
+    "char-yoshida-genji": { "kinds": ["colleague"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "源さん在这学校的时间比我长，尊敬他。" },
+    "char-tanaka-kakeru": { "kinds": ["teacher"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "班里最热血的家伙，把野球当命。" },
+    "char-sato-mafu": { "kinds": ["teacher"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "生徒会長，太紧绷了——希望她偶尔放松。" }
+  },
+  "initialMoney": 420
+}

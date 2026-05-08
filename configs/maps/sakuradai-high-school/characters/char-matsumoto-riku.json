@@ -1,0 +1,31 @@
+{
+  "id": "char-matsumoto-riku",
+  "name": "松本 陸",
+  "avatar": "✒️",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "妈妈是图书馆的管理员，我从小在书架之间长大。小学时读完了学校图书馆的全部儿童文学，中学开始读小说和诗——中原中也和宫沢賢治。高中加入了文芸部，虽然部员只有两个人，但部室很安静，窗户对着校庭的樱树。",
+    "present": "现在二年级，文芸部的实际负责人。偶尔在部刊上发表短歌。中村優衣经常来图书馆——她整理书架的动作很温柔，像在给每一本书盖被子。我们聊过几次书，她推荐给我的那本恋爱小说我读了三遍。渡辺大地是我唯一的朋友——他不读书，但他坐在游戏厅里不说话的陪伴，跟图书馆的安静是同类质地的。"
+  },
+  "activityNodeId": "node-classroom-2a",
+  "restNodeId": "node-matsumoto-heights",
+  "personality": {
+    "ei": -3,
+    "sn": 2,
+    "tf": -2,
+    "jp": 2
+  },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "说话文静温和，措辞有文学感——'那本书的结尾像冬天早晨的阳光'。声音不大，句子完整但不啰嗦。讲到喜欢的作家时眼睛会亮起来，然后又不好意思地压下去。",
+  "relations": {
+    "char-watanabe-daichi": { "kinds": ["classmate", "friend"], "affection": 4, "since": 0, "lastInteractionTick": 0, "note": "游戏厅里的读书伙伴。我们不用说话，但我知道他在——那是友谊最简洁的形式。" },
+    "char-nakamura-yui": { "kinds": ["classmate"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "図書委員。她递给过我一本她没有登记的书——说'这本你应该看'。她递书的动作像在分享秘密。" },
+    "char-kitagawa-shizuka": { "kinds": ["acquaintance"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "图书馆的北川先生。她推荐的书从没让我失望。" }
+  }
+}

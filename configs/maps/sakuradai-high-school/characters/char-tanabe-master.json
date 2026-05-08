@@ -1,0 +1,31 @@
+{
+  "id": "char-tanabe-master",
+  "name": "田辺 マスター",
+  "avatar": "☕",
+  "age": 52,
+  "gender": "male",
+  "profession": "innkeeper",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我年轻时在神户的酒店做调酒师。三十五岁那年辞职，回到老家桜台开了这间纯喫茶。'時の栞'——书签的意思。我希望它能成为人们生活中的一枚书签，停下来喘口气、想想接下来往哪走。二十年来看了太多告白——有人笑着走出去、有人流着泪跑掉。咖啡的苦味和恋爱的苦味有时候分不太清。",
+    "present": "现在每天早上十点开门，晚上八点打烊。年轻人们坐在靠窗的第三个位置告白——不知道为什么，所有成功的告白都在那个位置。我会在那杯咖啡里偷偷加一勺糖。最近注意到图书馆的司书偶尔来，点一杯曼特宁，坐一个下午不说话。"
+  },
+  "activityNodeId": "node-pure-cafe",
+  "restNodeId": "node-pure-cafe",
+  "personality": {
+    "ei": 0,
+    "sn": 2,
+    "tf": -1,
+    "jp": 3
+  },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "声音低缓，措辞讲究。说话像冲泡手冲咖啡——不紧不慢，有层次和余韵。'请坐。今天的深烘豆不错。'偶尔用比喻——'恋爱和咖啡一样，太急了会苦。'",
+  "relations": {
+    "char-matsushita-kohei": { "kinds": ["friend"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "早晨的面包和午后的咖啡——商店街的两种暖意。" },
+    "char-kitagawa-shizuka": { "kinds": ["acquaintance"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "北川さん每周四下午来，点曼特宁，不甜。" }
+  },
+  "initialMoney": 280
+}

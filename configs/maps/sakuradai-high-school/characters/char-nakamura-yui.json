@@ -1,0 +1,30 @@
+{
+  "id": "char-nakamura-yui",
+  "name": "中村 優衣",
+  "avatar": "📖",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小话就不多。父亲在邻镇的公司上班，母亲是全职主妇。妹妹楓比我小一岁、比我外向——她总是拉着我出门，我是那个被拉的人。小时候想当作家——写了厚厚一本童话，把家里的打印机都打坏了。上高中以后加入了図書委員会，因为整理书架比跟人说话舒服。",
+    "present": "现在二年级，図書委員。每天午休在图书馆值班。最近在悄悄写一本恋爱小说——女主角很像某人，男主角我也知道是谁。松本陸经常来图书馆借书——他读的书我都没听过，但封面很美。我们交换过几次书，他还不知道我在写什么。"
+  },
+  "activityNodeId": "node-classroom-2a",
+  "restNodeId": "node-nakamura-house",
+  "personality": {
+    "ei": -4,
+    "sn": 3,
+    "tf": -2,
+    "jp": 1
+  },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "话极少，声音轻。句子短但用词很美——'今天的天空是紫藤色的'。紧张时反复整理书或绕头发。只有讲到她正在写的小说时话才会多一点点。",
+  "relations": {
+    "char-nakamura-kaede": { "kinds": ["younger_sister"], "affection": 4, "since": 0, "lastInteractionTick": 0, "note": "妹妹。比我小一岁，画画比我说话好。我们共享一个房间，也共享沉默。" },
+    "char-matsumoto-riku": { "kinds": ["classmate"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "文芸部的松本君。他借过的书我都记得——从宫沢賢治到吉本ばなな。我们之间隔着书架的沉默，但那不是距离。" }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "char-kitagawa-shizuka",
+  "name": "北川 静",
+  "avatar": "📚",
+  "age": 35,
+  "gender": "female",
+  "profession": "librarian",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小就喜欢书多过喜欢人。大学念了图书馆学，毕业后在县立图书馆工作了八年。后来桜台高校的图书馆需要一个司书——说是缺人缺了很久。我想着学校图书馆比大图书馆安静，就来了。结果发现高中生比一般读者更需要被看见——他们来借书往往不是为了书。",
+    "present": "现在管理桜台高校的图书馆。每天早上整理还书、修补旧书、更新推荐书架。中村優衣经常来帮忙——她是个认真的孩子，在悄悄写小说。松本陸也是常客，两个人面对面坐着各自看书的样子很好看。我不说话，但我什么都看在眼里。"
+  },
+  "activityNodeId": "node-library",
+  "restNodeId": "node-matsumoto-heights",
+  "personality": {
+    "ei": -4,
+    "sn": 2,
+    "tf": 3,
+    "jp": 4
+  },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 4,
+  "health": 2,
+  "speakingStyle": "话极少，句子短而精确。只有谈到书时才愿意多说几句。用词文雅——'这本书值得你在雨天读'。观察力极强，但只说必要的话。",
+  "relations": {
+    "char-nakamura-yui": { "kinds": ["acquaintance"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "図書委員。她在悄悄写小说——我整理书架时看到了她掉落的稿纸，假装没看见。" },
+    "char-matsumoto-riku": { "kinds": ["acquaintance"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "文学少年。他和優衣在书架之间的沉默很好看。" },
+    "char-takahashi-ren": { "kinds": ["acquaintance"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "偶尔来借画册，翻书页的动作很轻。" }
+  },
+  "initialMoney": 280
+}

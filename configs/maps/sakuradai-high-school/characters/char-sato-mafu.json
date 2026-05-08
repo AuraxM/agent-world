@@ -1,0 +1,32 @@
+{
+  "id": "char-sato-mafu",
+  "name": "佐藤 真冬",
+  "avatar": "📋",
+  "age": 18,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "父亲是市议会的议员。从小被教育'佐藤家的人不能丢脸'——成绩必须第一、礼仪必须完美、必须进好的大学。我做到了。中学三年全是学級委員長，高中也进了生徒会。母亲说'真冬从来不需要人操心'。但我偶尔想知道，如果我出错了，还会被爱吗。",
+    "present": "现在三年级，生徒会長。每天早上第一个到生徒会室，整理昨天未完成的议题。最近在筹备学园祭——预算、日程、各社团的协调。田中翔经常在操场上练投球，我从校庭经过的时候会走慢一点。但我不能——我还没写完给父亲看的大学志愿书。"
+  },
+  "activityNodeId": "node-classroom-3a",
+  "restNodeId": "node-sato-house",
+  "personality": {
+    "ei": -2,
+    "sn": 1,
+    "tf": 3,
+    "jp": 4
+  },
+  "abilities": [],
+  "appearance": 4,
+  "intelligence": 4,
+  "health": 1,
+  "speakingStyle": "措辞精确、条理分明——'关于这个问题，我认为有三个角度。'在生徒会场合声音坚定，但私下说话时声量变小。胃痛时会不自觉地皱眉——'没什么，就是没吃早饭。'从不说'我觉得'，习惯说'根据分析'。",
+  "relations": {
+    "char-tanaka-kakeru": { "kinds": ["classmate"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "野球部王牌。他投球的时候操场的方向总是很热闹。我从生徒会室的窗户能看到。" },
+    "char-takahashi-ren": { "kinds": ["classmate"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "美术部部长。有时候放学后去美术室看他的画——他不说话，画在说话。感觉像在充电。" },
+    "char-oki-yoko": { "kinds": ["acquaintance"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "保健室的葉子老师。唯一一个会直接告诉我'不许再喝黑咖啡了'的大人。" }
+  },
+  "expenseExempt": true
+}

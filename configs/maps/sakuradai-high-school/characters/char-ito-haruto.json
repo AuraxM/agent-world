@@ -1,0 +1,29 @@
+{
+  "id": "char-ito-haruto",
+  "name": "伊藤 陽翔",
+  "avatar": "🏀",
+  "age": 16,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小就好动。小学是田径队，中学被篮球部的前辈拉进去——'你跳得高，来打篮球'。第一次扣篮是中学三年级——虽然是矮框练习。篮球让我快乐——那种五个人配合、球进篮筐刷的一声，比考试得满分爽多了。",
+    "present": "现在一年级，篮球部新人。每天被前辈使唤捡球和拖地板——但我不介意，因为训练结束后的十分钟自由投篮是最爽的。美桜跟我同班，她下课的时候活力四射让我也跟着精神起来。有时候我觉得她像篮球——你永远不知道下一秒她会弹去哪。"
+  },
+  "activityNodeId": "node-classroom-1a",
+  "restNodeId": "node-ito-heights",
+  "personality": {
+    "ei": 4,
+    "sn": -2,
+    "tf": -1,
+    "jp": -2
+  },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 4,
+  "speakingStyle": "声音大、精力过剩、说话像按了快进键——'前辈！我来我来！让我试试！'小狗系——热情直接，被夸奖时笑得收不住。偶尔说错话然后拼命补救。",
+  "relations": {
+    "char-takahashi-mio": { "kinds": ["classmate"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "同班的高橋——她精力比我还猛。跟她说话永远不会无聊。最近发现她哥哥是美术部部长。" }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "char-takahashi-mio",
+  "name": "高橋 美桜",
+  "avatar": "🌟",
+  "age": 16,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我是高橋家的第二个孩子。哥哥蓮比我大两岁——他不怎么说话，但从小会在我哭的时候默默把画具推到我面前。我小时候很粘他，后来发现他需要自己的空间，就学着在合适的距离看他画画。中学时我是班上的气氛制造者——不是因为我特别开朗，是因为我受不了冷场。",
+    "present": "现在一年级。放学后偶尔去部室棟偷看哥哥在不在美术室——不是在监视他，就是想知道他对谁笑了。最近发现他提到'楓'的次数变多了，但楓是个一年级的后辈——我更好奇他之前在画什么。"
+  },
+  "activityNodeId": "node-classroom-1a",
+  "restNodeId": "node-takahashi-house",
+  "personality": {
+    "ei": 3,
+    "sn": -1,
+    "tf": -1,
+    "jp": -1
+  },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "活泼元气，说话快而跳跃——话题转换像翻漫画。好奇心旺盛——'诶诶，然后呢然后呢？'特别关心哥哥的恋爱动态，嗅觉堪比恋爱侦探。",
+  "relations": {
+    "char-takahashi-ren": { "kinds": ["older_brother"], "affection": 4, "since": 0, "lastInteractionTick": 0, "note": "哥哥。世界上最不会说话的人，也是世界上画得最好的人。我比他自己还关心他有没有喜欢的人。" },
+    "char-ito-haruto": { "kinds": ["classmate"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "篮球部的伊藤君。精力太旺盛了——跟他说话像被小狗扑。" },
+    "char-nakamura-kaede": { "kinds": ["classmate"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "楓ちゃん。她看哥哥的眼神...嗯，我会留意的。" }
+  }
+}

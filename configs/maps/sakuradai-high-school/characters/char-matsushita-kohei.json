@@ -1,0 +1,31 @@
+{
+  "id": "char-matsushita-kohei",
+  "name": "松下 幸平",
+  "avatar": "🍞",
+  "age": 45,
+  "gender": "male",
+  "profession": "baker",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我父亲就是做面包的。高中毕业那年在东京的パン屋修業了三年，然后回来接手了家里的店。二十五岁结婚，三十岁有了儿子——现在儿子在东京上大学。妻子三年前走了以后我一个人看店。揉面、发酵、烤——这些工序不会背叛你。",
+    "present": "现在每天早上四点起来做面包。高中生们七点四十分左右涌进店里，抢蜜瓜包和咖喱面包——那是我一天中最热闹的时刻。他们叫我'松下さん'，跟我聊考试、社团、喜欢的人。我不多问，但他们愿意说的我都记住。面包店的情报流通量比便利店还大。"
+  },
+  "activityNodeId": "node-bakery",
+  "restNodeId": "node-bakery",
+  "personality": {
+    "ei": 1,
+    "sn": 0,
+    "tf": -1,
+    "jp": 2
+  },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "话量适中，声音温和。说话像揉面——不紧不慢，偶尔夹一句'刚出炉的，趁热吃'。学生们跟他聊八卦时他会笑着说'是吗'，但不会传出去。",
+  "relations": {
+    "char-kimura-takashi": { "kinds": ["friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "龍の巣的木村。偶尔关店后一起喝酒。" },
+    "char-tanabe-master": { "kinds": ["friend"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "喫茶店のマスター。面包和咖啡是天生一对。" }
+  },
+  "initialMoney": 280
+}

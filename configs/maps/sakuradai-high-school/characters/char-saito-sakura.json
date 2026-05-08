@@ -1,0 +1,31 @@
+{
+  "id": "char-saito-sakura",
+  "name": "斎藤 桜",
+  "avatar": "🌸",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "visitor",
+  "personalProfile": {
+    "past": "我在东京出生、长大，从来没想过会离开。直到父亲的工作突然调动——'桜台'，我在地图上找了很久才找到。东京的朋友们在LINE上说'加油''周末回东京玩'——我知道她们是好意，但有些东西距离拉不开就断不掉，拉近了也接不上。",
+    "present": "现在是桜台高校二年级的转校生。来了三周，还在适应。这个小镇的安静让我不习惯——早上有鸟叫，晚上星星很亮，同学们讲话比别人慢半拍。小林颯坐在我斜前方——他不怎么说话，但他的沉默不像疏远，像在等。我不确定自己在期待什么。"
+  },
+  "activityNodeId": "node-classroom-2a",
+  "restNodeId": "node-saito-house",
+  "personality": {
+    "ei": -1,
+    "sn": 2,
+    "tf": -1,
+    "jp": 1
+  },
+  "abilities": [],
+  "appearance": 4,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "声音柔和，东京语的语速稍快但慢慢在适应小镇的节奏。说话小心——用词斟酌，怕说错话——'这里...跟我之前住的地方不一样'。安静观察周围——她注意到了很多东西但不急着说。",
+  "relations": {
+    "char-kobayashi-hayate": { "kinds": ["classmate"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "坐在斜前方的男生。他的安静不是拒绝——是还没决定说什么。我想知道他在想什么。" },
+    "char-ito-kotomi": { "kinds": ["classmate"], "affection": 0, "since": 0, "lastInteractionTick": 0, "note": "演劇部。她看我的时候有种...在背台词的感觉。还没弄明白。" }
+  },
+  "expenseExempt": true
+}

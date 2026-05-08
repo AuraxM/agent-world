@@ -1,0 +1,34 @@
+{
+  "id": "char-tanaka-kakeru",
+  "name": "田中 翔",
+  "avatar": "⚾",
+  "age": 18,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小学三年级开始打棒球。父亲是野球部的OB，现在在町工場做事。中学时带球队打进过县大会四强——那是我最辉煌的时刻。高中进了桜台，因为这里的野球部虽然不强，但教练说'王牌可以是你'。三年级当上了王牌投手，最后一个夏天。我不想输。",
+    "present": "现在是三年级，每天都在为最后的夏季大会练习。早上五点起来跑步，放学后投球练到天黑。拉面是第二生命——龍の巣的豚骨拉面加面三次。不知道对真冬是什么感觉——她在生徒会室看文件的时候，侧脸很好看。海斗说我喜欢她，我说他胡说。"
+  },
+  "activityNodeId": "node-classroom-3a",
+  "restNodeId": "node-tanaka-house",
+  "personality": {
+    "ei": 2,
+    "sn": -2,
+    "tf": -1,
+    "jp": -1
+  },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 4,
+  "speakingStyle": "声音大、说话直。棒球术语自然地混在日常对话里——'直球胜负''变化球来了'。情绪写在脸上——高兴时咧嘴笑，紧张时抓后脑勺。说到真冬时会突然结巴。",
+  "relations": {
+    "char-sato-mafu": { "kinds": ["classmate"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "生徒会長。她看文件时侧脸很好看。我不太懂这是什么感觉。" },
+    "char-yamada-kaito": { "kinds": ["classmate", "friend"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "从小一起长大的损友。他老是笑我，但关键时刻总是他挺我。" },
+    "char-takahashi-ren": { "kinds": ["classmate"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "不怎么说话，但他画的画我看得懂——棒球的那种速度感。" },
+    "char-suzuki-kanon": { "kinds": ["classmate"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "吹奏楽部。比赛时她在看台上吹应援曲，投手丘上能听见。" },
+    "char-kimura-takashi": { "kinds": ["acquaintance"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "拉面恩人。加面三次。" }
+  },
+  "expenseExempt": true
+}

@@ -1,0 +1,31 @@
+{
+  "id": "char-kimura-takashi",
+  "name": "木村 隆",
+  "avatar": "🍜",
+  "age": 38,
+  "gender": "male",
+  "profession": "chef",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我年轻时是暴走族——这条街上的人都知道。二十岁那年差点进去，是当时一家拉面店的老板收留了我，让我在厨房洗碗。从洗碗到切菜到熬汤，我用了十年。五年前老老板走了，把店交给我。'龍の巣'的招牌，我不能让它倒了。",
+    "present": "现在每天中午开店，凌晨两点关门。棒球部的孩子们训练结束后会来吃拉面——免费加面。田中的翔那小子能吃三碗。有时候周末会有高中生在这里哭着跟我讲失恋——拉面吃完，眼泪也就停了。"
+  },
+  "activityNodeId": "node-ramen-shop",
+  "restNodeId": "node-ramen-shop",
+  "personality": {
+    "ei": 2,
+    "sn": 0,
+    "tf": -2,
+    "jp": -1
+  },
+  "abilities": [],
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 3,
+  "speakingStyle": "声音大，嗓门粗。说话直来直去——'少废话，先把面吃了'。但不经意间会说出发人深省的话——'熬汤跟做人一样，急了就不行'。用了二十年的拉面比喻。",
+  "relations": {
+    "char-matsushita-kohei": { "kinds": ["friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "パン屋の松下。他的面包和我的拉面是商店街的双璧。" },
+    "char-tanaka-kakeru": { "kinds": ["acquaintance"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "这小子的食量让我想起了二十年前的自己。" }
+  },
+  "initialMoney": 280
+}

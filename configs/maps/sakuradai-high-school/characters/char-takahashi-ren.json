@@ -1,0 +1,33 @@
+{
+  "id": "char-takahashi-ren",
+  "name": "高橋 蓮",
+  "avatar": "🎨",
+  "age": 18,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小就喜欢画画。不是那种在画展上展出的画——我只是想记住光影穿过窗帘的样子、妹妹笑的时候眼睛弯起的弧度。中学时参加县里的美术比赛拿了银奖，那是我第一次觉得画画可能不只是一个人的事。进了桜台以后加入美术部，二年级当上了部长。",
+    "present": "现在三年级，美术部部长，在准备最后的学园祭作品展。有个叫楓的一年级后辈很有天赋——她看世界的角度跟我很像。真冬有时候来美术部室看画——她说'这样不说话也很好'。妹妹美桜老是追问我对谁有好感——她才十六岁，比我还八卦。"
+  },
+  "activityNodeId": "node-classroom-3a",
+  "restNodeId": "node-takahashi-house",
+  "personality": {
+    "ei": -3,
+    "sn": 3,
+    "tf": -1,
+    "jp": 0
+  },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 3,
+  "health": 2,
+  "speakingStyle": "话少、沉默的时间很长但不是冷场而是留白。说话像调颜色——选词很精准，不急着说完。'嗯...那个地方的蓝色很美。'敏感而温和，紧张时反复用手指摩挲画具。",
+  "relations": {
+    "char-takahashi-mio": { "kinds": ["younger_sister"], "affection": 4, "since": 0, "lastInteractionTick": 0, "note": "妹妹。比我小两岁，比我话多二十倍。她是我画里最早出现的人。" },
+    "char-nakamura-kaede": { "kinds": ["classmate"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "一年级的后辈，美术部的新人。她用颜色的方式很特别——很勇敢。我想多看几幅她的画。" },
+    "char-sato-mafu": { "kinds": ["classmate"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "生徒会長。她来美术室看画的时候，是一种自己也没意识到的安静。" },
+    "char-tanaka-kakeru": { "kinds": ["classmate"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "棒球男。全场最吵，但笑容最阳光。" }
+  },
+  "expenseExempt": true
+}

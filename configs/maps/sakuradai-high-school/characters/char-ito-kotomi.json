@@ -1,0 +1,31 @@
+{
+  "id": "char-ito-kotomi",
+  "name": "伊藤 琴美",
+  "avatar": "🎭",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小就活在故事里。小时候读完童话会对着镜子演结局——我的版本永远跟书里不一样。小学五年级参加了儿童剧团，在舞台上第一次发现——比做自己更轻松的是做别人。进了桜台以后加入演劇部，二年级当了副部长。",
+    "present": "现在二年级，每天放学后在部室排练。这学期的剧目是《罗密欧与朱丽叶》——我演朱丽叶。小林颯经过部室窗外的时候，我演戏特别卖力。他是那种你想象罗密欧的时候会出现的脸——酷酷的、不说话的、但看人很认真。只是他好像在看斎藤桜。"
+  },
+  "activityNodeId": "node-classroom-2a",
+  "restNodeId": "node-ito-heights",
+  "personality": {
+    "ei": 3,
+    "sn": 2,
+    "tf": -3,
+    "jp": -2
+  },
+  "abilities": [],
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 2,
+  "speakingStyle": "说话像在念台词——表情、手势、声音的抑扬都到位。情绪表达夸张——'我的心碎成一千片了！'——但你知道她下一秒会笑。可以用三种不同的语气说同一句话。",
+  "relations": {
+    "char-kobayashi-hayate": { "kinds": ["classmate"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "小林颯。我的罗密欧——如果他能从那个转校生身上移开视线的话。他的沉默让我想用一千句台词填满。" },
+    "char-saito-sakura": { "kinds": ["classmate"], "affection": -1, "since": 0, "lastInteractionTick": 0, "note": "转校生。她什么都没做，但她的存在本身就像抢了我的台词。" },
+    "char-oki-yoko": { "kinds": ["acquaintance"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "保健室でいつも恋愛相談に乗ってくれる大人。" }
+  }
+}

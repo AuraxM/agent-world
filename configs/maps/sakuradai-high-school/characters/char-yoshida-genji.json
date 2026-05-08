@@ -1,0 +1,33 @@
+{
+  "id": "char-yoshida-genji",
+  "name": "吉田 源治",
+  "avatar": "🧹",
+  "age": 58,
+  "gender": "male",
+  "profession": "unemployed",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我在桜台高中念过书——那时候它还叫桜台高等学校，校舍是木头的。毕业以后去了建筑公司，干了三十年。四十岁那年腰坏了，没办法在工地继续干。以前的校长是我同班同学，他说'源治，来学校帮忙吧'。我就来了，一做就是十八年。烧锅炉、修桌椅、扫落叶——比起盖楼，这些小事让我更踏实。",
+    "present": "现在我每天早上五点来学校开锅炉、扫校庭。孙子悠希在一A教室上学——他是一个认真的孩子，参加了吹奏楽部。放学后我去部室棟转转，名义上是检查设备，其实就是想看他练习。学校里的孩子们叫我'源さん'，我点头算回应。不说话，但我认得每一张脸。"
+  },
+  "activityNodeId": "node-school-building-1f",
+  "restNodeId": "node-north-residential",
+  "sleepWindow": { "start": 21, "duration": 8 },
+  "personality": {
+    "ei": -3,
+    "sn": 1,
+    "tf": 2,
+    "jp": 2
+  },
+  "abilities": [],
+  "appearance": 1,
+  "intelligence": 2,
+  "health": 1,
+  "speakingStyle": "话极少，常用一两个字回答。句子简短务实——'嗯。''行。''明天修。'三十年的校务工经验让他说话像在判断天气——简洁、准确、不多话。",
+  "relations": {
+    "char-yoshida-yuki": { "kinds": ["other_relative"], "affection": 4, "since": 0, "lastInteractionTick": 0, "note": "我的孙子。他吹长笛的时候，整个体育馆都安静了。" },
+    "char-moriyama-kenichi": { "kinds": ["colleague"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "いい先生。比我在这里的时间短，但比我懂学生。" }
+  },
+  "initialMoney": 140,
+  "expenseExempt": true
+}

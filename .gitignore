@@ -15,3 +15,5 @@ coverage/
 tsconfig.tsbuildinfo
 # Stray data/ logs left by tsx-run scripts:
 data/
+# Claude Code local settings (per-machine, not shared)
+.claude/settings.local.json

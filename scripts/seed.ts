@@ -9,8 +9,8 @@
  */
 import { existsSync } from "node:fs";
 import { eq } from "drizzle-orm";
-import { db, schema } from "@/db/client";
-import { createWorldFromConfig, type CastMember } from "@/engine/createWorld";
+import { db, schema } from "@agw/db";
+import { createWorldFromConfig, type CastMember } from "@agw/systems";
 
 const WORLD_ID = "world-sakuradai";
 const MAP_ID = "sakuradai-high-school";

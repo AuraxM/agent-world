@@ -14,13 +14,6 @@ interface DecisionEvent {
   action: Action;
 }
 
-interface DoneEvent {
-  worldId: string;
-  fromTick: number;
-  toTick: number;
-  eventCount: number;
-}
-
 interface ErrorEvent {
   error: string;
   status: number;

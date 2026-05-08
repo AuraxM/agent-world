@@ -9,7 +9,7 @@ import {
   TICK_WIDTH,
   stackEventsAtTick,
 } from "./gantt-utils";
-import type { WorldEvent } from "@/types/api.generated";
+import type { Character, WorldEvent } from "@/types/api.generated";
 
 function mkEvent(overrides: Partial<WorldEvent> = {}): WorldEvent {
   return {
@@ -93,9 +93,9 @@ describe("getOtherParticipants", () => {
     const event = mkEvent({
       participants: ["char-a", "char-b", "char-c"],
     });
-    const charById = new Map([
-      ["char-b", { id: "char-b", name: "Bob" } as any],
-      ["char-c", { id: "char-c", name: "Cal" } as any],
+    const charById = new Map<string, Character>([
+      ["char-b", { id: "char-b", name: "Bob" } as Character],
+      ["char-c", { id: "char-c", name: "Cal" } as Character],
     ]);
     const others = getOtherParticipants(event, charById, "char-a");
     expect(others).toHaveLength(2);
@@ -106,10 +106,10 @@ describe("getOtherParticipants", () => {
     const event = mkEvent({
       participants: ["alice", "bob", "cal"],
     });
-    const charById = new Map([
-      ["alice", { id: "alice", name: "Alice" } as any],
-      ["bob", { id: "bob", name: "Bob" } as any],
-      ["cal", { id: "cal", name: "Cal" } as any],
+    const charById = new Map<string, Character>([
+      ["alice", { id: "alice", name: "Alice" } as Character],
+      ["bob", { id: "bob", name: "Bob" } as Character],
+      ["cal", { id: "cal", name: "Cal" } as Character],
     ]);
     // Bob's row — should exclude Bob, show Alice + Cal
     const others = getOtherParticipants(event, charById, "bob");
@@ -121,8 +121,8 @@ describe("getOtherParticipants", () => {
     const event = mkEvent({
       participants: ["char-a", "char-b", "char-x"],
     });
-    const charById = new Map([
-      ["char-b", { id: "char-b", name: "Bob" } as any],
+    const charById = new Map<string, Character>([
+      ["char-b", { id: "char-b", name: "Bob" } as Character],
     ]);
     const others = getOtherParticipants(event, charById, "char-a");
     expect(others).toHaveLength(1);
@@ -162,7 +162,7 @@ describe("getCategoryIcon", () => {
   });
 
   it("returns empty for unknown", () => {
-    expect(getCategoryIcon("unknown" as any)).toBe("");
+    expect(getCategoryIcon("unknown")).toBe("");
   });
 });
 

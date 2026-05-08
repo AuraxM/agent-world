@@ -160,7 +160,7 @@ export function ProfilePane({
   onFollow,
   isFollowing,
   epoch,
-  currentTick,
+  currentTick: _currentTick,
 }: {
   character: Character | null;
   nodes: MapNode[];

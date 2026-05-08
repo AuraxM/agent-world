@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Character, WorldEvent } from "@/types/api.generated";
+import type { Character, DialogTurn, WorldEvent } from "@/types/api.generated";
 
 const CATEGORY_COLOR: Record<string, string> = {
   social: "var(--color-pixel-accent)",
@@ -74,7 +74,7 @@ export function EventsPane({
                 )}
                 {hasTranscript && isExpanded && (
                   <div className="mt-2 p-2 bg-(--color-pixel-bg-subtle) rounded border border-(--color-pixel-border-light) text-game-sm">
-                    {ev.dialogTranscript!.map((turn: any, i: number) => {
+                    {ev.dialogTranscript!.map((turn: DialogTurn, i: number) => {
                       if (!turn) return null;
                       const speakerName =
                         charById.get(turn.speakerId)?.name ?? turn.speakerId;

@@ -52,7 +52,7 @@ export function GanttRow({
     : 0;
   const rowHeight = Math.max(60, maxTop + 54 + 12);
 
-  let sleepRanges: { left: number; width: number }[] = [];
+  const sleepRanges: { left: number; width: number }[] = [];
   if (sleepTicks.length > 0) {
     sleepTicks.sort((a, b) => b - a);
     let rangeStart = sleepTicks[0]!;

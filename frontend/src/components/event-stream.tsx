@@ -50,7 +50,7 @@ export function EventStream({
 
   const setDensityWithPersist = (d: Density) => {
     setDensity(d);
-    try { localStorage.setItem("agent-world.stream-density", d); } catch {}
+    try { localStorage.setItem("agent-world.stream-density", d); } catch { /* intentionally empty: storage unavailable, fall back to in-memory state */ }
   };
 
   // Find followed character

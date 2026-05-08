@@ -21,7 +21,7 @@ export function TreeSidebar({
   onJumpToNode,
   onSelectCharacter,
   templates,
-  onPlace,
+  onPlace: _onPlace,
   disabled,
 }: {
   nodes: MapNode[];

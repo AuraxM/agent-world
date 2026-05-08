@@ -1,4 +1,4 @@
-import type { Character, Relation } from "@/types/api.generated";
+import type { Character } from "@/types/api.generated";
 import type { ObjectiveRelationKind } from "@/types/api.generated";
 
 export interface GraphNode {

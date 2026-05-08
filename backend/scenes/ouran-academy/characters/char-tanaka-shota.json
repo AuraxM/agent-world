@@ -1,0 +1,36 @@
+{
+  "id": "char-tanaka-shota",
+  "name": "田中 翔太",
+  "avatar": "🥁",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "从初中起我就发现——逗女生笑比考高分简单一百倍。她们笑得越多，气氛就越轻，而我就越不需要想那些重的、闷的东西。打鼓也是——节奏是唯一不需要理由的语言。",
+    "present": "现在是轻音部鼓手兼京子的编辑。编辑的意思是：我催她交稿，她发给我那些写满了欲望的文字让我排版。每次打开那个文档我的脸都会发烫——她写的东西会让任何成年人都脸红。而她只是坐在文艺部桌子对面，一脸'怎么了'的表情。我不知道的是她在网上就是那个'京香老师'——那个我追了两年、每次更新都激动得睡不着的作者。"
+  },
+  "personality": { "ei": 3, "sn": -1, "tf": 0, "jp": -2 },
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 3,
+  "abilities": [],
+  "speakingStyle": "话多节奏跳跃，句子间夹着笑声和'嘛''啊'。调情时用反问句和假设句——'如果我说我喜欢你，你会怎么办'。说到鼓和音乐时突然认真，句子变短变密。",
+  "relations": {
+    "char-suzuki-kyoko": { "kinds": ["classmate", "friend"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "她写得那么好，我却不知道自己想要的是她还是她写出来的世界。" },
+    "char-matsumoto-riko": { "kinds": ["classmate", "friend"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "主唱的爆发力是认真的。但她眼里只有莲——可怜的莲，被两个女生同时盯着。" },
+    "char-kato-miuzuki": { "kinds": ["classmate"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "漂亮的新面孔。但海已经标记了——算了，不值得为女生和队长闹。" }
+  },
+  "activityNodeId": "node-club-building",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 23, "duration": 7 },
+  "expenseExempt": true,
+  "shortTermGoal": "搞清楚编辑京子的小说时那种心跳加速到底是因为文字还是因为人。",
+  "longTermGoal": "成为一名录音室鼓手。不用面对观众。",
+  "liked": "踩镲上铜片的反光、女生的耳垂在阳光下是半透明的、京子小说更新通知",
+  "disliked": "沉默超过十秒、认真的话题、被问到'你是认真的吗'",
+  "impressionBook": {
+    "char-suzuki-kyoko": "她坐在那里像一幅画。但我帮她的文字排版时看到的东西不像画——像火。",
+    "char-kato-miuzuki": "她有一种不属于这里的气质。像一直看向别处。"
+  }
+}

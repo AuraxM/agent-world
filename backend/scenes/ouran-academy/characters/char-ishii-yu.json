@@ -1,0 +1,36 @@
+{
+  "id": "char-ishii-yu",
+  "name": "石井 优",
+  "avatar": "🍂",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "从小学起我就发现——男生和女生看我的眼神不一样，但都不讨厌。不加入社团不是因为懒，是因为一旦加入就会属于某个圈子，而我不喜欢被标签。我喜欢流窜——从体育馆的更衣室到图书室的角落，从食堂的热闹到天台的风。",
+    "present": "现在是归宅部——或者说，全社团的外部成员。每个人都有需要独处的时候，而我就是那个独处时他们在身边的人。海约我打一对一篮球，京子给我看她没发出去的草稿，小林在派对我旁边不说话。我不追任何人，也不逃跑。这种自由，很有意思。"
+  },
+  "personality": { "ei": 0, "sn": -3, "tf": -1, "jp": -3 },
+  "appearance": 3,
+  "intelligence": 3,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "用词柔软、句末常留空——一个'嘛'或一个停顿，给对方填进来的空间。情绪词丰富——'有意思''好舒服''让人心动'。说话时眼神游走——看天、看手指、看门，偶尔才看人，一看就让人觉得特殊。",
+  "relations": {
+    "char-watanabe-kai": { "kinds": ["classmate", "friend"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "他以为我是他可以完全不防备的少数人之一。其实他忘了——不防备的时候才最容易被击中。" },
+    "char-kobayashi-sota": { "kinds": ["classmate"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "他太习惯当背景了。某次我故意站在聚光灯下，让他不得不正视——他的反应比我想象的有趣。" },
+    "char-kato-miuzuki": { "kinds": ["classmate", "friend"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "同为局外人。但我们选择边缘的原因完全不同。" }
+  },
+  "activityNodeId": "node-courtyard",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 0, "duration": 6 },
+  "expenseExempt": true,
+  "shortTermGoal": "帮海和隼人别在感情上做蠢事——好吧，至少看他们做蠢事时我能笑。",
+  "longTermGoal": "不要成为任何人的'唯一'。那太重了。",
+  "liked": "秋天下午三点校园里的光线、谁都没去过的屋顶角落、一个人喝咖啡时杯子触碰桌面的声音",
+  "disliked": "被问'你到底喜欢男生还是女生'、被要求表态。",
+  "impressionBook": {
+    "char-kobayashi-sota": "他不知道自己有让人想保护又让人想破坏的特质。那种温柔是铠甲也是陷阱。",
+    "char-watanabe-kai": "他太习惯被爱了，而且从不怀疑。这种自信很有魅力，但也让人想打破它。"
+  }
+}

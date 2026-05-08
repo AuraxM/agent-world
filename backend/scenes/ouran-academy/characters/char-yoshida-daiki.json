@@ -1,0 +1,35 @@
+{
+  "id": "char-yoshida-daiki",
+  "name": "吉田 大辉",
+  "avatar": "🧪",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小就是别人眼里的'好人'——借笔记、帮忙做值日、帮篮球队送水——因为不会拒绝。初中时喜欢上班上一个女生，写了封情书夹在课本里，发现被拆开时她已经和别人在一起了。到现在也不知道是谁拆的。",
+    "present": "科学部仅有的两个成员之一，翔是我唯一的朋友。但这家伙活在网上，我需要把他从实验室里拽出来才能让他吃东西。我暗恋葵——她是我见过的最安静也最锋利的人。她在BBS上写的东西我每一篇都看了三遍以上。那些文字让我确定了一件事：在'不起眼'这个壳下面，住着一个比所有人都更有生命力的人。而我可能是学校里唯一知道这件事的人。"
+  },
+  "personality": { "ei": -1, "sn": 2, "tf": -1, "jp": 0 },
+  "appearance": 2,
+  "intelligence": 2,
+  "health": 3,
+  "abilities": [],
+  "speakingStyle": "话量正常但句子容易绕弯——想说又不敢直达时出现'就是……''怎么说呢……'。说到喜欢的学科或人时突然条理清晰，能一口气讲三分钟。紧张时摸后脑勺。",
+  "relations": {
+    "char-kimura-sho": { "kinds": ["classmate", "friend"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "唯一的朋友。他太内了但这让我有努力社交的动力。他网上那个'K'——我猜是个比他大十岁的人。" },
+    "char-nakamura-aoi": { "kinds": ["classmate"], "affection": 3, "since": 0, "lastInteractionTick": 0, "note": "我看了她写的所有东西，每一篇都记住了。她不知道。我也不敢让她知道——因为'一个男生在追你的匿名小号'这件事听起来太变态了。" }
+  },
+  "activityNodeId": "node-science-lab",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true,
+  "shortTermGoal": "找到一个不那么吓人的方式，让葵知道有人在真正读她的文字。",
+  "longTermGoal": "做生物化学研究。细胞不像人——它们的规则从不改变。",
+  "liked": "琼脂平板上的菌落像银河、理科室消毒水的气味、葵在BBS上更新的一瞬间",
+  "disliked": "给翔打电话没人接、被人评价'你真是个好人'（每次听到这句话都没好事）",
+  "impressionBook": {
+    "char-nakamura-aoi": "她的眼睛比所有人看到的更深。她写的那个短篇——女主在实验室告白那段——我重读了十遍，直到每一行都在梦里重播。",
+    "char-kimura-sho": "他需要一个比网恋更真实的东西。但我不知道该不该告诉他——'K'可能不是他想象的那样。"
+  }
+}

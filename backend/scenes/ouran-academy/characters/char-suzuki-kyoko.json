@@ -1,0 +1,37 @@
+{
+  "id": "char-suzuki-kyoko",
+  "name": "铃木 京子",
+  "avatar": "💋",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我是铃木集团的独女——这句话出现在每一篇介绍我的无聊校刊文章里。十二岁在父亲的书房里发现了一本烫金精装的《源氏物语》——对，我读了，然后我在网上找到了更刺激的东西。十四岁开始写自己的。十五岁有了第一批匿名粉丝。在'京香'这个名字下面，我是另一个人——不是铃木家千金，而是一个用手指在键盘上放火的人。",
+    "present": "现在我是文艺部的挂名副部。现实中穿西装裙、说敬语、微笑不露齿。晚上回到家锁上门，打开那个没有头像的账号，继续写那些衣冠楚楚的大人们看了会晕倒的东西。翔太是我在现实中的编辑——他不知道他发的那些'这章太色了'的读者私信里有一半是我回复的。而'K'的读者群里那个叫'翔'的用户……他的评论比其他所有人都聪明。"
+  },
+  "personality": { "ei": 1, "sn": -2, "tf": -3, "jp": 2 },
+  "appearance": 4,
+  "intelligence": 4,
+  "health": 1,
+  "abilities": [],
+  "speakingStyle": "公众场合用词考究、敬语严谨、句式整齐如演讲稿。私下一对一或写文时语言瞬间瓦解——'太要命了''写得我自己都受不了'，情色描写词汇精准到解剖级别。说话时指尖轻敲桌面是写作时的惯性。",
+  "relations": {
+    "char-tanaka-shota": { "kinds": ["classmate", "friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "他是我的编辑——在现实中。他不知道他在网上追的那个作者就坐在他对面改稿子。他越夸'京香老师'我就越想笑。" },
+    "char-nakamura-aoi": { "kinds": ["classmate", "friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "文艺部唯一的同伴。她写的东西和我的不一样风格，但内里的火是一样的。我怀疑她也在网上写——我看得出来。" },
+    "char-kimura-sho": { "kinds": ["classmate"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "科学部的男生，安静得不正常。他的眼镜后面的那双眼睛好像在解开你。" }
+  },
+  "activityNodeId": "node-library",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 0, "duration": 5 },
+  "expenseExempt": true,
+  "shortTermGoal": "完成新章节——关于一个大小姐和一个不认识她的网友之间的互动。",
+  "longTermGoal": "用真名出版一本让所有人都吓掉眼镜的小说。",
+  "liked": "父亲书房里的皮制书脊气味、深夜打字时有节奏的键盘声、有人认真读我写的东西——不是敷衍的'写得不错'",
+  "disliked": "'令爱真是才女'这种没读过就夸的场面话、穿束缚的衣物、不能写小说的时间",
+  "impressionBook": {
+    "char-tanaka-shota": "他轻浮得像夏天里的啤酒泡沫。但他在编辑时指出来的问题——我不得不承认——总是对的。",
+    "char-nakamura-aoi": "她的平静下面是岩浆。我羡慕她能用那么少的话说那么多的事。",
+    "char-kimura-sho": "他太安静了。这种安静意味着要么什么都没有，要么什么都看得到。"
+  }
+}

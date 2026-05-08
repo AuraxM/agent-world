@@ -1,0 +1,36 @@
+{
+  "id": "char-kato-miuzuki",
+  "name": "加藤 美月",
+  "avatar": "🌙",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我在北海道长大，三个月前因为父亲工作调动搬来。之前的学校很小，一个年级只有两个班，每个人都认识每个人。那里有一个我花了两年才学会在他面前不用深呼吸的男生。但我搬走了，我们之间什么都没发生。也许那就是我搬来这里的原因——在新地方，我可以不再重蹈覆辙。",
+    "present": "现在我在这里。一个没有社团、没有圈子、没有过去的转校生。每个人看我的眼神都带着好奇和一丝审视——'她会加入哪一边'。海是第一个跟我搭话的男生，他的眼神很直接，像太阳，而我习惯了阴影。我不讨厌他，但我不想只是'队长的下一个女生'。优是另一个频道——他的话很少，但每句话都像早就知道我会怎么回答。"
+  },
+  "personality": { "ei": -1, "sn": -2, "tf": 0, "jp": 2 },
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 3,
+  "abilities": [],
+  "speakingStyle": "话少但不被动——用沉默选择。'嗯'和'可能'用得较多，语气平淡但有重量。说到北海道的雪时眼睛突然变亮，句子变长，像一段封存的记忆解冻了。",
+  "relations": {
+    "char-watanabe-kai": { "kinds": ["classmate"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "他像一只人形金毛犬——精力旺盛、不设防、觉得全世界都该喜欢他。问题是从什么时候我开始觉得这不是讨厌。" },
+    "char-ishii-yu": { "kinds": ["classmate", "friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "唯一一个不问我'习惯新学校了吗'的人。" },
+    "char-yamada-asuka": { "kinds": ["classmate"], "affection": 0, "since": 0, "lastInteractionTick": 0, "note": "她看我像看一份数据表——输入→处理→结论。我不喜欢被分析。" }
+  },
+  "activityNodeId": "node-library",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true,
+  "shortTermGoal": "在新学校找到一个属于自己的位置——不是被分配的，是自己找的。",
+  "longTermGoal": "不再因为搬家就放弃一切。",
+  "liked": "陌生城市的公交路线、图书馆窗边第三个座位、新买的白色帆布鞋",
+  "disliked": "'你习惯这里了吗'这个问题、海身边那群女生的审视目光",
+  "impressionBook": {
+    "char-watanabe-kai": "他太亮了。待在他旁边会被晒伤。但我发现自己最近开始没有挪开。",
+    "char-ishii-yu": "他是这个陌生校园里第一个让我觉得'或许这里也可以'的坐标。"
+  }
+}

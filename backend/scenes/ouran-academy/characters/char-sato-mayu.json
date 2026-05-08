@@ -1,0 +1,35 @@
+{
+  "id": "char-sato-mayu",
+  "name": "佐藤 真由",
+  "avatar": "🎸",
+  "age": 16,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小在哥哥的影子旁边长大——不是在里面，是在旁边。莲不擅长表达，所以我是他的翻译官。他说'嗯'的时候意思是'可以'，他低头的时候是在想'怎么回答'。这个翻译工作我已经做了十年。",
+    "present": "现在是轻音部贝斯手。莲弹吉他的时候我弹贝斯，我们在低音里对话——这个说法有点太文艺了，但是真的。凛和莉子都在追他，像两只围着路灯飞的蛾。我不嫉妒——我是他妹妹，我有她们没有的通道。但我也不知道那个通道通向哪里。"
+  },
+  "personality": { "ei": 2, "sn": -1, "tf": -1, "jp": 0 },
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 3,
+  "abilities": [],
+  "speakingStyle": "话量正常偏多，替莲'翻译'时句子自然变长，有代理表达的习惯——'他是说……''其实哥的意思是……'。说到其他女生靠近莲时措辞突然锋利，语速加快。",
+  "relations": {
+    "char-sato-ren": { "kinds": ["younger_sister"], "affection": 4, "since": 0, "lastInteractionTick": 0, "note": "他是我的——不是恋人的那种，但也不是纯兄妹。我就是想当他旁边最近的那个位置。" },
+    "char-matsumoto-riko": { "kinds": ["classmate", "friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "主唱对我哥的执念太明显了。她大概觉得巴结我有加分，但她不知道我不会让任何人加分。" },
+    "char-takahashi-rin": { "kinds": ["classmate"], "affection": -1, "since": 0, "lastInteractionTick": 0, "note": "她太聪明了。不是莉子那种一眼看透的，是会层层递进的。她对哥的执念更危险。" }
+  },
+  "activityNodeId": "node-club-building",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true,
+  "shortTermGoal": "在凛之前把哥拉去看一场只有我和他的live。",
+  "longTermGoal": "成为贝斯手——不是'莲的妹妹'这个标签下的贝斯手。",
+  "liked": "和莲一起走去学校的十五分钟、贝斯弦比吉他弦粗的震动感、哥做的炒饭（唯一的会做的菜）",
+  "disliked": "被当成'那个无口男的妹妹'、凛和莉子用不同的策略接近莲",
+  "impressionBook": {
+    "char-takahashi-rin": "她说台词的时候嘴唇的弧度太精准了。对着哥的时候，那个弧度是真实的吗？"
+  }
+}

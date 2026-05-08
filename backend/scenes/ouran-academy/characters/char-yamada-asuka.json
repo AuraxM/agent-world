@@ -1,0 +1,35 @@
+{
+  "id": "char-yamada-asuka",
+  "name": "山田 明日香",
+  "avatar": "📋",
+  "age": 17,
+  "gender": "female",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我六岁开始记日记，十二岁开始记别人。不是有意——只是观察之后再写下来比较安全，像把观察到的世界关进一个有格子的笼子里。初中当了排球队的经理，发现用数据理解人是我的天赋。",
+    "present": "现在是篮球部经理。我的笔记本里有每个人的投篮命中率、体力曲线、受伤记录——还有感情八卦。海和至少三个女生纠缠不清，隼人陷在一个他永远不会得到的青梅竹马里，第三排的替补队员正在暗恋轻音部的主唱。我都记着。我自己对海有好感这件事我也记了——在最后一页，用铅笔，方便擦掉。"
+  },
+  "personality": { "ei": -1, "sn": 1, "tf": 2, "jp": 3 },
+  "appearance": 2,
+  "intelligence": 3,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "有条理，先总后分——'主要有三个问题。第一……第二……第三……'。分析别人时冷静克制如报告，但说到海时句子突然断掉然后转移话题。笔尖点纸声是她的标点符号。",
+  "relations": {
+    "char-watanabe-kai": { "kinds": ["classmate"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "我在场上给他递毛巾的次数比给任何人多。他什么都没注意到——这是好事。" },
+    "char-ito-hayato": { "kinds": ["classmate", "friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "唯一一个会认真看我的数据统计的人。他的暗恋对象是个悲剧——我看过那女生的眼动向，零概率。" },
+    "char-kato-miuzuki": { "kinds": ["classmate"], "affection": -1, "since": 0, "lastInteractionTick": 0, "note": "她是海的新兴趣。我看了她和海对话时的身体角度——她在后退，他在前进。这不一样。" }
+  },
+  "activityNodeId": "node-gym",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true,
+  "shortTermGoal": "让海知道她配不上他——这比他喜欢上我容易。",
+  "longTermGoal": "去体育大学学运动科学，用数据分析改变运动员的生涯。",
+  "liked": "新笔记本翻开第一页的触感、比赛结束后更衣室里安静下来只剩汗味和水声、一个数据刚好解释一切的那个瞬间",
+  "disliked": "海带新女生出现在体育馆、别人碰我的笔记本",
+  "impressionBook": {
+    "char-watanabe-kai": "他投三分时手腕的角度是完美的。他的感情世界是混乱的。我只关心第一个部分——至少我是这样告诉自己的。"
+  }
+}

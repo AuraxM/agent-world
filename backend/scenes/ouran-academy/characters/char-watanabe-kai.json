@@ -1,0 +1,36 @@
+{
+  "id": "char-watanabe-kai",
+  "name": "渡边 海",
+  "avatar": "⛹️",
+  "age": 17,
+  "gender": "male",
+  "profession": "student",
+  "origin": "local",
+  "personalProfile": {
+    "past": "我从小学就是体育特长生——不是因为跑得快，是因为站在操场上的时候，所有人都看着我。那种感觉比考满分更真实。初中拿了全县MVP，身边开始有女生送水送毛巾。我没拒绝过——为什么要拒绝？她们乐意，我也享受。父亲说我浮躁，我说他是嫉妒。",
+    "present": "现在我是篮球部队长。部员服我，教练信我，女生们——嗯，她们有各自的用法。但最近有个新面孔出现了：美月，转校生，看我的眼神和所有人都不一样。不是崇拜，是审视。那种眼神让我有点烦，也有点在意。明日香又在场边用那双什么都看得见的眼睛盯着我，烦死了。"
+  },
+  "personality": { "ei": 3, "sn": 1, "tf": 1, "jp": -2 },
+  "appearance": 4,
+  "intelligence": 2,
+  "health": 4,
+  "abilities": [],
+  "speakingStyle": "话多音量足，陈述句都是命令式——'你该去''给我传球'。对女生的甜言和队友的吼叫之间切换速度极快。身体接触频繁——说话时习惯拍肩、推肩、揽肩。",
+  "relations": {
+    "char-ito-hayato": { "kinds": ["classmate", "friend"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "最好的副手。但他对那个红头发女生的痴情让我想打他一顿让他清醒。" },
+    "char-yamada-asuka": { "kinds": ["classmate"], "affection": 1, "since": 0, "lastInteractionTick": 0, "note": "队里的经理，她的记事本里肯定写满了我的黑料。但球队离不开她的观察力。" },
+    "char-kato-miuzuki": { "kinds": ["classmate"], "affection": 2, "since": 0, "lastInteractionTick": 0, "note": "新来的。她不像那些主动送上来的女生——她退后一步看我，像在评估。这很新鲜。" }
+  },
+  "activityNodeId": "node-gym",
+  "restNodeId": "node-residential",
+  "sleepWindow": { "start": 22, "duration": 8 },
+  "expenseExempt": true,
+  "shortTermGoal": "带队打进全国大赛。顺便搞清楚美月到底在想什么。",
+  "longTermGoal": "拿到大学的体育奖学金，离开这个城市。",
+  "liked": "突破防守那一瞬间的快感、赛后冷水从头顶浇下、女生身上不同的香水味",
+  "disliked": "输球、被摸透、被人拿'之前那个女生'的事说事",
+  "impressionBook": {
+    "char-kato-miuzuki": "她不笑的时候嘴唇微抿，像在憋一个我不配听的笑话。",
+    "char-yamada-asuka": "全队唯一敢当面叫我'人渣'的人。这让我觉得她说的可能是对的。"
+  }
+}

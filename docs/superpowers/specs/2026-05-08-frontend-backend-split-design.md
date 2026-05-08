@@ -123,11 +123,16 @@ agent-world/
 - 后端 `tick` 走 SSE 长连接；Vite 默认 proxy 支持 SSE，无需额外配置。
 
 ### 3.3 类型契约（codegen）
-- **单一信源**：`backend/src/domain/{types,enums,schemas}.ts`（zod）。
-- **工具**：`zod-to-ts`（用户选定）。
-- **入口脚本**：`backend/scripts/generate-types.ts`，输出到 `frontend/src/types/api.generated.ts`。
-- **产物文件**：自包含、零运行时依赖；头部加注释 `⚠️ AUTO-GENERATED ... Do not edit by hand`；**签入 git** 作为版本化 API 契约。
-- **常量同步**：`enums.ts` 中的非类型 export（如 `TICKS_PER_HOUR = 5`）一并由 codegen 拷贝到产物文件，前端继续 `import { TICKS_PER_HOUR }` 使用。
+- **单一信源**：`backend/src/domain/types.ts`（纯 TS interface/type）+ `backend/src/domain/enums.ts`（`as const` 数组、字面量联合、值常量）。这两个文件全是 TS-native，**与 `schemas.ts`（zod）无关**——前端不消费 zod schemas。
+- **工具**：`tsc --emitDeclarationOnly` + 一段 ~50 行的 Node 合并脚本。`typescript` 已是 backend dep，**不引入新的 npm dep**。
+- **入口脚本**：`backend/scripts/generate-types.ts`，流程：
+  1. 调 `tsc --emitDeclarationOnly --outDir <tmp> src/domain/types.ts src/domain/enums.ts`，得到 `<tmp>/types.d.ts` 与 `<tmp>/enums.d.ts`。
+  2. 读两份 `.d.ts`，移除其中的 `import` 语句（types.d.ts 会有 `import type { ... } from "./enums"`，因为合并后 enums.ts 内容已并入同一文件，import 必须删）。
+  3. 串接顺序：先 enums 内容、后 types 内容（types 引用 enums，被引用者要先声明）。
+  4. 加头部注释 `⚠️ AUTO-GENERATED from backend/src/domain/{types,enums}.ts. Run \`pnpm gen:types\` from repo root to regen. Do not edit by hand.`。
+  5. 写出到 `../frontend/src/types/api.generated.ts`。
+- **常量值 export**：`enums.ts` 里的非类型 export（如 `export const TICKS_PER_HOUR = 5`、`export const NODE_TAGS = [...] as const`、`export const PROFESSION_INCOME_TIERS: Record<string, number> = {...}`）需要在前端**作为运行时值**使用——但 `tsc --emitDeclarationOnly` 只产生 `.d.ts`（仅声明，无实现）。所以 generate-types.ts 还要做第 6 步：从 `enums.ts` 源文件中**额外提取所有 `export const` 声明**（regex 或简单 AST），把它们的实现一并附在产物末尾。这样产物既是类型也是值。
+- **产物文件**：自包含、零运行时依赖、是单一 `.ts` 文件（不是 `.d.ts`）；**签入 git** 作为版本化 API 契约。
 - **漂移检查**：`backend/scripts/check-types-fresh.ts` 跑 `gen:types` 后比对 `git diff --exit-code frontend/src/types/api.generated.ts`；非空即报错。
 
 ### 3.4 样式与测试
@@ -298,9 +303,9 @@ agent-world.db*
 - 验证：`pnpm --dir backend lint && pnpm --dir backend test` 全绿；`pnpm dev:backend` 起来，`curl localhost:3001/api/worlds` 返回。
 
 **Step 1.4 — 接通 codegen 管线**
-- 写 `backend/scripts/generate-types.ts`：`zod-to-ts` 读 `backend/src/domain/{schemas,types,enums}.ts`，输出 `../frontend/src/types/api.generated.ts`，含警告头。
+- 写 `backend/scripts/generate-types.ts`：调用 `tsc --emitDeclarationOnly` 生成 `types.d.ts` + `enums.d.ts`，移除内部 `import`、串接（enums 在前 types 在后）、从 `enums.ts` 源文件提取 `export const` 实现并附在末尾、加警告头，写到 `../frontend/src/types/api.generated.ts`。详见 §3.3。
 - 写 `backend/scripts/check-types-fresh.ts`：跑 codegen 后 `git diff --exit-code` 该产物，非零即失败。
-- 跑 `pnpm gen:types`，对比与 step 1.2 手写打底版差异；以生成版为准。前端缺类型则回 backend 加 export/schema。
+- 跑 `pnpm gen:types`，对比与 step 1.2 手写打底版差异；以生成版为准。前端缺类型则回 backend 加 export。
 - 后续 CI 系统接入时调用 `check-types-fresh.ts`。
 
 **Step 1.5 — 写根 `package.json` + `scripts/run-parallel.mjs`**
@@ -334,7 +339,7 @@ Phase 0 与 Phase 1 在**同一分支**进行；Phase 1 内部可拆多个原子
 
 | 风险 | 影响 | 缓解 |
 |---|---|---|
-| `zod-to-ts` 生成的类型与手写 `domain/types.ts` 不一致（zod 描述能力有限） | 前端类型不可用 | step 1.4 对比阶段以生成版为准；缺失字段回 backend domain 补 schema/export；最坏情况 fall back 到手写产物 + 一致性 lint |
+| `tsc --emitDeclarationOnly` 生成的 `.d.ts` 在 inline 跨文件 import 后语法不合法（如 `import type` 路径丢失导致符号找不到） | codegen 产物前端无法 build | generate-types.ts 实现时先在临时目录跑通 tsc，再做合并；step 1.4 完成后用 `tsc --noEmit` 在 `frontend/` 上验证产物可被消费 |
 | Drizzle migrations 路径调整破坏现有迁移记录 | DB 状态错乱 | 不改迁移文件内容，只改 `drizzle.config.ts` 的 `out`；先在副本 db 上验证 `db:migrate` 幂等 |
 | `scenes/<pack>/` 路径调整漏改某个动态加载点 | 地图包加载失败 | 全仓库 grep `'maps/'` 字面量；`backend/src/config/{loader,mod-loader,event-loader}.ts` 三个文件重点 review |
 | Vite SSE proxy 与 Next rewrite 行为微差异 | tick 推送中断 | step 1.6 验证清单包含手动跑一次 tick 看 SSE 能否正常推 |
@@ -354,7 +359,7 @@ Phase 0 与 Phase 1 在**同一分支**进行；Phase 1 内部可拆多个原子
 | 5 | 根 `package.json` | (β) 极薄编排器，不持依赖、非 workspace |
 | 5b | 内容目录命名 | `backend/scenes/<scene-id>/`（原 `configs/maps/<pack>/`） |
 | 6 | 迁移序列 | Phase 0（清死代码）→ Phase 1（主重构），同一分支单 PR |
-| 7 | codegen 工具 | `zod-to-ts` |
+| 7 | codegen 工具 | (B) `tsc --emitDeclarationOnly` + 自家合并脚本（无新 dep）。原选 `zod-to-ts` 在 plan 阶段被否：前端消费的是 `types.ts`/`enums.ts` TS-native 内容，`schemas.ts` 的 zod 与前端无关。 |
 | 8 | 路由库 | `react-router-dom` |
 | 9 | 测试 DOM 环境 | `jsdom` |
 | 10 | TS path alias | 不用，全部相对路径；ESLint 边界用 `no-restricted-paths` |

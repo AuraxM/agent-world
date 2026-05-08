@@ -1,8 +1,0 @@
-{
-  "id": "sakuradai-high-school",
-  "name": "桜台高校",
-  "description": "以桜台高校为中心的小镇。JR车站前的商店街、河边的樱花道、神社的石阶——青春在这里开始，也在这里结束。",
-  "language": "zh",
-  "startDate": "2026-04-07T08:00:00",
-  "actions": "actions.js"
-}

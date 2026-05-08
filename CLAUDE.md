@@ -34,7 +34,6 @@ pnpm gen:types        # Regenerate frontend/src/types/api.generated.ts
 pnpm check:types-fresh # CI guard: fail if codegen output is stale
 pnpm db:migrate       # Drizzle migrations on backend/data/agent-world.db
 pnpm db:reset         # Reset DB then re-migrate
-pnpm seed             # Seed data via backend/scripts/seed.ts
 
 # Or work in a subproject directly:
 cd frontend && pnpm dev

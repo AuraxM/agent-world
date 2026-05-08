@@ -12,7 +12,6 @@
     "lint": "eslint .",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:reset": "tsx scripts/db-reset.ts && tsx src/db/migrate.ts",
-    "seed": "tsx scripts/seed.ts",
     "gen:types": "tsx scripts/generate-types.ts",
     "check:types-fresh": "tsx scripts/check-types-fresh.ts"
   },

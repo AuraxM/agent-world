@@ -20,7 +20,6 @@
     "check:types-fresh": "pnpm --dir backend run check:types-fresh",
     "db:migrate":    "pnpm --dir backend run db:migrate",
     "db:reset":      "pnpm --dir backend run db:reset",
-    "seed":          "pnpm --dir backend run seed",
     "install:all":   "pnpm --dir backend install && pnpm --dir frontend install"
   }
 }

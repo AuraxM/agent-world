@@ -16,7 +16,6 @@ Each side has its own `package.json` / `pnpm-lock.yaml` / `node_modules` / tooli
 ```
 pnpm install:all   # install deps in both frontend/ and backend/
 pnpm db:migrate    # set up backend SQLite database
-pnpm seed          # seed the example scene
 pnpm dev           # run both servers concurrently
 ```
 
@@ -33,7 +32,7 @@ Open http://localhost:3000/admin.
 | `pnpm build` | Production build of both sides |
 | `pnpm gen:types` | Regenerate `frontend/src/types/api.generated.ts` from `backend/src/domain/{types,enums}.ts` |
 | `pnpm check:types-fresh` | Fail if the generated types file is stale (use in CI) |
-| `pnpm db:migrate` / `pnpm db:reset` / `pnpm seed` | Backend database tasks |
+| `pnpm db:migrate` / `pnpm db:reset` | Backend database tasks |
 
 You can also work in a subproject directly: `cd frontend && pnpm dev`.
 

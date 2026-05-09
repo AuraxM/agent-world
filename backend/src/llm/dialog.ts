@@ -2,7 +2,7 @@
  * 对话协议模块。
  *
  * 职责：
- *   - 配对 speak 请求（mutual / pending / autoFail）
+ *   - 配对 chat 请求（mutual / pending / autoFail）
  *   - 接受/拒绝决策编排
  *   - 对话展开（5 来回 + 摘要）
  *   - 补救轮编排
@@ -26,7 +26,7 @@ import { injectTimeMessage } from "./prompt";
 import { db, schema } from "../db/index";
 import { eq, and } from "drizzle-orm";
 import { actionRegistry } from "../domain/index";
-import { applyStateChange } from "../systems/index";
+import { applyStateChange, findPath } from "../systems/index";
 import { getNextHourEntries } from "../systems/index";
 const log = createLogger("dialog");
 
@@ -34,7 +34,7 @@ const log = createLogger("dialog");
 // Types (exported for testing and tick.ts)
 // ---------------------------------------------------------------------------
 
-export interface SpeakPairing {
+export interface ChatPairing {
   mutualPairs: Array<{ a: string; b: string; aFreeText: string; bFreeText: string }>;
   pendingAcceptances: Array<{ requester: string; target: string; freeText: string }>;
   autoFails: Array<{
@@ -69,7 +69,7 @@ export interface DialogPhaseResult {
 // ---------------------------------------------------------------------------
 
 export interface AcceptDecideResult {
-  type: "accept_speak" | "reject_speak";
+  type: "accept_chat" | "reject_chat";
   targetId: string;
   reasoning: string;
   selfImportance: 1 | 2 | 3 | 4 | 5;
@@ -151,7 +151,7 @@ interface ChainResult {
 }
 
 /**
- * 纯函数：在 acceptDecide 之前对单向 speak 请求做链式截断。
+ * 纯函数：在 acceptDecide 之前对单向 chat 请求做链式截断。
  *
  * 规则：构建请求链（A→B→C→D），从头节点（不被任何人 target 的 requester）
  * 开始遍历，每访问两个节点（形成一个 pair），截断下一跳的请求。
@@ -315,30 +315,30 @@ export function deleteConversation(worldId: string, id: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// pairSpeakRequests
+// pairChatRequests
 // ---------------------------------------------------------------------------
 
 /**
- * 纯函数：从 rawActions 中提取 speak 请求，分类为 mutual / pending / autoFail。
+ * 纯函数：从 rawActions 中提取 chat 请求，分类为 mutual / pending / autoFail。
  * 使用 tick.ts 阶段 4 收尾时的位置快照判断同节点。
  */
-export function pairSpeakRequests(
+export function pairChatRequests(
   rawActions: Action[],
   characters: Character[],
-): SpeakPairing {
-  const speakActions = rawActions.filter((a) => a.type === "speak");
+): ChatPairing {
+  const chatActions = rawActions.filter((a) => a.type === "chat");
   const charById = new Map(characters.map((c) => [c.id, c]));
 
-  const mutualPairs: SpeakPairing["mutualPairs"] = [];
-  const pendingAcceptances: SpeakPairing["pendingAcceptances"] = [];
-  const autoFails: SpeakPairing["autoFails"] = [];
+  const mutualPairs: ChatPairing["mutualPairs"] = [];
+  const pendingAcceptances: ChatPairing["pendingAcceptances"] = [];
+  const autoFails: ChatPairing["autoFails"] = [];
   const consumed = new Set<string>();
 
   // 1. Identify mutual pairs (A↔B, same node)
-  for (const a of speakActions) {
+  for (const a of chatActions) {
     if (consumed.has(a.actorId)) continue;
     if (!a.targetId) continue;
-    const peer = speakActions.find(
+    const peer = chatActions.find(
       (b) =>
         b.actorId === a.targetId &&
         b.targetId === a.actorId &&
@@ -362,8 +362,8 @@ export function pairSpeakRequests(
     }
   }
 
-  // 2. Non-mutual speak → validate and classify
-  for (const a of speakActions) {
+  // 2. Non-mutual chat → validate and classify
+  for (const a of chatActions) {
     if (consumed.has(a.actorId)) continue;
     const target = a.targetId ? charById.get(a.targetId) : null;
     const actor = charById.get(a.actorId)!;
@@ -455,11 +455,85 @@ function executeDialogueAction(
       restNodeName: null,
       hoursAtCurrentLocation: 0,
       todayActionCounts: {},
-      todaySpeakTargets: {},
+      todayChatTargets: {},
     },
   };
 
   try {
+    // travel_together: special handling — set ongoing action on both characters
+    if (actionType === "travel_together") {
+      const targetNodeId = params.target_node_id as string;
+      if (!targetNodeId) return undefined;
+      if (targetNodeId === actor.locationId) return `${actor.name} 已经在目的地了。`;
+
+      const nodesArray = Array.from(nodeById.values());
+      const path = findPath(actor.locationId, targetNodeId, nodesArray);
+      if (!path) return undefined;
+
+      const destNode = nodeById.get(targetNodeId);
+      const destName = destNode?.name ?? targetNodeId;
+      const reason = (params.reason as string) || "结伴同行";
+      const endsAt = tick + path.length - 1;
+
+      // Set ongoing action on BOTH characters
+      const ongoingAction = {
+        type: "travel_together" as const,
+        startedAt: tick,
+        endsAt,
+        description: `和 ${target.name} 结伴前往 ${destName}`,
+        interruptThreshold: 5 as const,
+        path,
+        stepIndex: 1,
+        partnerId: target.id,
+        reason,
+      };
+      const partnerAction = {
+        type: "travel_together" as const,
+        startedAt: tick,
+        endsAt,
+        description: `和 ${actor.name} 结伴前往 ${destName}`,
+        interruptThreshold: 5 as const,
+        path,
+        stepIndex: 1,
+        partnerId: actor.id,
+        reason,
+      };
+
+      // First step
+      actor.locationId = path[1];
+      target.locationId = path[1];
+
+      if (path.length <= 2) {
+        // Single step — arrived immediately
+        actor.currentAction = undefined;
+        target.currentAction = undefined;
+        pushMemo(actor, {
+          id: `mem-${randomUUID().slice(0, 8)}`, tick, importance: 3,
+          content: `我和 ${target.name} 一起到达了 ${destName}。`,
+        });
+        pushMemo(target, {
+          id: `mem-${randomUUID().slice(0, 8)}`, tick, importance: 3,
+          content: `我和 ${actor.name} 一起到达了 ${destName}。`,
+        });
+        return `${actor.name} 和 ${target.name} 结伴到达了 ${destName}。`;
+      }
+
+      actor.currentAction = ongoingAction;
+      target.currentAction = partnerAction;
+
+      pushMemo(actor, {
+        id: `mem-${randomUUID().slice(0, 8)}`, tick, importance: 3,
+        content: `我和 ${target.name} 开始结伴前往 ${destName}。${reason}`,
+      });
+      pushMemo(target, {
+        id: `mem-${randomUUID().slice(0, 8)}`, tick, importance: 3,
+        content: `我和 ${actor.name} 开始结伴前往 ${destName}。${reason}`,
+      });
+
+      return `${actor.name} 和 ${target.name} 开始结伴前往 ${destName}。`;
+    }
+
+    // Normal action execution
     const outcome = def.execute(ctx, params);
     if (outcome.stateChanges) {
       for (const sc of outcome.stateChanges) {
@@ -504,8 +578,8 @@ function executeDialogueAction(
 
 function pushMemo(c: Character, mem: Memory): void {
   c.shortMemory.push(mem);
-  if (c.shortMemory.length > 50) {
-    c.shortMemory.splice(0, c.shortMemory.length - 50);
+  if (c.shortMemory.length > 120) {
+    c.shortMemory.splice(0, c.shortMemory.length - 120);
   }
 }
 
@@ -577,7 +651,7 @@ async function runOneTickDialog(
         restNodeName: null,
         hoursAtCurrentLocation: 0,
         todayActionCounts: {},
-        todaySpeakTargets: {},
+        todayChatTargets: {},
       },
     };
     const dialogueActions = actionRegistry.getDialogueActions(actionCtx);
@@ -699,7 +773,7 @@ async function runOneTickDialog(
               restNodeName: null,
               hoursAtCurrentLocation: 0,
               todayActionCounts: {},
-              todaySpeakTargets: {},
+              todayChatTargets: {},
             },
           };
           const otherDialogueActions = actionRegistry.getDialogueActions(otherActionCtx);
@@ -853,11 +927,11 @@ export async function runDialogPhase(
     }),
   );
 
-  // ── Part 2: Process new speak actions ──
-  const rawPairing = pairSpeakRequests(rawActions, characters);
+  // ── Part 2: Process new chat actions ──
+  const rawPairing = pairChatRequests(rawActions, characters);
 
   // Skip pairs where either party is already in an ongoing conversation
-  const pairing: SpeakPairing = {
+  const pairing: ChatPairing = {
     mutualPairs: rawPairing.mutualPairs.filter(
       (mp) => !consumedActorIds.has(mp.a) && !consumedActorIds.has(mp.b),
     ),
@@ -937,6 +1011,15 @@ export async function runDialogPhase(
     pairing.pendingAcceptances.map(async (pa) => {
       const target = charById.get(pa.target)!;
       const requester = charById.get(pa.requester)!;
+
+      // Cooldown: character who just ended a conversation cannot accept a new one
+      if (target.lastConversationEndTick > 0 && tick - target.lastConversationEndTick <= 1) {
+        return { pa, result: { type: "reject_chat" as const, targetId: pa.requester, reasoning: "刚结束对话，需要缓一缓。" } };
+      }
+      if (requester.lastConversationEndTick > 0 && tick - requester.lastConversationEndTick <= 1) {
+        return { pa, result: { type: "reject_chat" as const, targetId: pa.requester, reasoning: "对方刚结束对话，暂时不想聊。" } };
+      }
+
       const here = nodeById.get(target.locationId)!;
       let result: AcceptDecideResult;
       try {
@@ -945,10 +1028,10 @@ export async function runDialogPhase(
           freeText: pa.freeText, here, peer: requester, tick, epoch, language: input.language,
         });
       } catch {
-        result = { type: "reject_speak", targetId: pa.requester, reasoning: "决策失败默认拒绝", selfImportance: 1 };
+        result = { type: "reject_chat", targetId: pa.requester, reasoning: "决策失败默认拒绝", selfImportance: 1 };
       }
-      if (result.type !== "accept_speak" && result.type !== "reject_speak") {
-        result = { type: "reject_speak", targetId: pa.requester, reasoning: "决策输出非法 type", selfImportance: 1 };
+      if (result.type !== "accept_chat" && result.type !== "reject_chat") {
+        result = { type: "reject_chat", targetId: pa.requester, reasoning: "决策输出非法 type", selfImportance: 1 };
       }
       return { pa, result };
     }),
@@ -957,7 +1040,7 @@ export async function runDialogPhase(
   const newDialogGroups: Array<{ requesterId: string; responderId: string; openingLine: string }> = [];
   for (const { pa, result } of acceptResults) {
     consumedActorIds.add(pa.requester);
-    if (result.type === "accept_speak") {
+    if (result.type === "accept_chat") {
       newDialogGroups.push({ requesterId: pa.requester, responderId: pa.target, openingLine: pa.freeText });
     } else {
       const requester = charById.get(pa.requester)!;
@@ -1105,11 +1188,17 @@ export async function runDialogPhase(
           dialogTranscript: conv.transcript,
           dialogEndedBy: conv.endedBy === "passive" ? "passive" : (conv.endedBy ? "end_tool" : "natural"),
         });
-        // Release from conversation
+        // Release from conversation + set cooldown
         const initiator = charById.get(conv.initiatorId);
-        if (initiator) initiator.activeConversationIds = initiator.activeConversationIds.filter((id) => id !== conv.id);
+        if (initiator) {
+          initiator.activeConversationIds = initiator.activeConversationIds.filter((id) => id !== conv.id);
+          initiator.lastConversationEndTick = tick;
+        }
         const acceptor = charById.get(conv.acceptorId);
-        if (acceptor) acceptor.activeConversationIds = acceptor.activeConversationIds.filter((id) => id !== conv.id);
+        if (acceptor) {
+          acceptor.activeConversationIds = acceptor.activeConversationIds.filter((id) => id !== conv.id);
+          acceptor.lastConversationEndTick = tick;
+        }
       } else {
         dialogEvents.push({
           id: `evt-conv-${conv.id}`,

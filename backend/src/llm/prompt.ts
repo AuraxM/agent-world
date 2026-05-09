@@ -1221,6 +1221,9 @@ export function buildDialogTurnPrompt(args: {
   const selfDesc = buildSelfImage(self);
   const peerDesc = buildPeerImage(self, peer);
 
+  // ── Stable prefix (cached across turns) ──
+  // Location & pending action moved to suffix to keep this prefix identical every turn.
+
   if (language === "zh") {
     // Identity anchors interleaved ×3 — keeps who-is-who salient throughout long dialogues
     lines.push(selfDesc);
@@ -1241,15 +1244,21 @@ export function buildDialogTurnPrompt(args: {
     lines.push(`- 压力：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
     lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
-    if (nodes) lines.push(describeLocalMap(here, nodes, language));
-    else lines.push(`当前地点：${here.name}`);
-    lines.push("");
     lines.push(buildDialogueActionsBlock("zh"));
-    lines.push(buildPendingActionBlock("zh"));
     lines.push(buildUpcomingBlock("zh"));
     lines.push("");
     lines.push("对话记录：");
     lines.push(history || "(尚未开始)");
+    // ── Suffix: location + pending action (per-turn, appended after stable prefix) ──
+    if (nodes) {
+      lines.push("");
+      lines.push(describeLocalMap(here, nodes, language));
+    } else {
+      lines.push("");
+      lines.push(`【当前地点：${here.name}】`);
+    }
+    const paBlock = buildPendingActionBlock("zh");
+    if (paBlock) lines.push(paBlock.trimStart());
   } else if (language === "en") {
     lines.push(selfDesc);
     lines.push(peerDesc);
@@ -1269,15 +1278,20 @@ export function buildDialogTurnPrompt(args: {
     lines.push(`- Stress: ${emoWord(self.emotion.stress, STRESS_WORDS)}`);
     lines.push(`- Social: ${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
-    if (nodes) lines.push(describeLocalMap(here, nodes, language));
-    else lines.push(`Current location: ${here.name}`);
-    lines.push("");
     lines.push(buildDialogueActionsBlock("en"));
-    lines.push(buildPendingActionBlock("en"));
     lines.push(buildUpcomingBlock("en"));
     lines.push("");
     lines.push("Conversation:");
     lines.push(history || "(not yet started)");
+    if (nodes) {
+      lines.push("");
+      lines.push(describeLocalMap(here, nodes, language));
+    } else {
+      lines.push("");
+      lines.push(`【Current location: ${here.name}】`);
+    }
+    const paBlockEn = buildPendingActionBlock("en");
+    if (paBlockEn) lines.push(paBlockEn.trimStart());
   } else {
     lines.push(selfDesc);
     lines.push(peerDesc);
@@ -1297,16 +1311,21 @@ export function buildDialogTurnPrompt(args: {
     lines.push(`- ストレス：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
     lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
-    if (nodes) lines.push(describeLocalMap(here, nodes, language));
-    else lines.push(`現在地：${here.name}`);
-    lines.push("");
     lines.push(buildDialogueActionsBlock("ja"));
-    lines.push(buildPendingActionBlock("ja"));
     lines.push(buildUpcomingBlock("ja"));
     lines.push("");
 
     lines.push("会話の記録：");
     lines.push(history || "(まだ始まっていません)");
+    if (nodes) {
+      lines.push("");
+      lines.push(describeLocalMap(here, nodes, language));
+    } else {
+      lines.push("");
+      lines.push(`【現在地：${here.name}】`);
+    }
+    const paBlockJa = buildPendingActionBlock("ja");
+    if (paBlockJa) lines.push(paBlockJa.trimStart());
   }
 
   return lines.join("\n");

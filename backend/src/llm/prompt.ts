@@ -675,26 +675,58 @@ function describeMapGraph(nodes: MapNode[]): string {
  * 局部地图：当前节点 + parent + children（仅一层）。
  * 不包含 siblings、shortcuts。所有节点附带 [id] 供 target_node_id 复用。
  */
-function describeLocalMap(here: MapNode, nodes: MapNode[]): string {
+function describeLocalMap(here: MapNode, nodes: MapNode[], language: Language = "zh"): string {
   const children = nodes.filter((n) => n.parentId === here.id);
   const parent = here.parentId ? nodes.find((n) => n.id === here.parentId) : undefined;
 
-  const tagStr = here.tags.length > 0 ? here.tags.join("/") : "无标签";
+  const noTag = language === "zh" ? "无标签" : language === "en" ? "no tags" : "タグなし";
+  const tagStr = here.tags.length > 0 ? here.tags.join("/") : noTag;
   const lines: string[] = [];
-  lines.push(`当前位置：${here.name} [${here.id}]（${here.privacy}, ${tagStr}）`);
-  if (here.description) {
-    lines.push(`  描述：${here.description}`);
-  }
-  if (parent) {
-    const pTag = parent.tags.length > 0 ? parent.tags.join("/") : "无标签";
-    lines.push(`  父节点：${parent.name} [${parent.id}]（${parent.privacy}, ${pTag}）`);
-  }
-  if (children.length > 0) {
-    lines.push(`  子节点：`);
-    for (const c of children) {
-      const cTag = c.tags.length > 0 ? c.tags.join("/") : "无标签";
-      const desc = c.description ? ` — ${c.description}` : "";
-      lines.push(`    · ${c.name} [${c.id}]（${c.privacy}, ${cTag}）${desc}`);
+
+  if (language === "zh") {
+    lines.push(`当前位置：${here.name} [${here.id}]（${here.privacy}, ${tagStr}）`);
+    if (here.description) lines.push(`  描述：${here.description}`);
+    if (parent) {
+      const pTag = parent.tags.length > 0 ? parent.tags.join("/") : noTag;
+      lines.push(`  父节点：${parent.name} [${parent.id}]（${parent.privacy}, ${pTag}）`);
+    }
+    if (children.length > 0) {
+      lines.push(`  子节点：`);
+      for (const c of children) {
+        const cTag = c.tags.length > 0 ? c.tags.join("/") : noTag;
+        const desc = c.description ? ` — ${c.description}` : "";
+        lines.push(`    · ${c.name} [${c.id}]（${c.privacy}, ${cTag}）${desc}`);
+      }
+    }
+  } else if (language === "en") {
+    lines.push(`Current location: ${here.name} [${here.id}] (${here.privacy}, ${tagStr})`);
+    if (here.description) lines.push(`  Description: ${here.description}`);
+    if (parent) {
+      const pTag = parent.tags.length > 0 ? parent.tags.join("/") : noTag;
+      lines.push(`  Parent: ${parent.name} [${parent.id}] (${parent.privacy}, ${pTag})`);
+    }
+    if (children.length > 0) {
+      lines.push(`  Children:`);
+      for (const c of children) {
+        const cTag = c.tags.length > 0 ? c.tags.join("/") : noTag;
+        const desc = c.description ? ` — ${c.description}` : "";
+        lines.push(`    · ${c.name} [${c.id}] (${c.privacy}, ${cTag})${desc}`);
+      }
+    }
+  } else {
+    lines.push(`現在地：${here.name} [${here.id}]（${here.privacy}, ${tagStr}）`);
+    if (here.description) lines.push(`  説明：${here.description}`);
+    if (parent) {
+      const pTag = parent.tags.length > 0 ? parent.tags.join("/") : noTag;
+      lines.push(`  親ノード：${parent.name} [${parent.id}]（${parent.privacy}, ${pTag}）`);
+    }
+    if (children.length > 0) {
+      lines.push(`  子ノード：`);
+      for (const c of children) {
+        const cTag = c.tags.length > 0 ? c.tags.join("/") : noTag;
+        const desc = c.description ? ` — ${c.description}` : "";
+        lines.push(`    · ${c.name} [${c.id}]（${c.privacy}, ${cTag}）${desc}`);
+      }
     }
   }
   return lines.join("\n");
@@ -1205,7 +1237,7 @@ export function buildDialogTurnPrompt(args: {
     lines.push(`- 压力：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
     lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
-    if (nodes) lines.push(describeLocalMap(here, nodes));
+    if (nodes) lines.push(describeLocalMap(here, nodes, language));
     else lines.push(`当前地点：${here.name}`);
     lines.push("");
     lines.push(buildDialogueActionsBlock("zh"));
@@ -1233,7 +1265,7 @@ export function buildDialogTurnPrompt(args: {
     lines.push(`- Stress: ${emoWord(self.emotion.stress, STRESS_WORDS)}`);
     lines.push(`- Social: ${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
-    if (nodes) lines.push(describeLocalMap(here, nodes));
+    if (nodes) lines.push(describeLocalMap(here, nodes, language));
     else lines.push(`Current location: ${here.name}`);
     lines.push("");
     lines.push(buildDialogueActionsBlock("en"));
@@ -1261,7 +1293,7 @@ export function buildDialogTurnPrompt(args: {
     lines.push(`- ストレス：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
     lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
-    if (nodes) lines.push(describeLocalMap(here, nodes));
+    if (nodes) lines.push(describeLocalMap(here, nodes, language));
     else lines.push(`現在地：${here.name}`);
     lines.push("");
     lines.push(buildDialogueActionsBlock("ja"));
@@ -1696,7 +1728,7 @@ export function buildUserPrompt(args: {
   lines.push("");
 
   // 2. 当前位置（局部地图：仅一层）
-  lines.push(describeLocalMap(here, nodes));
+  lines.push(describeLocalMap(here, nodes, language));
   lines.push("");
 
   // 3. 生理状态（定性）
@@ -2030,7 +2062,7 @@ export function buildThinkPrompt(args: {
       lines.push(`你所在的世界：${worldDescription}`);
       lines.push("");
     }
-    if (nodes) lines.push(describeLocalMap(here, nodes));
+    if (nodes) lines.push(describeLocalMap(here, nodes, language));
     else lines.push(`当前地点：${here.name}（${here.description || "无描述"}）`);
     lines.push("");
     lines.push("你当前的状态：");
@@ -2072,7 +2104,7 @@ export function buildThinkPrompt(args: {
       lines.push(`The world you live in: ${worldDescription}`);
       lines.push("");
     }
-    if (nodes) lines.push(describeLocalMap(here, nodes));
+    if (nodes) lines.push(describeLocalMap(here, nodes, language));
     else lines.push(`Current location: ${here.name} (${here.description || ""})`);
     lines.push("");
     lines.push("Your current state:");
@@ -2110,7 +2142,7 @@ export function buildThinkPrompt(args: {
       lines.push(`あなたの住む世界：${worldDescription}`);
       lines.push("");
     }
-    if (nodes) lines.push(describeLocalMap(here, nodes));
+    if (nodes) lines.push(describeLocalMap(here, nodes, language));
     else lines.push(`現在地：${here.name}`);
     lines.push("");
 

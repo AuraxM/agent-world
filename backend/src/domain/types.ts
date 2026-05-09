@@ -44,7 +44,7 @@ export interface Ability {
   exp: number;
 }
 
-/** 单条记忆。Stage 1 仅使用 short（FIFO 50）。 */
+/** 单条记忆。Stage 1 仅使用 short（FIFO 120）。 */
 export interface Memory {
   /** 由 nanoid 或 uuid 生成 */
   id: string;
@@ -95,6 +95,8 @@ export interface OngoingAction {
   arrivalAction?: Action["arrivalAction"];
   /** move 专属：移动原因（中断时用于写记忆） */
   reason?: string;
+  /** travel_together 专属：同行伙伴的角色 ID */
+  partnerId?: string;
 }
 
 /** 地图节点。 */
@@ -202,7 +204,9 @@ export interface Character {
   speakingStyle?: string;
   /** 当前参与的对话 ID 列表（发起者锁在其中，接受者可同时在多段对话） */
   activeConversationIds: string[];
-  /** Stage 1: short memory FIFO 50 */
+  /** 最近一次对话结束的 tick。0 = 从未进行过对话。用于对话后冷却。 */
+  lastConversationEndTick: Tick;
+  /** Stage 1: short memory FIFO 120 */
   shortMemory: Memory[];
   /** 中期日记忆：睡觉时由 LLM 压缩清醒期 shortMemory 生成 */
   dailyMemory: Memory[];

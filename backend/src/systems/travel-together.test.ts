@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { actionRegistry } from "../domain/index";
 import { BUILTIN_ACTIONS } from "./index";
 
@@ -24,7 +24,6 @@ describe("travel_together action definition", () => {
   });
 
   it("appears in dialogue actions via getDialogueActions", () => {
-    const def = actionRegistry.get("travel_together")!;
     const ctx = minimalCtx();
     const dialogueActions = actionRegistry.getDialogueActions(ctx);
     expect(dialogueActions.some(d => d.type === "travel_together")).toBe(true);
@@ -64,7 +63,7 @@ describe("travel_together action definition", () => {
   });
 });
 
-function minimalCtx() {
+function minimalCtx(): import("../domain").ActionContext {
   return {
     worldId: "test",
     tick: 0,
@@ -120,5 +119,5 @@ function minimalCtx() {
       todayActionCounts: {},
       todayChatTargets: {},
     },
-  } as any;
+  } as unknown as import("../domain").ActionContext;
 }

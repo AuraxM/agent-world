@@ -203,13 +203,16 @@ export const thinkAction: ActionDefinition = {
   },
 };
 
-export const speakAction: ActionDefinition = {
-  type: "speak",
+export const chatAction: ActionDefinition = {
+  type: "chat",
   duration: "instant",
   triggerHint: "身边有人、想发起对话交流时使用。",
   paramRule: "必填 target_id（说话对象）+ free_text（说什么）。",
   check(ctx) {
-    return ctx.companions.length > 0;
+    if (ctx.companions.length === 0) return false;
+    // 对话结束后冷却 1 tick，禁止连续对话
+    if (ctx.self.lastConversationEndTick > 0 && ctx.tick - ctx.self.lastConversationEndTick <= 1) return false;
+    return true;
   },
   hint(ctx) {
     if (ctx.companions.length === 0) return "（没有可以说话的人）";
@@ -219,8 +222,8 @@ export const speakAction: ActionDefinition = {
     }));
   },
   validateParams(input, ctx) {
-    if (!input.target_id) return "speak 需要指定 target_id（对话对象的角色 ID）";
-    if (!input.free_text || input.free_text.trim().length === 0) return "speak 需要 free_text（你想说的话）";
+    if (!input.target_id) return "chat 需要指定 target_id（对话对象的角色 ID）";
+    if (!input.free_text || input.free_text.trim().length === 0) return "chat 需要 free_text（你想说的话）";
     const target = ctx.companions.find(c => c.id === input.target_id);
     if (!target) return `target_id="${input.target_id}" 不在你当前所在节点，无法对话`;
     return null;
@@ -432,6 +435,52 @@ export const giveAction: ActionDefinition = {
   usableInDialogue: true,
 };
 
+export const travelTogetherAction: ActionDefinition = {
+  type: "travel_together",
+  duration: 0, // computed from BFS path length
+  usableInDialogue: true,
+  triggerHint: "与对话对象约定一同前往某地，边走边聊，途中不会被外界打断。",
+  paramRule: "必填 target_node_id（目的地节点 id）+ reason（为何前往）。仅对话中可用。",
+  check(_ctx) {
+    return false; // dialogue-only，正常决策中不可选
+  },
+  hint(ctx) {
+    return ctx.companions.map((c) => ({
+      hint: `约 ${c.name} 结伴同行`,
+      targetId: c.id,
+    }));
+  },
+  validateParams(input, ctx) {
+    if (!input.target_node_id) return "travel_together 需要指定 target_node_id（目的地节点 ID）";
+    if (!input.reason) return "travel_together 需要 reason（结伴前往的原因）";
+    const targetNode = ctx.reachable.find(n => n.id === input.target_node_id);
+    if (!targetNode) return `target_node_id="${input.target_node_id}" 不可达或不存在`;
+    if (input.target_node_id === ctx.here.id) return "你已经在目的地了";
+    return null;
+  },
+  execute(ctx, input) {
+    // 正常不会走这里——对话中 accept 后由 executeDialogueAction 特殊处理
+    // 提供 fallback 以保持接口完整性
+    const targetId = input.target_node_id as string;
+    const target = ctx.reachable.find(n => n.id === targetId);
+    const reason = (input.reason as string) || "结伴";
+    return {
+      memory: `我约了同伴一起去 ${target?.name ?? targetId}：${reason}。`,
+      event: {
+        category: "social",
+        description: `${ctx.self.name} 约同伴一起去 ${target?.name ?? targetId}。`,
+        intensity: 2,
+      },
+    };
+  },
+  extraParams: {
+    target_node_id: { type: "string", description: "目的地节点 id。" },
+    reason: { type: "string", description: "结伴前往的原因。" },
+    free_text: { type: "string", description: "在对话中说明同行细节（可选）。" },
+  },
+  extraRequired: ["target_node_id", "reason"],
+};
+
 export const lookAroundAction: ActionDefinition = {
   type: "look_around",
   duration: 5,
@@ -497,9 +546,10 @@ export const BUILTIN_ACTIONS: ActionDefinition[] = [
   restAction,
   workAction,
   thinkAction,
-  speakAction,
+  chatAction,
   sleepAction,
   moveAction,
   giveAction,
+  travelTogetherAction,
   lookAroundAction,
 ];

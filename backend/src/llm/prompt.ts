@@ -1108,8 +1108,9 @@ export function buildDialogTurnPrompt(args: {
   tick?: number;
   epoch?: number;
   worldDescription?: string;
+  nodes?: MapNode[];
 }): string {
-  const { self, peer, transcript, here, pendingAction, dialogueActions, upcomingEntries, epoch: promptEpoch, worldDescription } = args;
+  const { self, peer, transcript, here, pendingAction, dialogueActions, upcomingEntries, epoch: promptEpoch, worldDescription, nodes } = args;
   const language = args.language ?? "zh";
 
   const history = transcript
@@ -1204,7 +1205,8 @@ export function buildDialogTurnPrompt(args: {
     lines.push(`- 压力：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
     lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
-    lines.push(`当前地点：${here.name}`);
+    if (nodes) lines.push(describeLocalMap(here, nodes));
+    else lines.push(`当前地点：${here.name}`);
     lines.push("");
     lines.push(buildDialogueActionsBlock("zh"));
     lines.push(buildPendingActionBlock("zh"));
@@ -1231,7 +1233,8 @@ export function buildDialogTurnPrompt(args: {
     lines.push(`- Stress: ${emoWord(self.emotion.stress, STRESS_WORDS)}`);
     lines.push(`- Social: ${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
-    lines.push(`Current location: ${here.name}`);
+    if (nodes) lines.push(describeLocalMap(here, nodes));
+    else lines.push(`Current location: ${here.name}`);
     lines.push("");
     lines.push(buildDialogueActionsBlock("en"));
     lines.push(buildPendingActionBlock("en"));
@@ -1258,7 +1261,8 @@ export function buildDialogTurnPrompt(args: {
     lines.push(`- ストレス：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
     lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
-    lines.push(`現在地：${here.name}`);
+    if (nodes) lines.push(describeLocalMap(here, nodes));
+    else lines.push(`現在地：${here.name}`);
     lines.push("");
     lines.push(buildDialogueActionsBlock("ja"));
     lines.push(buildPendingActionBlock("ja"));
@@ -1691,11 +1695,8 @@ export function buildUserPrompt(args: {
   lines.push(describeContinuity(facts, here.name, tick, nameMap));
   lines.push("");
 
-  // 2. 当前位置
-  lines.push(
-    `你现在的位置：${here.name}（${here.privacy}, ${here.tags.join("/") || "无标签"}）`,
-  );
-  lines.push(`位置描述：${here.description || "（无）"}`);
+  // 2. 当前位置（局部地图：仅一层）
+  lines.push(describeLocalMap(here, nodes));
   lines.push("");
 
   // 3. 生理状态（定性）
@@ -1998,8 +1999,9 @@ export function buildThinkPrompt(args: {
   epoch?: number;
   allCharacters?: Character[];
   worldDescription?: string;
+  nodes?: MapNode[];
 }): string {
-  const { self, here, transcript, allCharacters, worldDescription } = args;
+  const { self, here, transcript, allCharacters, worldDescription, nodes } = args;
   const language = args.language ?? "zh";
 
   const history = transcript
@@ -2028,7 +2030,8 @@ export function buildThinkPrompt(args: {
       lines.push(`你所在的世界：${worldDescription}`);
       lines.push("");
     }
-    lines.push(`当前地点：${here.name}（${here.description || "无描述"}）`);
+    if (nodes) lines.push(describeLocalMap(here, nodes));
+    else lines.push(`当前地点：${here.name}（${here.description || "无描述"}）`);
     lines.push("");
     lines.push("你当前的状态：");
     lines.push(`- 饥饿：${hunger.phrase}`);
@@ -2069,7 +2072,8 @@ export function buildThinkPrompt(args: {
       lines.push(`The world you live in: ${worldDescription}`);
       lines.push("");
     }
-    lines.push(`Current location: ${here.name} (${here.description || ""})`);
+    if (nodes) lines.push(describeLocalMap(here, nodes));
+    else lines.push(`Current location: ${here.name} (${here.description || ""})`);
     lines.push("");
     lines.push("Your current state:");
     lines.push(`- Hunger: ${hunger.phrase}`);
@@ -2106,7 +2110,8 @@ export function buildThinkPrompt(args: {
       lines.push(`あなたの住む世界：${worldDescription}`);
       lines.push("");
     }
-    lines.push(`現在地：${here.name}`);
+    if (nodes) lines.push(describeLocalMap(here, nodes));
+    else lines.push(`現在地：${here.name}`);
     lines.push("");
 
     if (shortMemories) {

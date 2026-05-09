@@ -14,6 +14,8 @@ import {
   MEMORIZE_TOOL_NAME, MemorizeSchema, MemorizeToolSchema,
   UPDATE_LIKES_TOOL_NAME, UpdateLikesSchema, UpdateLikesToolSchema,
   UPDATE_GOALS_TOOL_NAME, UpdateGoalsSchema, UpdateGoalsToolSchema,
+  UPDATE_RELATION_TOOL_NAME, UpdateRelationSchema, UpdateRelationToolSchema,
+  VIEW_MAP_TOOL_NAME,
   ACCEPT_TOOL_NAME, AcceptDecisionSchema, AcceptToolSchema,
   DIALOG_TURN_TOOL_NAME, DialogTurnSchema, DialogTurnToolSchema,
   DIALOG_SUMMARY_TOOL_NAME, DialogSummarySchema, DialogSummaryToolSchema,
@@ -45,10 +47,12 @@ import {
   buildThinkSystemPrompt,
   buildThinkFollowup,
   buildThinkPrompt,
+  buildMapView,
+  buildMapTool,
   languageInstruction,
 } from "./prompt";
 import type { ThinkTurn } from "../domain/index";
-import { createLogger } from "../shared/index";
+import { createLogger, writePromptFile } from "../shared/index";
 
 export interface DecideInput {
   character: Character;
@@ -207,13 +211,14 @@ async function callLLMWithRetry(
   entryName: string,
   ctx: ActionContext,
   allCharacters: Character[] = [],
+  nodes: MapNode[] = [],
 ): Promise<{ actionType: string; data: ToolArgPayload }> {
   const config = getEntryConfig(entryName);
   const client = getLLMClientForEntry(entryName);
   const extra: Record<string, unknown> = {};
   if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
-  const tools: ChatCompletionTool[] = [tool, buildRecallTool(), buildMemorizeTool()];
+  const tools: ChatCompletionTool[] = [tool, buildRecallTool(), buildMemorizeTool(), buildMapTool()];
 
   let lastResponseSnapshot = "(no response)";
   for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
@@ -286,6 +291,14 @@ async function callLLMWithRetry(
       handleMemorize(parseResult.data.target_id, parseResult.data.impression, ctx.self);
       messages.push({ role: "tool", tool_call_id: tc.id, content: "已记录。" });
       // memorize continues loop, doesn't count as a decision round
+      round = Math.max(0, round - 1);
+      continue;
+    }
+
+    // ── Handle view_map ──
+    if (tcName === VIEW_MAP_TOOL_NAME) {
+      const mapText = buildMapView(ctx.here, nodes);
+      messages.push({ role: "tool", tool_call_id: tc.id, content: mapText });
       round = Math.max(0, round - 1);
       continue;
     }
@@ -384,6 +397,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
   ];
 
   decideLog.info("DECIDE_PROMPT", { prompt: { system, user }, character: input.character.name });
+  writePromptFile("decide", `## decide — ${input.character.name}\n### system\n${system}\n### user\n${user}`);
 
   const startMs = Date.now();
   decideLog.info("LLM decide 请求", {
@@ -391,7 +405,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     model: getModelNameForEntry("decide"),
   });
 
-  const { actionType, data } = await callLLMWithRetry(messages, tool, "LLM", "decide", input.ctx, input.allCharacters);
+  const { actionType, data } = await callLLMWithRetry(messages, tool, "LLM", "decide", input.ctx, input.allCharacters, input.nodes);
 
   decideLog.info("LLM decide 响应", {
     角色: input.character.name,
@@ -531,6 +545,7 @@ interface DialogTurnInput {
   previousMessages?: Array<Record<string, unknown>>;
   /** previousMessages 上次保存时 transcript 的长度，用于计算增量。 */
   previousTranscriptLength?: number;
+  worldDescription?: string;
 }
 
 export interface DialogTurnResult {
@@ -572,6 +587,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     upcomingEntries: input.upcomingEntries,
     tick: input.tick,
     epoch: input.epoch,
+    worldDescription: input.worldDescription,
   });
 
   dialogLog.info("DIALOG_PROMPT", { prompt, speaker: input.self.name, peer: input.peer.name });
@@ -598,6 +614,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     buildNotebookTool(),
     buildUpdateLikesTool(),
     buildUpdateGoalsTool(),
+    buildUpdateRelationTool(),
   ];
 
   // Add interactive action tools if dialogue actions are available
@@ -660,6 +677,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
       { role: "system", content: systemPrompt },
       { role: "user", content: prompt },
     ];
+    writePromptFile("dialog", `## dialog_turn — ${input.self.name} ↔ ${input.peer.name}\n### system\n${systemPrompt}\n### user\n${prompt}`);
   }
 
   let lastError: unknown;
@@ -894,6 +912,59 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
             }
           }
           messages.push({ role: "tool", tool_call_id: t.id, content: applied.length > 0 ? `已更新：${applied.join("、")}。` : "目标更新间隔未到，暂未应用。" });
+        } else if (name === UPDATE_RELATION_TOOL_NAME) {
+          let parsedArgs: unknown;
+          try { parsedArgs = JSON.parse(t.function.arguments); } catch {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `update_relation JSON 解析失败。` });
+            hasError = true;
+            continue;
+          }
+          const parseResult = UpdateRelationSchema.safeParse(parsedArgs);
+          if (!parseResult.success) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `update_relation 参数不符合要求：${parseResult.error.message}。` });
+            hasError = true;
+            continue;
+          }
+          const { target_id, add_kinds, remove_kinds } = parseResult.data;
+          const rel = input.self.relations[target_id] ?? { kinds: [], since: 0, lastInteractionTick: 0 };
+
+          // Blood relations (except other_relative) cannot be removed
+          const BLOOD = new Set(["father", "mother", "son", "daughter", "older_brother", "younger_brother", "older_sister", "younger_sister"]);
+          const protectedKinds = rel.kinds.filter(k => BLOOD.has(k));
+          const mutableKinds = rel.kinds.filter(k => !BLOOD.has(k));
+
+          let changed = false;
+
+          if (remove_kinds && remove_kinds.length > 0) {
+            const toRemove = new Set(remove_kinds);
+            const blocked = remove_kinds.filter(k => BLOOD.has(k) && protectedKinds.includes(k as any));
+            const newMutable = mutableKinds.filter(k => !toRemove.has(k));
+            if (newMutable.length !== mutableKinds.length) {
+              rel.kinds = [...protectedKinds, ...newMutable];
+              changed = true;
+            }
+            if (blocked.length > 0) {
+              messages.push({ role: "tool", tool_call_id: t.id, content: `无法移除血缘关系：${blocked.join("、")}。其他变更已应用。` });
+              input.self.relations[target_id] = rel;
+              continue;
+            }
+          }
+
+          if (add_kinds && add_kinds.length > 0) {
+            for (const k of add_kinds) {
+              if (!rel.kinds.includes(k)) {
+                rel.kinds.push(k);
+                changed = true;
+              }
+            }
+          }
+
+          if (changed) {
+            input.self.relations[target_id] = rel;
+            messages.push({ role: "tool", tool_call_id: t.id, content: `已更新与 ${target_id} 的关系：${rel.kinds.join("、") || "（无）"}。` });
+          } else {
+            messages.push({ role: "tool", tool_call_id: t.id, content: "关系未发生变化。" });
+          }
         } else if (name === DIALOG_TURN_TOOL_NAME) {
           let args: unknown;
           try { args = JSON.parse(t.function.arguments); } catch (e) {
@@ -960,9 +1031,9 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
           messages.push({ role: "tool", tool_call_id: t.id, content: `已提出 ${result.data.action_type} 请求。` });
           proposeAction = {
             actionType: result.data.action_type,
-            targetId: result.data.target_id,
+            targetId: input.peer.id,
             params: {
-              target_id: result.data.target_id,
+              target_id: input.peer.id,
               amount: result.data.amount,
               free_text: result.data.free_text,
             },
@@ -1291,6 +1362,7 @@ export async function llmThink(args: {
   previousMessages?: Array<Record<string, unknown>>;
   previousTranscriptLength?: number;
   allCharacters?: Character[];
+  worldDescription?: string;
 }): Promise<ThinkTurnResult | ThinkEndResult> {
   if (!hasApiKey()) throw new Error("没有激活的 LLM provider");
 
@@ -1306,6 +1378,7 @@ export async function llmThink(args: {
     tick: args.tick,
     epoch: args.epoch,
     allCharacters: args.allCharacters,
+    worldDescription: args.worldDescription,
   });
 
   dialogLog.info("THINK_PROMPT", { prompt, speaker: args.self.name });
@@ -1324,6 +1397,7 @@ export async function llmThink(args: {
     buildNotebookTool(),
     buildUpdateLikesTool(),
     buildUpdateGoalsTool(),
+    buildUpdateRelationTool(),
   ];
 
   const extra: Record<string, unknown> = {};
@@ -1352,6 +1426,7 @@ export async function llmThink(args: {
       { role: "system", content: systemPrompt },
       { role: "user", content: prompt },
     ];
+    writePromptFile("think", `## think — ${args.self.name}\n### system\n${systemPrompt}\n### user\n${prompt}`);
   }
 
   for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
@@ -1510,6 +1585,47 @@ export async function llmThink(args: {
           }
         }
         messages.push({ role: "tool", tool_call_id: t.id, content: applied.length > 0 ? `已更新：${applied.join("、")}。` : "目标更新间隔未到，暂未应用。" });
+      } else if (name === UPDATE_RELATION_TOOL_NAME) {
+        let parsedArgs: unknown;
+        try { parsedArgs = JSON.parse(t.function.arguments); } catch {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `update_relation JSON 解析失败。` });
+          hasError = true;
+          continue;
+        }
+        const parseResult = UpdateRelationSchema.safeParse(parsedArgs);
+        if (!parseResult.success) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: `update_relation 参数不符合要求：${parseResult.error.message}。` });
+          hasError = true;
+          continue;
+        }
+        const { target_id, add_kinds, remove_kinds } = parseResult.data;
+        const rel = args.self.relations[target_id] ?? { kinds: [], since: 0, lastInteractionTick: 0 };
+        const BLOOD = new Set(["father", "mother", "son", "daughter", "older_brother", "younger_brother", "older_sister", "younger_sister"]);
+        const protectedKinds = rel.kinds.filter(k => BLOOD.has(k));
+        const mutableKinds = rel.kinds.filter(k => !BLOOD.has(k));
+        let changed = false;
+        if (remove_kinds && remove_kinds.length > 0) {
+          const toRemove = new Set(remove_kinds);
+          const blocked = remove_kinds.filter(k => BLOOD.has(k) && protectedKinds.includes(k as any));
+          const newMutable = mutableKinds.filter(k => !toRemove.has(k));
+          if (newMutable.length !== mutableKinds.length) { rel.kinds = [...protectedKinds, ...newMutable]; changed = true; }
+          if (blocked.length > 0) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `无法移除血缘关系：${blocked.join("、")}。其他变更已应用。` });
+            args.self.relations[target_id] = rel;
+            continue;
+          }
+        }
+        if (add_kinds && add_kinds.length > 0) {
+          for (const k of add_kinds) {
+            if (!rel.kinds.includes(k)) { rel.kinds.push(k); changed = true; }
+          }
+        }
+        if (changed) {
+          args.self.relations[target_id] = rel;
+          messages.push({ role: "tool", tool_call_id: t.id, content: `已更新与 ${target_id} 的关系：${rel.kinds.join("、") || "（无）"}。` });
+        } else {
+          messages.push({ role: "tool", tool_call_id: t.id, content: "关系未发生变化。" });
+        }
       } else if (name === THINK_TOOL_NAME) {
         let a: unknown;
         try { a = JSON.parse(t.function.arguments); } catch {
@@ -1644,9 +1760,9 @@ export interface AcceptDecisionInput {
 
 export async function llmAcceptDecide(
   input: AcceptDecisionInput,
-): Promise<{ type: "accept_speak" | "reject_speak"; targetId: string; reasoning: string; selfImportance: 1 | 2 | 3 | 4 | 5 }> {
+): Promise<{ type: "accept_chat" | "reject_chat"; targetId: string; reasoning: string; selfImportance: 1 | 2 | 3 | 4 | 5 }> {
   if (!hasApiKey()) {
-    return { type: "reject_speak", targetId: input.requesterId, reasoning: "决策失败默认拒绝", selfImportance: 1 };
+    return { type: "reject_chat", targetId: input.requesterId, reasoning: "决策失败默认拒绝", selfImportance: 1 };
   }
 
   const config = getEntryConfig("accept_decision");
@@ -1713,7 +1829,7 @@ export async function llmAcceptDecide(
         throw new Error(`AcceptDecision 参数不符合 schema：${result.error.message}。rawArgs：${toolCall.function.arguments.slice(0, 1000)}`);
       }
       // Validate type field
-      if (result.data.action_type !== "accept_speak" && result.data.action_type !== "reject_speak") {
+      if (result.data.action_type !== "accept_chat" && result.data.action_type !== "reject_chat") {
         throw new Error(`非法 action_type：${result.data.action_type}。rawArgs：${toolCall.function.arguments.slice(0, 1000)}`);
       }
       return {
@@ -1733,11 +1849,11 @@ export async function llmAcceptDecide(
     }
   }
   acceptLog.error("LLM accept_decision 彻底失败，默认拒绝", { llmResponse: lastResponseSnapshot });
-  return { type: "reject_speak", targetId: input.requesterId, reasoning: "决策失败默认拒绝", selfImportance: 1 };
+  return { type: "reject_chat", targetId: input.requesterId, reasoning: "决策失败默认拒绝", selfImportance: 1 };
 }
 
 /**
- * 补救轮：speak 请求被拒/失败后直接 fallback 到 look_around，不再走 LLM 决策。
+ * 补救轮：chat 请求被拒/失败后直接 fallback 到 look_around，不再走 LLM 决策。
  */
 export async function llmSalvageDecide(
   input: DecideInput & { rejectReason: string },
@@ -1765,4 +1881,8 @@ function buildUpdateLikesTool(): ChatCompletionTool {
 
 function buildUpdateGoalsTool(): ChatCompletionTool {
   return { type: "function", function: { name: UPDATE_GOALS_TOOL_NAME, description: "更新你的短期或长期的人生目标。", parameters: UpdateGoalsToolSchema } };
+}
+
+function buildUpdateRelationTool(): ChatCompletionTool {
+  return { type: "function", function: { name: UPDATE_RELATION_TOOL_NAME, description: "更新你与某人的客观关系——添加或移除关系标签（如变成朋友、不再是同学）。", parameters: UpdateRelationToolSchema } };
 }

@@ -290,6 +290,9 @@ export const ProposeDialogueActionSchema = z.object({
   amount: z.number().int().positive().optional(),
   free_text: z.string().max(300).optional(),
   reasoning: z.string().min(1).max(400),
+  target_node_id: z.string().optional(),
+  target_node_name: z.string().optional(),
+  reason: z.string().optional(),
 });
 export type ProposeDialogueActionPayload = z.infer<typeof ProposeDialogueActionSchema>;
 export const ProposeDialogueActionToolSchema = {
@@ -299,6 +302,9 @@ export const ProposeDialogueActionToolSchema = {
     amount: { type: "integer", description: "金额（give 需要）。" },
     free_text: { type: "string", description: "附言或说明（可选）。" },
     reasoning: { type: "string", description: "发起该行为的理由（内心独白）。" },
+    target_node_id: { type: "string", description: "目的地节点 id（travel_together 需要，与 target_node_name 二选一）。" },
+    target_node_name: { type: "string", description: "目的地名称如'国际通'（travel_together 需要，与 target_node_id 二选一）。" },
+    reason: { type: "string", description: "发起行为的原因（travel_together 需要说明为何前往）。" },
   },
   required: ["action_type", "reasoning"],
   additionalProperties: true,
@@ -572,18 +578,18 @@ export const UpdateLikesToolSchema = {
 
 export const UPDATE_RELATION_TOOL_NAME = "update_relation";
 export const UpdateRelationSchema = z.object({
-  target_id: z.string().min(1),
+  target_id: z.string().min(1).optional(),
   add_kinds: z.array(z.enum(OBJECTIVE_RELATION_KINDS)).optional(),
   remove_kinds: z.array(z.enum(OBJECTIVE_RELATION_KINDS)).optional(),
 });
 export const UpdateRelationToolSchema = {
   type: "object" as const,
   properties: {
-    target_id: { type: "string", description: "要更新关系的角色 ID。" },
+    target_id: { type: "string", description: "要更新关系的角色 ID。对话中可省略，默认为当前对话对象。" },
     add_kinds: { type: "array", items: { type: "string" }, description: "要添加的关系类型（如 friend、classmate）。" },
     remove_kinds: { type: "array", items: { type: "string" }, description: "要移除的关系类型（血缘关系不可移除）。" },
   },
-  required: ["target_id"],
+  required: [] as string[],
   additionalProperties: false,
 };
 

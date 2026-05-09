@@ -43,8 +43,8 @@ export interface AggregatedFacts {
     lastRestTick?: Tick;
     lastEatTick?: Tick;
     todayActionCounts: Partial<Record<string, number>>;
-    /** 今日 speak 的目标角色 ID → 次数（仅记录 speak 类型）。 */
-    todaySpeakTargets: Record<string, number>;
+    /** 今日 chat 的目标角色 ID → 次数（仅记录 chat 类型）。 */
+    todayChatTargets: Record<string, number>;
 }
 export interface ActionInput {
     target_id?: string;
@@ -127,6 +127,8 @@ export interface ActionOption {
 }
 export interface ActionDefinition {
     type: string;
+    /** 自然语言行为名称，用于系统消息展示（如 "结伴出行"）。不提供时退回到 type。 */
+    displayName?: string;
     duration: "instant" | number;
     check(ctx: ActionContext): boolean;
     hint(ctx: ActionContext): string | Array<{
@@ -163,6 +165,7 @@ export declare class ActionRegistry {
     types(): IterableIterator<string>;
     buildOptions(ctx: ActionContext): ActionOption[];
     /** 获取对话中可用的 action 定义（usableInDialogue 即表示对话中可用，LLM 自行判断时机）。 */
+    getDisplayName(type: string): string;
     getDialogueActions(_ctx?: ActionContext): ActionDefinition[];
 }
 /** Global singleton. */
@@ -198,7 +201,7 @@ export interface Ability {
     tier: number;
     exp: number;
 }
-/** 单条记忆。Stage 1 仅使用 short（FIFO 50）。 */
+/** 单条记忆。Stage 1 仅使用 short（FIFO 120）。 */
 export interface Memory {
     /** 由 nanoid 或 uuid 生成 */
     id: string;
@@ -246,6 +249,8 @@ export interface OngoingAction {
     arrivalAction?: Action["arrivalAction"];
     /** move 专属：移动原因（中断时用于写记忆） */
     reason?: string;
+    /** travel_together 专属：同行伙伴的角色 ID */
+    partnerId?: string;
 }
 /** 地图节点。 */
 export interface MapNode {
@@ -348,7 +353,9 @@ export interface Character {
     speakingStyle?: string;
     /** 当前参与的对话 ID 列表（发起者锁在其中，接受者可同时在多段对话） */
     activeConversationIds: string[];
-    /** Stage 1: short memory FIFO 50 */
+    /** 最近一次对话结束的 tick。0 = 从未进行过对话。用于对话后冷却。 */
+    lastConversationEndTick: Tick;
+    /** Stage 1: short memory FIFO 120 */
     shortMemory: Memory[];
     /** 中期日记忆：睡觉时由 LLM 压缩清醒期 shortMemory 生成 */
     dailyMemory: Memory[];

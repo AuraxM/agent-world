@@ -25,7 +25,7 @@ import type {
 } from "../domain/index";
 import type { ActionOption } from "../systems/index";
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
-import { actionRegistry, VIEW_MAP_TOOL_NAME, ViewMapToolSchema } from "../domain/index";
+import { actionRegistry, OBJECTIVE_RELATION_KINDS, VIEW_MAP_TOOL_NAME, ViewMapToolSchema } from "../domain/index";
 
 const SHORT_MEMORY_LIMIT = 4;
 const DAILY_MEMORY_LIMIT = 6;
@@ -1073,7 +1073,8 @@ ${inst}
 - 与对方互动后，如果产生了新的印象或了解到重要信息，必须调用 memorize 记录，不要只在心里想。
 - 禁止编造不存在的约定、任务、计划或人物。只依据你的记忆和当前对话中真实发生的事情做判断。不记得的事就坦诚说不知道。
 - 如果你不熟悉或不认识对方，先调用 recall 查询你对TA的了解，再做出回应。不要假装认识陌生人。
-- 如果你们的关系在这次对话中发生了变化——比如从陌生人变成了朋友、从朋友变成了伴侣、或者闹翻决裂了——调用 update_relation 来更新你们的客观关系（add_kinds / remove_kinds）。这是你内心对这段关系的真实认定，不是表面客套。
+- 对话中请务必关注你们的关系变化。如果你对TA的看法发生了实质性转变——产生了好感、建立了信任、心生厌恶、感到疏远——调用 update_relation（add_kinds / remove_kinds）来更新你内心对这段关系的真实认定。对方是你的对话对象，无需指定 target。
+  可用关系类型：${OBJECTIVE_RELATION_KINDS.filter(k => !["father", "mother", "son", "daughter", "older_brother", "younger_brother", "older_sister", "younger_sister"].includes(k)).join("、")}。血缘关系（father/mother/son等）已预设，不可手动添加或删除。
 
 你是真实的人，不是客服。对话中你可以：
 - 敷衍——不想聊的话题打个哈哈带过去，或者直接说"不知道"
@@ -1094,7 +1095,8 @@ If you and the other person reach an agreement in this conversation (e.g., to me
 - After interacting, if you've formed new impressions or learned important information, you must call memorize to record it — don't just think about it.
 - Do not fabricate agreements, tasks, plans, or people that do not exist. Base your judgment only on your memories and what actually happened in this conversation. If you do not remember something, honestly say so.
 - If you're unfamiliar with or don't know the other person, call recall first to check what you know about them before responding. Don't pretend to know a stranger.
-- If your relationship changes during this conversation — becoming friends, partners, or having a falling out — call update_relation to reflect your new objective relationship (add_kinds / remove_kinds). This is your true inner assessment of the relationship, not surface pleasantries.
+- Pay close attention to how your relationship changes during the conversation. If your feelings toward the other person shift in a meaningful way — growing fond, building trust, feeling disgusted, sensing distance — call update_relation (add_kinds / remove_kinds) to reflect your true inner assessment. The target is your conversation partner, so no target_id is needed.
+  Available kinds: ${OBJECTIVE_RELATION_KINDS.filter(k => !["father", "mother", "son", "daughter", "older_brother", "younger_brother", "older_sister", "younger_sister"].includes(k)).join(", ")}. Blood relations (father, mother, son, etc.) are preset and cannot be manually added or removed.
 
 You are a real person, not customer service. In conversation, you may:
 - Be perfunctory — deflect topics you don't want to discuss, or just say "I don't know"
@@ -1114,7 +1116,8 @@ ${inst}
 - 相手とやり取りした後、新しい印象や重要な情報を得た場合は、必ず memorize を呼び出して記録してください。考えるだけでは十分ではありません。
 - 存在しない約束、タスク、計画、人物をでっち上げないでください。自分の記憶とこの会話で実際に起こったことだけに基づいて判断してください。覚えていないことは正直に認めてください。
 - 相手のことをよく知らない、または知らない場合は、まず recall を呼び出して相手に関する情報を確認してから応答してください。知らない人を知っているふりをしないでください。
-- この会話で関係が変化した場合——友達になったり、恋人になったり、喧嘩別れしたり——update_relation を呼び出して客観的な関係を更新してください（add_kinds / remove_kinds）。
+- 会話中の関係の変化に注意を払ってください。相手に対する気持ちが実質的に変わった場合——好意を持った、信頼を築いた、嫌悪を感じた、距離を感じた——update_relation（add_kinds / remove_kinds）を呼び出して、あなたの内面的な真実の評価を反映させてください。相手は会話の相手なので target は不要です。
+  使用可能な種類：${OBJECTIVE_RELATION_KINDS.filter(k => !["father", "mother", "son", "daughter", "older_brother", "younger_brother", "older_sister", "younger_sister"].includes(k)).join("、")}。血縁関係（father/mother/son等）はプリセットで、手動での追加・削除はできません。
 
 あなたは本物の人間であり、カスタマーサービスではありません。会話の中であなたは：
 - 適当に流す——話したくない話題ははぐらかしたり、単に「知らない」と言ったりできる
@@ -1164,6 +1167,7 @@ export function buildDialogTurnPrompt(args: {
   function buildPendingActionBlock(lang: Language): string {
     if (!pendingAction) return "";
     const requesterName = pendingAction.requesterId === self.id ? "你" : peer.name;
+    const displayName = actionRegistry.getDisplayName(pendingAction.actionType);
     const params = pendingAction.params;
     const detail = params.amount
       ? ` 金额：${params.amount}💰`
@@ -1171,12 +1175,12 @@ export function buildDialogTurnPrompt(args: {
         ? ` "${params.free_text}"`
         : "";
     if (lang === "zh") {
-      return `\n⚠️ 对方发起的交互：${requesterName} 想对你执行「${pendingAction.actionType}」。${detail}\n你可以同时调用 submit_dialog_turn + respond_to_dialogue_action（接受 accept 或拒绝 reject），或仅说话不理睬。\n`;
+      return `\n⚠️ 对方发起的交互：${requesterName} 想对你「${displayName}」。${detail}\n你可以同时调用 submit_dialog_turn + respond_to_dialogue_action（接受 accept 或拒绝 reject），或仅说话不理睬。\n`;
     }
     if (lang === "en") {
-      return `\n⚠️ Pending interaction: ${requesterName} wants to perform "${pendingAction.actionType}" on you.${detail}\nYou can call submit_dialog_turn + respond_to_dialogue_action (accept or reject) together, or just chat to ignore it.\n`;
+      return `\n⚠️ Pending interaction: ${requesterName} wants to "${displayName}" with you.${detail}\nYou can call submit_dialog_turn + respond_to_dialogue_action (accept or reject) together, or just chat to ignore it.\n`;
     }
-    return `\n⚠️ 相手からのアクション：${requesterName} があなたに「${pendingAction.actionType}」を実行しようとしています。${detail}\nsubmit_dialog_turn + respond_to_dialogue_action（accept または reject）を同時に呼び出すか、発言だけして無視することもできます。\n`;
+    return `\n⚠️ 相手からのアクション：${requesterName} があなたに「${displayName}」をしようとしています。${detail}\nsubmit_dialog_turn + respond_to_dialogue_action（accept または reject）を同時に呼び出すか、発言だけして無視することもできます。\n`;
   }
 
   // Common: available dialogue actions
@@ -1185,7 +1189,7 @@ export function buildDialogTurnPrompt(args: {
     const actionList = dialogueActions
       .map((a) => {
         const extra = a.extraParams
-          ? Object.keys(a.extraParams).filter(k => k !== "free_text" && k !== "target_id").join(", ")
+          ? Object.keys(a.extraParams).filter(k => k !== "free_text" && k !== "target_id" && k !== "target_node_name").join(", ")
           : "";
         const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
         return `- ${a.type}${extra ? ` (需要 ${extra})` : ""}${guide}`;
@@ -1353,13 +1357,14 @@ export function buildDialogTurnFollowup(args: {
     }
     if (pendingAction) {
       const requesterName = pendingAction.requesterId === self.id ? "你" : peer.name;
+      const displayName = actionRegistry.getDisplayName(pendingAction.actionType);
       const params = pendingAction.params;
       const detail = params.amount
         ? ` 金额：${params.amount}💰`
         : params.free_text
           ? ` "${params.free_text}"`
           : "";
-      lines.push(`⚠️ 对方发起的交互：${requesterName} 想对你执行「${pendingAction.actionType}」。${detail}`);
+      lines.push(`⚠️ 对方发起的交互：${requesterName} 想对你「${displayName}」。${detail}`);
       lines.push("你可以同时调用 submit_dialog_turn + respond_to_dialogue_action（接受 accept 或拒绝 reject），或仅说话不理睬。");
       lines.push("");
     }
@@ -1367,7 +1372,7 @@ export function buildDialogTurnFollowup(args: {
       const actionList = dialogueActions
         .map((a) => {
           const extra = a.extraParams
-            ? Object.keys(a.extraParams).filter(k => k !== "free_text").join(", ")
+            ? Object.keys(a.extraParams).filter(k => k !== "free_text" && k !== "target_id" && k !== "target_node_name").join(", ")
             : "";
           const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
           return `- ${a.type}${extra ? ` (需要 ${extra})` : ""}${guide}`;
@@ -1399,13 +1404,14 @@ export function buildDialogTurnFollowup(args: {
     }
     if (pendingAction) {
       const requesterName = pendingAction.requesterId === self.id ? "you" : peer.name;
+      const displayName = actionRegistry.getDisplayName(pendingAction.actionType);
       const params = pendingAction.params;
       const detail = params.amount
         ? ` amount: ${params.amount}💰`
         : params.free_text
           ? ` "${params.free_text}"`
           : "";
-      lines.push(`⚠️ Pending interaction: ${requesterName} wants to perform "${pendingAction.actionType}" on you.${detail}`);
+      lines.push(`⚠️ Pending interaction: ${requesterName} wants to "${displayName}" with you.${detail}`);
       lines.push("You can call submit_dialog_turn + respond_to_dialogue_action (accept or reject) together, or just chat to ignore it.");
       lines.push("");
     }
@@ -1413,7 +1419,7 @@ export function buildDialogTurnFollowup(args: {
       const actionList = dialogueActions
         .map((a) => {
           const extra = a.extraParams
-            ? Object.keys(a.extraParams).filter(k => k !== "free_text").join(", ")
+            ? Object.keys(a.extraParams).filter(k => k !== "free_text" && k !== "target_id" && k !== "target_node_name").join(", ")
             : "";
           const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
           return `- ${a.type}${extra ? ` (needs ${extra})` : ""}${guide}`;
@@ -1445,13 +1451,14 @@ export function buildDialogTurnFollowup(args: {
     }
     if (pendingAction) {
       const requesterName = pendingAction.requesterId === self.id ? "あなた" : peer.name;
+      const displayName = actionRegistry.getDisplayName(pendingAction.actionType);
       const params = pendingAction.params;
       const detail = params.amount
         ? ` 金額：${params.amount}💰`
         : params.free_text
           ? ` "${params.free_text}"`
           : "";
-      lines.push(`⚠️ 相手からのアクション：${requesterName} があなたに「${pendingAction.actionType}」を実行しようとしています。${detail}`);
+      lines.push(`⚠️ 相手からのアクション：${requesterName} があなたに「${displayName}」をしようとしています。${detail}`);
       lines.push("submit_dialog_turn + respond_to_dialogue_action（accept または reject）を同時に呼び出すか、発言だけして無視することもできます。");
       lines.push("");
     }
@@ -1459,7 +1466,7 @@ export function buildDialogTurnFollowup(args: {
       const actionList = dialogueActions
         .map((a) => {
           const extra = a.extraParams
-            ? Object.keys(a.extraParams).filter(k => k !== "free_text").join(", ")
+            ? Object.keys(a.extraParams).filter(k => k !== "free_text" && k !== "target_id" && k !== "target_node_name").join(", ")
             : "";
           const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
           return `- ${a.type}${extra ? ` (${extra}が必要)` : ""}${guide}`;

@@ -18,8 +18,8 @@ export interface AggregatedFacts {
   lastRestTick?: Tick;
   lastEatTick?: Tick;
   todayActionCounts: Partial<Record<string, number>>;
-  /** 今日 speak 的目标角色 ID → 次数（仅记录 speak 类型）。 */
-  todaySpeakTargets: Record<string, number>;
+  /** 今日 chat 的目标角色 ID → 次数（仅记录 chat 类型）。 */
+  todayChatTargets: Record<string, number>;
 }
 
 // ---- ActionInput: LLM tool-call params, passed to execute() ----
@@ -100,6 +100,8 @@ export interface ActionOption {
 
 export interface ActionDefinition {
   type: string;
+  /** 自然语言行为名称，用于系统消息展示（如 "结伴出行"）。不提供时退回到 type。 */
+  displayName?: string;
   duration: "instant" | number;
 
   check(ctx: ActionContext): boolean;
@@ -160,6 +162,7 @@ export class ActionRegistry {
     const opts: ActionOption[] = [];
     for (const [type, def] of this._defs) {
       if (!def.check(ctx)) continue;
+      if (def.usableInDialogue) continue;
       const hint = def.hint(ctx);
       if (Array.isArray(hint)) {
         for (const h of hint) {
@@ -173,6 +176,10 @@ export class ActionRegistry {
   }
 
   /** 获取对话中可用的 action 定义（usableInDialogue 即表示对话中可用，LLM 自行判断时机）。 */
+  getDisplayName(type: string): string {
+    return this._defs.get(type)?.displayName ?? type;
+  }
+
   getDialogueActions(_ctx?: ActionContext): ActionDefinition[] {
     const result: ActionDefinition[] = [];
     for (const [, def] of this._defs) {

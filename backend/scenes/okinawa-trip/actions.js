@@ -2,6 +2,7 @@ module.exports = [
   // ── hold_hands: 牵手 ──
   {
     type: "hold_hands",
+    displayName: "牵手",
     duration: "instant",
     triggerHint: "与有好感的人并肩行走时，用牵手传递温度与试探。",
     paramRule: "必填 target_id（牵手对象）+ 可选 free_text（牵手时想说的话）。",
@@ -52,6 +53,7 @@ module.exports = [
   // ── pat_head: 摸头 ──
   {
     type: "pat_head",
+    displayName: "摸头",
     duration: "instant",
     triggerHint: "想宠溺对方、或借身高差调戏时，揉乱ta的头发。",
     paramRule: "必填 target_id（摸头对象）+ 可选 free_text。",
@@ -102,6 +104,7 @@ module.exports = [
   // ── caress: 抚摸 ──
   {
     type: "caress",
+    displayName: "抚摸",
     duration: "instant",
     triggerHint: "独处、气氛暧昧、体温升高时，手掌在对方身体上游走，从肩膀到腰线，隔着制服感受肌肤的弧度与热度。",
     paramRule: "必填 target_id（抚摸对象）+ 可选 free_text。",
@@ -152,6 +155,7 @@ module.exports = [
   // ── unbutton: 解开纽扣 ──
   {
     type: "unbutton",
+    displayName: "解开纽扣",
     duration: "instant",
     triggerHint: "私密空间中情欲高涨，指尖一颗颗挑开对方衣扣，露出锁骨与胸口。",
     paramRule: "必填 target_id（对象）+ 可选 free_text。",
@@ -202,6 +206,7 @@ module.exports = [
   // ── lick_ear: 舔耳 ──
   {
     type: "lick_ear",
+    displayName: "舔耳",
     duration: "instant",
     triggerHint: "极亲密时的挑逗——凑近耳边，舌尖沿着耳廓描摹，探入耳道，听对方压抑的喘息。",
     paramRule: "必填 target_id（舔耳对象）+ 可选 free_text。",
@@ -252,6 +257,7 @@ module.exports = [
   // ── kiss: 亲吻（覆盖内置） ──
   {
     type: "kiss",
+    displayName: "亲吻",
     duration: "instant",
     triggerHint: "与喜欢的人独处，气氛到了无言的临界点——嘴唇压过去，舌头顶开齿关，在彼此的口腔里纠缠。",
     paramRule: "必填 target_id（亲吻对象）+ 可选 free_text（亲吻后说的话）。",

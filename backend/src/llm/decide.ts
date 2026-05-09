@@ -935,7 +935,8 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
             hasError = true;
             continue;
           }
-          const { target_id, add_kinds, remove_kinds } = parseResult.data;
+          const target_id = parseResult.data.target_id || input.peer.id;
+          const { add_kinds, remove_kinds } = parseResult.data;
           const rel = input.self.relations[target_id] ?? { kinds: [], since: 0, lastInteractionTick: 0 };
 
           // Blood relations (except other_relative) cannot be removed
@@ -1046,6 +1047,9 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
               target_id: input.peer.id,
               amount: result.data.amount,
               free_text: result.data.free_text,
+              target_node_id: result.data.target_node_id,
+              target_node_name: result.data.target_node_name,
+              reason: result.data.reason,
             },
           };
         } else if (name === RESPOND_DIALOGUE_ACTION_TOOL_NAME) {
@@ -1618,7 +1622,13 @@ export async function llmThink(args: {
           hasError = true;
           continue;
         }
-        const { target_id, add_kinds, remove_kinds } = parseResult.data;
+        const target_id = parseResult.data.target_id;
+        if (!target_id) {
+          messages.push({ role: "tool", tool_call_id: t.id, content: "update_relation 需要指定 target_id。" });
+          hasError = true;
+          continue;
+        }
+        const { add_kinds, remove_kinds } = parseResult.data;
         const rel = args.self.relations[target_id] ?? { kinds: [], since: 0, lastInteractionTick: 0 };
         const BLOOD = new Set(["father", "mother", "son", "daughter", "older_brother", "younger_brother", "older_sister", "younger_sister"]);
         const protectedKinds = rel.kinds.filter(k => BLOOD.has(k));

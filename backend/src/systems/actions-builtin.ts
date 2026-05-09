@@ -381,6 +381,7 @@ export const moveAction: ActionDefinition = {
 
 export const giveAction: ActionDefinition = {
   type: "give",
+  displayName: "赠送金钱",
   duration: "instant",
   triggerHint: "身边有人需要帮助，想给予金钱时使用。",
   paramRule: "必填 target_id（给谁）+ amount（金额，正整数）。",
@@ -437,10 +438,11 @@ export const giveAction: ActionDefinition = {
 
 export const travelTogetherAction: ActionDefinition = {
   type: "travel_together",
+  displayName: "结伴出行",
   duration: 0, // computed from BFS path length
   usableInDialogue: true,
   triggerHint: "与对话对象约定一同前往某地，边走边聊，途中不会被外界打断。",
-  paramRule: "必填 target_node_id（目的地节点 id）+ reason（为何前往）。仅对话中可用。",
+  paramRule: "必填 target_node_id（目的地节点 id）或 target_node_name（目的地名称）+ reason（为何前往）。仅对话中可用。",
   check(_ctx) {
     return false; // dialogue-only，正常决策中不可选
   },
@@ -451,34 +453,54 @@ export const travelTogetherAction: ActionDefinition = {
     }));
   },
   validateParams(input, ctx) {
-    if (!input.target_node_id) return "travel_together 需要指定 target_node_id（目的地节点 ID）";
+    const nodeId = input.target_node_id as string | undefined;
+    const nodeName = input.target_node_name as string | undefined;
+    if (!nodeId && !nodeName) return "travel_together 需要指定 target_node_id（目的地节点 ID）或 target_node_name（目的地名称）";
     if (!input.reason) return "travel_together 需要 reason（结伴前往的原因）";
-    const targetNode = ctx.reachable.find(n => n.id === input.target_node_id);
-    if (!targetNode) return `target_node_id="${input.target_node_id}" 不可达或不存在`;
-    if (input.target_node_id === ctx.here.id) return "你已经在目的地了";
+    let resolvedId: string | undefined;
+    if (nodeId) {
+      const targetNode = ctx.reachable.find(n => n.id === nodeId);
+      if (!targetNode) return `target_node_id="${nodeId}" 不可达或不存在`;
+      resolvedId = nodeId;
+    } else {
+      const match = ctx.reachable.find(n => n.name === nodeName || n.name.includes(nodeName!));
+      if (!match) return `找不到名为"${nodeName}"的目的地，请确认地点名称是否正确`;
+      resolvedId = match.id;
+    }
+    if (resolvedId === ctx.here.id) return "你已经在目的地了";
+    // Store resolved ID back so execute/dialog don't need to repeat lookup
+    (input as Record<string, unknown>).target_node_id = resolvedId;
     return null;
   },
   execute(ctx, input) {
     // 正常不会走这里——对话中 accept 后由 executeDialogueAction 特殊处理
     // 提供 fallback 以保持接口完整性
-    const targetId = input.target_node_id as string;
-    const target = ctx.reachable.find(n => n.id === targetId);
+    const targetId = (input.target_node_id as string)
+      || (() => {
+        const name = input.target_node_name as string | undefined;
+        if (!name) return undefined;
+        const m = ctx.reachable.find(n => n.name === name || n.name.includes(name));
+        return m?.id;
+      })();
+    const target = targetId ? ctx.reachable.find(n => n.id === targetId) : undefined;
+    const destName = target?.name ?? (input.target_node_name as string) ?? targetId ?? "???";
     const reason = (input.reason as string) || "结伴";
     return {
-      memory: `我约了同伴一起去 ${target?.name ?? targetId}：${reason}。`,
+      memory: `我约了同伴一起去 ${destName}：${reason}。`,
       event: {
         category: "social",
-        description: `${ctx.self.name} 约同伴一起去 ${target?.name ?? targetId}。`,
+        description: `${ctx.self.name} 约同伴一起去 ${destName}。`,
         intensity: 2,
       },
     };
   },
   extraParams: {
-    target_node_id: { type: "string", description: "目的地节点 id。" },
+    target_node_id: { type: "string", description: "目的地节点 id（与 target_node_name 二选一）。" },
+    target_node_name: { type: "string", description: "目的地名称如'国际通'（与 target_node_id 二选一）。" },
     reason: { type: "string", description: "结伴前往的原因。" },
     free_text: { type: "string", description: "在对话中说明同行细节（可选）。" },
   },
-  extraRequired: ["target_node_id", "reason"],
+  extraRequired: ["reason"],
 };
 
 export const lookAroundAction: ActionDefinition = {

@@ -464,7 +464,17 @@ function executeDialogueAction(
   try {
     // travel_together: special handling — set ongoing action on both characters
     if (actionType === "travel_together") {
-      const targetNodeId = params.target_node_id as string;
+      let targetNodeId = params.target_node_id as string | undefined;
+      const targetNodeName = params.target_node_name as string | undefined;
+      // Resolve name to node ID if needed
+      if (!targetNodeId && targetNodeName) {
+        for (const n of nodeById.values()) {
+          if (n.name === targetNodeName || n.name.includes(targetNodeName)) {
+            targetNodeId = n.id;
+            break;
+          }
+        }
+      }
       if (!targetNodeId) return undefined;
       if (targetNodeId === actor.locationId) return `${actor.name} 已经在目的地了。`;
 
@@ -473,7 +483,7 @@ function executeDialogueAction(
       if (!path) return undefined;
 
       const destNode = nodeById.get(targetNodeId);
-      const destName = destNode?.name ?? targetNodeId;
+      const destName = targetNodeName || destNode?.name || targetNodeId;
       const reason = (params.reason as string) || "结伴同行";
       const endsAt = tick + path.length - 1;
 
@@ -732,6 +742,20 @@ async function runOneTickDialog(
               });
             }
           }
+        } else {
+          // Rejected — push system message
+          const displayName = actionRegistry.getDisplayName(pa.actionType);
+          const tgt = chars.get(pa.targetId);
+          const rejecterName = tgt?.name ?? "???";
+          let rejectMsg: string;
+          if (language === "zh") rejectMsg = `${rejecterName} 拒绝了 ${displayName}。`;
+          else if (language === "en") rejectMsg = `${rejecterName} rejected ${displayName}.`;
+          else rejectMsg = `${rejecterName} が ${displayName} を拒否しました。`;
+          transcript.push({
+            speakerId: "__system__",
+            kind: "action_result",
+            line: rejectMsg,
+          });
         }
         // Clear pending regardless
         conv.pendingAction = undefined;
@@ -822,21 +846,37 @@ async function runOneTickDialog(
           // Process any respondToAction in extra round too
           if (extraResult.respondToAction) {
             const pa = conv.pendingAction;
-            if (pa && extraResult.respondToAction.accepted) {
-              const requester = chars.get(pa.requesterId);
-              const tgt = chars.get(pa.targetId);
-              if (requester && tgt) {
-                const dialogRecord = executeDialogueAction(
-                  pa.actionType, requester, tgt, pa.params,
-                  chars, nodeById, conv.worldId, currentTick, epoch,
-                );
-                if (dialogRecord) {
-                  transcript.push({
-                    speakerId: "__system__",
-                    kind: "action_result",
-                    line: dialogRecord,
-                  });
+            if (pa) {
+              if (extraResult.respondToAction.accepted) {
+                const requester = chars.get(pa.requesterId);
+                const tgt = chars.get(pa.targetId);
+                if (requester && tgt) {
+                  const dialogRecord = executeDialogueAction(
+                    pa.actionType, requester, tgt, pa.params,
+                    chars, nodeById, conv.worldId, currentTick, epoch,
+                  );
+                  if (dialogRecord) {
+                    transcript.push({
+                      speakerId: "__system__",
+                      kind: "action_result",
+                      line: dialogRecord,
+                    });
+                  }
                 }
+              } else {
+                // Rejected — push system message
+                const displayName = actionRegistry.getDisplayName(pa.actionType);
+                const tgt = chars.get(pa.targetId);
+                const rejecterName = tgt?.name ?? "???";
+                let rejectMsg: string;
+                if (language === "zh") rejectMsg = `${rejecterName} 拒绝了 ${displayName}。`;
+                else if (language === "en") rejectMsg = `${rejecterName} rejected ${displayName}.`;
+                else rejectMsg = `${rejecterName} が ${displayName} を拒否しました。`;
+                transcript.push({
+                  speakerId: "__system__",
+                  kind: "action_result",
+                  line: rejectMsg,
+                });
               }
             }
             conv.pendingAction = undefined;

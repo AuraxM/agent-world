@@ -111,6 +111,8 @@ export type TurnDecideFn = (input: {
   upcomingEntries?: import("../domain/types").NotebookEntry[];
   previousMessages?: Array<Record<string, unknown>>;
   previousTranscriptLength?: number;
+  worldDescription?: string;
+  nodes?: MapNode[];
 }) => Promise<
   | { kind: "turn"; turn: DialogTurn; proposeAction?: DialogueActionProposal; respondToAction?: DialogueActionResponse; messages?: Array<Record<string, unknown>>; transcriptLength?: number }
   | { kind: "end"; payload: EndConversationPayload; respondToAction?: DialogueActionResponse; messages?: Array<Record<string, unknown>>; transcriptLength?: number }
@@ -591,6 +593,8 @@ async function runOneTickDialog(
   language: Language,
   currentTick: number,
   epoch: number,
+  worldDescription?: string,
+  nodes?: MapNode[],
 ): Promise<TickDialogResult> {
   const initiator = chars.get(conv.initiatorId)!;
   const acceptor = chars.get(conv.acceptorId)!;
@@ -620,12 +624,19 @@ async function runOneTickDialog(
     TURNS_PER_TICK * 2 - (conv.currentTickRounds === 0 && hasExistingTurns ? 1 : 0);
   const sixthSentenceIndex = maxRounds - 1;
 
-  // Inject time reminder before this tick's dialogue rounds
-  transcript.push({
+  // Inject time reminder before this tick's dialogue rounds.
+  // On the very first tick, insert it before the opening line so the LLM
+  // sees the time context first.
+  const timeTurn: DialogTurn = {
     speakerId: "__system__",
     kind: "say",
     line: injectTimeMessage({ tick: currentTick, epoch, tickStarted: conv.tickStarted, language }),
-  });
+  };
+  if (conv.currentTickRounds === 0) {
+    transcript.unshift(timeTurn);
+  } else {
+    transcript.push(timeTurn);
+  }
 
   for (let round = 0; round < maxRounds; round++) {
     const speakerId =
@@ -678,6 +689,8 @@ async function runOneTickDialog(
         upcomingEntries,
         previousMessages: conv.sharedMessages,
         previousTranscriptLength: conv.sharedMessagesTranscriptLength,
+        worldDescription,
+        nodes,
       }));
     } catch (err) {
       log.error("turnDecide 异常，对话被迫终止", {
@@ -793,6 +806,8 @@ async function runOneTickDialog(
             upcomingEntries,
             previousMessages: conv.sharedMessages,
             previousTranscriptLength: conv.sharedMessagesTranscriptLength,
+            worldDescription,
+            nodes,
           });
           // Save extra round context too
           if (extraResult.messages) {
@@ -862,6 +877,7 @@ export interface RunDialogPhaseInput {
   tick: number;
   epoch: number;
   worldName: string;
+  worldDescription?: string;
   language: Language;
   acceptDecide: AcceptDecideFn;
   turnDecide: TurnDecideFn;
@@ -910,7 +926,7 @@ export async function runDialogPhase(
         return;
       }
 
-      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick, epoch);
+      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick, epoch, input.worldDescription, nodes);
       conv.transcript = tickResult.transcript;
       conv.currentTickRounds = TURNS_PER_TICK;
 
@@ -1079,7 +1095,7 @@ export async function runDialogPhase(
         currentTickRounds: 0,
         status: "active",
       };
-      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick, epoch);
+      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick, epoch, input.worldDescription, nodes);
       conv.transcript = tickResult.transcript;
       conv.currentTickRounds = TURNS_PER_TICK;
       if (tickResult.ended) {

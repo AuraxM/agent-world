@@ -546,6 +546,7 @@ interface DialogTurnInput {
   /** previousMessages 上次保存时 transcript 的长度，用于计算增量。 */
   previousTranscriptLength?: number;
   worldDescription?: string;
+  nodes?: MapNode[];
 }
 
 export interface DialogTurnResult {
@@ -588,6 +589,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     tick: input.tick,
     epoch: input.epoch,
     worldDescription: input.worldDescription,
+    nodes: input.nodes,
   });
 
   dialogLog.info("DIALOG_PROMPT", { prompt, speaker: input.self.name, peer: input.peer.name });
@@ -612,6 +614,7 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     buildRecallTool(),
     buildMemorizeTool(),
     buildNotebookTool(),
+    buildMapTool(),
     buildUpdateLikesTool(),
     buildUpdateGoalsTool(),
     buildUpdateRelationTool(),
@@ -784,6 +787,13 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
           }
           handleMemorize(parseResult.data.target_id, parseResult.data.impression, input.self);
           messages.push({ role: "tool", tool_call_id: t.id, content: "已记录。" });
+        } else if (name === VIEW_MAP_TOOL_NAME) {
+          if (input.nodes && input.nodes.length > 0) {
+            const mapText = buildMapView(input.here, input.nodes);
+            messages.push({ role: "tool", tool_call_id: t.id, content: mapText });
+          } else {
+            messages.push({ role: "tool", tool_call_id: t.id, content: "地图数据不可用。" });
+          }
         } else if (name === NOTEBOOK_TOOL_NAME) {
           const NBR = "NOTEBOOK_TIMEFAIL" as const;
           const previousFails = messages.filter(
@@ -1363,6 +1373,7 @@ export async function llmThink(args: {
   previousTranscriptLength?: number;
   allCharacters?: Character[];
   worldDescription?: string;
+  nodes?: MapNode[];
 }): Promise<ThinkTurnResult | ThinkEndResult> {
   if (!hasApiKey()) throw new Error("没有激活的 LLM provider");
 
@@ -1379,6 +1390,7 @@ export async function llmThink(args: {
     epoch: args.epoch,
     allCharacters: args.allCharacters,
     worldDescription: args.worldDescription,
+    nodes: args.nodes,
   });
 
   dialogLog.info("THINK_PROMPT", { prompt, speaker: args.self.name });
@@ -1395,6 +1407,7 @@ export async function llmThink(args: {
     buildRecallTool(),
     buildMemorizeTool(),
     buildNotebookTool(),
+    buildMapTool(),
     buildUpdateLikesTool(),
     buildUpdateGoalsTool(),
     buildUpdateRelationTool(),
@@ -1503,6 +1516,13 @@ export async function llmThink(args: {
         }
         handleMemorize(parseResult.data.target_id, parseResult.data.impression, args.self);
         messages.push({ role: "tool", tool_call_id: t.id, content: "已记录。" });
+      } else if (name === VIEW_MAP_TOOL_NAME) {
+        if (args.nodes && args.nodes.length > 0) {
+          const mapText = buildMapView(args.here, args.nodes);
+          messages.push({ role: "tool", tool_call_id: t.id, content: mapText });
+        } else {
+          messages.push({ role: "tool", tool_call_id: t.id, content: "地图数据不可用。" });
+        }
       } else if (name === NOTEBOOK_TOOL_NAME) {
         let parsedArgs: unknown;
         try { parsedArgs = JSON.parse(t.function.arguments); } catch {

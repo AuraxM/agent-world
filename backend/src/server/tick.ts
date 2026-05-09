@@ -873,6 +873,8 @@ export async function tick(
             previousMessages: ts.sharedMessages,
             previousTranscriptLength: ts.sharedMessagesTranscriptLength,
             allCharacters: characters,
+            worldDescription: manifest.description,
+            nodes,
           });
         } catch (err) {
           log.error("llmThink 异常，思考被迫终止", {
@@ -916,6 +918,7 @@ export async function tick(
     tick: fromTick,
     epoch: world.epoch,
     worldName: world.name,
+    worldDescription: manifest.description,
     language,
     acceptDecide: (input) => llmAcceptDecide(input),
     turnDecide: (input) => llmDialogTurn(input),
@@ -1119,6 +1122,8 @@ export async function tick(
           previousMessages: ts.sharedMessages,
           previousTranscriptLength: ts.sharedMessagesTranscriptLength,
           allCharacters: characters,
+          worldDescription: manifest.description,
+          nodes,
         });
       } catch (err) {
         log.error("llmThink 异常（新会话）", {

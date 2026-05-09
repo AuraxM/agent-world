@@ -100,7 +100,7 @@ function emptyFacts(): import("../domain/index").AggregatedFacts {
     restNodeName: null,
     hoursAtCurrentLocation: 0,
     todayActionCounts: {},
-    todaySpeakTargets: {},
+    todayChatTargets: {},
   };
 }
 
@@ -363,6 +363,77 @@ export async function tick(
     }
   }
 
+  // ── travel_together: auto-step synchronised movement for paired characters ──
+  const travelProcessed = new Set<string>();
+  for (const c of characters) {
+    const ca = c.currentAction;
+    if (!ca || ca.type !== "travel_together" || travelProcessed.has(c.id)) continue;
+
+    const partnerId = ca.partnerId;
+    if (!partnerId) continue;
+    const partner = characters.find(p => p.id === partnerId);
+    if (!partner) continue;
+
+    travelProcessed.add(c.id);
+    travelProcessed.add(partnerId);
+
+    const path = ca.path;
+    if (!path || path.length === 0) continue;
+
+    const stepIndex = ca.stepIndex ?? 0;
+    const nextStep = stepIndex + 1;
+
+    // Step both characters forward together
+    ca.stepIndex = nextStep;
+    c.locationId = path[nextStep];
+    if (partner.currentAction?.type === "travel_together") {
+      partner.currentAction.stepIndex = nextStep;
+      partner.locationId = path[nextStep];
+    }
+
+    // Lock both (ensures lock even after dialogue ends)
+    lockedCharacterIds.add(c.id);
+    lockedCharacterIds.add(partnerId);
+
+    if (nextStep >= path.length - 1) {
+      // ── Arrived at destination ──
+      const destId = path[path.length - 1];
+      const destName = nodeById.get(destId)?.name ?? destId;
+
+      c.currentAction = undefined;
+      if (partner.currentAction?.type === "travel_together") {
+        partner.currentAction = undefined;
+      }
+
+      c.shortMemory.push({
+        id: `mem-${randomUUID().slice(0, 8)}`,
+        tick: fromTick,
+        importance: 3,
+        content: `我和 ${partner.name} 一起到达了 ${destName}。`,
+      });
+      partner.shortMemory.push({
+        id: `mem-${randomUUID().slice(0, 8)}`,
+        tick: fromTick,
+        importance: 3,
+        content: `我和 ${c.name} 一起到达了 ${destName}。`,
+      });
+
+      allEvents.push({
+        id: `evt-${randomUUID().slice(0, 8)}`,
+        worldId,
+        tick: fromTick,
+        category: "action",
+        description: `${c.name} 和 ${partner.name} 结伴到达了 ${destName}。`,
+        participants: [c.id, partnerId],
+        source: "actor",
+        intensity: 2,
+        scope: "node",
+        nodeId: destId,
+        duration: 1,
+      });
+    }
+  }
+
   // 6. 角色决策（并发）
   const actionsForExecution: Action[] = [];
 
@@ -392,6 +463,24 @@ export async function tick(
         selfImportance: 2,
         skipExecution: true, skipMemory: true,
       });
+    } else {
+      // travel_together without active dialogue (dialogue ended, movement continues)
+      const c = characters.find(ch => ch.id === charId);
+      if (c?.currentAction?.type === "travel_together") {
+        const path = c.currentAction.path!;
+        const destId = path[path.length - 1];
+        const destName = nodeById.get(destId)?.name ?? destId;
+        const partnerId = c.currentAction.partnerId!;
+        const partner = characters.find(p => p.id === partnerId);
+        const step = c.currentAction.stepIndex ?? 0;
+        actionsForExecution.push({
+          type: "wait",
+          actorId: charId,
+          reasoning: `正与 ${partner?.name ?? "同伴"} 结伴前往 ${destName} 途中（第 ${step}/${path.length - 1} 步）。`,
+          selfImportance: 2,
+          skipExecution: true, skipMemory: true,
+        });
+      }
     }
   }
 
@@ -926,8 +1015,8 @@ export async function tick(
     const c = characters.find((ch) => ch.id === mw.characterId);
     if (c) {
       c.shortMemory.push(mw.memory);
-      if (c.shortMemory.length > 50) {
-        c.shortMemory.splice(0, c.shortMemory.length - 50);
+      if (c.shortMemory.length > 120) {
+        c.shortMemory.splice(0, c.shortMemory.length - 120);
       }
     }
   }

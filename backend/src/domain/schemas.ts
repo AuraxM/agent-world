@@ -230,9 +230,9 @@ export const WorldEventSchema = z.object({
 // Dialog protocol schemas
 // ---------------------------------------------------------------------------
 
-// Accept decision: restricts output to accept_speak | reject_speak
+// Accept decision: restricts output to accept_chat | reject_chat
 export const AcceptDecisionSchema = z.object({
-  action_type: z.enum(["accept_speak", "reject_speak"]),
+  action_type: z.enum(["accept_chat", "reject_chat"]),
   target_id: z.string().min(1),
   reasoning: z.string().min(1).max(400),
   self_importance: z.union([
@@ -245,7 +245,7 @@ export const ACCEPT_TOOL_NAME = "submit_accept_decision";
 export const AcceptToolSchema = {
   type: "object" as const,
   properties: {
-    action_type: { type: "string", enum: ["accept_speak", "reject_speak"] },
+    action_type: { type: "string", enum: ["accept_chat", "reject_chat"] },
     target_id: { type: "string", description: "邀请者的 character id。" },
     reasoning: { type: "string", description: "接受或拒绝的理由（内心独白）。" },
     self_importance: { type: "integer", enum: [1, 2, 3, 4, 5], description: "1-5 自评重要度。" },
@@ -287,7 +287,6 @@ export const EndConversationToolSchema = {
 export const PROPOSE_DIALOGUE_ACTION_TOOL_NAME = "propose_dialogue_action";
 export const ProposeDialogueActionSchema = z.object({
   action_type: z.string().min(1),
-  target_id: z.string().min(1),
   amount: z.number().int().positive().optional(),
   free_text: z.string().max(300).optional(),
   reasoning: z.string().min(1).max(400),
@@ -297,12 +296,11 @@ export const ProposeDialogueActionToolSchema = {
   type: "object" as const,
   properties: {
     action_type: { type: "string", description: "要发起的交互行为类型。" },
-    target_id: { type: "string", description: "交互目标角色 ID。" },
     amount: { type: "integer", description: "金额（give 需要）。" },
     free_text: { type: "string", description: "附言或说明（可选）。" },
     reasoning: { type: "string", description: "发起该行为的理由（内心独白）。" },
   },
-  required: ["action_type", "target_id", "reasoning"],
+  required: ["action_type", "reasoning"],
   additionalProperties: true,
 };
 
@@ -422,6 +420,19 @@ export const EndThinkingToolSchema = {
 };
 
 // ---------------------------------------------------------------------------
+// View map tool
+// ---------------------------------------------------------------------------
+
+export const VIEW_MAP_TOOL_NAME = "view_map";
+export const ViewMapSchema = z.object({});
+export const ViewMapToolSchema = {
+  type: "object" as const,
+  properties: {},
+  required: [],
+  additionalProperties: false,
+};
+
+// ---------------------------------------------------------------------------
 // Unified action decision tool (replaces per-action tools)
 // ---------------------------------------------------------------------------
 
@@ -455,9 +466,9 @@ export const DecideActionToolSchema = {
       type: "string",
       description: "行动类型。可选值由引擎动态生成并注入 description。",
     },
-    target_id: { type: "string", description: "目标角色 ID 或节点 ID（speak/move/give 需要）。" },
+    target_id: { type: "string", description: "目标角色 ID 或节点 ID（chat/move/give 需要）。" },
     target_node_id: { type: "string", description: "目标节点 ID（move 需要）。" },
-    free_text: { type: "string", description: "对话内容（speak）或思考内容（think）。" },
+    free_text: { type: "string", description: "对话内容（chat）或思考内容（think）。" },
     amount: { type: "integer", description: "金额（give 需要）。" },
     reasoning: { type: "string", description: "内心独白。必须显式引用一项你的性格特征（用文字描述，不要写数值）。" },
     self_importance: { type: "integer", enum: [1, 2, 3, 4, 5], description: "1-5 自评要不要长期记住。" },
@@ -559,6 +570,23 @@ export const UpdateLikesToolSchema = {
   additionalProperties: false,
 };
 
+export const UPDATE_RELATION_TOOL_NAME = "update_relation";
+export const UpdateRelationSchema = z.object({
+  target_id: z.string().min(1),
+  add_kinds: z.array(z.enum(OBJECTIVE_RELATION_KINDS)).optional(),
+  remove_kinds: z.array(z.enum(OBJECTIVE_RELATION_KINDS)).optional(),
+});
+export const UpdateRelationToolSchema = {
+  type: "object" as const,
+  properties: {
+    target_id: { type: "string", description: "要更新关系的角色 ID。" },
+    add_kinds: { type: "array", items: { type: "string" }, description: "要添加的关系类型（如 friend、classmate）。" },
+    remove_kinds: { type: "array", items: { type: "string" }, description: "要移除的关系类型（血缘关系不可移除）。" },
+  },
+  required: ["target_id"],
+  additionalProperties: false,
+};
+
 export const UPDATE_GOALS_TOOL_NAME = "update_goals";
 export const UpdateGoalsSchema = z.object({
   short_term_goal: z.string().max(300).optional(),
@@ -592,7 +620,7 @@ export function buildDecideActionTool(ctx: ActionContext): ActionToolDef {
   const actionTypes: string[] = [];
   for (const type of actionRegistry.types()) {
     const def = actionRegistry.get(type);
-    if (def && def.check(ctx)) actionTypes.push(type);
+    if (def && def.check(ctx) && !def.usableInDialogue) actionTypes.push(type);
   }
 
   const typeDesc = actionTypes.map((t) => {

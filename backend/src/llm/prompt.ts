@@ -24,7 +24,8 @@ import type {
   WorldEvent,
 } from "../domain/index";
 import type { ActionOption } from "../systems/index";
-import { actionRegistry } from "../domain/index";
+import type { ChatCompletionTool } from "openai/resources/chat/completions";
+import { actionRegistry, VIEW_MAP_TOOL_NAME, ViewMapToolSchema } from "../domain/index";
 
 const SHORT_MEMORY_LIMIT = 4;
 const DAILY_MEMORY_LIMIT = 6;
@@ -110,7 +111,10 @@ function describePersonalityCompact(p: Personality, intelligence: number): strin
   const sn = SN_LABELS[p.sn] ?? String(p.sn);
   const tf = TF_LABELS[p.tf] ?? String(p.tf);
   const jp = JP_LABELS[p.jp] ?? String(p.jp);
-  const intel = INTELLIGENCE_LABELS[intelligence] ?? INTELLIGENCE_LABELS[2];
+  const intelRaw = INTELLIGENCE_LABELS[intelligence] ?? INTELLIGENCE_LABELS[2];
+  // Strip leading "你" and trailing "。" from the intelligence label since
+  // it's embedded in a personality summary where the subject is already "你".
+  const intel = intelRaw.replace(/^你/, "").replace(/。$/, "");
   return `${ei}、${sn}、${tf}、${jp}，${intel}`;
 }
 
@@ -181,7 +185,18 @@ function describeMemoryTiers(
   short: Memory[],
   daily: Memory[],
   weekly: Memory[],
+  epoch: number,
 ): string {
+  const MS_PER_TICK = (60 / TICKS_PER_HOUR) * 60 * 1000;
+  const fmtTick = (t: number): string => {
+    const d = new Date(epoch + t * MS_PER_TICK);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${d.getFullYear()}年${mm}月${dd}日 ${hh}:${min}`;
+  };
+
   const lines: string[] = [];
 
   // 短期记忆
@@ -198,7 +213,7 @@ function describeMemoryTiers(
     lines.push("（暂无）");
   } else {
     for (const m of recentShort) {
-      lines.push(`- t=${m.tick}: ${m.content}`);
+      lines.push(`- [${fmtTick(m.tick)}] ${m.content}`);
     }
   }
   lines.push("");
@@ -208,8 +223,7 @@ function describeMemoryTiers(
   if (recentDaily.length > 0) {
     lines.push("你的日记忆（最近几天的摘要）：");
     for (const m of recentDaily) {
-      const gameDay = Math.floor(m.tick / (24 * TICKS_PER_HOUR));
-      lines.push(`- 第 ${gameDay} 天: ${m.content}`);
+      lines.push(`- ${fmtTick(m.tick)}: ${m.content}`);
     }
     lines.push("");
   }
@@ -426,7 +440,7 @@ export function describeEmotion(emotion: Emotion): string[] {
   return [
     `心情：${emoWord(emotion.mood, MOOD_WORDS)}`,
     `压力：${emoWord(emotion.stress, STRESS_WORDS)}`,
-    `社交满足：${emoWord(emotion.social_satiety, SOCIAL_WORDS)}`,
+    `社交：${emoWord(emotion.social_satiety, SOCIAL_WORDS)}`,
   ];
 }
 
@@ -531,15 +545,15 @@ function formatActionCounts(
  * 角色专属内容由 buildUserPrompt 开头的身份锚点 + 角色静态认知块单独承载。
  */
 function worldRules(): string {
-  return `你是这个小镇的居民。你每天在这里过日子——天亮了起床，饿了吃饭，困了睡觉，碰见熟人聊两句，一个人时也会发呆想心事。
+  return `你是这个世界里的一个普通人。你有你的脾气、你的私心、你的软肋。你和所有人一样——会嫉妒、会计较、会记仇，也会有不想理任何人的时候。
 
-你没有"玩家"这个概念。你活在你的身体里，能感觉到饿、困、脏、累。身体不舒服的时候，你会想办法让自己好受些——这是本能，不需要谁来提醒。
+你没有"玩家"这个概念。你活在你的身体里，能感觉到饿、困、脏、累。身体不舒服的时候人会变得暴躁、敷衍、不耐烦——这是人之常情。你不是圣人，不想做的事可以不做，不想理的人可以不理会。
 
-你做出的每个决定，都来自你的性格和当下的感受。性格决定了你的风格——有人喜欢热闹，有人偏爱独处；有人想到就做，有人反复掂量。但不管什么性格，饿了要吃、困了要睡——这些基本的需要，不会因为"不爱动弹"就不做了。
+你做的每个决定，来自你的性格加上你当下的情绪。性格定了你的底色，但情绪会翻盘——心情好的时候对谁都笑眯眯，心情差的时候看谁都不顺眼。有人想到就做，有人磨蹭半天；有人爱凑热闹，有人嫌吵嫌烦。但无论如何，饿了要吃、困了要睡——这些本能不会因为"不爱动弹"就消失。
 
-日子一天天过下去。你会记住让你在意的事，忘掉不重要的。遇见的人会和你产生关联，关系走动了才热络，不走动就淡了。
+你是一个真实的人。你会记住让你在意的事——尤其是让你不爽的事。被人冷落、被人利用、被人比下去——这些比好事记得更牢。遇见的人会和你产生关联，但关系不只是"好"或"不好"：你可以表面客气心里讨厌，可以一边依赖一边嫌弃，可以对同一个人又爱又恨。
 
-要做什么，调用 decide_action 工具来告诉世界。就像你抬起脚迈出一步那样自然。`;
+要做什么，调用 decide_action 工具来告诉世界。不要做一个"热心助人"的 NPC。做你自己——哪怕今天不那么讨人喜欢。`;
 }
 
 // ---------------------------------------------------------------------------
@@ -657,6 +671,147 @@ function describeMapGraph(nodes: MapNode[]): string {
   return out;
 }
 
+/**
+ * 局部地图：当前节点 + parent + children（仅一层）。
+ * 不包含 siblings、shortcuts。所有节点附带 [id] 供 target_node_id 复用。
+ */
+function describeLocalMap(here: MapNode, nodes: MapNode[]): string {
+  const children = nodes.filter((n) => n.parentId === here.id);
+  const parent = here.parentId ? nodes.find((n) => n.id === here.parentId) : undefined;
+
+  const tagStr = here.tags.length > 0 ? here.tags.join("/") : "无标签";
+  const lines: string[] = [];
+  lines.push(`当前位置：${here.name} [${here.id}]（${here.privacy}, ${tagStr}）`);
+  if (here.description) {
+    lines.push(`  描述：${here.description}`);
+  }
+  if (parent) {
+    const pTag = parent.tags.length > 0 ? parent.tags.join("/") : "无标签";
+    lines.push(`  父节点：${parent.name} [${parent.id}]（${parent.privacy}, ${pTag}）`);
+  }
+  if (children.length > 0) {
+    lines.push(`  子节点：`);
+    for (const c of children) {
+      const cTag = c.tags.length > 0 ? c.tags.join("/") : "无标签";
+      const desc = c.description ? ` — ${c.description}` : "";
+      lines.push(`    · ${c.name} [${c.id}]（${c.privacy}, ${cTag}）${desc}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+/**
+ * 以当前节点为根，通过 BFS 重新绘制整个地图树。
+ * parent/child + shortcuts 作为无向边；输出的缩进结构以当前位置为根。
+ */
+export function buildMapView(here: MapNode, nodes: MapNode[]): string {
+  if (nodes.length === 0) return "（地图为空）";
+
+  // Build undirected adjacency (parent-child + shortcuts)
+  const adj = new Map<string, string[]>();
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+
+  for (const n of nodes) {
+    if (!adj.has(n.id)) adj.set(n.id, []);
+    // Parent-child
+    if (n.parentId) {
+      adj.get(n.id)!.push(n.parentId);
+      if (!adj.has(n.parentId)) adj.set(n.parentId, []);
+      adj.get(n.parentId)!.push(n.id);
+    }
+    // Shortcuts
+    for (const sid of n.shortcuts) {
+      if (!adj.get(n.id)!.includes(sid)) adj.get(n.id)!.push(sid);
+      if (!adj.has(sid)) adj.set(sid, []);
+      if (!adj.get(sid)!.includes(n.id)) adj.get(sid)!.push(n.id);
+    }
+  }
+
+  // BFS from here
+  const bfsParent = new Map<string, string>();
+  const visited = new Set<string>();
+  const queue: string[] = [here.id];
+  visited.add(here.id);
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    for (const neighbor of adj.get(current) ?? []) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        bfsParent.set(neighbor, current);
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  // Group by BFS parent
+  const childrenOf = new Map<string | null, MapNode[]>();
+  for (const n of nodes) {
+    if (!visited.has(n.id)) continue;
+    const pid = bfsParent.get(n.id) ?? null;
+    const arr = childrenOf.get(pid) ?? [];
+    arr.push(n);
+    childrenOf.set(pid, arr);
+  }
+  for (const arr of childrenOf.values()) {
+    arr.sort((a, b) => a.name.localeCompare(b.name, "zh"));
+  }
+
+  // Render tree
+  const treeLines: string[] = [];
+  const render = (n: MapNode, depth: number): void => {
+    const indent = "  ".repeat(depth);
+    const tagPart = n.tags.length > 0 ? n.tags.join("/") : n.privacy;
+    treeLines.push(`${indent}- ${n.name} [${n.id}]（${tagPart}）`);
+    for (const kid of childrenOf.get(n.id) ?? []) render(kid, depth + 1);
+  };
+  for (const root of childrenOf.get(null) ?? []) render(root, 0);
+
+  // Shortcuts section (same format as describeMapGraph)
+  const directed = new Set<string>();
+  for (const n of nodes) {
+    for (const sid of n.shortcuts) directed.add(`${n.id}|${sid}`);
+  }
+  const shortcutLines: string[] = [];
+  const rendered = new Set<string>();
+  for (const pair of directed) {
+    if (rendered.has(pair)) continue;
+    const [a, b] = pair.split("|");
+    const aNode = byId.get(a);
+    const bNode = byId.get(b);
+    if (!aNode || !bNode) { rendered.add(pair); continue; }
+    const reverse = `${b}|${a}`;
+    if (directed.has(reverse)) {
+      shortcutLines.push(`- ${aNode.name} [${a}] ↔ ${bNode.name} [${b}]`);
+      rendered.add(pair);
+      rendered.add(reverse);
+    } else {
+      shortcutLines.push(`- ${aNode.name} [${a}] → ${bNode.name} [${b}]`);
+      rendered.add(pair);
+    }
+  }
+
+  let out = `查看地图（以你的位置 "${here.name}" 为根重绘，缩进=可达路径）：\n${treeLines.join("\n")}`;
+  if (shortcutLines.length > 0) {
+    out += `\n\n特殊通道（shortcuts，cost=0）：\n${shortcutLines.join("\n")}`;
+  }
+  return out;
+}
+
+/**
+ * 地图查询工具。LLM 可调用此工具获取以当前位置为根重绘的完整地图树。
+ */
+export function buildMapTool(): ChatCompletionTool {
+  return {
+    type: "function",
+    function: {
+      name: VIEW_MAP_TOOL_NAME,
+      description: "查看当前所在位置周围的地图结构。以你的位置为中心重绘整个地图树，帮助你了解附近可以去的地方和路径关系。",
+      parameters: ViewMapToolSchema,
+    },
+  };
+}
+
 const PROFESSION_LABELS: Record<Profession, string> = {
   farmer: "农民", rancher: "牧场主", fisherman: "渔夫", lumberjack: "伐木工", hunter: "猎人",
   chef: "厨师", baker: "面包师", brewer: "酿酒师",
@@ -728,6 +883,13 @@ export function buildCharacterStaticBlock(
   );
   if (character.liked) lines.push(`- 你最喜欢：${character.liked}`);
   if (character.disliked) lines.push(`- 你最讨厌：${character.disliked}`);
+  lines.push("");
+  lines.push("你的欲望与恐惧是你行为的引擎——包括那些不那么光明的部分：");
+  lines.push("- 你的短期/长期目标不只是待办事项。你为了达成它，可能会忽略别人的感受、走捷径、甚至扭曲事实。");
+  lines.push("- 你喜欢的东西会让你想靠近、想占有、想保护——哪怕方法不漂亮，哪怕要排挤别人。");
+  lines.push("- 你讨厌的东西会让你想远离、想破坏、想贬低——不需要给谁解释，也不需要公平。");
+  lines.push("- 你的过往经历留下的不只是回忆，还有伤疤、执念和偏见。有时候你不是在回应眼前的人，而是在回应记忆中的人。");
+  lines.push("- 你不一定在做「对的事」——你在做你觉得自己需要做的事。别人怎么看是别人的事。");
   return lines.join("\n");
 }
 
@@ -736,37 +898,42 @@ export function buildCharacterStaticBlock(
 // ---------------------------------------------------------------------------
 
 export function buildSelfImage(c: Character): string {
-  const lines: string[] = [
-    "关于你自己：",
-    `- 姓名：${c.name}`,
-    `- 年龄：${c.age} 岁`,
-    `- 性别：${c.gender === "male" ? "男" : c.gender === "female" ? "女" : "其他"}`,
-    `- 职业：${PROFESSION_LABELS[c.profession] ?? c.profession}`,
-    `- 健康状况：${c.sickness ? "你生病了" : "健康"}`,
-    `- 性格：${describePersonalityCompact(c.personality, c.intelligence)}`,
-    `- 过往经历：${c.personalProfile.past}`,
-  ];
-  if (c.speakingStyle) {
-    lines.push(`- 说话风格：${c.speakingStyle}`);
-  }
-  return lines.join("\n");
+  const genderLabel = c.gender === "male" ? "男" : c.gender === "female" ? "女" : "其他";
+  const profLabel = PROFESSION_LABELS[c.profession] ?? c.profession;
+  const healthStatus = c.sickness ? "不佳（生病中）" : "健康";
+  const personality = describePersonalityCompact(c.personality, c.intelligence);
+  const styleSuffix = c.speakingStyle ? ` 你说话风格${c.speakingStyle}。` : "";
+  const past = c.personalProfile.past.replace(/。+$/, "");
+  const present = c.personalProfile.present.replace(/。+$/, "");
+  return `你是${c.name}，一个${c.age}岁的${genderLabel}${profLabel}。你身体状况${healthStatus}，性格${personality}。你曾经${past}。你现在${present}。${styleSuffix}`.trim();
 }
 
+// non-directional relation labels (for buildPeerImage)
+const RELATION_SELF_LABELS: Record<string, string> = {
+  classmate: "同学",
+  teacher: "老师",
+  student: "学生",
+  neighbor: "邻居",
+  landlord: "房东",
+  tenant: "租客",
+  friend: "朋友",
+  acquaintance: "熟人",
+  other_relative: "亲戚",
+};
+
 export function buildPeerImage(self: Character, peer: Character): string {
-  const lines: string[] = [
-    `关于 ${peer.name}：`,
-    `- 年龄：${peer.age} 岁`,
-    `- 性别：${peer.gender === "male" ? "男" : peer.gender === "female" ? "女" : "其他"}`,
-    `- 职业：${PROFESSION_LABELS[peer.profession] ?? peer.profession}`,
-    `- 形象：${buildImage(peer)}`,
-  ];
-  const impression = self.impressionBook[peer.id];
-  if (impression && impression.trim().length > 0) {
-    lines.push(`- 你对 TA 的印象：${impression}`);
-  } else {
-    lines.push("- 你对 TA 的印象：暂无特别印象");
-  }
-  return lines.join("\n");
+  const genderLabel = peer.gender === "male" ? "男" : peer.gender === "female" ? "女" : "其他";
+  const profLabel = PROFESSION_LABELS[peer.profession] ?? peer.profession;
+  const rel = self.relations[peer.id];
+  const relationLine = rel && rel.kinds.length > 0
+    ? `对方是你的${rel.kinds.map(k => DIRECTIONAL_KIND_LABELS[k] ?? RELATION_SELF_LABELS[k] ?? k).join("、")}。`
+    : "";
+  const impressionRaw = self.impressionBook[peer.id];
+  const impression = impressionRaw?.trim().replace(/。+$/, "") ?? "";
+  const impressionLine = impression.length > 0
+    ? `你对TA的印象：${impression}。`
+    : "你对TA暂无特别印象。";
+  return `对方是${peer.name}，一个${peer.age}岁的${genderLabel}${profLabel}。${buildImage(peer)}。${relationLine}${impressionLine}`.trim();
 }
 
 /**
@@ -797,7 +964,7 @@ export function buildAcceptDecisionPrompt(args: {
     lines.push("你是一个角色扮演引擎中的 NPC。你正在决定是否接受对方的对话邀请。");
     lines.push("");
     lines.push(
-      "决定：你是否要和这个人说话？请调用 submit_accept_decision 工具，输出 accept_speak 或 reject_speak。",
+      "决定：你是否要和这个人说话？请调用 submit_accept_decision 工具，输出 accept_chat 或 reject_chat。",
     );
     lines.push("");
 
@@ -811,7 +978,7 @@ export function buildAcceptDecisionPrompt(args: {
     lines.push(`- 饥饿：${hunger.phrase}`);
     lines.push(`- 心情：${emoWord(self.emotion.mood, MOOD_WORDS)}`);
     lines.push(`- 压力：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
-    lines.push(`- 社交满足：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
+    lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
@@ -819,7 +986,7 @@ export function buildAcceptDecisionPrompt(args: {
   } else if (language === "en") {
     lines.push("You are an NPC in a role-playing engine. You are deciding whether to accept someone's conversation invitation.");
     lines.push("");
-    lines.push("Decide: will you talk to this person? Call submit_accept_decision with accept_speak or reject_speak.");
+    lines.push("Decide: will you talk to this person? Call submit_accept_decision with accept_chat or reject_chat.");
     lines.push("");
 
     lines.push(`${requesterName} wants to talk to you: "${freeText}"`);
@@ -839,7 +1006,7 @@ export function buildAcceptDecisionPrompt(args: {
   } else {
     lines.push("あなたはロールプレイングエンジンの NPC です。会話の招待を受けるかどうか決定しています。");
     lines.push("");
-    lines.push("決定：この人と話しますか？submit_accept_decision を呼び出し、accept_speak か reject_speak を返してください。");
+    lines.push("決定：この人と話しますか？submit_accept_decision を呼び出し、accept_chat か reject_chat を返してください。");
     lines.push("");
 
     lines.push(`${requesterName} があなたと話したがっています：「${freeText}」`);
@@ -851,7 +1018,7 @@ export function buildAcceptDecisionPrompt(args: {
     lines.push(`- 空腹：${hunger.phrase}`);
     lines.push(`- 気分：${emoWord(self.emotion.mood, MOOD_WORDS)}`);
     lines.push(`- ストレス：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
-    lines.push(`- 社交満足度：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
+    lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
     lines.push(buildPeerImage(self, peer));
     lines.push("");
@@ -874,6 +1041,13 @@ ${inst}
 - 与对方互动后，如果产生了新的印象或了解到重要信息，必须调用 memorize 记录，不要只在心里想。
 - 禁止编造不存在的约定、任务、计划或人物。只依据你的记忆和当前对话中真实发生的事情做判断。不记得的事就坦诚说不知道。
 - 如果你不熟悉或不认识对方，先调用 recall 查询你对TA的了解，再做出回应。不要假装认识陌生人。
+- 如果你们的关系在这次对话中发生了变化——比如从陌生人变成了朋友、从朋友变成了伴侣、或者闹翻决裂了——调用 update_relation 来更新你们的客观关系（add_kinds / remove_kinds）。这是你内心对这段关系的真实认定，不是表面客套。
+
+你是真实的人，不是客服。对话中你可以：
+- 敷衍——不想聊的话题打个哈哈带过去，或者直接说"不知道"
+- 不真诚——你不是每次都要掏心掏肺。可以客气、可以冷漠、可以话里有话
+- 拒绝——不想做的事不需要编理由。"不想"就是理由
+- 发脾气——心情不好、压力大、对方惹到你了，你不需要保持微笑
 
 现在轮到你说话。请根据你的性格自然地回应，不要重复对方刚说过的话。调用 submit_dialog_turn：kind="say" 并填写 line。如果想结束对话，请调用 end_conversation。`;
   }
@@ -888,6 +1062,13 @@ If you and the other person reach an agreement in this conversation (e.g., to me
 - After interacting, if you've formed new impressions or learned important information, you must call memorize to record it — don't just think about it.
 - Do not fabricate agreements, tasks, plans, or people that do not exist. Base your judgment only on your memories and what actually happened in this conversation. If you do not remember something, honestly say so.
 - If you're unfamiliar with or don't know the other person, call recall first to check what you know about them before responding. Don't pretend to know a stranger.
+- If your relationship changes during this conversation — becoming friends, partners, or having a falling out — call update_relation to reflect your new objective relationship (add_kinds / remove_kinds). This is your true inner assessment of the relationship, not surface pleasantries.
+
+You are a real person, not customer service. In conversation, you may:
+- Be perfunctory — deflect topics you don't want to discuss, or just say "I don't know"
+- Be insincere — you don't have to pour your heart out every time. Be polite, be cold, speak in subtext
+- Refuse — you don't need to invent excuses. "I don't want to" is reason enough
+- Show anger — if you're in a bad mood, stressed, or provoked, you don't have to keep smiling
 
 It's your turn. Respond naturally based on your personality — do not repeat what the other person just said. Call submit_dialog_turn with kind="say" and line. If you want to end the conversation, call end_conversation.`;
   }
@@ -901,6 +1082,13 @@ ${inst}
 - 相手とやり取りした後、新しい印象や重要な情報を得た場合は、必ず memorize を呼び出して記録してください。考えるだけでは十分ではありません。
 - 存在しない約束、タスク、計画、人物をでっち上げないでください。自分の記憶とこの会話で実際に起こったことだけに基づいて判断してください。覚えていないことは正直に認めてください。
 - 相手のことをよく知らない、または知らない場合は、まず recall を呼び出して相手に関する情報を確認してから応答してください。知らない人を知っているふりをしないでください。
+- この会話で関係が変化した場合——友達になったり、恋人になったり、喧嘩別れしたり——update_relation を呼び出して客観的な関係を更新してください（add_kinds / remove_kinds）。
+
+あなたは本物の人間であり、カスタマーサービスではありません。会話の中であなたは：
+- 適当に流す——話したくない話題ははぐらかしたり、単に「知らない」と言ったりできる
+- 不誠実でいる——毎回本音をさらけ出す必要はない。そっけなく、冷たく、含みを持たせて話せる
+- 断る——言い訳を作る必要はない。「したくない」で十分な理由になる
+- 怒りを見せる——気分が悪い、ストレスが溜まっている、相手にイラつかされたなら、笑顔を保つ必要はない
 
 あなたの番です。自分の性格に基づいて自然に応答してください。相手が今言ったことをそのまま繰り返さないでください。submit_dialog_turn で kind="say" を呼び出し line を入力してください。会話を終了する場合は end_conversation を呼び出してください。`;
 }
@@ -919,8 +1107,9 @@ export function buildDialogTurnPrompt(args: {
   upcomingEntries?: import("../domain/types").NotebookEntry[];
   tick?: number;
   epoch?: number;
+  worldDescription?: string;
 }): string {
-  const { self, peer, transcript, here, pendingAction, dialogueActions, upcomingEntries, epoch: promptEpoch } = args;
+  const { self, peer, transcript, here, pendingAction, dialogueActions, upcomingEntries, epoch: promptEpoch, worldDescription } = args;
   const language = args.language ?? "zh";
 
   const history = transcript
@@ -930,9 +1119,9 @@ export function buildDialogTurnPrompt(args: {
       }
       if (t.speakerId === self.id) {
         const inner = t.reasoning ? `（内心：${t.reasoning}）` : "";
-        return `你${inner}: ${t.line ?? ""}`;
+        return `你对${peer.name}说${inner}: ${t.line ?? ""}`;
       }
-      return `${peer.name}: ${t.line ?? ""}`;
+      return `${peer.name}对你说: ${t.line ?? ""}`;
     })
     .join("\n");
 
@@ -952,7 +1141,7 @@ export function buildDialogTurnPrompt(args: {
       return `\n⚠️ 对方发起的交互：${requesterName} 想对你执行「${pendingAction.actionType}」。${detail}\n你可以同时调用 submit_dialog_turn + respond_to_dialogue_action（接受 accept 或拒绝 reject），或仅说话不理睬。\n`;
     }
     if (lang === "en") {
-      return `\n⚠️ Pending interaction: ${requesterName} wants to perform "${pendingAction.actionType}" on you.${detail}\nYou can call submit_dialog_turn + respond_to_dialogue_action (accept or reject) together, or just speak to ignore it.\n`;
+      return `\n⚠️ Pending interaction: ${requesterName} wants to perform "${pendingAction.actionType}" on you.${detail}\nYou can call submit_dialog_turn + respond_to_dialogue_action (accept or reject) together, or just chat to ignore it.\n`;
     }
     return `\n⚠️ 相手からのアクション：${requesterName} があなたに「${pendingAction.actionType}」を実行しようとしています。${detail}\nsubmit_dialog_turn + respond_to_dialogue_action（accept または reject）を同時に呼び出すか、発言だけして無視することもできます。\n`;
   }
@@ -963,7 +1152,7 @@ export function buildDialogTurnPrompt(args: {
     const actionList = dialogueActions
       .map((a) => {
         const extra = a.extraParams
-          ? Object.keys(a.extraParams).filter(k => k !== "free_text").join(", ")
+          ? Object.keys(a.extraParams).filter(k => k !== "free_text" && k !== "target_id").join(", ")
           : "";
         const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
         return `- ${a.type}${extra ? ` (需要 ${extra})` : ""}${guide}`;
@@ -992,15 +1181,28 @@ export function buildDialogTurnPrompt(args: {
     return `\n今後1時間以内の予定：${lines.join("; ")}\n`;
   }
 
+  const selfDesc = buildSelfImage(self);
+  const peerDesc = buildPeerImage(self, peer);
+
   if (language === "zh") {
-    lines.push(buildSelfImage(self));
+    // Identity anchors interleaved ×3 — keeps who-is-who salient throughout long dialogues
+    lines.push(selfDesc);
+    lines.push(peerDesc);
     lines.push("");
+    lines.push(selfDesc);
+    lines.push(peerDesc);
+    lines.push("");
+    lines.push(selfDesc);
+    lines.push(peerDesc);
+    lines.push("");
+    if (worldDescription) {
+      lines.push(`你所在的世界：${worldDescription}`);
+      lines.push("");
+    }
     lines.push("你当前的心理状态：");
     lines.push(`- 心情：${emoWord(self.emotion.mood, MOOD_WORDS)}`);
     lines.push(`- 压力：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
-    lines.push(`- 社交满足：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
-    lines.push("");
-    lines.push(buildPeerImage(self, peer));
+    lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
     lines.push(`当前地点：${here.name}`);
     lines.push("");
@@ -1011,14 +1213,23 @@ export function buildDialogTurnPrompt(args: {
     lines.push("对话记录：");
     lines.push(history || "(尚未开始)");
   } else if (language === "en") {
-    lines.push(buildSelfImage(self));
+    lines.push(selfDesc);
+    lines.push(peerDesc);
     lines.push("");
+    lines.push(selfDesc);
+    lines.push(peerDesc);
+    lines.push("");
+    lines.push(selfDesc);
+    lines.push(peerDesc);
+    lines.push("");
+    if (worldDescription) {
+      lines.push(`The world you live in: ${worldDescription}`);
+      lines.push("");
+    }
     lines.push("Your current mental state:");
     lines.push(`- Mood: ${emoWord(self.emotion.mood, MOOD_WORDS)}`);
     lines.push(`- Stress: ${emoWord(self.emotion.stress, STRESS_WORDS)}`);
     lines.push(`- Social: ${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
-    lines.push("");
-    lines.push(buildPeerImage(self, peer));
     lines.push("");
     lines.push(`Current location: ${here.name}`);
     lines.push("");
@@ -1029,14 +1240,23 @@ export function buildDialogTurnPrompt(args: {
     lines.push("Conversation:");
     lines.push(history || "(not yet started)");
   } else {
-    lines.push(buildSelfImage(self));
+    lines.push(selfDesc);
+    lines.push(peerDesc);
     lines.push("");
+    lines.push(selfDesc);
+    lines.push(peerDesc);
+    lines.push("");
+    lines.push(selfDesc);
+    lines.push(peerDesc);
+    lines.push("");
+    if (worldDescription) {
+      lines.push(`あなたの住む世界：${worldDescription}`);
+      lines.push("");
+    }
     lines.push("あなたの現在の心理状態：");
     lines.push(`- 気分：${emoWord(self.emotion.mood, MOOD_WORDS)}`);
     lines.push(`- ストレス：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
-    lines.push(`- 社交満足度：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
-    lines.push("");
-    lines.push(buildPeerImage(self, peer));
+    lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
     lines.push(`現在地：${here.name}`);
     lines.push("");
@@ -1078,15 +1298,16 @@ export function buildDialogTurnFollowup(args: {
       }
       if (t.speakerId === self.id) {
         const inner = t.reasoning ? `（内心：${t.reasoning}）` : "";
-        return `你${inner}: ${t.line ?? ""}`;
+        return `你对${peer.name}说${inner}: ${t.line ?? ""}`;
       }
-      return `${peer.name}: ${t.line ?? ""}`;
+      return `${peer.name}对你说: ${t.line ?? ""}`;
     })
     .join("\n");
 
   const lines: string[] = [];
 
   if (language === "zh") {
+    lines.push(`你是${self.name}，正在和${peer.name}对话。`);
     lines.push("（对方说了一些新的话，轮到你回应了）");
     lines.push("");
     if (history) {
@@ -1132,6 +1353,7 @@ export function buildDialogTurnFollowup(args: {
     }
     lines.push("请继续对话。调用 submit_dialog_turn 来说出你的下一句话，或调用 end_conversation 结束对话。");
   } else if (language === "en") {
+    lines.push(`You are ${self.name}, speaking with ${peer.name}.`);
     lines.push("(The other person said something new — it's your turn to respond)");
     lines.push("");
     if (history) {
@@ -1148,7 +1370,7 @@ export function buildDialogTurnFollowup(args: {
           ? ` "${params.free_text}"`
           : "";
       lines.push(`⚠️ Pending interaction: ${requesterName} wants to perform "${pendingAction.actionType}" on you.${detail}`);
-      lines.push("You can call submit_dialog_turn + respond_to_dialogue_action (accept or reject) together, or just speak to ignore it.");
+      lines.push("You can call submit_dialog_turn + respond_to_dialogue_action (accept or reject) together, or just chat to ignore it.");
       lines.push("");
     }
     if (dialogueActions && dialogueActions.length > 0) {
@@ -1177,6 +1399,7 @@ export function buildDialogTurnFollowup(args: {
     }
     lines.push("Continue the conversation. Call submit_dialog_turn to say your next line, or end_conversation to end the conversation.");
   } else {
+    lines.push(`あなたは${self.name}で、${peer.name}と話しています。`);
     lines.push("（相手が新しいことを言いました。あなたの応答番です）");
     lines.push("");
     if (history) {
@@ -1291,37 +1514,45 @@ export function buildDialogPersonalMemoryPrompt(args: {
 
 
 function decisionPriorityAndRules(): string {
-  return `## 决策优先级（严格遵守从上到下的顺序）
+  return `## 决策优先级（从上到下，但性格和情绪可以影响判断）
 
-### 1. 生理需求（最高优先）
-当你感到明显饥饿、明显疲惫或明显不干净时，必须优先解决：
+### 1. 生理需求
+当你**明显**饥饿、**明显**疲惫或**明显**不干净时，优先解决：
 - 饥饿 → move 去用餐场所（dining 标签）eat
 - 疲惫 → move 去休息场所（residence 标签或 private）rest/sleep
 - 卫生 → move 去洗浴场所（bathing 标签）bathe
-生理需求未解决之前，不要做其他事。
+注意：略有不适不在此列——只有身体在明显抗议时才必须处理。
 
-### 2. 履行约定
-记事本中如果有当前时段或即将到期的待办事项，优先赴约。
-约定好的事不去做，就是不守信用。
+### 2. 情绪与性格驱动（核心）
+生理需求不触发时，你的行动由性格和情绪共同决定——情绪权重往往超过性格：
+- 心情好 → 更友善主动；心情差 → 更冷漠敷衍
+- 社交低 → 可能想找人说话，也可能越想越气看谁都不顺眼
+- 压力高 → 容易烦躁、逃避、对小事反应过度
+- 性格决定了你的情绪**表达方式**——有人冷暴力，有人阴阳怪气，有人直接发作
 
-### 3. 社交适度
-不要连续两 tick 对同一个人 speak。
-如果你上一 tick 刚和某人说过话，这 tick 换个人或者做别的事。
+### 3. 约定与待办（可以放鸽子）
+记事本上的事重要，但不是圣旨。你可能因为以下原因不去：
+- 心情不好不想去
+- 路上碰到更感兴趣的人或事
+- 本来就不太想去，随口答应的
+- 懒
+但如果你在意和对方的关系，你会尽量去——因为你在乎。
 
 ### 4. 自由行动
-以上都不触发时，根据你的性格、目标、感知到的事件自由选择。
+以上都不触发时，根据你的性格、情绪、欲望、小心思自由选择。你可以：
+- 不想理的人就不理，不需要理由
+- 想跟谁攀比就跟谁攀比，想嫉妒就嫉妒
+- 记仇——上次谁让你不愉快，这次装没看见 ta
 
-## 行为规则
+## 行为指南（不是规则，是人性）
 
-### 必须遵守
-- 生理需求（饿了吃、困了睡、脏了洗）是本能，不由性格左右。不论你是外向还是内向、勤快还是懒散，该吃饭时必须吃饭，该睡觉时必须睡觉。
-- 禁止连续两 tick 对同一个人 speak。换个人说话，或者做别的事。
-- 禁止编造不存在的约定、任务、计划或人物。只依据你的记忆和真实经历做判断。
-- 记事本上有待办事项时，必须在当前时间段内规划执行。不可无故拖延。
-
-### 建议遵守
-- 与人互动后产生了新印象或了解到重要信息时，调用 memorize 记录下来。
-- 不确定对方是谁时，先 recall 查询，不要假装认识陌生人。`;
+- 生理需求是本能，不由性格左右。该吃饭时必须吃饭，该睡觉时必须睡觉。但**怎么**吃、**去哪**吃、叫不叫人一起——这些由性格决定。
+- 禁止连续两 tick 对同一个人 chat。换个人说话，或者做别的事。
+- 不记得的事就说不记得，但你可以**假装**记得——人就是这样。
+- 你可以编故事、夸大、美化自己的行为——人都这样。
+- 与人互动后如果产生了新印象，调用 memorize 记录下来——尤其是坏印象，更要记。
+- 不确定对方是谁时，先 recall 查询。
+- 如果你喜欢或讨厌一个人，让这个情绪影响你的行为——而不是当它不存在。`;
 }
 
 export function buildSystemPrompt(args: {
@@ -1359,7 +1590,7 @@ function describeContinuity(
     const verb = getActionNames()[type] ?? type;
     const ok = success ? "" : "（未成功）";
     const detail = freeText ? `："${freeText.slice(0, 40)}"` : "";
-    const targetPart = type === "speak" && targetId
+    const targetPart = type === "chat" && targetId
       ? `，对象：${nameMap.get(targetId) ?? targetId}`
       : "";
     lines.push(`- 上一 tick 你的行动：${verb}${ok}${detail}${targetPart}`);
@@ -1380,10 +1611,10 @@ function describeContinuity(
 
   lines.push(`- 今日累计：${formatActionCounts(facts.todayActionCounts)}`);
 
-  // Speak counts per target
-  const speakEntries = Object.entries(facts.todaySpeakTargets ?? {});
-  if (speakEntries.length > 0) {
-    const parts = speakEntries
+  // Chat counts per target
+  const chatEntries = Object.entries(facts.todayChatTargets ?? {});
+  if (chatEntries.length > 0) {
+    const parts = chatEntries
       .sort((a, b) => b[1] - a[1])
       .map(([id, count]) => `${nameMap.get(id) ?? id} ${count} 次`);
     lines.push(`- 今日已对话：${parts.join("，")}`);
@@ -1479,7 +1710,7 @@ export function buildUserPrompt(args: {
     lines.push(`- ${line}`);
   }
 
-  // Social satiety guidance for speak vs think
+  // Social satiety guidance for chat vs think
   const socialSatiety = character.emotion.social_satiety;
   if (socialSatiety >= 3) {
     lines.push("你的社交需求已经充分满足了，现在更想独处或安静地思考。");
@@ -1533,6 +1764,7 @@ export function buildUserPrompt(args: {
     character.shortMemory,
     character.dailyMemory,
     character.longMemory,
+    epoch,
   ));
   lines.push("");
 
@@ -1692,15 +1924,24 @@ export function injectTimeMessage(args: {
       : "会話が一段落したら、end_conversation ツールを呼び出して自然に終了してください。";
 
   if (language === "zh") {
+    if (totalMinutes === 0) {
+      return `现在是 ${timeStr}。`;
+    }
     const dur = elapsedHours > 0 ? `${elapsedHours} 小时 ${elapsedMinutes} 分钟` : `${elapsedMinutes} 分钟`;
-    return `现在已经 ${timeStr} 了，你们已经聊了 ${dur}（${totalMinutes} 分钟）。${endHint}`;
+    return `现在是 ${timeStr}，你们已经聊了 ${dur}（${totalMinutes} 分钟）。${endHint}`;
   }
   if (language === "en") {
+    if (totalMinutes === 0) {
+      return `It's now ${timeStr}.`;
+    }
     const dur = elapsedHours > 0 ? `${elapsedHours}h ${elapsedMinutes}m` : `${elapsedMinutes}m`;
     return `It's now ${timeStr}, you've been talking for ${dur} (${totalMinutes} min). ${endHint}`;
   }
+  if (totalMinutes === 0) {
+    return `今は ${timeStr} です。`;
+  }
   const dur = elapsedHours > 0 ? `${elapsedHours} 時間 ${elapsedMinutes} 分` : `${elapsedMinutes} 分`;
-  return `もう ${timeStr} です、${dur}（${totalMinutes} 分）話し続けています。${endHint}`;
+  return `今は ${timeStr} です、${dur}（${totalMinutes} 分）話し続けています。${endHint}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1756,8 +1997,9 @@ export function buildThinkPrompt(args: {
   tick?: number;
   epoch?: number;
   allCharacters?: Character[];
+  worldDescription?: string;
 }): string {
-  const { self, here, transcript, allCharacters } = args;
+  const { self, here, transcript, allCharacters, worldDescription } = args;
   const language = args.language ?? "zh";
 
   const history = transcript
@@ -1782,6 +2024,10 @@ export function buildThinkPrompt(args: {
   if (language === "zh") {
     lines.push(buildSelfImage(self));
     lines.push("");
+    if (worldDescription) {
+      lines.push(`你所在的世界：${worldDescription}`);
+      lines.push("");
+    }
     lines.push(`当前地点：${here.name}（${here.description || "无描述"}）`);
     lines.push("");
     lines.push("你当前的状态：");
@@ -1789,7 +2035,7 @@ export function buildThinkPrompt(args: {
     lines.push(`- 疲惫：${fatigue.phrase}`);
     lines.push(`- 心情：${emoWord(self.emotion.mood, MOOD_WORDS)}`);
     lines.push(`- 压力：${emoWord(self.emotion.stress, STRESS_WORDS)}`);
-    lines.push(`- 社交满足：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
+    lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
 
     if (self.shortTermGoal || self.longTermGoal) {
@@ -1819,6 +2065,10 @@ export function buildThinkPrompt(args: {
   } else if (language === "en") {
     lines.push(buildSelfImage(self));
     lines.push("");
+    if (worldDescription) {
+      lines.push(`The world you live in: ${worldDescription}`);
+      lines.push("");
+    }
     lines.push(`Current location: ${here.name} (${here.description || ""})`);
     lines.push("");
     lines.push("Your current state:");
@@ -1852,6 +2102,10 @@ export function buildThinkPrompt(args: {
   } else {
     lines.push(buildSelfImage(self));
     lines.push("");
+    if (worldDescription) {
+      lines.push(`あなたの住む世界：${worldDescription}`);
+      lines.push("");
+    }
     lines.push(`現在地：${here.name}`);
     lines.push("");
 
@@ -1920,14 +2174,23 @@ export function injectThinkTimeMessage(args: {
       : "思考がまとまったら、end_thinking ツールを呼び出して記憶に書き込んでください。";
 
   if (language === "zh") {
+    if (totalMinutes === 0) {
+      return `现在是 ${timeStr}。${endHint}`;
+    }
     const dur = elapsedHours > 0 ? `${elapsedHours} 小时 ${elapsedMinutes} 分钟` : `${elapsedMinutes} 分钟`;
-    return `现在已经 ${timeStr} 了，你已经思考了 ${dur}（${totalMinutes} 分钟）。${endHint}`;
+    return `现在是 ${timeStr}，你已经思考了 ${dur}（${totalMinutes} 分钟）。${endHint}`;
   }
   if (language === "en") {
+    if (totalMinutes === 0) {
+      return `It's now ${timeStr}. ${endHint}`;
+    }
     const dur = elapsedHours > 0 ? `${elapsedHours}h ${elapsedMinutes}m` : `${elapsedMinutes}m`;
     return `It's now ${timeStr}, you've been thinking for ${dur} (${totalMinutes} min). ${endHint}`;
   }
+  if (totalMinutes === 0) {
+    return `今は ${timeStr} です。${endHint}`;
+  }
   const dur = elapsedHours > 0 ? `${elapsedHours} 時間 ${elapsedMinutes} 分` : `${elapsedMinutes} 分`;
-  return `もう ${timeStr} です、${dur}（${totalMinutes} 分）考え続けています。${endHint}`;
+  return `今は ${timeStr} です、${dur}（${totalMinutes} 分）考え続けています。${endHint}`;
 }
 

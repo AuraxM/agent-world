@@ -112,6 +112,34 @@ Built-in actions in `backend/src/systems/actions-builtin.ts`. Mod actions loaded
 
 `backend/src/llm/` uses an OpenAI-compatible API. Multiple named entry points (`decide`, `dialog_turn`, `dialog_summarize`, `memory_compress`, `accept_decision`, `dialog_personal_memory`) can route to different providers configured in the `llm_providers` / `llm_entry_configs` DB tables. Tool-calling is mandatory; pure-text responses trigger re-prompting (max 3 rounds). DeepSeek `reasoning_content` is preserved across rounds. Fallback action on any LLM failure: `look_around`.
 
+### LLM prompt cache — 对话 prompt 前缀稳定性
+
+对话 prompt 构建时，**每一轮都相同的部分必须放在 prompt 最前面**，每轮可能变化的部分放到**末尾（后缀）**。这样 LLM 的 prompt-cache 可以复用整个前缀。
+
+**规则：**
+
+- `buildDialogTurnPrompt`（首轮）的前缀仅包含跨轮不变的内容：identity ×3、world description、emotion 状态、可用行为列表、日程信息。这些东西同一场对话每一轮都一样。
+- 以下内容**禁止**放在 prompt 前缀中，必须作为后缀追加在对话记录之后：
+  - **当前地点**（`describeLocalMap` / `当前地点：XXX`）—— travel_together 等行为会改变位置
+  - **待处理交互请求**（`⚠️ 对方发起的交互...`）—— 对方每轮可能发起新的
+- 后缀追加方式：在 `对话记录：[history]` 行之后 `lines.push`，不要插入到前缀区。
+- `buildDialogTurnFollowup`（后续轮）使用 `previousMessages` 复用完整上下文，追加的 followup 本身是新的 user message，不影响缓存前缀。
+
+**在添加任何新的 per-turn 动态信息到对话 prompt 时，必须追问自己：这个信息同一场对话的每一轮都完全一样吗？如果不一样，放到后缀区。**
+
+**正确的 prompt 结构：**
+```
+[identity ×3]          ← 完全不变
+[world description]      ← 完全不变
+[emotion/vitals state]   ← 完全不变（emotion 每 tick 变化但 LLM 不关心微小差异）
+[dialogue actions list]  ← 完全不变
+[upcoming entries]       ← 完全不变
+                         ← ↑ 缓存边界在此 ↑
+对话记录：[history]       ← 追加
+【当前地点：XXX】          ← 后缀（可能变化）
+⚠️ 对方发起的交互...      ← 后缀（可能变化）
+```
+
 ### Key domain constants (game)
 
 - 1 tick = 1/5 game hour (`TICKS_PER_HOUR = 5`)

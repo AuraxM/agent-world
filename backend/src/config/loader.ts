@@ -3,14 +3,26 @@ import path from "node:path";
 import type { ZodSafeParseResult, ZodType } from "zod";
 import {
   CharacterTemplateSchema,
+  ItemDefinitionSchema,
   ManifestSchema,
   MapConfigSchema,
+  ShopDefinitionSchema,
 } from "./schemas";
-import type { CharacterTemplate, Manifest, MapConfig } from "./types";
+import type { CharacterTemplate, Manifest, MapConfig, ShopDefinition } from "./types";
 import type { PackValidation } from "./loader-types";
+import type { ItemDefinition } from "../domain/types";
 import { PROFESSION_INCOME_TIERS } from "../domain/index";
 import { DEFAULT_ECONOMY_CONFIG } from "./types";
 import type { EconomyConfig } from "./types";
+
+/** Load a CommonJS module at runtime without involving the bundler. */
+function loadJSModule(filePath: string): unknown {
+  const code = readFileSync(filePath, "utf8");
+  const module = { exports: {} as unknown };
+  const fn = new Function("module", "exports", code);
+  fn(module, module.exports);
+  return module.exports;
+}
 
 function scenesRoot(): string {
   return (
@@ -188,4 +200,104 @@ export function loadEconomyConfig(mapId: string): EconomyConfig {
 /** Resolve a profession string to its income tier (0-3). */
 export function resolveIncomeLevel(profession: string): number {
   return PROFESSION_INCOME_TIERS[profession] ?? 0;
+}
+
+/** Load items.json from a map pack. Returns empty array if file doesn't exist. */
+export function loadItems(packId: string): ItemDefinition[] {
+  const file = path.join(scenesRoot(), packId, "items.json");
+  if (!existsSync(file)) return [];
+  const json = readJsonFile(file);
+  if (!Array.isArray(json)) throw new Error(`items.json must be an array`);
+  return json.map((item, i) => {
+    const r = ItemDefinitionSchema.safeParse(item);
+    if (!r.success) {
+      const issues = r.error.issues.map((iss) => `${iss.path.join(".")}: ${iss.message}`).join("; ");
+      throw new Error(`config invalid: ${file}[${i}]: ${issues}`);
+    }
+    return r.data;
+  });
+}
+
+/** Load shops.json with parent-child constraint validation. Throws if constraint violated. */
+export function loadShops(packId: string): ShopDefinition[] {
+  const file = path.join(scenesRoot(), packId, "shops.json");
+  if (!existsSync(file)) return [];
+  const json = readJsonFile(file);
+  if (!Array.isArray(json)) throw new Error(`shops.json must be an array`);
+  const shops: ShopDefinition[] = [];
+  for (let i = 0; i < json.length; i++) {
+    const r = ShopDefinitionSchema.safeParse(json[i]);
+    if (!r.success) {
+      const issues = r.error.issues.map((iss) => `${iss.path.join(".")}: ${iss.message}`).join("; ");
+      throw new Error(`config invalid: ${file}[${i}]: ${issues}`);
+    }
+    shops.push(r.data);
+  }
+
+  // Parent-child constraint: no shop can be ancestor/descendant of another shop
+  const map = loadMap(packId);
+  const nodeById = new Map(map.nodes.map((n) => [n.id, n]));
+  const shopNodeIds = new Set(shops.map((s) => s.nodeId));
+
+  for (const shop of shops) {
+    // Check node exists
+    let current = nodeById.get(shop.nodeId);
+    if (!current) throw new Error(`shop nodeId "${shop.nodeId}" not found in map "${packId}"`);
+
+    // Check ancestors (traverse up)
+    while (current.parentId) {
+      if (shopNodeIds.has(current.parentId)) {
+        throw new Error(
+          `Shop constraint violation in "${packId}": node "${shop.nodeId}" has ancestor "${current.parentId}" which is also a shop. Parent shops cannot contain child shops.`
+        );
+      }
+      current = nodeById.get(current.parentId);
+      if (!current) break;
+    }
+
+    // Check descendants
+    const checkDescendants = (nodeId: string): void => {
+      for (const n of map.nodes) {
+        if (n.parentId === nodeId && shopNodeIds.has(n.id)) {
+          throw new Error(
+            `Shop constraint violation in "${packId}": node "${shop.nodeId}" has child "${n.id}" which is also a shop.`
+          );
+        }
+        if (n.parentId === nodeId) checkDescendants(n.id);
+      }
+    };
+    checkDescendants(shop.nodeId);
+  }
+
+  return shops;
+}
+
+/** Load items from mod items.js (override/merge). */
+export function loadModItems(packId: string): ItemDefinition[] {
+  const manifest = loadManifest(packId);
+  if (!manifest.items) return [];
+  const itemsPath = path.join(scenesRoot(), packId, manifest.items);
+  if (!existsSync(itemsPath)) return [];
+  const mod = loadJSModule(itemsPath);
+  const arr: ItemDefinition[] = Array.isArray(mod)
+    ? mod
+    : ((mod as { default?: ItemDefinition[] }).default ?? []);
+  // Validate each
+  for (let i = 0; i < arr.length; i++) {
+    const r = ItemDefinitionSchema.safeParse(arr[i]);
+    if (!r.success) {
+      const issues = r.error.issues.map((iss) => `${iss.path.join(".")}: ${iss.message}`).join("; ");
+      throw new Error(`config invalid: ${itemsPath}[${i}]: ${issues}`);
+    }
+  }
+  return arr;
+}
+
+/** Merge base items.json + mod items.js. Mod overrides by id. */
+export function loadAllItems(packId: string): ItemDefinition[] {
+  const base = loadItems(packId);
+  const mod = loadModItems(packId);
+  const merged = new Map<string, ItemDefinition>();
+  for (const item of [...base, ...mod]) merged.set(item.id, item);
+  return [...merged.values()];
 }

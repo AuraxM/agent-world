@@ -1,10 +1,5 @@
-import { Suspense } from "react";
-import { Dashboard } from "@/components/dashboard";
+import { Navigate } from "react-router-dom";
 
-export default function Page() {
-  return (
-    <Suspense>
-      <Dashboard />
-    </Suspense>
-  );
+export default function HomePage() {
+  return <Navigate to="/hub/mods" replace />;
 }

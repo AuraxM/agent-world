@@ -35,6 +35,10 @@ export interface Manifest {
   actions?: string;
   /** Path to events.json relative to the map pack directory. */
   events?: string;
+  /** Path to items.json relative to the map pack directory. */
+  items?: string;
+  /** Path to shops.json relative to the map pack directory. */
+  shops?: string;
   /** Optional economy configuration overrides. */
   economy?: EconomyConfig;
 }
@@ -76,6 +80,8 @@ export type CharacterTemplate = Omit<
   liked?: string;
   /** 最讨厌的人或事 */
   disliked?: string;
+  /** 初始持有的物品 ID 列表 */
+  initialItems?: string[];
 };
 
 export interface SurvivalCosts {
@@ -109,6 +115,13 @@ export interface EconomyConfig {
   tierMultipliers?: Record<number, number>;
   /** 每日最低生存成本基准。mod 可覆写以适配不同世界观。默认 20。 */
   mdc?: number;
+}
+
+export interface ShopDefinition {
+  nodeId: string;
+  ownerCharacterId: string;
+  goods: string[];
+  salary: number;
 }
 
 export const DEFAULT_ECONOMY_CONFIG: EconomyConfig = {

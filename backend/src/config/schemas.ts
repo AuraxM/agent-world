@@ -6,7 +6,8 @@
 import { z } from "zod";
 import { NODE_TAGS, OBJECTIVE_RELATION_KINDS, PROFESSIONS, GENDERS, CHARACTER_ORIGINS } from "../domain/index";
 import { PersonalitySchema, RelationSchema } from "../domain/index";
-import type { Manifest, MapConfig, CharacterTemplate, MapNodeConfig, EconomyConfig, SurvivalCosts, ProfessionIncomes, BalanceThresholds } from "./types";
+import type { Manifest, MapConfig, CharacterTemplate, MapNodeConfig, EconomyConfig, SurvivalCosts, ProfessionIncomes, BalanceThresholds, ShopDefinition } from "./types";
+import type { ItemDefinition } from "../domain/types";
 
 /** 节点（文件内格式）：相比运行时缺 `worldId`。 */
 export const MapNodeConfigSchema: z.ZodType<MapNodeConfig> = z.object({
@@ -59,6 +60,35 @@ export const EconomyConfigSchema: z.ZodType<EconomyConfig> = z.object({
   mdc: z.number().int().min(1).optional(),
 });
 
+const ItemEffectSchema = z.object({
+  vitals: z.object({
+    hunger: z.number().int().optional(),
+    fatigue: z.number().int().optional(),
+    hygiene: z.number().int().optional(),
+  }).optional(),
+  emotion: z.object({
+    mood: z.number().int().optional(),
+    stress: z.number().int().optional(),
+    socialSatiety: z.number().int().optional(),
+  }).optional(),
+});
+
+export const ItemDefinitionSchema: z.ZodType<ItemDefinition> = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  value: z.number().int().min(0),
+  consumable: z.boolean(),
+  effects: ItemEffectSchema,
+});
+
+export const ShopDefinitionSchema: z.ZodType<ShopDefinition> = z.object({
+  nodeId: z.string().min(1),
+  ownerCharacterId: z.string().min(1),
+  goods: z.array(z.string()).min(1).max(3),
+  salary: z.number().int().min(0),
+});
+
 /** 地图包 manifest —— 每个地图包目录下的 manifest.json。 */
 export const ManifestSchema: z.ZodType<Manifest> = z.object({
   id: z.string().min(1),
@@ -73,6 +103,8 @@ export const ManifestSchema: z.ZodType<Manifest> = z.object({
     .optional(),
   actions: z.string().optional(),
   events: z.string().optional(),
+  items: z.string().optional(),
+  shops: z.string().optional(),
   economy: EconomyConfigSchema.optional(),
 });
 
@@ -165,6 +197,7 @@ export const CharacterTemplateSchema: z.ZodType<CharacterTemplate> = z.object({
   longTermGoal: z.string().optional(),
   liked: z.string().optional(),
   disliked: z.string().optional(),
+  initialItems: z.array(z.string()).optional(),
 });
 
 // 校验封闭枚举确实被引用（防止 enums.ts 改动后 schema 漏更新）。

@@ -60,6 +60,8 @@ export function buildActionContext(
     reachable,
     isSleepHour,
     facts,
+    shops: [],
+    itemDefs: new Map(),
   };
 }
 

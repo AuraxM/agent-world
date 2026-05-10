@@ -63,6 +63,7 @@ export type CharacterTemplate = Omit<
   | "liked"
   | "disliked"
   | "notebook"
+  | "inventory"
 > & {
   initialMoney?: number;
   incomeMultiplier?: number;

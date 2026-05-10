@@ -459,6 +459,8 @@ function executeDialogueAction(
       todayActionCounts: {},
       todayChatTargets: {},
     },
+    shops: [],
+    itemDefs: new Map(),
   };
 
   try {
@@ -674,6 +676,8 @@ async function runOneTickDialog(
         todayActionCounts: {},
         todayChatTargets: {},
       },
+      shops: [],
+      itemDefs: new Map(),
     };
     const dialogueActions = actionRegistry.getDialogueActions(actionCtx);
 
@@ -812,6 +816,8 @@ async function runOneTickDialog(
               todayActionCounts: {},
               todayChatTargets: {},
             },
+            shops: [],
+            itemDefs: new Map(),
           };
           const otherDialogueActions = actionRegistry.getDialogueActions(otherActionCtx);
           const otherPendingAction = conv.pendingAction && conv.pendingAction.targetId === otherId

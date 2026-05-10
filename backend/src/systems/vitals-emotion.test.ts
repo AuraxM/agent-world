@@ -50,6 +50,7 @@ function mkChar(
     activeConversationIds: [],
     lastConversationEndTick: 0,
     impressionBook: {},
+    inventory: [],
     notebook: [],
     shortTermGoal: null,
     longTermGoal: null,

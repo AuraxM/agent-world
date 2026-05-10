@@ -217,7 +217,7 @@ export const transactions = sqliteTable(
     tick: integer("tick").notNull(),
     characterId: text("character_id").notNull(),
     amount: integer("amount").notNull(),
-    category: text("category", { enum: ["expense", "income", "transfer_in", "transfer_out"] })
+    category: text("category", { enum: ["expense", "income", "transfer_in", "transfer_out", "shop_sale", "salary"] })
       .notNull(),
     description: text("description").notNull().default(""),
     counterpartyId: text("counterparty_id"),

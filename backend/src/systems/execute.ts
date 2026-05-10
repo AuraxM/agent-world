@@ -230,6 +230,8 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
         todayActionCounts: {},
         todayChatTargets: {},
       },
+      shops: [],
+      itemDefs: new Map(),
     };
 
     // Build ActionInput from the Action

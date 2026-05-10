@@ -33,6 +33,7 @@ export function rowToCharacter(c: CharRow): Character {
     speakingStyle: c.speakingStyle ?? undefined,
     activeConversationIds: JSON.parse(c.activeConversationIdsJson),
     lastConversationEndTick: 0, // runtime-only cooldown, not persisted
+    inventory: [],
     notebook: [],
   };
 }

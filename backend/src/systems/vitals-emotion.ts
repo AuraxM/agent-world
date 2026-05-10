@@ -316,24 +316,27 @@ function fatigueCapDescription(severity: "light" | "heavy"): string {
 }
 
 function hungerDescription(value: number, level: "medium" | "severe"): string {
+  const v = value.toFixed(2);
   if (level === "severe") {
-    return `极度饥饿（${value} 小时未进食），必须立刻找东西吃。`;
+    return `极度饥饿（${v} 小时未进食），必须立刻找东西吃。`;
   }
-  return `明显感到饿了（${value} 小时未进食）。`;
+  return `明显感到饿了（${v} 小时未进食）。`;
 }
 
 function fatigueDescription(value: number, level: "medium" | "severe"): string {
+  const v = value.toFixed(2);
   if (level === "severe") {
-    return `极度疲惫（已 ${value} 小时未眠），几乎站着都能睡着。`;
+    return `极度疲惫（已 ${v} 小时未眠），几乎站着都能睡着。`;
   }
-  return `开始感到累（已 ${value} 小时未眠）。`;
+  return `开始感到累（已 ${v} 小时未眠）。`;
 }
 
 function hygieneDescription(value: number, level: "medium" | "severe"): string {
+  const v = value.toFixed(2);
   if (level === "severe") {
-    return `身上已经很脏了（${value} 小时未洗浴），自己都能闻到味道。`;
+    return `身上已经很脏了（${v} 小时未洗浴），自己都能闻到味道。`;
   }
-  return `感觉有点不干净（${value} 小时未洗浴）。`;
+  return `感觉有点不干净（${v} 小时未洗浴）。`;
 }
 
 // ---- emotion evolution ----

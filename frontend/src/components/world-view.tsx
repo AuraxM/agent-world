@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useWorldState } from "@/hooks/use-world-state";
 import { useViewState } from "@/hooks/use-view-state";
 import { useFollow } from "@/hooks/use-follow";
+import { findRootNode } from "@/lib/world";
 import { CharacterList } from "./character-list";
 import { TickControl } from "./tick-control";
 import { EventStream } from "./event-stream";
@@ -13,7 +14,7 @@ import { ProfilePane } from "./profile-pane";
 export function WorldView() {
   const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto } = useWorldState();
   const view = useViewState();
-  const { followingId, follow, clear: clearFollow, isFollowing } = useFollow();
+  const { followingId, follow, isFollowing } = useFollow();
   const [centerTab, setCenterTab] = useState<"stream" | "gantt">("stream");
   const [profileId, setProfileId] = useState<string | null>(null);
 
@@ -23,13 +24,22 @@ export function WorldView() {
   }, [snapshot, profileId]);
 
   const handleSelectCharacter = (id: string) => {
-    view.selectCharacter(id);
-    setProfileId((prev) => prev === id ? null : id);
+    setProfileId((prev) => {
+      if (prev === id) return null;
+      view.selectCharacter(id);
+      return id;
+    });
   };
+
+  useEffect(() => {
+    if (!snapshot) return;
+    const root = findRootNode(snapshot.nodes);
+    if (root) view.initRootIfNeeded(root.id);
+  }, [snapshot, view]);
 
   if (!snapshot) {
     return (
-      <div className="h-full flex items-center justify-center text-white/40 text-body-lg">
+      <div className="h-full flex items-center justify-center text-(--text-on-frame-muted) text-body-lg">
         {error ? `加载失败：${error}` : loading ? "加载中…" : "无数据"}
       </div>
     );
@@ -106,7 +116,7 @@ export function WorldView() {
 
         {/* Profile slide-in overlay */}
         <div
-          className={`absolute inset-y-0 right-0 w-[85%] bg-black/50 backdrop-blur-xl border-l border-white/10 shadow-[-4px_0_24px_rgba(0,0,0,0.4)] transition-transform duration-250 ease ${
+          className={`absolute inset-y-0 right-0 w-[85%] bg-black/50 backdrop-blur-xl border-l border-white/10 shadow-[-4px_0_24px_rgba(0,0,0,0.4)] transition-transform duration-[250ms] ease ${
             profileId ? "translate-x-0" : "translate-x-full"
           }`}
         >

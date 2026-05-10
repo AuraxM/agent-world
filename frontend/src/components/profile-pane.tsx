@@ -62,9 +62,9 @@ function BiBar({
   const fillEnd = isNeg ? 50 : pct;
   return (
     <div className="flex items-center gap-2 text-game-xs">
-      <span className="w-8 text-(--color-pixel-muted)">{label}</span>
-      <div className="flex-1 h-2 bg-(--color-pixel-bg) border border-(--color-pixel-border-dark) relative">
-        <div className="absolute inset-y-0 left-1/2 w-px bg-(--color-pixel-border-light)" />
+      <span className="w-8 text-white/40">{label}</span>
+      <div className="flex-1 h-2 bg-white/[0.06] border border-white/10 relative">
+        <div className="absolute inset-y-0 left-1/2 w-px bg-white/15" />
         <div
           className="absolute inset-y-0"
           style={{
@@ -76,7 +76,7 @@ function BiBar({
           }}
         />
       </div>
-      <span className="w-8 text-right text-(--color-pixel-fg)">{Number.isInteger(value) ? value : value.toFixed(2)}</span>
+      <span className="w-8 text-right text-white/80">{Number.isInteger(value) ? value : value.toFixed(2)}</span>
     </div>
   );
 }
@@ -105,11 +105,11 @@ function UniBar({
         : "var(--color-pixel-success)";
   return (
     <div className="flex items-center gap-2 text-game-xs">
-      <span className="w-8 text-(--color-pixel-muted)">{label}</span>
-      <div className="flex-1 h-2 bg-(--color-pixel-bg) border border-(--color-pixel-border-dark) overflow-hidden">
+      <span className="w-8 text-white/40">{label}</span>
+      <div className="flex-1 h-2 bg-white/[0.06] border border-white/10 overflow-hidden">
         <div className="h-full" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span className="w-8 text-right text-(--color-pixel-fg)">{Number.isInteger(value) ? value : value.toFixed(2)}</span>
+      <span className="w-8 text-right text-white/80">{Number.isInteger(value) ? value : value.toFixed(2)}</span>
     </div>
   );
 }
@@ -131,10 +131,10 @@ function SectionLabel({
   const showCount = total !== undefined;
   const showToggle = onToggle !== undefined && total !== undefined && shown !== undefined && total > shown;
   return (
-    <div className="flex items-center gap-2 text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+    <div className="flex items-center gap-2 text-game-xs uppercase tracking-widest text-white/40 mb-1">
       <span>{children}</span>
       {showCount && (
-        <span className="px-1 bg-(--color-pixel-bg-2) border border-(--color-pixel-border-dark) text-game-2xs normal-case tracking-normal">
+        <span className="px-1 bg-white/[0.06] border border-white/10 text-game-2xs normal-case tracking-normal">
           {shown !== undefined ? `${shown}/${total}` : total}
         </span>
       )}
@@ -142,7 +142,7 @@ function SectionLabel({
         <button
           type="button"
           onClick={onToggle}
-          className="ml-auto text-(--color-pixel-accent) hover:underline normal-case tracking-normal"
+          className="ml-auto text-(--accent-strong) hover:underline normal-case tracking-normal"
         >
           {expanded ? "收起 ▴" : "展开 ▾"}
         </button>
@@ -196,11 +196,9 @@ export function ProfilePane({
 
   if (!character) {
     return (
-      <div className="flex-1 min-h-0 flex items-center justify-center p-4">
-        <p className="text-game-base text-(--color-pixel-muted) text-center max-w-xs leading-relaxed">
-          点击左栏角色卡片或地图上的角色，
-          <br />
-          查看完整档案与上一轮思考。
+      <div className="h-full flex items-center justify-center p-4">
+        <p className="text-white/30 text-center max-w-xs leading-relaxed">
+          点击左栏角色查看完整档案。
         </p>
       </div>
     );
@@ -234,9 +232,9 @@ export function ProfilePane({
   const visibleNotebook = notebookExpanded ? sortedNotebook : sortedNotebook.slice(0, 5);
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Tab header + follow */}
-      <div className="flex items-center border-b border-(--border) bg-(--chrome)">
+      <div className="flex items-center border-b border-white/10 bg-white/[0.03] flex-shrink-0">
         <div className="flex">
           {([
             ["profile", "档案"],
@@ -248,10 +246,10 @@ export function ProfilePane({
               key={key}
               type="button"
               onClick={() => setProfileTab(key)}
-              className={`text-pixel-xs px-3 py-2 tracking-[var(--letter-pixel-tight)] uppercase cursor-pointer border-b-2 -mb-px transition-colors ${
+              className={`text-[10px] tracking-[0.1em] px-3 py-2 uppercase cursor-pointer border-b-2 -mb-px transition-colors ${
                 profileTab === key
-                  ? "text-(--accent-strong) border-(--accent-strong) bg-(--frame)"
-                  : "text-(--text-on-frame-muted) border-transparent hover:text-(--text-on-frame)"
+                  ? "text-(--accent-strong) border-(--accent-strong)"
+                  : "text-white/40 border-transparent hover:text-white/80"
               }`}
             >
               {label}
@@ -263,10 +261,10 @@ export function ProfilePane({
           <button
             type="button"
             onClick={() => onFollow(character.id)}
-            className={`mr-2 px-2 py-1 text-pixel-xs border border-(--border-amber) cursor-pointer tracking-[var(--letter-pixel-tight)] ${
+            className={`mr-2 px-2 py-1 text-[10px] tracking-[0.1em] border border-white/10 rounded cursor-pointer ${
               isFollowing
-                ? "bg-(--border-amber) text-(--panel)"
-                : "bg-transparent text-(--text-on-frame-muted) hover:text-(--text-on-frame)"
+                ? "bg-(--accent-strong)/10 text-(--accent-strong)"
+                : "bg-transparent text-white/40 hover:text-white/80"
             }`}
           >
             {isFollowing ? "👁 已跟随" : "👁 跟随她"}
@@ -276,15 +274,15 @@ export function ProfilePane({
 
       {/* 档案 tab — all existing content */}
       {profileTab === "profile" && (
-        <div className="flex-1 min-h-0 overflow-y-auto pixel-scroll p-3 space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
           {/* 头部 */}
           <div className="flex items-start gap-3">
-            <span className="npc-chip npc-chip--lg npc-chip--selected pixelated" style={{ fontSize: "36px", width: "60px", height: "60px" }}>
+            <span className="text-[36px]">
               {characterEmoji(character)}
             </span>
             <div className="flex-1 min-w-0 space-y-1">
-              <div className="text-game-lg text-(--color-pixel-fg)">{character.name}</div>
-              <div className="text-game-sm text-(--color-pixel-muted)">
+              <div className="text-[15px] text-white/85">{character.name}</div>
+              <div className="text-[11px] text-white/40">
                 {PROFESSION_LABELS[character.profession] ?? character.profession}
                 {" · "}
                 {character.age} 岁
@@ -295,38 +293,38 @@ export function ProfilePane({
                 {" · "}
                 💰 {character.money}
               </div>
-              <div className="text-game-sm text-(--color-pixel-muted)">
+              <div className="text-[11px] text-white/40">
                 {APPEARANCE_LABELS[character.appearance] ?? "—"}
                 {" · "}
                 {INTELLIGENCE_LABELS[character.intelligence] ?? "—"}
                 {" · "}
                 {HEALTH_LABELS[character.health] ?? "—"}
                 {character.sickness && (
-                  <span className="text-(--color-pixel-danger)">
+                  <span className="text-(--danger)">
                     {" · "}🤒 生病
                   </span>
                 )}
                 {character.speakingStyle && (
-                  <span className="text-(--color-pixel-accent)">
+                  <span className="text-(--accent-strong)">
                     {" · "}{character.speakingStyle}
                   </span>
                 )}
               </div>
-              <div className="text-game-sm">
+              <div className="text-[11px]">
                 <button
                   type="button"
                   onClick={() => onJumpToNode(character.locationId)}
-                  className="text-(--color-pixel-accent) hover:underline"
+                  className="text-(--accent-strong) hover:underline"
                 >
                   @ {here?.name ?? character.locationId} ↗
                 </button>
                 {character.activityNodeId && nodeById.get(character.activityNodeId) && (
-                  <span className="text-(--color-pixel-muted)">
+                  <span className="text-white/40">
                     {" · 活动处 "}
                     <button
                       type="button"
                       onClick={() => onJumpToNode(character.activityNodeId!)}
-                      className="text-(--color-pixel-accent) hover:underline"
+                      className="text-(--accent-strong) hover:underline"
                     >
                       {nodeById.get(character.activityNodeId)?.name}
                     </button>
@@ -335,12 +333,12 @@ export function ProfilePane({
                 {character.restNodeId
                   && character.restNodeId !== character.activityNodeId
                   && nodeById.get(character.restNodeId) && (
-                    <span className="text-(--color-pixel-muted)">
+                    <span className="text-white/40">
                       {" · 休息处 "}
                       <button
                         type="button"
                         onClick={() => onJumpToNode(character.restNodeId!)}
-                        className="text-(--color-pixel-accent) hover:underline"
+                        className="text-(--accent-strong) hover:underline"
                       >
                         {nodeById.get(character.restNodeId)?.name}
                       </button>
@@ -349,14 +347,7 @@ export function ProfilePane({
               </div>
               {character.currentAction && (
                 <div>
-                  <span
-                    className="inline-block px-1 text-game-xs"
-                    style={{
-                      background: "var(--color-pixel-accent)",
-                      color: "var(--color-pixel-border-dark)",
-                      border: "1px solid var(--color-pixel-accent-dark)",
-                    }}
-                  >
+                  <span className="inline-block px-1.5 text-game-xs bg-(--accent-strong)/10 text-(--accent-strong) rounded">
                     {formatActionWindow(character.currentAction)}
                   </span>
                 </div>
@@ -366,20 +357,20 @@ export function ProfilePane({
 
           {/* 个人档案 */}
           {character.personalProfile && (character.personalProfile.past || character.personalProfile.present) && (
-            <section className="border-2 border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2) p-2 space-y-2">
-              <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">个人档案</div>
+            <section className="border-2 border-white/10 bg-white/[0.06] p-2 space-y-2">
+              <div className="text-game-xs uppercase tracking-widest text-white/40 mb-1">个人档案</div>
               {character.personalProfile.past && (
                 <div>
-                  <div className="text-game-xs text-(--color-pixel-muted) mb-0.5">过往经历</div>
-                  <p className="text-game-sm leading-relaxed text-(--color-pixel-fg) italic">
+                  <div className="text-game-xs text-white/40 mb-0.5">过往经历</div>
+                  <p className="text-game-sm leading-relaxed text-white/80 italic">
                     &ldquo;{character.personalProfile.past}&rdquo;
                   </p>
                 </div>
               )}
               {character.personalProfile.present && (
                 <div>
-                  <div className="text-game-xs text-(--color-pixel-muted) mb-0.5">当前状况</div>
-                  <p className="text-game-sm leading-relaxed text-(--color-pixel-fg) italic">
+                  <div className="text-game-xs text-white/40 mb-0.5">当前状况</div>
+                  <p className="text-game-sm leading-relaxed text-white/80 italic">
                     &ldquo;{character.personalProfile.present}&rdquo;
                   </p>
                 </div>
@@ -388,23 +379,21 @@ export function ProfilePane({
           )}
 
           {/* 上一轮思考 */}
-          <section className="border-2 border-(--color-pixel-border-dark) bg-(--color-pixel-bg-2) p-2 space-y-1">
-            <div className="flex items-center gap-2 text-game-xs uppercase tracking-widest text-(--color-pixel-accent)">
+          <section className="border-2 border-white/10 bg-white/[0.06] p-2 space-y-1">
+            <div className="flex items-center gap-2 text-game-xs uppercase tracking-widest text-(--accent-strong)">
               <span>上一轮思考</span>
               {lastThought && (
                 <>
-                  <span className="text-(--color-pixel-muted)">·</span>
-                  <span className="text-(--color-pixel-muted)">t={lastThought.tick}</span>
-                  <span className="text-(--color-pixel-muted)">·</span>
-                  <span className="text-(--color-pixel-muted)">{lastThought.action.type}</span>
+                  <span className="text-white/40">·</span>
+                  <span className="text-white/40">t={lastThought.tick}</span>
+                  <span className="text-white/40">·</span>
+                  <span className="text-white/40">{lastThought.action.type}</span>
                   <span
-                    className="ml-auto px-1 text-game-2xs"
-                    style={{
-                      background: lastThought.success
-                        ? "var(--color-pixel-success)"
-                        : "var(--color-pixel-danger)",
-                      color: "var(--color-pixel-border-dark)",
-                    }}
+                    className={`ml-auto px-1 text-game-2xs rounded ${
+                      lastThought.success
+                        ? "bg-(--success)/30 text-(--success)"
+                        : "bg-(--danger)/30 text-(--danger)"
+                    }`}
                   >
                     {lastThought.success ? "OK" : "FAIL"}
                   </span>
@@ -412,18 +401,18 @@ export function ProfilePane({
               )}
             </div>
             {!lastThought ? (
-              <p className="text-game-sm text-(--color-pixel-muted)">
+              <p className="text-game-sm text-white/40">
                 还没有过决策（推进 1 小时后再来看）。
               </p>
             ) : (
               <>
                 {lastThought.action.emotionTag && (
-                  <div className="inline-block text-game-xs px-1 bg-(--color-pixel-accent) text-(--color-pixel-border-dark)">
+                  <div className="inline-block text-game-xs px-1.5 bg-(--accent-strong)/10 text-(--accent-strong) rounded">
                     {lastThought.action.emotionTag}
                   </div>
                 )}
                 <div
-                  className={`text-game-sm leading-relaxed text-(--color-pixel-fg) whitespace-pre-wrap ${
+                  className={`text-game-sm leading-relaxed text-white/80 whitespace-pre-wrap ${
                     thoughtExpanded ? "" : "line-clamp-4"
                   }`}
                 >
@@ -433,13 +422,13 @@ export function ProfilePane({
                   <button
                     type="button"
                     onClick={() => setThoughtExpanded((v) => !v)}
-                    className="text-game-xs text-(--color-pixel-accent) hover:underline"
+                    className="text-game-xs text-(--accent-strong) hover:underline"
                   >
                     {thoughtExpanded ? "收起 ▴" : "展开全文 ▾"}
                   </button>
                 </div>
                 {lastThought.action.freeText && (
-                  <div className="text-game-sm text-(--color-pixel-muted) italic border-t border-(--color-pixel-border-dark) pt-1">
+                  <div className="text-game-sm text-white/40 italic border-t border-white/10 pt-1">
                     &ldquo;{lastThought.action.freeText}&rdquo;
                   </div>
                 )}
@@ -458,12 +447,12 @@ export function ProfilePane({
               备忘记事本
             </SectionLabel>
             {totalNotebook === 0 ? (
-              <p className="text-game-sm text-(--color-pixel-muted)">暂无记事</p>
+              <p className="text-game-sm text-white/40">暂无记事</p>
             ) : (
               <ul className="space-y-1">
                 {visibleNotebook.map((e) => (
-                  <li key={e.id} className="text-game-sm text-(--color-pixel-fg) leading-snug">
-                    <span className="text-(--color-pixel-muted)">
+                  <li key={e.id} className="text-game-sm text-white/80 leading-snug">
+                    <span className="text-white/40">
                       {formatScheduledTime(e.scheduledTick, epoch)}
                     </span>
                     {" "}{e.content}
@@ -474,13 +463,10 @@ export function ProfilePane({
           </section>
 
           {/* 状态仪表盘（hero） */}
-          <section
-            className="border-2 border-(--color-pixel-accent-dark) bg-(--color-pixel-bg-2) p-2"
-            style={{ boxShadow: "inset 0 0 0 1px var(--color-pixel-accent)" }}
-          >
+          <section className="border border-(--accent-strong)/30 bg-white/[0.06] p-2">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+                <div className="text-game-xs uppercase tracking-widest text-white/40 mb-1">
                   生理
                 </div>
                 <div className="space-y-0.5">
@@ -489,14 +475,14 @@ export function ProfilePane({
                   <UniBar label="脏" value={character.vitals.hygiene} max={16} danger={10} warn={6} />
                 </div>
                 {character.sleepWindow && (
-                  <div className="text-game-xs text-(--color-pixel-muted) mt-1">
+                  <div className="text-game-xs text-white/40 mt-1">
                     🌙 {String(character.sleepWindow.start).padStart(2, "0")}:00 ~{" "}
                     {String((character.sleepWindow.start + character.sleepWindow.duration) % 24).padStart(2, "0")}:00
                   </div>
                 )}
               </div>
               <div>
-                <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+                <div className="text-game-xs uppercase tracking-widest text-white/40 mb-1">
                   情绪
                 </div>
                 <div className="space-y-0.5">
@@ -510,7 +496,7 @@ export function ProfilePane({
 
           {/* 性格 */}
           <section>
-            <div className="text-game-xs uppercase tracking-widest text-(--color-pixel-muted) mb-1">
+            <div className="text-game-xs uppercase tracking-widest text-white/40 mb-1">
               性格
             </div>
             <div className="space-y-0.5">
@@ -533,7 +519,7 @@ export function ProfilePane({
               关系
             </SectionLabel>
             {totalRelations === 0 ? (
-              <p className="text-game-sm text-(--color-pixel-muted)">尚无任何关系</p>
+              <p className="text-game-sm text-white/40">尚无任何关系</p>
             ) : (
               <ul className="space-y-1">
                 {visibleRelations.map(([id, rel]) => {
@@ -558,14 +544,14 @@ export function ProfilePane({
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               setImpressionPopover({ targetId: id, x: rect.left, y: rect.bottom + 4 });
                             }}
-                            className="text-(--color-pixel-fg) hover:underline cursor-pointer"
+                            className="text-white/80 hover:underline cursor-pointer"
                           >
                             {charById.get(id)?.name ?? id}
                           </button>
-                          <span className="text-(--color-pixel-muted) text-game-xs"> · {rel.kinds.join("/")}</span>
+                          <span className="text-white/40 text-game-xs"> · {rel.kinds.join("/")}</span>
                         </div>
                         {imp && (
-                          <div className="text-game-xs text-(--color-pixel-muted) italic truncate">
+                          <div className="text-game-xs text-white/40 italic truncate">
                             &ldquo;{imp}&rdquo;
                           </div>
                         )}
@@ -574,10 +560,10 @@ export function ProfilePane({
                         style={{
                           color:
                             impTone === "pos"
-                              ? "var(--color-pixel-success)"
+                              ? "var(--success)"
                               : impTone === "neg"
-                                ? "var(--color-pixel-danger)"
-                                : "var(--color-pixel-muted)",
+                                ? "var(--danger)"
+                                : "var(--text-muted)",
                         }}
                       >
                         {imp ? imp.slice(0, 8) + (imp.length > 8 ? "…" : "") : rel.kinds.join("/")}
@@ -600,13 +586,13 @@ export function ProfilePane({
               最近记忆
             </SectionLabel>
             {totalMemories === 0 ? (
-              <p className="text-game-sm text-(--color-pixel-muted)">暂无记忆</p>
+              <p className="text-game-sm text-white/40">暂无记忆</p>
             ) : (
               <ul className="space-y-1">
                 {visibleMemories.map((m) => (
-                  <li key={m.id} className="text-game-sm text-(--color-pixel-fg) leading-snug">
-                    <span className="text-(--color-pixel-muted)">
-                      t={m.tick}·<span className="text-(--color-pixel-accent)">{"★".repeat(m.importance)}</span>
+                  <li key={m.id} className="text-game-sm text-white/80 leading-snug">
+                    <span className="text-white/40">
+                      t={m.tick}·<span className="text-(--accent-strong)">{"★".repeat(m.importance)}</span>
                     </span>{" "}
                     {m.content}
                   </li>
@@ -626,13 +612,13 @@ export function ProfilePane({
               日记忆
             </SectionLabel>
             {totalDaily === 0 ? (
-              <p className="text-game-sm text-(--color-pixel-muted)">暂无日记忆</p>
+              <p className="text-game-sm text-white/40">暂无日记忆</p>
             ) : (
               <ul className="space-y-1">
                 {visibleDaily.map((m) => (
-                  <li key={m.id} className="text-game-sm text-(--color-pixel-fg) leading-snug">
-                    <span className="text-(--color-pixel-muted)">
-                      t={m.tick}·<span className="text-(--color-pixel-accent)">{"★".repeat(m.importance)}</span>
+                  <li key={m.id} className="text-game-sm text-white/80 leading-snug">
+                    <span className="text-white/40">
+                      t={m.tick}·<span className="text-(--accent-strong)">{"★".repeat(m.importance)}</span>
                     </span>{" "}
                     {m.content}
                   </li>
@@ -652,13 +638,13 @@ export function ProfilePane({
               周记忆
             </SectionLabel>
             {totalLong === 0 ? (
-              <p className="text-game-sm text-(--color-pixel-muted)">暂无周记忆</p>
+              <p className="text-game-sm text-white/40">暂无周记忆</p>
             ) : (
               <ul className="space-y-1">
                 {visibleLong.map((m) => (
-                  <li key={m.id} className="text-game-sm text-(--color-pixel-fg) leading-snug">
-                    <span className="text-(--color-pixel-muted)">
-                      t={m.tick}·<span className="text-(--color-pixel-accent)">{"★".repeat(m.importance)}</span>
+                  <li key={m.id} className="text-game-sm text-white/80 leading-snug">
+                    <span className="text-white/40">
+                      t={m.tick}·<span className="text-(--accent-strong)">{"★".repeat(m.importance)}</span>
                     </span>{" "}
                     {m.content}
                   </li>
@@ -671,15 +657,15 @@ export function ProfilePane({
           <section>
             <SectionLabel total={character.abilities.length}>能力</SectionLabel>
             {character.abilities.length === 0 ? (
-              <p className="text-game-sm text-(--color-pixel-muted)">尚未习得任何能力</p>
+              <p className="text-game-sm text-white/40">尚未习得任何能力</p>
             ) : (
               <div className="flex flex-wrap gap-1">
                 {character.abilities.map((a, i) => (
                   <span
                     key={`${a.kind}-${i}`}
-                    className="text-game-xs px-1 bg-(--color-pixel-bg-2) border border-(--color-pixel-border-dark) text-(--color-pixel-fg)"
+                    className="text-game-xs px-1 bg-white/[0.06] border border-white/10 text-white/80"
                   >
-                    {a.kind} · <span className="text-(--color-pixel-accent)">t{a.tier}</span>
+                    {a.kind} · <span className="text-(--accent-strong)">t{a.tier}</span>
                   </span>
                 ))}
               </div>
@@ -690,23 +676,23 @@ export function ProfilePane({
 
       {/* 独白 tab */}
       {profileTab === "monologue" && (
-        <div className="flex-1 overflow-y-auto pixel-scroll p-4">
+        <div className="flex-1 overflow-y-auto p-4">
           {character?.lastThought?.action?.reasoning ? (
             <div>
-              <div className="text-pixel-xs text-(--text-on-frame-muted) tracking-[var(--letter-pixel)] mb-2">最近思考</div>
-              <div className="text-body-sm text-(--text-on-frame) leading-[var(--lh-loose)]">
+              <div className="text-[10px] tracking-[0.1em] text-white/40 mb-2">最近思考</div>
+              <div className="text-body-sm text-white/80 leading-[var(--lh-loose)]">
                 {character.lastThought.action.reasoning}
               </div>
               {events && events.length > 0 && (
                 <div className="mt-4">
-                  <div className="text-pixel-xs text-(--text-on-frame-muted) tracking-[var(--letter-pixel)] mb-2">历史独白</div>
+                  <div className="text-[10px] tracking-[0.1em] text-white/40 mb-2">历史独白</div>
                   {events
                     .filter((ev) => ev.category === "inner" && ev.participants.includes(character.id))
                     .slice(0, 20)
                     .map((ev) => (
-                      <div key={ev.id} className="mb-2 text-body-sm text-(--text-on-frame) leading-[var(--lh-normal)] italic border-l-2 border-(--border-amber) pl-3">
+                      <div key={ev.id} className="mb-2 text-body-sm text-white/80 leading-[var(--lh-normal)] italic border-l-2 border-(--accent-strong)/30 pl-3">
                         &ldquo;{ev.description}&rdquo;
-                        <div className="text-pixel-xs text-(--text-on-frame-faint) mt-0.5">
+                        <div className="text-[10px] text-white/25 mt-0.5">
                           T={ev.tick}
                         </div>
                       </div>
@@ -715,14 +701,14 @@ export function ProfilePane({
               )}
             </div>
           ) : (
-            <p className="text-body-sm text-(--text-on-frame-muted) text-center mt-10">暂无独白记录</p>
+            <p className="text-body-sm text-white/40 text-center mt-10">暂无独白记录</p>
           )}
         </div>
       )}
 
       {/* 关系 tab */}
       {profileTab === "relations" && (
-        <div className="flex-1 overflow-y-auto pixel-scroll p-4">
+        <div className="flex-1 overflow-y-auto p-4">
           {character && character.relations && Object.keys(character.relations).length > 0 ? (
             <ul className="space-y-2">
               {Object.entries(character.relations).map(([targetId, rel]) => {
@@ -735,8 +721,9 @@ export function ProfilePane({
                       ? "neg"
                       : "zero"
                   : "zero";
+                const toneColor = impTone === "pos" ? "var(--success)" : impTone === "neg" ? "var(--danger)" : "var(--text-muted)";
                 return (
-                  <li key={targetId} className="text-body-sm text-(--text-on-frame) flex items-center gap-2">
+                  <li key={targetId} className="text-body-sm text-white/80 flex items-center gap-2">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -744,21 +731,19 @@ export function ProfilePane({
                         setImpressionPopover({ targetId, x: rect.left, y: rect.bottom + 4 });
                       }}
                       className="hover:underline cursor-pointer"
-                      style={{ color: impTone === "pos" ? "var(--color-pixel-success)" : impTone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)" }}
+                      style={{ color: toneColor }}
                     >
                       {other?.name ?? targetId}
                     </button>
-                    <span className="text-pixel-xs text-(--text-on-frame-muted)">
+                    <span className="text-[10px] text-white/40">
                       {rel.kinds.join("/")}
                     </span>
                     {imp && (
-                      <span className="text-body-xs text-(--text-on-frame-faint) italic">
+                      <span className="text-body-xs text-white/25 italic">
                         — {imp}
                       </span>
                     )}
-                    <span className="ml-auto text-pixel-xs" style={{
-                      color: impTone === "pos" ? "var(--color-pixel-success)" : impTone === "neg" ? "var(--color-pixel-danger)" : "var(--color-pixel-muted)",
-                    }}>
+                    <span className="ml-auto text-[10px]" style={{ color: toneColor }}>
                       {imp ? imp.slice(0, 8) + (imp.length > 8 ? "..." : "") : rel.kinds.join("/")}
                     </span>
                   </li>
@@ -766,22 +751,22 @@ export function ProfilePane({
               })}
             </ul>
           ) : (
-            <p className="text-body-sm text-(--text-on-frame-muted) text-center mt-10">暂无关系</p>
+            <p className="text-body-sm text-white/40 text-center mt-10">暂无关系</p>
           )}
         </div>
       )}
 
       {/* 经历 tab */}
       {profileTab === "history" && (
-        <div className="flex-1 overflow-y-auto pixel-scroll p-4">
+        <div className="flex-1 overflow-y-auto p-4">
           {character && events ? (
             (() => {
               const charEvents = events.filter((ev) => ev.participants.includes(character.id));
               return charEvents.length > 0 ? (
                 <div className="space-y-3">
                   {charEvents.slice(0, 30).map((ev) => (
-                    <div key={ev.id} className="text-body-sm text-(--text-on-frame) leading-[var(--lh-normal)]">
-                      <span className="text-pixel-xs text-(--text-on-frame-faint) mr-2">
+                    <div key={ev.id} className="text-body-sm text-white/80 leading-[var(--lh-normal)]">
+                      <span className="text-[10px] text-white/25 mr-2">
                         T={ev.tick}
                       </span>
                       {ev.description}
@@ -789,11 +774,11 @@ export function ProfilePane({
                   ))}
                 </div>
               ) : (
-                <p className="text-body-sm text-(--text-on-frame-muted) text-center mt-10">暂无经历</p>
+                <p className="text-body-sm text-white/40 text-center mt-10">暂无经历</p>
               );
             })()
           ) : (
-            <p className="text-body-sm text-(--text-on-frame-muted) text-center mt-10">选择角色以查看经历</p>
+            <p className="text-body-sm text-white/40 text-center mt-10">选择角色以查看经历</p>
           )}
         </div>
       )}
@@ -804,40 +789,36 @@ export function ProfilePane({
         const targetChar = charById.get(targetId);
         const impText = character.impressionBook[targetId];
         return (
-          <div className="fixed inset-0 z-50 bg-black/20" onClick={() => setImpressionPopover(null)}>
+          <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setImpressionPopover(null)}>
             <div
-              className="absolute bg-(--color-pixel-bg) border-2 border-(--color-pixel-accent-dark) p-3 max-w-xs"
+              className="absolute bg-black/70 backdrop-blur-xl border border-white/10 rounded p-3 max-w-[320px] shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
               style={{
                 left: impressionPopover.x,
                 top: impressionPopover.y,
-                maxWidth: Math.min(320, window.innerWidth - impressionPopover.x - 16),
-                maxHeight: Math.min(320, window.innerHeight - impressionPopover.y - 16),
-                overflowY: "auto",
-                boxShadow: "4px 4px 0 var(--color-pixel-border-dark)",
               }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-2 mb-2">
-                <span className="npc-chip w-6 h-6 text-sm">
+                <span className="text-base">
                   {characterEmoji(targetChar ?? { id: targetId })}
                 </span>
-                <span className="text-game-sm font-semibold text-(--color-pixel-fg)">
+                <span className="text-game-sm font-semibold text-white/80">
                   {targetChar?.name ?? targetId} 的印象
                 </span>
                 <button
                   type="button"
                   onClick={() => setImpressionPopover(null)}
-                  className="ml-auto text-(--color-pixel-muted) hover:text-(--color-pixel-fg) cursor-pointer"
+                  className="ml-auto text-white/40 hover:text-white/70 cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
               {impText ? (
-                <p className="text-game-sm text-(--color-pixel-fg) italic leading-relaxed">
+                <p className="text-game-sm text-white/60 italic leading-relaxed">
                   &ldquo;{impText}&rdquo;
                 </p>
               ) : (
-                <p className="text-game-sm text-(--color-pixel-muted)">
+                <p className="text-game-sm text-white/40">
                   暂无印象记录。
                 </p>
               )}

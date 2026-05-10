@@ -21,10 +21,6 @@ export function GanttTimeline({
       style={{
         display: "flex",
         gap: 0,
-        paddingLeft: 100,
-        position: "sticky",
-        top: 0,
-        zIndex: 10,
         background: "rgba(0,0,0,0.35)",
         backdropFilter: "blur(8px)",
         borderBottom: "1px solid rgba(255,255,255,0.1)",

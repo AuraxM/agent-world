@@ -1,4 +1,3 @@
-// src/app/_components/gantt-row.tsx
 "use client";
 
 import type { Character, MapNode, WorldEvent } from "@/types/api.generated";
@@ -8,7 +7,6 @@ import {
   isSleepTick,
   stackEventsAtTick,
 } from "@/lib/gantt-utils";
-import { characterEmoji } from "@/lib/sprite";
 import { GanttCard } from "./gantt-card";
 
 export function GanttRow({
@@ -18,6 +16,7 @@ export function GanttRow({
   endTick,
   characters,
   nodes,
+  rowHeight,
   onEventClick,
 }: {
   character: Character;
@@ -26,6 +25,7 @@ export function GanttRow({
   endTick: number;
   characters: Character[];
   nodes: MapNode[];
+  rowHeight: number;
   onEventClick: (event: WorldEvent, rect: DOMRect) => void;
 }) {
   const charById = new Map(characters.map((c) => [c.id, c]));
@@ -46,11 +46,6 @@ export function GanttRow({
       }
     }
   }
-
-  const maxTop = stacked.length > 0
-    ? Math.max(...stacked.map((s) => s.top))
-    : 0;
-  const rowHeight = Math.max(60, maxTop + 54 + 12);
 
   const sleepRanges: { left: number; width: number }[] = [];
   if (sleepTicks.length > 0) {
@@ -77,90 +72,43 @@ export function GanttRow({
 
   return (
     <div
-      className="gantt-row"
       style={{
         display: "flex",
-        alignItems: "stretch",
+        position: "relative",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
-        minHeight: rowHeight,
+        height: rowHeight,
         background: "rgba(255,255,255,0.02)",
+        boxSizing: "border-box",
       }}
     >
-      {/* Sticky name cell */}
-      <div
-        style={{
-          minWidth: 100,
-          maxWidth: 100,
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          padding: "4px 8px",
-          borderRight: "2px solid var(--accent-strong)",
-          background: "rgba(0,0,0,0.35)",
-          backdropFilter: "blur(8px)",
-          position: "sticky",
-          left: 0,
-          zIndex: 5,
-        }}
-      >
-        <span
-          style={{
-            width: 18,
-            height: 18,
-            borderRadius: "50%",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 11,
-            background: "rgba(255,255,255,0.05)",
-            flexShrink: 0,
-          }}
-        >
-          {characterEmoji(character)}
-        </span>
-        <span
-          className="text-pixel-xs font-semibold text-white/70"
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {character.name}
-        </span>
-      </div>
-
-      {/* Cards area */}
-      <div style={{ flex: 1, position: "relative" }}>
-        {stacked.map(({ event, left, top }) => (
-          <div key={event.id} style={{ position: "absolute", left, top }}>
-            <GanttCard
-              event={event}
-              charById={charById}
-              nodeById={nodeById}
-              excludeId={character.id}
-              onClick={(rect) => onEventClick(event, rect)}
-            />
-          </div>
-        ))}
-
-        {sleepRanges.map((r, i) => (
-          <div
-            key={i}
-            style={{
-              position: "absolute",
-              left: r.left,
-              top: rowHeight - 12,
-              width: r.width,
-              height: 8,
-              background: "rgba(255,255,255,0.05)",
-              border: "1px dashed rgba(255,255,255,0.1)",
-              borderRadius: 1,
-              pointerEvents: "none",
-            }}
+      {stacked.map(({ event, left, top }) => (
+        <div key={event.id} style={{ position: "absolute", left, top }}>
+          <GanttCard
+            event={event}
+            charById={charById}
+            nodeById={nodeById}
+            excludeId={character.id}
+            onClick={(rect) => onEventClick(event, rect)}
           />
-        ))}
-      </div>
+        </div>
+      ))}
+
+      {sleepRanges.map((r, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: r.left,
+            top: rowHeight - 12,
+            width: r.width,
+            height: 8,
+            background: "rgba(255,255,255,0.05)",
+            border: "1px dashed rgba(255,255,255,0.1)",
+            borderRadius: 1,
+            pointerEvents: "none",
+          }}
+        />
+      ))}
     </div>
   );
 }

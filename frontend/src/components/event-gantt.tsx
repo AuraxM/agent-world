@@ -2,10 +2,20 @@
 
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { Character, MapNode, WorldEvent } from "@/types/api.generated";
-import { DEFAULT_TICK_WINDOW, getTickWindow, TICK_WIDTH } from "@/lib/gantt-utils";
+import {
+  DEFAULT_TICK_WINDOW,
+  getTickWindow,
+  TICK_WIDTH,
+  groupEventsByTick,
+  isSleepTick,
+  stackEventsAtTick,
+} from "@/lib/gantt-utils";
+import { characterEmoji } from "@/lib/sprite";
 import { GanttTimeline } from "./gantt-timeline";
 import { GanttRow } from "./gantt-row";
 import { GanttPopup } from "./gantt-popup";
+
+const NAME_COL_WIDTH = 100;
 
 export function EventGantt({
   events,
@@ -41,6 +51,20 @@ export function EventGantt({
   const tickColumns = endTick - startTick + 1;
   const contentWidth = tickColumns * TICK_WIDTH;
 
+  // Pre-compute row heights (same logic as GanttRow)
+  const rowHeights = useMemo(() => {
+    return characters.map((c) => {
+      const grouped = groupEventsByTick(events, c.id, startTick, endTick);
+      const allRowEvents: WorldEvent[] = [];
+      for (const evs of grouped.values()) allRowEvents.push(...evs);
+      const stacked = stackEventsAtTick(allRowEvents, endTick);
+      const maxTop = stacked.length > 0
+        ? Math.max(...stacked.map((s) => s.top))
+        : 0;
+      return Math.max(60, maxTop + 54 + 12);
+    });
+  }, [events, characters, startTick, endTick]);
+
   const handleEventClick = useCallback((ev: WorldEvent, rect: DOMRect) => {
     setSelectedEvent(ev);
     setPopupAnchor(rect);
@@ -51,19 +75,34 @@ export function EventGantt({
     setPopupAnchor(null);
   }, []);
 
-  // ---- wheel handler: deltaY -> scrollLeft ----
-  const scrollRef = useRef<HTMLDivElement>(null);
+  // Scroll sync refs
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const namesRef = useRef<HTMLDivElement>(null);
 
+  const syncScroll = useCallback(() => {
+    const cards = cardsRef.current;
+    if (!cards) return;
+    if (timelineRef.current) {
+      timelineRef.current.scrollLeft = cards.scrollLeft;
+    }
+    if (namesRef.current) {
+      namesRef.current.scrollTop = cards.scrollTop;
+    }
+  }, []);
+
+  // Wheel handler: deltaY -> scrollLeft in the cards area
   useEffect(() => {
-    const el = scrollRef.current;
+    const el = cardsRef.current;
     if (!el) return;
 
     function handleWheel(e: WheelEvent) {
       if (!(e.target instanceof HTMLElement && el!.contains(e.target))) return;
       if (e.shiftKey) return;
-      // Left of 100px = name column → native vertical scroll
+      // Left of name column = native vertical scroll
       const rect = el!.getBoundingClientRect();
-      if (e.clientX < rect.left + 100) return;
+      const mouseInNameCol = e.clientX < rect.left;
+      if (mouseInNameCol) return;
       // Right side = card area → wheel Y → horizontal scroll
       e.preventDefault();
       el!.scrollLeft += e.deltaY;
@@ -76,8 +115,8 @@ export function EventGantt({
   if (events.length === 0) {
     return (
       <div className="h-full flex flex-col">
-        <div className="flex items-center px-6 py-2.5 bg-black/15 border-b border-white/10">
-          <span className="text-pixel-sm text-(--accent-strong) tracking-[var(--letter-pixel)] uppercase">
+        <div className="flex items-center px-4 py-2 bg-black/15 border-b border-white/10">
+          <span className="text-[11px] text-(--accent-strong) tracking-[0.1em] uppercase">
             甘特图
           </span>
         </div>
@@ -90,42 +129,124 @@ export function EventGantt({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Toolbar — no buttons */}
-      <div className="flex items-center gap-3 px-6 py-2.5 bg-black/15 border-b border-white/10">
-        <span className="text-pixel-sm text-(--accent-strong) tracking-[var(--letter-pixel)] uppercase">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 px-4 py-2 bg-black/15 border-b border-white/10 flex-shrink-0">
+        <span className="text-[11px] text-(--accent-strong) tracking-[0.1em] uppercase">
           甘特图
         </span>
         <div className="flex items-center gap-3 ml-auto">
-          <span className="text-pixel-xs text-white/40 tracking-[var(--letter-pixel)]">
+          <span className="text-[10px] text-white/40">
             T={startTick} ~ T={endTick}
           </span>
-          <span className="text-pixel-xs text-white/25">
+          <span className="text-[10px] text-white/25">
             {characters.length} 角色
           </span>
         </div>
       </div>
 
-      {/* Body: single scroll container */}
-      <div
-        ref={scrollRef}
-        className="flex-1"
-        style={{ overflow: "auto" }}
-      >
-        <div style={{ width: contentWidth + 100, display: "flex", flexDirection: "column" }}>
-          <GanttTimeline startTick={startTick} endTick={endTick} epoch={epoch} />
+      {/* Body: four-quadrant layout */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top row: corner + timeline */}
+        <div className="flex flex-shrink-0 overflow-hidden">
+          {/* Corner */}
+          <div
+            style={{
+              width: NAME_COL_WIDTH,
+              flexShrink: 0,
+              background: "rgba(0,0,0,0.35)",
+              backdropFilter: "blur(8px)",
+              borderBottom: "1px solid rgba(255,255,255,0.1)",
+              borderRight: "1px solid rgba(255,255,255,0.1)",
+              zIndex: 2,
+            }}
+          />
+          {/* Timeline — syncs horizontal scroll */}
+          <div
+            ref={timelineRef}
+            className="flex-1 overflow-hidden"
+          >
+            <div style={{ width: contentWidth }}>
+              <GanttTimeline startTick={startTick} endTick={endTick} epoch={epoch} />
+            </div>
+          </div>
+        </div>
 
-          {characters.map((c) => (
-            <GanttRow
-              key={c.id}
-              character={c}
-              events={events}
-              startTick={startTick}
-              endTick={endTick}
-              characters={characters}
-              nodes={nodes}
-              onEventClick={handleEventClick}
-            />
-          ))}
+        {/* Bottom row: names + cards */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Name column — syncs vertical scroll */}
+          <div
+            ref={namesRef}
+            className="overflow-hidden flex-shrink-0"
+            style={{ width: NAME_COL_WIDTH }}
+          >
+            {characters.map((c, i) => (
+              <div
+                key={c.id}
+                style={{
+                  height: rowHeights[i],
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "4px 8px",
+                  borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  borderRight: "2px solid var(--accent-strong)",
+                  background: "rgba(0,0,0,0.35)",
+                  backdropFilter: "blur(8px)",
+                  boxSizing: "border-box",
+                }}
+              >
+                <span
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
+                    background: "rgba(255,255,255,0.05)",
+                    flexShrink: 0,
+                  }}
+                >
+                  {characterEmoji(c)}
+                </span>
+                <span
+                  className="text-pixel-xs font-semibold text-white/70"
+                  style={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {c.name}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Cards area — scrolls both directions */}
+          <div
+            ref={cardsRef}
+            className="flex-1"
+            style={{ overflow: "auto" }}
+            onScroll={syncScroll}
+          >
+            <div style={{ width: contentWidth }}>
+              {characters.map((c, i) => (
+                <GanttRow
+                  key={c.id}
+                  character={c}
+                  events={events}
+                  startTick={startTick}
+                  endTick={endTick}
+                  characters={characters}
+                  nodes={nodes}
+                  rowHeight={rowHeights[i]}
+                  onEventClick={handleEventClick}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

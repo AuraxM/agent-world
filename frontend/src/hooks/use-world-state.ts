@@ -261,6 +261,8 @@ export function useWorldState(): UseWorldState {
 
   const stopAuto = useCallback(() => {
     shouldStopRef.current = true;
+    abortRef.current?.abort();
+    setAutoMode(null);
   }, []);
 
   const placeCharacter = useCallback(

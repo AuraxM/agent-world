@@ -13,9 +13,9 @@ A character template is a **location-agnostic** identity definition. Where the c
   "gender": "male",            // "male" | "female" | "other"
   "profession": "farmer",      // from PROFESSIONS enum (23 values)
   "origin": "local",           // "local" | "visitor" from CHARACTER_ORIGINS enum
-  "personalProfile": {          // required; first-person, two-part profile
-    "past": "我在一个农民家庭长大...",   // required; life stages overview
-    "present": "现在我独自经营这片牧场..." // optional but strongly recommended
+  "personalProfile": {          // required; second-person ("你") two-part profile
+    "past": "你在一个农民家庭长大...",   // required; life stages overview, written as "你..."
+    "present": "现在你独自经营这片牧场..." // optional but strongly recommended, written as "你..."
   },
   "activityNodeId": "node-farm", // optional; work/study/daily activity location
   "restNodeId": "node-home",    // optional; sleep/private time location
@@ -152,18 +152,18 @@ Required. One of `"local"` or `"visitor"` from the `CHARACTER_ORIGINS` enum.
 
 ### `personalProfile`
 
-Required. Object with two first-person string fields. Both must be written in the pack's declared language (see SKILL.md "语言纪律").
+Required. Object with two string fields, written in **second person ("你")** — the LLM is addressed directly as "你" in all prompts. Both must be in the pack's declared language (see SKILL.md "语言纪律").
 
 ```jsonc
 "personalProfile": {
-  "past": "我在一个农民家庭长大……",    // 过往不同人生阶段的经历概述（必填，非空）
-  "present": "现在我独自经营这片牧场……" // 当前个人信息简介（可选，强烈推荐填写）
+  "past": "你在一个农民家庭长大……",    // 过往不同人生阶段的经历概述（必填，非空），用"你"叙述
+  "present": "现在你独自经营这片牧场……" // 当前个人信息简介（可选，强烈推荐填写），用"你"叙述
 }
 ```
 
 #### `personalProfile.past`（过往经历）
 
-Required (non-empty). First-person overview of experiences from different life stages. Content varies by age:
+Required (non-empty). Overview of experiences from different life stages, written in **second person ("你")** — the LLM is addressed directly as "你". Content varies by age:
 
 | Age | Stages to cover | Suggested length |
 |-----|----------------|------------------|
@@ -178,11 +178,11 @@ Required (non-empty). First-person overview of experiences from different life s
 Each stage should be 2-4 sentences with specific events, people, and feelings. Avoid vague descriptions.
 
 Example (`language: "zh"`, age 24):
-> 我是在这个谷里长大的。七岁那年第一次跟祖父上山，他教我看鹿的足迹和野猪的泥浴坑——那时候我觉得他什么都知道。十五岁那年祖父走了，父亲接下牧场，我开始学会挤奶、接生小牛、修围栏。五年前父亲也走了，牧场到了我手上。那一年我十九岁，什么都不会，但牛还在。
+> 你是在这个谷里长大的。七岁那年第一次跟祖父上山，他教你看鹿的足迹和野猪的泥浴坑——那时候你觉得他什么都知道。十五岁那年祖父走了，父亲接下牧场，你开始学会挤奶、接生小牛、修围栏。五年前父亲也走了，牧场到了你手上。那一年你十九岁，什么都不会，但牛还在。
 
 #### `personalProfile.present`（当前状况）
 
-Optional but strongly recommended. First-person summary of current self:
+Optional but strongly recommended. Second-person ("你") summary of current self:
 - Current living situation and daily rhythm
 - What matters most right now (people, work, goals)
 - Recent changes or concerns
@@ -191,7 +191,7 @@ Optional but strongly recommended. First-person summary of current self:
 Writing style: present tense, first person, specific rather than generic.
 
 Example (`language: "zh"`):
-> 现在我和二十头黑毛和牛一起住在这片牧场上。每天早上五点起来挤奶，八点送到杂货店，然后回来走一圈——日子不复杂。偶尔去酒馆喝一杯，不跟人搭话，但那种热闹是舒服的。狩野老爹下山的次数比以前少了，我开始想，再过几年这山谷会变成什么样。
+> 现在你和二十头黑毛和牛一起住在这片牧场上。每天早上五点起来挤奶，八点送到杂货店，然后回来走一圈——日子不复杂。偶尔去酒馆喝一杯，不跟人搭话，但那种热闹是舒服的。狩野老爹下山的次数比以前少了，你开始想，再过几年这山谷会变成什么样。
 
 ## Avatars
 

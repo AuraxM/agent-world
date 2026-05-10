@@ -2088,9 +2088,6 @@ export function buildThinkPrompt(args: {
       lines.push(`你所在的世界：${worldDescription}`);
       lines.push("");
     }
-    if (nodes) lines.push(describeLocalMap(here, nodes, language));
-    else lines.push(`当前地点：${here.name}（${here.description || "无描述"}）`);
-    lines.push("");
     lines.push("你当前的状态：");
     lines.push(`- 饥饿：${hunger.phrase}`);
     lines.push(`- 疲惫：${fatigue.phrase}`);
@@ -2123,6 +2120,10 @@ export function buildThinkPrompt(args: {
 
     lines.push("你的思考记录：");
     lines.push(history || "（刚开始思考）");
+    // ── Suffix: location (appended after stable prefix) ──
+    lines.push("");
+    if (nodes) lines.push(describeLocalMap(here, nodes, language));
+    else lines.push(`当前地点：${here.name}（${here.description || "无描述"}）`);
   } else if (language === "en") {
     lines.push(buildSelfImage(self));
     lines.push("");
@@ -2130,9 +2131,6 @@ export function buildThinkPrompt(args: {
       lines.push(`The world you live in: ${worldDescription}`);
       lines.push("");
     }
-    if (nodes) lines.push(describeLocalMap(here, nodes, language));
-    else lines.push(`Current location: ${here.name} (${here.description || ""})`);
-    lines.push("");
     lines.push("Your current state:");
     lines.push(`- Hunger: ${hunger.phrase}`);
     lines.push(`- Fatigue: ${fatigue.phrase}`);
@@ -2161,6 +2159,10 @@ export function buildThinkPrompt(args: {
 
     lines.push("Your thoughts so far:");
     lines.push(history || "(just started)");
+    // ── Suffix: location (appended after stable prefix) ──
+    lines.push("");
+    if (nodes) lines.push(describeLocalMap(here, nodes, language));
+    else lines.push(`Current location: ${here.name} (${here.description || ""})`);
   } else {
     lines.push(buildSelfImage(self));
     lines.push("");
@@ -2168,10 +2170,6 @@ export function buildThinkPrompt(args: {
       lines.push(`あなたの住む世界：${worldDescription}`);
       lines.push("");
     }
-    if (nodes) lines.push(describeLocalMap(here, nodes, language));
-    else lines.push(`現在地：${here.name}`);
-    lines.push("");
-
     if (shortMemories) {
       lines.push("最近の記憶：");
       lines.push(shortMemories);
@@ -2180,6 +2178,10 @@ export function buildThinkPrompt(args: {
 
     lines.push("思考の記録：");
     lines.push(history || "（始まったばかり）");
+    // ── Suffix: location (appended after stable prefix) ──
+    lines.push("");
+    if (nodes) lines.push(describeLocalMap(here, nodes, language));
+    else lines.push(`現在地：${here.name}`);
   }
 
   return lines.join("\n");

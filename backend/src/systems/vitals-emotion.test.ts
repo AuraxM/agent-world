@@ -48,6 +48,7 @@ function mkChar(
     incomeLevel: 0,
     expenseExempt: false,
     activeConversationIds: [],
+    lastConversationEndTick: 0,
     impressionBook: {},
     notebook: [],
     shortTermGoal: null,

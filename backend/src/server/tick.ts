@@ -365,6 +365,7 @@ export async function tick(
 
   // ── travel_together: auto-step synchronised movement for paired characters ──
   const travelProcessed = new Set<string>();
+  const travelArrivedThisTick = new Set<string>();
   for (const c of characters) {
     const ca = c.currentAction;
     if (!ca || ca.type !== "travel_together" || travelProcessed.has(c.id)) continue;
@@ -404,6 +405,8 @@ export async function tick(
       if (partner.currentAction?.type === "travel_together") {
         partner.currentAction = undefined;
       }
+      travelArrivedThisTick.add(c.id);
+      travelArrivedThisTick.add(partnerId);
 
       c.shortMemory.push({
         id: `mem-${randomUUID().slice(0, 8)}`,
@@ -464,7 +467,7 @@ export async function tick(
         skipExecution: true, skipMemory: true,
       });
     } else {
-      // travel_together without active dialogue (dialogue ended, movement continues)
+      // travel_together without active dialogue (dialogue ended, movement continues, or just arrived)
       const c = characters.find(ch => ch.id === charId);
       if (c?.currentAction?.type === "travel_together") {
         const path = c.currentAction.path!;
@@ -477,6 +480,16 @@ export async function tick(
           type: "wait",
           actorId: charId,
           reasoning: `正与 ${partner?.name ?? "同伴"} 结伴前往 ${destName} 途中（第 ${step}/${path.length - 1} 步）。`,
+          selfImportance: 2,
+          skipExecution: true, skipMemory: true,
+        });
+      } else if (travelArrivedThisTick.has(charId) && c) {
+        const partnerId = [...travelArrivedThisTick].find(id => id !== charId);
+        const partnerName = partnerId ? characters.find(ch => ch.id === partnerId)?.name : "同伴";
+        actionsForExecution.push({
+          type: "wait",
+          actorId: charId,
+          reasoning: `刚和 ${partnerName} 结伴到达目的地。`,
           selfImportance: 2,
           skipExecution: true, skipMemory: true,
         });

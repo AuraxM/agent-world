@@ -52,7 +52,7 @@ Always test through `runDialogPhase` directly (not `tick.ts`). All LLM decision 
 
 ```typescript
 const result = await runDialogPhase({
-  rawActions,            // Action[] — at least one "speak" to start conversation
+  rawActions,            // Action[] — at least one "chat" to start conversation
   characters,            // Character[] — the participants
   nodes,                 // MapNode[] — usually just [baseNode()]
   perceptions,           // Map<string, WorldEvent[]> — usually new Map()

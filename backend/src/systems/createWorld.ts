@@ -82,11 +82,9 @@ export function createWorldFromConfig(
     const tpl = loadCharacter(m.characterId, mapId);
     let loc = m.locationId;
     if (!loc) {
-      // Locals prefer their home node
-      if (tpl.origin === "local" && tpl.restNodeId && nodeIds.has(tpl.restNodeId)) {
+      if (tpl.restNodeId && nodeIds.has(tpl.restNodeId)) {
         loc = tpl.restNodeId;
       }
-      // Visitors (or locals without restNodeId) fall back to entry
       if (!loc) {
         loc = defaultEntry;
       }

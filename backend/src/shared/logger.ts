@@ -167,6 +167,18 @@ export interface Logger {
   error(message: string, context?: Record<string, unknown>): void;
 }
 
+/** 将 prompt 内容写入独立文件，与主日志分离。 */
+export function writePromptFile(type: "decide" | "dialog" | "think", content: string): void {
+  const cfg = getConfig();
+  if (!cfg.fileEnabled) return;
+  ensureDir();
+  const day = today();
+  const filePath = path.join(cfg.logDir, `prompt-${type}-${day}.log`);
+  const tsStr = ts();
+  const line = `\n── ${tsStr} ──\n${content}\n`;
+  fs.appendFileSync(filePath, line, "utf-8");
+}
+
 export function createLogger(component: string): Logger {
   function log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
     if (LEVEL_PRIORITY[level] < LEVEL_PRIORITY[getConfig().level]) return;

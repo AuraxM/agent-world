@@ -1304,7 +1304,7 @@ export async function runDialogPhase(
       finalActionsMap.set(a.actorId, a);
     }
   }
-  const finalActions = characters.map((c) => finalActionsMap.get(c.id)!);
+  const finalActions = characters.map((c) => finalActionsMap.get(c.id)!).filter((a): a is Action => a != null);
 
   return { finalActions, dialogEvents, memoryWrites, updatedConversations };
 }

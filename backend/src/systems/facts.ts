@@ -40,8 +40,8 @@ export interface AggregatedFacts {
   lastEatTick?: Tick;
   /** 最近一个游戏日（24h = TODAY_WINDOW ticks）内（不含本 tick）按 action type 计数。 */
   todayActionCounts: Partial<Record<string, number>>;
-  /** 今日 speak 的目标角色 ID → 次数（仅记录 speak 类型）。 */
-  todaySpeakTargets: Record<string, number>;
+  /** 今日 chat 的目标角色 ID → 次数（仅记录 chat 类型）。 */
+  todayChatTargets: Record<string, number>;
 }
 
 export interface DeriveFactsInput {
@@ -106,13 +106,13 @@ export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts 
       (todayActionCounts[t.action.type] ?? 0) + 1;
   }
 
-  // 今日 speak 目标计数
-  const todaySpeakTargets: Record<string, number> = {};
+  // 今日 chat 目标计数
+  const todayChatTargets: Record<string, number> = {};
   for (const t of recentThoughts) {
     if (t.tick < cutoff) break;
-    if (t.action.type === "speak" && t.action.targetId) {
-      todaySpeakTargets[t.action.targetId] =
-        (todaySpeakTargets[t.action.targetId] ?? 0) + 1;
+    if (t.action.type === "chat" && t.action.targetId) {
+      todayChatTargets[t.action.targetId] =
+        (todayChatTargets[t.action.targetId] ?? 0) + 1;
     }
   }
 
@@ -139,6 +139,6 @@ export function deriveAggregatedFacts(input: DeriveFactsInput): AggregatedFacts 
     lastRestTick,
     lastEatTick,
     todayActionCounts,
-    todaySpeakTargets,
+    todayChatTargets,
   };
 }

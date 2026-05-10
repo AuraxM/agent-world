@@ -22,7 +22,7 @@ import type { Outcome, StateChange } from "../domain/index";
 import { createLogger } from "../shared/index";
 const log = createLogger("execute");
 
-const SHORT_MEMORY_LIMIT = 50;
+const SHORT_MEMORY_LIMIT = 120;
 
 interface ExecuteInput {
   worldId: string;
@@ -228,7 +228,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
         restNodeName: null,
         hoursAtCurrentLocation: 0,
         todayActionCounts: {},
-        todaySpeakTargets: {},
+        todayChatTargets: {},
       },
     };
 

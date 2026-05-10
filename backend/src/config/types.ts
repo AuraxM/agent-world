@@ -57,6 +57,7 @@ export type CharacterTemplate = Omit<
   | "incomeLevel"
   | "expenseExempt"
   | "activeConversationIds"
+  | "lastConversationEndTick"
   | "shortTermGoal"
   | "longTermGoal"
   | "liked"

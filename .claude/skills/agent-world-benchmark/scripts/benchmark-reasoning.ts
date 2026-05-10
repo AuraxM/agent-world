@@ -2,7 +2,7 @@
  * 角色推理耗时基准测试。
  *
  * 测量每个角色在「有对话」和「无对话」情况下单回合推理（LLM decide 调用）的耗时。
- * 对话由角色自主选择 speak 触发 —— 脚本没有办法强制触发或阻止对话，
+ * 对话由角色自主选择 chat 触发 —— 脚本没有办法强制触发或阻止对话，
  * 因此通过运行多个 tick 并分别统计来收集两种场景的数据。
  *
  * 用法：npx tsx scripts/benchmark-reasoning.ts [worldId] [tickCount]
@@ -75,8 +75,8 @@ async function main() {
     const totalMs = Date.now() - tickT0;
 
     // r.decisions 在对话阶段后被改写为 wait proxy，所以用原始 charTimings 判断
-    const hadDialog = charTimings.some((t) => t.actionType === "speak");
-    const dialogChars = charTimings.filter((t) => t.actionType === "speak").map((t) => t.characterId);
+    const hadDialog = charTimings.some((t) => t.actionType === "chat");
+    const dialogChars = charTimings.filter((t) => t.actionType === "chat").map((t) => t.characterId);
 
     // 估算各阶段耗时（非精确，但足以分层）
     const decidePhaseMs = charTimings.reduce((sum, t) => sum + t.decideMs, 0);

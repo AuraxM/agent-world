@@ -63,6 +63,7 @@ const baseCharacter: Character = {
   incomeLevel: 0,
   expenseExempt: false,
   activeConversationIds: [],
+  lastConversationEndTick: 0,
   impressionBook: {},
   notebook: [],
   shortTermGoal: null,
@@ -124,8 +125,8 @@ describe("deriveAggregatedFacts", () => {
 
   it("最近 move 决定 hoursAtCurrentLocation", () => {
     const thoughts: AgentThought[] = [
-      mkThought(10, mkAction("speak")), // 最近
-      mkThought(9, mkAction("speak")),
+      mkThought(10, mkAction("chat")), // 最近
+      mkThought(9, mkAction("chat")),
       mkThought(8, mkAction("move", { targetNodeId: "node-here" })),
       mkThought(7, mkAction("eat")),
       mkThought(6, mkAction("move", { targetNodeId: "node-other" })),
@@ -163,7 +164,7 @@ describe("deriveAggregatedFacts", () => {
 
   it("lastRestTick 取最近一次成功 rest", () => {
     const thoughts: AgentThought[] = [
-      mkThought(10, mkAction("speak")),
+      mkThought(10, mkAction("chat")),
       mkThought(9, mkAction("rest"), false),
       mkThought(8, mkAction("rest"), true),
       mkThought(7, mkAction("rest"), true),
@@ -182,11 +183,11 @@ describe("deriveAggregatedFacts", () => {
   it("todayActionCounts 只统计最近 120 tick (= 24 游戏小时)", () => {
     // currentTick = 126，window = [6, 126)
     const thoughts: AgentThought[] = [
-      mkThought(29, mkAction("speak")),
-      mkThought(28, mkAction("speak")),
+      mkThought(29, mkAction("chat")),
+      mkThought(28, mkAction("chat")),
       mkThought(27, mkAction("observe")),
-      mkThought(10, mkAction("speak")),
-      mkThought(5, mkAction("speak")), // 应被排除（< 6）
+      mkThought(10, mkAction("chat")),
+      mkThought(5, mkAction("chat")), // 应被排除（< 6）
     ];
     const facts = deriveAggregatedFacts({
       character: baseCharacter,
@@ -196,7 +197,7 @@ describe("deriveAggregatedFacts", () => {
       activityNodeId: null,
       restNodeId: null,
     });
-    expect(facts.todayActionCounts.speak).toBe(3);
+    expect(facts.todayActionCounts.chat).toBe(3);
     expect(facts.todayActionCounts.observe).toBe(1);
   });
 
@@ -204,7 +205,7 @@ describe("deriveAggregatedFacts", () => {
     const stale = mkThought(5, mkAction("wait"));
     const fresh: AgentThought = mkThought(
       10,
-      mkAction("speak", { freeText: "你好", targetId: "char-y" }),
+      mkAction("chat", { freeText: "你好", targetId: "char-y" }),
     );
 
     const facts = deriveAggregatedFacts({
@@ -216,7 +217,7 @@ describe("deriveAggregatedFacts", () => {
       restNodeId: null,
     });
     expect(facts.lastAction).toEqual({
-      type: "speak",
+      type: "chat",
       freeText: "你好",
       tick: 10,
       success: true,
@@ -224,11 +225,11 @@ describe("deriveAggregatedFacts", () => {
     });
   });
 
-  it("todaySpeakTargets 统计今日 speak 目标", () => {
+  it("todayChatTargets 统计今日 chat 目标", () => {
     const thoughts: AgentThought[] = [
-      mkThought(10, mkAction("speak", { targetId: "alice" })),
-      mkThought(9, mkAction("speak", { targetId: "bob" })),
-      mkThought(8, mkAction("speak", { targetId: "alice" })),
+      mkThought(10, mkAction("chat", { targetId: "alice" })),
+      mkThought(9, mkAction("chat", { targetId: "bob" })),
+      mkThought(8, mkAction("chat", { targetId: "alice" })),
       mkThought(7, mkAction("eat")),
     ];
     const facts = deriveAggregatedFacts({
@@ -239,7 +240,7 @@ describe("deriveAggregatedFacts", () => {
       activityNodeId: null,
       restNodeId: null,
     });
-    expect(facts.todaySpeakTargets).toEqual({ alice: 2, bob: 1 });
+    expect(facts.todayChatTargets).toEqual({ alice: 2, bob: 1 });
   });
 
   it("activityNodeId/restNodeId 找不到节点时 activityNodeName/restNodeName 为 null", () => {

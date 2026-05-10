@@ -1,8 +1,7 @@
 import type { ActionDefinition, StateChange } from "../domain/index";
 import { TICKS_PER_HOUR } from "../domain/index";
-import { DEFAULT_ECONOMY_CONFIG } from "../config/index";
 import { getEatCost, getBatheCost } from "./bme";
-import { rollWorkIncome } from "./economy";
+import { paySalary, findEmployment, findShopAtNode, canAfford, buyItems } from "./economy";
 
 export const eatAction: ActionDefinition = {
   type: "eat",
@@ -126,32 +125,32 @@ export const restAction: ActionDefinition = {
 
 export const workAction: ActionDefinition = {
   type: "work",
-  duration: 5,
-  triggerHint: "在工作/学习地点、该干活时使用，赚取收入。",
-  paramRule: "可选 free_text。需在个人的活动节点。持续 5 ticks。",
+  duration: 10,
+  triggerHint: "在雇佣你的店铺工作，完成 10 tick 后获得工资。",
+  paramRule: "可选 free_text。需在雇佣你的店铺节点。",
   check(ctx) {
-    if (!ctx.facts.activityNodeId) return false;
-    if (ctx.self.incomeLevel <= 0) return false;
-    if (ctx.self.age < 18) return false;
-    return ctx.here.id === ctx.facts.activityNodeId;
+    const emp = findEmployment(ctx.self, ctx.shops);
+    if (!emp) return false;
+    return ctx.here.id === emp.nodeId;
   },
   hint(ctx) {
-    const prof = ctx.self.profession;
-    const label = prof === "student" ? "学习" : prof;
-    return `工作（${label}，5 ticks）`;
+    const emp = findEmployment(ctx.self, ctx.shops);
+    if (!emp) return "工作（未被雇佣）";
+    return `工作（${ctx.here.name}，${emp.salary}💰/次，10 ticks）`;
   },
   validateParams() { return null; },
   execute(ctx, input) {
-    const desc = (input.free_text as string) || "专注于手头的事情";
+    const desc = (input.free_text as string) || "开始工作";
+    const emp = findEmployment(ctx.self, ctx.shops)!;
     return {
-      memory: `我开始工作：${desc}。`,
+      memory: `我在 ${ctx.here.name} 开始工作：${desc}。`,
       event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 开始工作。`, intensity: 1 },
       stateChanges: [{
         kind: "setOngoingAction",
         action: {
           type: "work",
           startedAt: ctx.tick,
-          endsAt: ctx.tick + 5,
+          endsAt: ctx.tick + 10,
           description: `在 ${ctx.here.name} 工作`,
           interruptThreshold: 3,
         },
@@ -159,20 +158,18 @@ export const workAction: ActionDefinition = {
     };
   },
   onComplete(ctx) {
-    const income = rollWorkIncome(ctx.self, DEFAULT_ECONOMY_CONFIG);
-    const changes: StateChange[] = [];
-    if (income > 0) {
-      changes.push({ kind: "adjustMoney", amount: income, reason: "work" });
-    }
+    const emp = findEmployment(ctx.self, ctx.shops);
+    if (!emp) return { memory: "我完成了工作但店铺已不存在。", stateChanges: [] };
+    const changes = paySalary(ctx.worldId, ctx.tick, ctx.self, emp);
     return {
-      memory: `我完成了工作，收入 ${income}💰。`,
-      event: { category: "action", description: `${ctx.self.name} 在 ${ctx.here.name} 完成了工作。`, intensity: 2 },
+      memory: `我完成了工作，收到 ${emp.salary}💰 工资。`,
+      event: { category: "action", description: `${ctx.self.name} 完成了工作。`, intensity: 2 },
       stateChanges: changes,
     };
   },
   onInterrupt(ctx, reason) {
     return {
-      memory: `我的工作被打断了——${reason}，没有收入。`,
+      memory: `工作被打断——${reason}，没有收入。`,
       event: { category: "action", description: `${ctx.self.name} 的工作被打断。`, intensity: 3 },
     };
   },
@@ -505,22 +502,23 @@ export const travelTogetherAction: ActionDefinition = {
 
 export const lookAroundAction: ActionDefinition = {
   type: "look_around",
-  duration: 5,
+  duration: "instant",
   triggerHint: "无事可做时四处看看。",
   paramRule: "无需额外参数。始终可用，兜底选项。",
   check(_ctx) { return true; },
   hint(ctx) {
-    return `环顾四周（查看 ${ctx.here.name} 的情况，原地停留 5 ticks）`;
+    return `环顾四周（查看 ${ctx.here.name} 的情况）`;
   },
   validateParams() { return null; },
   execute(ctx, _input) {
     const lines: string[] = [];
     lines.push(`我环顾四周。我在 ${ctx.here.name}。`);
 
-    if (ctx.companions.length === 0) {
+    const nearby = ctx.companions.slice(0, 5);
+    if (nearby.length === 0) {
       lines.push("周围没有其他人。");
     } else {
-      const parts = ctx.companions.map((c) => {
+      const parts = nearby.map((c) => {
         const action = c.currentAction;
         if (action) {
           return `${c.name}（正在${action.description}）`;
@@ -538,28 +536,229 @@ export const lookAroundAction: ActionDefinition = {
         description: `${ctx.self.name} 环顾四周，观察周围情况。`,
         intensity: 1,
       },
-      stateChanges: [{
-        kind: "setOngoingAction",
-        action: {
-          type: "look_around",
-          startedAt: ctx.tick,
-          endsAt: ctx.tick + 5,
-          description: `在 ${ctx.here.name} 观察等待`,
-          interruptThreshold: 2,
-        },
-      }],
     };
   },
-  onComplete(ctx) {
+};
+
+export const buyAction: ActionDefinition = {
+  type: "buy",
+  duration: "instant",
+  triggerHint: "在店铺购买物品（店铺商品无限供应）。",
+  paramRule: "必填 item_def_id（物品ID），可选 item_count（默认1）。需在店铺节点。",
+  check(ctx) {
+    const shop = findShopAtNode(ctx.here.id, ctx.shops);
+    if (!shop) return false;
+    const prices = shop.goods.map((gid) => ctx.itemDefs.get(gid)?.value ?? Infinity);
+    const cheapest = Math.min(...prices);
+    return canAfford(ctx.self, cheapest === Infinity ? 0 : cheapest);
+  },
+  hint(ctx) {
+    const shop = findShopAtNode(ctx.here.id, ctx.shops);
+    if (!shop) return "（不在此刻店铺）";
+    const goods = shop.goods.map((gid) => ctx.itemDefs.get(gid)).filter(Boolean);
+    if (goods.length === 0) return "（店铺暂无可购买物品）";
+    return goods.map((g) => ({
+      hint: `购买 ${g!.name}（$${g!.value}）`,
+    }));
+  },
+  validateParams(input, ctx) {
+    const itemDefId = input.item_def_id as string | undefined;
+    if (!itemDefId) return "buy 需要 item_def_id";
+    const shop = findShopAtNode(ctx.here.id, ctx.shops);
+    if (!shop) return "当前位置没有店铺";
+    if (!shop.goods.includes(itemDefId)) {
+      return `店铺不销售 "${itemDefId}"，可选：${shop.goods.join(", ")}`;
+    }
+    const itemDef = ctx.itemDefs.get(itemDefId);
+    if (!itemDef) return `未知物品 "${itemDefId}"`;
+    const count = (input.item_count as number) ?? 1;
+    const total = itemDef.value * count;
+    if (!canAfford(ctx.self, total)) return `钱不够（需要 ${total}，当前 ${ctx.self.money}）`;
+    return null;
+  },
+  execute(ctx, input) {
+    const itemDefId = input.item_def_id as string;
+    const count = (input.item_count as number) ?? 1;
+    const shop = findShopAtNode(ctx.here.id, ctx.shops)!;
+    const itemDef = ctx.itemDefs.get(itemDefId)!;
+    const changes = buyItems(ctx.worldId, ctx.tick, ctx.self, shop, itemDef, count);
     return {
-      memory: `我在 ${ctx.here.name} 观察等待结束。`,
+      memory: `我购买了 ${itemDef.name} x${count}，花费 ${itemDef.value * count}💰。`,
+      event: { category: "action", description: `${ctx.self.name} 购买了 ${itemDef.name}。`, intensity: 1 },
+      stateChanges: changes,
     };
   },
-  onInterrupt(ctx, reason) {
+  extraParams: {
+    item_def_id: { type: "string", description: "要购买的物品 ID。" },
+    item_count: { type: "integer", description: "购买数量，默认 1。" },
+  },
+  extraRequired: ["item_def_id"],
+};
+
+export const useItemAction: ActionDefinition = {
+  type: "use_item",
+  duration: "instant",
+  triggerHint: "使用背包中的物品。消耗品使用后消失。",
+  paramRule: "必填 item_def_id（从背包中选择）。",
+  check(ctx) {
+    return ctx.self.inventory.length > 0;
+  },
+  hint(ctx) {
+    const defs = ctx.itemDefs;
+    const groups = new Map<string, number>();
+    for (const item of ctx.self.inventory) {
+      groups.set(item.itemDefId, (groups.get(item.itemDefId) ?? 0) + 1);
+    }
+    return [...groups.entries()].map(([id, qty]) => {
+      const def = defs.get(id);
+      return { hint: `使用 ${def?.name ?? id}（持有 ${qty}）` };
+    });
+  },
+  validateParams(input, ctx) {
+    const itemDefId = input.item_def_id as string | undefined;
+    if (!itemDefId) return "use_item 需要 item_def_id";
+    if (!ctx.self.inventory.some((i) => i.itemDefId === itemDefId)) {
+      return `你没有 "${itemDefId}"`;
+    }
+    return null;
+  },
+  execute(ctx, input) {
+    const itemDefId = input.item_def_id as string;
+    const itemDef = ctx.itemDefs.get(itemDefId);
+    if (!itemDef) return { memory: `我尝试使用未知物品 ${itemDefId}。` };
+    const changes: StateChange[] = [];
+    if (itemDef.consumable) {
+      changes.push({ kind: "removeItem", itemDefId, count: 1 });
+    }
+    if (itemDef.effects.vitals) {
+      const v = itemDef.effects.vitals;
+      if (v.hunger) changes.push({ kind: "adjustVital", vital: "hunger", delta: -v.hunger });
+      if (v.fatigue) changes.push({ kind: "adjustVital", vital: "fatigue", delta: -v.fatigue });
+      if (v.hygiene) changes.push({ kind: "adjustVital", vital: "hygiene", delta: -v.hygiene });
+    }
+    if (itemDef.effects.emotion) {
+      const e = itemDef.effects.emotion;
+      if (e.mood) changes.push({ kind: "adjustMood", delta: e.mood });
+      if (e.stress) changes.push({ kind: "adjustStress", delta: e.stress });
+      if (e.socialSatiety) changes.push({ kind: "adjustSocialSatiety", delta: e.socialSatiety });
+    }
     return {
-      memory: `我观察时被打断了——${reason}`,
+      memory: `我使用了 ${itemDef.name}。`,
+      event: { category: "action", description: `${ctx.self.name} 使用了 ${itemDef.name}。`, intensity: 1 },
+      stateChanges: changes,
     };
   },
+  extraParams: {
+    item_def_id: { type: "string", description: "要使用的物品 ID（从背包选择）。" },
+  },
+  extraRequired: ["item_def_id"],
+};
+
+export const giveItemAction: ActionDefinition = {
+  type: "give_item",
+  displayName: "赠送物品",
+  duration: "instant",
+  usableInDialogue: true,
+  triggerHint: "对话中赠送物品给对方。",
+  paramRule: "必填 item_def_id（从背包选择）+ target_id（赠送对象）。仅对话中可用。",
+  check(_ctx) { return false; },
+  hint(ctx) {
+    return ctx.companions.map((c) => ({
+      hint: `赠送物品给 ${c.name}`,
+      targetId: c.id,
+    }));
+  },
+  validateParams(input, ctx) {
+    const itemDefId = input.item_def_id as string | undefined;
+    if (!itemDefId) return "give_item 需要 item_def_id";
+    if (!ctx.self.inventory.some((i) => i.itemDefId === itemDefId)) {
+      return `你没有 "${itemDefId}" 可以赠送`;
+    }
+    return null;
+  },
+  execute(ctx, input) {
+    const targetId = input.target_id as string;
+    const target = ctx.companions.find((c) => c.id === targetId);
+    if (!target) return { memory: "赠送失败：找不到对方。" };
+    const itemDefId = input.item_def_id as string;
+    const itemDef = ctx.itemDefs.get(itemDefId);
+    const sysMsg = `${ctx.self.name} 赠送了 ${itemDef?.name ?? itemDefId}（价值 ${itemDef?.value ?? "?"}💰）给 ${target.name}。`;
+    return {
+      memory: `我赠送了 ${itemDef?.name ?? itemDefId} 给 ${target.name}。`,
+      targetMemory: `${ctx.self.name} 赠送了 ${itemDef?.name ?? itemDefId} 给我。`,
+      event: { category: "social", description: sysMsg, intensity: 3 },
+      stateChanges: [
+        { kind: "removeItem", itemDefId, count: 1 },
+      ],
+      dialogRecord: sysMsg,
+    };
+  },
+  extraParams: {
+    target_id: { type: "string", description: "赠送对象角色 id。" },
+    item_def_id: { type: "string", description: "要赠送的物品 ID。" },
+  },
+  extraRequired: ["target_id", "item_def_id"],
+};
+
+export const manageEmploymentAction: ActionDefinition = {
+  type: "manage_employment",
+  displayName: "管理雇佣",
+  duration: "instant",
+  usableInDialogue: true,
+  triggerHint: "店主在对话中可雇佣或解雇对方。",
+  paramRule: "必填 target_id + employment_action（hire/fire）。仅店主在对话中可用。",
+  check(_ctx) { return false; },
+  hint(ctx) {
+    return ctx.companions.map((c) => ({
+      hint: `雇佣/解雇 ${c.name}`,
+      targetId: c.id,
+    }));
+  },
+  validateParams(input, ctx) {
+    const action = input.employment_action as string | undefined;
+    if (!action || !["hire", "fire"].includes(action)) return "需要 employment_action: hire 或 fire";
+    const shop = ctx.shops.find((s) => s.ownerCharacterId === ctx.self.id);
+    if (!shop) return "只有店主可以管理雇佣";
+    if (action === "hire" && shop.employeeCharacterId) {
+      return "店铺已有雇员，需先解雇";
+    }
+    return null;
+  },
+  execute(ctx, input) {
+    const targetId = input.target_id as string;
+    const target = ctx.companions.find((c) => c.id === targetId);
+    if (!target) return { memory: "找不到操作对象。" };
+    const action = input.employment_action as "hire" | "fire";
+    const shop = ctx.shops.find((s) => s.ownerCharacterId === ctx.self.id)!;
+    if (action === "hire") {
+      const targetEmp = findEmployment(target, ctx.shops);
+      if (targetEmp) return { memory: `${target.name} 已有工作。`, targetMemory: `雇佣失败：${target.name} 已有工作。` };
+      if (shop.employeeCharacterId) return { memory: `店铺已有雇员。`, targetMemory: `雇佣失败：店铺已有雇员。` };
+      return {
+        memory: `我雇佣了 ${target.name}。`,
+        targetMemory: `${ctx.self.name} 雇佣了你 在 ${ctx.here.name}。`,
+        event: { category: "social", description: `${ctx.self.name} 雇佣了 ${target.name}。`, intensity: 3 },
+        stateChanges: [{ kind: "setEmployment", shopId: shop.id, characterId: target.id }],
+        dialogRecord: `${ctx.self.name} 雇佣了 ${target.name}。`,
+      };
+    } else {
+      if (shop.employeeCharacterId !== target.id) {
+        return { memory: `${target.name} 不是店铺雇员。` };
+      }
+      return {
+        memory: `我解雇了 ${target.name}。`,
+        targetMemory: `${ctx.self.name} 解雇了你 从 ${ctx.here.name}。`,
+        event: { category: "social", description: `${ctx.self.name} 解雇了 ${target.name}。`, intensity: 3 },
+        stateChanges: [{ kind: "setEmployment", shopId: shop.id }],
+        dialogRecord: `${ctx.self.name} 解雇了 ${target.name}。`,
+      };
+    }
+  },
+  extraParams: {
+    target_id: { type: "string", description: "雇佣/解雇对象角色 id。" },
+    employment_action: { type: "string", description: "hire 或 fire。" },
+  },
+  extraRequired: ["target_id", "employment_action"],
 };
 
 export const BUILTIN_ACTIONS: ActionDefinition[] = [
@@ -574,4 +773,8 @@ export const BUILTIN_ACTIONS: ActionDefinition[] = [
   giveAction,
   travelTogetherAction,
   lookAroundAction,
+  buyAction,
+  useItemAction,
+  giveItemAction,
+  manageEmploymentAction,
 ];

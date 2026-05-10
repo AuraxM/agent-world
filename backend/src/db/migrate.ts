@@ -106,7 +106,7 @@ export function migrate(dbUrl?: string) {
       tick INTEGER NOT NULL,
       character_id TEXT NOT NULL,
       amount INTEGER NOT NULL,
-      category TEXT NOT NULL CHECK(category IN ('expense','income','transfer_in','transfer_out')),
+      category TEXT NOT NULL CHECK(category IN ('expense','income','transfer_in','transfer_out','shop_sale','salary')),
       description TEXT NOT NULL DEFAULT '',
       counterparty_id TEXT
     )`,
@@ -164,6 +164,18 @@ export function migrate(dbUrl?: string) {
       PRIMARY KEY (world_id, id)
     )`,
     `CREATE INDEX IF NOT EXISTS think_sessions_world_idx ON think_sessions(world_id)`,
+    `CREATE TABLE IF NOT EXISTS shops (
+      id TEXT NOT NULL,
+      world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
+      node_id TEXT NOT NULL,
+      owner_character_id TEXT NOT NULL,
+      employee_character_id TEXT,
+      goods_json TEXT NOT NULL DEFAULT '[]',
+      salary INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+      PRIMARY KEY (world_id, id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS shops_world_idx ON shops(world_id)`,
   ];
 
   /** SQLite 不支持 ALTER ADD COLUMN IF NOT EXISTS；按 PRAGMA 自查后追加。 */
@@ -203,6 +215,7 @@ export function migrate(dbUrl?: string) {
     { name: "long_term_goal_json", ddl: "ALTER TABLE characters ADD COLUMN long_term_goal_json TEXT" },
     { name: "liked", ddl: "ALTER TABLE characters ADD COLUMN liked TEXT NOT NULL DEFAULT ''" },
     { name: "disliked", ddl: "ALTER TABLE characters ADD COLUMN disliked TEXT NOT NULL DEFAULT ''" },
+    { name: "inventory_json", ddl: "ALTER TABLE characters ADD COLUMN inventory_json TEXT NOT NULL DEFAULT '[]'" },
   ];
 
   const WORLDS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [

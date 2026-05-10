@@ -87,6 +87,7 @@ export const characters = sqliteTable(
     health: integer("health").notNull().default(2),
     sicknessJson: text("sickness_json"),
     activeConversationIdsJson: text("active_conversation_ids_json").notNull().default("[]"),
+    inventoryJson: text("inventory_json").notNull().default("[]"),
     speakingStyle: text("speaking_style"),
     personalProfileJson: text("personal_profile_json").notNull().default('{"past":"","present":""}'),
     origin: text("origin").notNull().default("local"),
@@ -224,6 +225,28 @@ export const transactions = sqliteTable(
   },
   (t) => [
     index("transactions_world_char_tick_idx").on(t.worldId, t.characterId, t.tick),
+  ],
+);
+
+export const shops = sqliteTable(
+  "shops",
+  {
+    id: text("id").notNull(),
+    worldId: text("world_id")
+      .notNull()
+      .references(() => worlds.id, { onDelete: "cascade" }),
+    nodeId: text("node_id").notNull(),
+    ownerCharacterId: text("owner_character_id").notNull(),
+    employeeCharacterId: text("employee_character_id"),
+    goodsJson: text("goods_json").notNull().default("[]"),
+    salary: integer("salary").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.worldId, t.id] }),
+    index("shops_world_idx").on(t.worldId),
   ],
 );
 

@@ -11,7 +11,7 @@ export function HubLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full animate-fade-in">
       {/* Left sidebar — semi-transparent */}
       <nav className="w-14 flex-shrink-0 flex flex-col items-center pt-3 gap-1 bg-black/30 backdrop-blur-md border-r border-white/10">
         {NAV_ITEMS.map((item) => (

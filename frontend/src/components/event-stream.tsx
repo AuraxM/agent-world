@@ -77,9 +77,9 @@ export function EventStream({
     if (filter === "dialogue") {
       evs = evs.filter((ev) => ev.dialogTranscript && ev.dialogTranscript.length > 0);
     } else if (filter === "thinking") {
-      evs = evs.filter((ev) => ev.category === "inner");
+      evs = evs.filter((ev) => ev.source === "think");
     } else {
-      evs = evs.filter((ev) => !(ev.dialogTranscript && ev.dialogTranscript.length > 0) && ev.category !== "inner");
+      evs = evs.filter((ev) => !(ev.dialogTranscript && ev.dialogTranscript.length > 0) && ev.source !== "think");
     }
 
     return evs;

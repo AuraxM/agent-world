@@ -25,12 +25,15 @@ export function EventCard({
   const charById = new Map(characters.map((c) => [c.id, c]));
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
   const [expanded, setExpanded] = useState(false);
+  const [thinkExpanded, setThinkExpanded] = useState(false);
 
   const important = event.intensity >= 3;
   const hasTranscript = event.dialogTranscript && event.dialogTranscript.length > 0;
   const transcriptMsgCount = hasTranscript
     ? event.dialogTranscript!.filter((t) => t && t.speakerId !== "__system__").length
     : 0;
+  const hasThinkTranscript = event.thinkTranscript && event.thinkTranscript.length > 0;
+  const thinkRoundCount = hasThinkTranscript ? event.thinkTranscript!.length : 0;
   const dialogueSpeakers = hasTranscript
     ? [...new Set(event.dialogTranscript!.filter(t => t && t.speakerId !== "__system__").map(t => t.speakerId))]
         .map(id => charById.get(id))
@@ -164,6 +167,56 @@ export function EventCard({
               {event.dialogEndedBy && event.dialogEndedBy !== "natural" && (
                 <div className="text-[10px] text-white/30 mt-2 pt-1 border-t border-white/10">
                   结束方式：{event.dialogEndedBy}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Think transcript expand/collapse */}
+      {hasThinkTranscript && (
+        <>
+          <button
+            type="button"
+            onClick={() => setThinkExpanded(!thinkExpanded)}
+            className="text-[10px] text-(--accent-strong) mt-2 hover:underline cursor-pointer tracking-[0.1em]"
+          >
+            {thinkExpanded
+              ? `收起思考 ▲（${thinkRoundCount} 轮）`
+              : `展开思考 ▼（${thinkRoundCount} 轮）`}
+          </button>
+          {thinkExpanded && (
+            <div className="mt-2 p-3 bg-white/[0.04] border border-white/10 rounded space-y-2">
+              {event.thinkTranscript!.map((turn, i) => {
+                if (!turn) return null;
+                return (
+                  <div key={i}>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <span className="text-[10px] text-white/30 tracking-[0.1em]">
+                        ROUND {i + 1}
+                      </span>
+                      <div className="flex-1 h-px bg-white/5" />
+                    </div>
+                    <div className="text-body-sm text-white/80 leading-[var(--lh-loose)]">
+                      {turn.text}
+                    </div>
+                    {turn.reasoning && (
+                      <details className="mt-1">
+                        <summary className="text-[10px] text-white/30 cursor-pointer hover:text-white/50">
+                          推理链
+                        </summary>
+                        <div className="text-[11px] text-white/40 mt-1 p-2 bg-white/[0.02] rounded leading-[var(--lh-loose)] whitespace-pre-wrap">
+                          {turn.reasoning}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                );
+              })}
+              {event.thinkEndedBy && event.thinkEndedBy !== "natural" && (
+                <div className="text-[10px] text-white/30 mt-2 pt-1 border-t border-white/10">
+                  结束方式：{event.thinkEndedBy}
                 </div>
               )}
             </div>

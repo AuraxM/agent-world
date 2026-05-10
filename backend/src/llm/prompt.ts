@@ -2147,8 +2147,11 @@ export function buildThinkPrompt(args: {
       lines.push("");
     }
     if (impressions) {
-      lines.push("你对他人的印象：");
+      lines.push("你对他人的印象（如果某人的印象需要更新，调用 memorize 记录）：");
       lines.push(impressions);
+      lines.push("");
+    } else {
+      lines.push("你对他人的印象：暂无。如果回忆起或意识到对他人的看法，调用 memorize 记录下来。");
       lines.push("");
     }
 
@@ -2179,8 +2182,11 @@ export function buildThinkPrompt(args: {
       lines.push("");
     }
     if (impressions) {
-      lines.push("Your impressions of others:");
+      lines.push("Your impressions of others (call memorize to update if any impression has changed):");
       lines.push(impressions);
+      lines.push("");
+    } else {
+      lines.push("Your impressions of others: none yet. If you recall or realize how you feel about someone, call memorize to record it.");
       lines.push("");
     }
 
@@ -2234,10 +2240,10 @@ export function buildThinkFollowup(args: {
     .join("\n");
 
   if (language === "zh") {
-    return `（继续沉思）\n\n思考记录更新：\n${history}\n\n请继续你的沉思。调用 submit_think_turn 输出思考内容，或调用 end_thinking 结束思考。`;
+    return `（继续沉思）\n\n思考记录更新：\n${history}\n\n请继续你的沉思。你可以使用 recall、memorize、update_likes、update_goals 等工具整理思绪。调用 submit_think_turn 输出思考内容，或调用 end_thinking 结束思考。`;
   }
   if (language === "en") {
-    return `(Continue your contemplation)\n\nThought record update:\n${history}\n\nContinue your contemplation. Call submit_think_turn to output your thoughts, or end_thinking to end the session.`;
+    return `(Continue your contemplation)\n\nThought record update:\n${history}\n\nContinue your contemplation. You may use recall, memorize, update_likes, update_goals and other tools to organize your thoughts. Call submit_think_turn to output your thoughts, or end_thinking to end the session.`;
   }
   return `（熟考を続けてください）\n\n思考記録の更新：\n${history}\n\n熟考を続けてください。submit_think_turn で思考内容を出力するか、end_thinking でセッションを終了してください。`;
 }

@@ -181,7 +181,7 @@ export function EventGantt({
           {/* Timeline — syncs horizontal scroll */}
           <div
             ref={timelineRef}
-            className="flex-1 overflow-x-auto overflow-y-hidden"
+            className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-hide"
             onScroll={syncFromTimeline}
           >
             <div style={{ width: contentWidth }}>
@@ -195,7 +195,7 @@ export function EventGantt({
           {/* Name column — syncs vertical scroll */}
           <div
             ref={namesRef}
-            className="overflow-y-auto overflow-x-hidden flex-shrink-0"
+            className="overflow-y-auto overflow-x-hidden flex-shrink-0 scrollbar-hide"
             onScroll={syncFromNames}
             style={{ width: NAME_COL_WIDTH }}
           >

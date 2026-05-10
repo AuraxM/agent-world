@@ -291,6 +291,13 @@ body {
   background: transparent;
 }
 
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* ================================================================
  *  GANTT VIEW
  * ================================================================ */

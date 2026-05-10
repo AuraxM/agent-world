@@ -50,7 +50,7 @@ export default function LLMConfigPage() {
   useEffect(() => { load(); }, [load]);
 
   const handleEntryChange = useCallback(
-    (entryName: string, field: "providerId" | "thinkingEnabled", value: string | boolean) => {
+    (entryName: string, field: "providerId" | "thinkingEnabled", value: string | boolean | null) => {
       setEntries((prev) =>
         prev.map((e) => (e.entryName === entryName ? { ...e, [field]: value } : e)),
       );
@@ -70,18 +70,18 @@ export default function LLMConfigPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="px-6 py-4 border-b-2 border-(--border)">
+      <div className="px-6 py-4 border-b border-white/10 bg-black/20 backdrop-blur-sm">
         <h2 className="text-(--accent-strong) text-body-lg font-bold">LLM 配置</h2>
       </div>
 
       <div className="flex-1 overflow-auto p-6 flex flex-col gap-5">
         {loading ? (
-          <div className="text-(--text-on-frame-muted)">加载中...</div>
+          <div className="text-white/50">加载中...</div>
         ) : (
           <>
             {/* Provider list */}
-            <section className="pixel-frame">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-(--border)">
+            <section className="pixel-frame bg-black/20 backdrop-blur-md border-white/10">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                 <h3 className="text-(--accent-strong) text-sm font-bold">Provider 管理</h3>
               </div>
               <div className="p-1">
@@ -111,15 +111,15 @@ export default function LLMConfigPage() {
             </section>
 
             {/* Entry Thinking config */}
-            <section className="pixel-frame">
-              <div className="px-4 py-3 border-b border-(--border)">
+            <section className="pixel-frame bg-black/20 backdrop-blur-md border-white/10">
+              <div className="px-4 py-3 border-b border-white/10">
                 <h3 className="text-(--accent-strong) text-sm font-bold">入口配置 & Thinking</h3>
               </div>
               <div>
                 {entries.map((entry) => (
                   <div
                     key={entry.entryName}
-                    className="flex items-center gap-4 px-3 py-2.5 border-b border-(--border)/30 last:border-b-0"
+                    className="flex items-center gap-4 px-3 py-2.5 border-b border-white/5 last:border-b-0"
                   >
                     <div className="flex-1 text-(--text-on-frame) text-xs">
                       <code className="text-[11px]">{entry.entryName}</code>

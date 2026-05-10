@@ -25,7 +25,7 @@ export function WorldInstanceCard({
   const status = statusColor(world.currentTick);
 
   return (
-    <div className="flex items-center gap-4 px-5 py-4 bg-(--frame) border-2 border-(--border) rounded-md">
+    <div className="flex items-center gap-4 px-5 py-4 bg-black/25 backdrop-blur-md border border-white/10 rounded-md">
       {/* Status light */}
       <div
         className="w-2 h-2 rounded-full flex-shrink-0"
@@ -34,10 +34,10 @@ export function WorldInstanceCard({
       />
 
       <div className="flex-1 min-w-0">
-        <div className="text-(--text-on-frame) text-sm font-bold mb-0.5 truncate">
+        <div className="text-white/90 text-sm font-bold mb-0.5 truncate">
           {world.name}
         </div>
-        <div className="text-(--text-on-frame-muted) text-[11px]">
+        <div className="text-white/50 text-[11px]">
           Tick {world.currentTick} · {world.characterCount} 角色
         </div>
       </div>
@@ -47,7 +47,7 @@ export function WorldInstanceCard({
           type="button"
           onClick={() => navigate(`/world/${world.id}`)}
           className="px-3 py-1.5 text-[11px] cursor-pointer border border-(--accent-strong) text-(--accent-strong)
-                     bg-(--frame) hover:bg-(--accent-strong) hover:text-(--frame) rounded transition-colors"
+                     bg-black/30 hover:bg-(--accent-strong) hover:text-black rounded transition-colors"
         >
           进入
         </button>
@@ -58,8 +58,8 @@ export function WorldInstanceCard({
               onDelete(world.id);
             }
           }}
-          className="px-3 py-1.5 text-[11px] cursor-pointer border border-(--danger) text-(--danger)
-                     bg-(--frame) hover:bg-(--danger) hover:text-white rounded transition-colors"
+          className="px-3 py-1.5 text-[11px] cursor-pointer border border-red-400/60 text-red-300
+                     bg-black/30 hover:bg-red-500/60 hover:text-white rounded transition-colors"
         >
           删除
         </button>

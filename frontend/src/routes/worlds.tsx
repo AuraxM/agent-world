@@ -49,14 +49,14 @@ export default function WorldsPanelPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="px-6 py-4 border-b-2 border-(--border)">
+      <div className="px-6 py-4 border-b border-white/10 bg-black/20 backdrop-blur-sm">
         <h2 className="text-(--accent-strong) text-body-lg font-bold">世界实例</h2>
       </div>
 
       <div className="flex-1 flex min-h-0">
         {/* Left panel: Mod list */}
-        <aside className="w-[280px] flex-shrink-0 border-r-2 border-(--border) bg-(--frame-2) flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b border-(--border) text-(--text-on-frame-muted) text-[11px] uppercase tracking-wider">
+        <aside className="w-[280px] flex-shrink-0 border-r border-white/10 bg-black/20 backdrop-blur-md flex flex-col overflow-hidden">
+          <div className="px-4 py-3 border-b border-white/10 text-white/40 text-[11px] uppercase tracking-wider">
             Mod 列表
           </div>
           <div className="flex-1 overflow-auto">
@@ -72,12 +72,12 @@ export default function WorldsPanelPage() {
                 }}
                 className={`w-full text-left px-4 py-3.5 border-l-3 cursor-pointer transition-colors ${
                   selectedModId === mod.id
-                    ? "border-l-(--accent-strong) bg-(--frame)/50 text-(--accent-strong)"
-                    : "border-l-transparent text-(--text-on-frame-muted) hover:text-(--text-on-frame) hover:bg-(--frame)/30"
+                    ? "border-l-(--accent-strong) bg-white/5 text-(--accent-strong)"
+                    : "border-l-transparent text-white/50 hover:text-white hover:bg-white/5"
                 }`}
               >
                 <div className="text-sm mb-0.5">{mod.name}</div>
-                <div className="text-[10px] text-(--text-on-frame-muted)/70">
+                <div className="text-[10px] text-white/30">
                   {worlds.filter((w) => w.mapId === mod.id).length} 个实例
                 </div>
               </button>
@@ -87,8 +87,8 @@ export default function WorldsPanelPage() {
 
         {/* Right panel: World instances */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-5 py-3 border-b border-(--border) flex items-center justify-between">
-            <span className="text-(--text-on-frame) text-sm">
+          <div className="px-5 py-3 border-b border-white/10 bg-black/20 backdrop-blur-sm flex items-center justify-between">
+            <span className="text-white/80 text-sm">
               {selectedModId
                 ? `${mods.find((m) => m.id === selectedModId)?.name ?? selectedModId} 的世界实例`
                 : "选择一个 Mod"}
@@ -96,7 +96,7 @@ export default function WorldsPanelPage() {
             <button
               type="button"
               className="px-3 py-1.5 text-[11px] cursor-pointer border border-(--accent-strong) text-(--accent-strong)
-                         bg-(--frame) hover:bg-(--accent-strong) hover:text-(--frame) rounded transition-colors"
+                         bg-black/30 hover:bg-(--accent-strong) hover:text-black rounded transition-colors"
               onClick={() => alert("Todo: 新建世界对话框")}
             >
               + 新建世界
@@ -105,9 +105,9 @@ export default function WorldsPanelPage() {
 
           <div className="flex-1 overflow-auto p-5">
             {loading ? (
-              <div className="text-(--text-on-frame-muted)">加载中...</div>
+              <div className="text-white/50">加载中...</div>
             ) : worlds.length === 0 ? (
-              <div className="text-(--text-on-frame-muted)">暂无世界实例</div>
+              <div className="text-white/50">暂无世界实例</div>
             ) : (
               <div className="flex flex-col gap-3">
                 {worlds.map((w) => (

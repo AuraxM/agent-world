@@ -11,9 +11,9 @@ export function HubLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Left sidebar */}
-      <nav className="w-14 flex-shrink-0 flex flex-col items-center pt-3 gap-1 bg-(--frame-2) border-r-2 border-(--border)">
+    <div className="flex h-full">
+      {/* Left sidebar — semi-transparent */}
+      <nav className="w-14 flex-shrink-0 flex flex-col items-center pt-3 gap-1 bg-black/30 backdrop-blur-md border-r border-white/10">
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
@@ -22,8 +22,8 @@ export function HubLayout({ children }: { children: ReactNode }) {
             className={({ isActive }) =>
               `w-10 h-10 flex items-center justify-center text-lg rounded-md transition-colors ${
                 isActive
-                  ? "bg-(--frame) border border-(--accent-strong) text-(--accent-strong)"
-                  : "text-(--text-on-frame-muted) hover:text-(--text-on-frame) hover:bg-(--frame)"
+                  ? "bg-white/10 border border-(--accent-strong) text-(--accent-strong)"
+                  : "text-white/50 hover:text-white hover:bg-white/10"
               }`
             }
           >
@@ -33,18 +33,18 @@ export function HubLayout({ children }: { children: ReactNode }) {
 
         <div className="flex-1" />
 
-        {/* Home / Cover */}
+        {/* Home button */}
         <button
           type="button"
           title="返回封面"
           onClick={() => navigate("/")}
-          className="w-10 h-10 flex items-center justify-center text-base text-(--text-on-frame-muted) hover:text-(--text-on-frame) hover:bg-(--frame) rounded-md mb-3 cursor-pointer transition-colors"
+          className="w-10 h-10 flex items-center justify-center text-base text-white/40 hover:text-white hover:bg-white/10 rounded-md mb-3 cursor-pointer transition-colors"
         >
           🏠
         </button>
       </nav>
 
-      {/* Content area */}
+      {/* Content area — transparent, cover shows through */}
       <main className="flex-1 min-w-0 overflow-hidden">
         {children}
       </main>

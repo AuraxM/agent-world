@@ -7,7 +7,7 @@ import {
   isSleepTick,
   stackEventsAtTick,
 } from "@/lib/gantt-utils";
-import { characterEmoji } from "@/lib/sprite";
+import { CharacterAvatar } from "./character-avatar";
 import { GanttCard } from "./gantt-card";
 
 export function GanttRow({
@@ -123,7 +123,7 @@ export function GanttRow({
             flexShrink: 0,
           }}
         >
-          {characterEmoji(character)}
+          <CharacterAvatar c={character} size={18} />
         </span>
         <span
           className="text-pixel-xs font-semibold text-white/70"

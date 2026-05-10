@@ -1,7 +1,7 @@
 "use client";
 
 import type { Character } from "@/types/api.generated";
-import { characterEmoji } from "@/lib/sprite";
+import { CharacterAvatar } from "./character-avatar";
 
 function actionLabel(c: Character): string {
   if (c.lastThought?.action?.type) return c.lastThought.action.type;
@@ -41,7 +41,7 @@ export function CharacterList({
               }`}
             >
               <span className="text-[12px] truncate min-w-0">
-                <span className="mr-1.5">{characterEmoji(c)}</span>
+                <CharacterAvatar c={c} size={14} />
                 {c.name}
               </span>
               <span

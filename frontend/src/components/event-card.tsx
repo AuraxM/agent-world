@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Character, MapNode, WorldEvent } from "@/types/api.generated";
-import { characterEmoji } from "@/lib/sprite";
+import { CharacterAvatar } from "./character-avatar";
 import { formatHHMM } from "@/lib/format";
 
 export function EventCard({
@@ -54,9 +54,7 @@ export function EventCard({
         {/* Single actor (non-dialogue) */}
         {!hasTranscript && actor && (
           <>
-            <span className="text-base">
-              {characterEmoji(actor)}
-            </span>
+            <CharacterAvatar c={actor} size={16} />
             <button
               type="button"
               onClick={() => onSelectCharacter(actor)}
@@ -70,9 +68,7 @@ export function EventCard({
         {/* Multi-speaker (dialogue events) */}
         {hasTranscript && dialogueSpeakers.map((speaker, i) => (
           <span key={speaker.id} className="flex items-center gap-1">
-            <span className="text-base">
-              {characterEmoji(speaker)}
-            </span>
+            <CharacterAvatar c={speaker} size={16} />
             <button
               type="button"
               onClick={() => onSelectCharacter(speaker)}

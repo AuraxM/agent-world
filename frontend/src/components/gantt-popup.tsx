@@ -54,12 +54,18 @@ export function GanttPopup({
   const panelWidth = dialogExpanded ? 640 : 320;
   const detailWidth = 320;
 
-  // Compute position: prefer to the right of the anchor card, fallback to center
+  // Compute position: prefer to the right of the anchor card
   let left: number;
   let top: number;
   if (anchorRect) {
-    left = Math.min(anchorRect.right + 12, window.innerWidth - panelWidth - 20);
-    top = Math.min(Math.max(anchorRect.top - 8, 40), window.innerHeight - 400);
+    // Try right side first, fallback to left side if it overflows
+    if (anchorRect.right + 12 + panelWidth < window.innerWidth - 20) {
+      left = anchorRect.right + 12;
+    } else {
+      left = Math.max(20, anchorRect.left - panelWidth - 12);
+    }
+    // Align top with card, clamp to keep panel on screen
+    top = Math.max(20, Math.min(anchorRect.top, window.innerHeight - 420));
   } else {
     left = (window.innerWidth - panelWidth) / 2;
     top = 120;

@@ -48,7 +48,7 @@ export function WorldView() {
   return (
     <div className="h-full flex overflow-hidden animate-fade-in">
       {/* Left column */}
-      <div className="w-[260px] flex-shrink-0 flex flex-col border-r border-white/10 bg-black/30 backdrop-blur-md">
+      <div className="w-[260px] flex-shrink-0 flex flex-col border-r border-white/10 bg-black/80 backdrop-blur-md">
         <CharacterList
           characters={snapshot.characters}
           selectedId={profileId ?? undefined}

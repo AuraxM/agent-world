@@ -43,14 +43,12 @@ export function ModCard({ mod }: { mod: ModInfo }) {
           {mod.description}
         </div>
       </div>
-      {/* Right side — card background image */}
-      {mod.backgroundImage && (
-        <img
-          src={mod.backgroundImage}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      )}
+      {/* Right side — card background image (with fallback) */}
+      <img
+        src={mod.backgroundImage ?? "/default-card-bg.png"}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover"
+      />
     </button>
   );
 }

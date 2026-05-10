@@ -9,7 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "../db/index";
-import { loadCharacter, resolveIncomeLevel } from "../config/index";
+import { loadCharacter, loadAllItems, resolveIncomeLevel } from "../config/index";
 import { appendEventsLog } from "./store";
 import type { Emotion, Vitals, WorldEvent } from "../domain/index";
 
@@ -142,6 +142,12 @@ export function addCharacterToWorld(
     duration: 1,
   };
 
+  // Compute initial inventory
+  const itemDefs = loadAllItems(world.mapId);
+  const initialItems = (tpl.initialItems ?? [])
+    .filter((itemId) => itemDefs.some((d) => d.id === itemId))
+    .map((itemId) => ({ itemDefId: itemId, acquiredTick: world.currentTick }));
+
   // Compute economy defaults
   const initialMoney = tpl.initialMoney ?? (
     tpl.origin === "visitor" && tpl.profession === "unemployed" ? 3000 : 200
@@ -185,6 +191,7 @@ export function addCharacterToWorld(
         disliked: tpl.disliked ?? "",
         relationsJson: JSON.stringify(tpl.relations),
         currentActionJson: null,
+        inventoryJson: JSON.stringify(initialItems),
         createdAt: now,
         updatedAt: now,
       })

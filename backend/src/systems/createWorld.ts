@@ -6,12 +6,14 @@
  * - 同步写入 worlds / nodes / characters；存在同 worldId 时直接抛错。
  */
 import { eq } from "drizzle-orm";
-import { db, schema } from "../db/index";
+import { db, schema, insertShops } from "../db/index";
 import {
   firstEntryNodeId,
   loadCharacter,
   loadManifest,
   loadMap,
+  loadShops,
+  loadAllItems,
   resolveIncomeLevel,
 } from "../config/index";
 import { getTierInitialMoney } from "./bme";
@@ -110,6 +112,7 @@ export function createWorldFromConfig(
 
   // 4. 事务写入
   const now = new Date();
+  const itemDefs = loadAllItems(mapId);
   db.transaction((tx) => {
     tx.insert(schema.worlds)
       .values({
@@ -165,6 +168,10 @@ export function createWorldFromConfig(
       const initialMoney = m.tpl.initialMoney ?? getTierInitialMoney(incomeLevel);
       const incomeMultiplier = m.tpl.incomeMultiplier ?? 1.0;
 
+      const initialItems = (m.tpl.initialItems ?? [])
+        .filter((itemId) => itemDefs.some((d) => d.id === itemId))
+        .map((itemId) => ({ itemDefId: itemId, acquiredTick: 0 }));
+
       tx.insert(schema.characters)
         .values({
           id: m.tpl.id,
@@ -203,8 +210,25 @@ export function createWorldFromConfig(
           disliked: m.tpl.disliked ?? "",
           relationsJson: JSON.stringify(m.tpl.relations),
           currentActionJson: null,
+          inventoryJson: JSON.stringify(initialItems),
           createdAt: now,
           updatedAt: now,
+        })
+        .run();
+    }
+
+    // Create shops
+    const shopDefs = loadShops(mapId);
+    for (const sd of shopDefs) {
+      tx.insert(schema.shops)
+        .values({
+          id: `shop-${sd.nodeId}`,
+          worldId,
+          nodeId: sd.nodeId,
+          ownerCharacterId: sd.ownerCharacterId,
+          employeeCharacterId: null,
+          goodsJson: JSON.stringify(sd.goods),
+          salary: sd.salary,
         })
         .run();
     }

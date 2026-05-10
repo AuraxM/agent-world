@@ -36,7 +36,7 @@ import {
   timeOfDay,
 } from "../llm/index";
 import { db, schema } from "../db/index";
-import { loadAllCharacters, loadManifest } from "../config/index";
+import { loadAllCharacters, loadManifest, loadAllItems } from "../config/index";
 import { actionRegistry, actionTypeFromToolName } from "../domain/index";
 import type { Action, Character, WorldEvent } from "../domain/index";
 import type { DecideInput } from "../llm/index";
@@ -100,11 +100,13 @@ export async function decideForCharacter(
   options: DecideForCharacterOptions = {},
 ): Promise<DecideForCharacterResult> {
   const loaded = loadWorld(worldId);
-  const { world, nodes, characters } = loaded;
+  const { world, nodes, characters, shops } = loaded;
   const c = characters.find((x) => x.id === characterId);
   if (!c) throw new Error(`character not in world: ${characterId}`);
 
   const fromTick = world.currentTick;
+  const itemDefsArr = loadAllItems(world.mapId);
+  const itemDefs = new Map(itemDefsArr.map((d) => [d.id, d]));
   const activityMap = buildActivityNodeMap();
   const restMap = buildRestNodeMap();
   const activityNodeId = activityMap.get(c.id) ?? null;
@@ -132,7 +134,7 @@ export async function decideForCharacter(
   });
   const baseTime = timeOfDay(fromTick, world.epoch);
   const isSleepHour = inSleepWindow(baseTime.hour, sleepWindow);
-  const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, world.epoch, isSleepHour, facts);
+  const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, world.epoch, isSleepHour, facts, undefined, shops, itemDefs);
   const opts = getAvailableActions(ctx);
 
   // 3. 决策（强制 arrivalIntro）
@@ -333,8 +335,8 @@ export async function decideForCharacter(
     characters,
     nodes,
     actions: [action],
-    shops: [],
-    itemDefs: new Map(),
+    shops,
+    itemDefs,
   });
 
   // 5. 持久化

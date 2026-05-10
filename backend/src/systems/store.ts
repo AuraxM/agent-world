@@ -10,6 +10,7 @@ import {
   getWorldOrThrow,
   findNodesByWorld,
   findCharactersByWorld,
+  findShopsByWorld,
   findLatestThoughts,
   findNotebookEntries,
   saveWorldMeta,
@@ -25,6 +26,7 @@ import type {
   AgentThought,
   Character,
   MapNode,
+  Shop,
   World,
   WorldEvent,
 } from "../domain/index";
@@ -36,6 +38,7 @@ export interface LoadedWorld {
   world: World;
   nodes: MapNode[];
   characters: Character[];
+  shops: Shop[];
 }
 
 export function loadWorld(worldId: string): LoadedWorld {
@@ -43,6 +46,7 @@ export function loadWorld(worldId: string): LoadedWorld {
 
   const nodes = findNodesByWorld(worldId);
   const characters = findCharactersByWorld(worldId);
+  const shops = findShopsByWorld(worldId);
 
   if (characters.length > 0) {
     const latest = findLatestThoughts(
@@ -62,7 +66,7 @@ export function loadWorld(worldId: string): LoadedWorld {
     c.notebook = entries.filter((e) => e.scheduledTick >= world.currentTick);
   }
 
-  return { world, nodes, characters };
+  return { world, nodes, characters, shops };
 }
 
 export function saveWorld(loaded: LoadedWorld): void {

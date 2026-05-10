@@ -9,7 +9,7 @@
  * 不改变行动**可选性**，仅丰富文本，避免压缩 LLM 自由度。
  */
 import type { AggregatedFacts } from "./facts";
-import type { Character, MapNode } from "../domain/index";
+import type { Character, ItemDefinition, MapNode, Shop } from "../domain/index";
 import {
   actionRegistry,
   type ActionContext as RegistryActionContext,
@@ -33,6 +33,8 @@ export function buildActionContext(
   facts: AggregatedFacts,
   /** 并发 tick 时传入各角色的位置快照；不传则读 character.locationId */
   locationOverrides?: ReadonlyMap<string, string>,
+  shops?: Shop[],
+  itemDefs?: Map<string, ItemDefinition>,
 ): RegistryActionContext {
   const loc = locationOverrides?.get(character.id) ?? character.locationId;
   const here = nodes.find((n) => n.id === loc);
@@ -60,8 +62,8 @@ export function buildActionContext(
     reachable,
     isSleepHour,
     facts,
-    shops: [],
-    itemDefs: new Map(),
+    shops: shops ?? [],
+    itemDefs: itemDefs ?? new Map(),
   };
 }
 

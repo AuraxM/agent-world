@@ -119,16 +119,14 @@ export function EventStream({
   }, [filtered, density]);
 
   return (
-    <div className="h-full flex flex-col bg-(--frame)">
+    <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 py-2.5 bg-(--frame-2) border-b-2 border-(--border) shadow-[inset_0_-1px_0_var(--border-amber))]">
-        <span className="text-pixel-sm text-(--accent-strong) tracking-[var(--letter-pixel)] uppercase">
-          事件流
-        </span>
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-white/10 bg-black/15 flex-shrink-0">
         {followedChar && (
-          <span className="text-body-xs text-(--text-on-frame-muted)">
-            跟随中：{followedChar.name} 视角
-          </span>
+          <span className="text-[11px] text-white/40">跟随中：{followedChar.name} 视角</span>
+        )}
+        {!followedChar && (
+          <span className="text-[11px] text-(--accent-strong) tracking-[0.1em] uppercase">事件流</span>
         )}
 
         <div className="flex items-center gap-1 ml-auto">
@@ -137,10 +135,10 @@ export function EventStream({
               key={f}
               type="button"
               onClick={() => setFilter(f)}
-              className={`text-pixel-xs px-2 py-0.5 border border-(--border-amber) cursor-pointer tracking-[var(--letter-pixel-tight)] ${
+              className={`text-[10px] px-2 py-0.5 border border-white/10 cursor-pointer tracking-[0.1em] rounded transition-colors ${
                 filter === f
-                  ? "bg-(--border-amber) text-(--panel)"
-                  : "bg-transparent text-(--text-on-frame-muted) hover:bg-(--border-amber)/20"
+                  ? "bg-white/10 text-white/90"
+                  : "bg-transparent text-white/35 hover:text-white/60 hover:border-white/20"
               }`}
             >
               {FILTER_LABELS[f]}
@@ -149,7 +147,7 @@ export function EventStream({
           <select
             value={density}
             onChange={(e) => setDensityWithPersist(e.target.value as Density)}
-            className="ml-2 text-pixel-xs px-2 py-0.5 bg-transparent border border-(--border-amber) text-(--text-on-frame) cursor-pointer tracking-[var(--letter-pixel-tight)]"
+            className="ml-2 text-[10px] px-2 py-0.5 bg-transparent border border-white/10 text-white/50 rounded cursor-pointer tracking-[0.1em]"
           >
             <option value="sparse">密度：稀</option>
             <option value="medium">密度：中</option>
@@ -159,18 +157,18 @@ export function EventStream({
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto pixel-scroll px-6 py-4">
+      <div className="flex-1 overflow-y-auto px-4 py-3">
         {groups.length === 0 ? (
-          <p className="text-body-md text-(--text-on-frame-muted) text-center mt-20">
+          <p className="text-sm text-white/30 text-center mt-20">
             此分类暂无事件
           </p>
         ) : (
           groups.map((group) => (
             <div key={group.tick} className="mb-4">
               {/* Tick separator */}
-              <div className="tick-sep mb-3">
+              <div className="flex items-center gap-2 mb-3 text-white/30 text-[10px] font-mono">
                 <span>T={group.tick} · {formatHHMM(epoch, group.tick)}</span>
-                <div className="tick-sep__line" />
+                <div className="flex-1 h-px bg-white/10" />
               </div>
 
               {/* Cards */}
@@ -190,7 +188,7 @@ export function EventStream({
 
               {/* Aggregated row */}
               {group.aggregatedCount > 0 && (
-                <div className="ev-card--aggregated mb-3">
+                <div className="text-center text-[11px] text-white/25 border border-dashed border-white/10 rounded px-3 py-2 cursor-pointer hover:text-white/40 mb-3">
                   ⊕ 同时刻{" "}
                   {group.aggregatedFrom.slice(0, 3).map((ev) => {
                     const loc = ev.nodeId ? nodes.find((n) => n.id === ev.nodeId) : null;

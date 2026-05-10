@@ -42,18 +42,25 @@ export function EventCard({
   const loc = event.nodeId ? nodeById.get(event.nodeId) : undefined;
 
   return (
-    <div className={`ev-card ${important ? "ev-card--important" : ""}`}>
+    <div className={`rounded border px-4 py-3 relative overflow-hidden ${
+      important
+        ? "bg-(--accent-strong)/8 border-(--accent-strong)/25"
+        : "border-white/10"
+    }`}>
+      {important && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-(--accent-strong)" />
+      )}
       <div className="flex items-center gap-2 mb-1.5">
         {/* Single actor (non-dialogue) */}
         {!hasTranscript && actor && (
           <>
-            <span className="npc-chip w-7 h-7 text-base">
+            <span className="text-base">
               {characterEmoji(actor)}
             </span>
             <button
               type="button"
               onClick={() => onSelectCharacter(actor)}
-              className="text-body-sm font-semibold text-(--text) hover:underline cursor-pointer"
+              className="text-body-sm font-semibold text-white/80 hover:underline cursor-pointer"
             >
               {actor.name}
             </button>
@@ -63,21 +70,21 @@ export function EventCard({
         {/* Multi-speaker (dialogue events) */}
         {hasTranscript && dialogueSpeakers.map((speaker, i) => (
           <span key={speaker.id} className="flex items-center gap-1">
-            <span className="npc-chip w-7 h-7 text-base">
+            <span className="text-base">
               {characterEmoji(speaker)}
             </span>
             <button
               type="button"
               onClick={() => onSelectCharacter(speaker)}
-              className="text-body-sm font-semibold text-(--text) hover:underline cursor-pointer"
+              className="text-body-sm font-semibold text-white/80 hover:underline cursor-pointer"
             >
               {speaker.name}
             </button>
-            <span className="text-pixel-2xs text-(--text-faint)">
+            <span className="text-pixel-2xs text-white/30">
               {genderIcon(speaker.gender)} {speaker.age}岁
             </span>
             {i < dialogueSpeakers.length - 1 && (
-              <span className="text-(--text-faint) mx-0.5">·</span>
+              <span className="text-white/30 mx-0.5">·</span>
             )}
           </span>
         ))}
@@ -87,7 +94,7 @@ export function EventCard({
           <button
             type="button"
             onClick={() => onJumpToNode(loc.id)}
-            className="text-pixel-xs text-(--text-muted) tracking-[var(--letter-pixel-tight)] bg-(--border-amber)/20 px-1.5 py-0.5 cursor-pointer hover:bg-(--border-amber)/40"
+            className="text-pixel-xs text-white/40 tracking-[var(--letter-pixel-tight)] bg-white/5 px-1.5 py-0.5 rounded cursor-pointer hover:bg-white/10"
           >
             📍 {loc.name}
           </button>
@@ -95,25 +102,25 @@ export function EventCard({
 
         {/* Important tag */}
         {important && (
-          <span className="text-pixel-2xs bg-(--danger) text-(--panel) px-1.5 py-0.5 tracking-[var(--letter-pixel)]">
+          <span className="text-pixel-2xs bg-(--accent-strong)/20 text-(--accent-strong) px-1.5 py-0.5 rounded tracking-[var(--letter-pixel)]">
             ⚠ 重要
           </span>
         )}
 
         {/* Time */}
-        <span className="ml-auto text-pixel-xs text-(--text-faint) tracking-[var(--letter-pixel-tight)]">
+        <span className="ml-auto text-pixel-xs text-white/30 tracking-[var(--letter-pixel-tight)]">
           {formatHHMM(epoch, event.tick)}
         </span>
       </div>
 
       {/* Description */}
-      <div className="text-body-md text-(--text) leading-[var(--lh-normal)]">
+      <div className="text-body-md text-white/80 leading-[var(--lh-normal)]">
         {event.description}
       </div>
 
       {/* Quote for inner events */}
       {event.category === "inner" && (
-        <div className="ev-card__quote">
+        <div className="bg-white/[0.04] border-l-3 border-white/15 text-white/50 italic px-3 py-2 mt-2 leading-[var(--lh-loose)]">
           &ldquo;{event.description}&rdquo;
         </div>
       )}
@@ -124,24 +131,24 @@ export function EventCard({
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
-            className="text-pixel-xs text-(--accent-strong) mt-2 hover:underline cursor-pointer tracking-[var(--letter-pixel-tight)]"
+            className="text-[10px] text-(--accent-strong) mt-2 hover:underline cursor-pointer tracking-[0.1em]"
           >
             {expanded
               ? `收起对话 ▲（${transcriptMsgCount} 条）`
               : `展开对话 ▼（${transcriptMsgCount} 条）${event.dialogEndedBy ? "" : " · 进行中"}`}
           </button>
           {expanded && (
-            <div className="mt-2 p-3 bg-(--panel) border border-(--border-amber) rounded space-y-1">
+            <div className="mt-2 p-3 bg-white/[0.04] border border-white/10 rounded space-y-1">
               {event.dialogTranscript!.map((turn, i) => {
                 if (!turn) return null;
                 if (turn.speakerId === "__system__") {
                   return (
                     <div key={i} className="flex items-center gap-2 my-2">
-                      <div className="flex-1 h-px bg-(--border-amber)/30" />
-                      <span className="text-pixel-2xs text-(--text-faint) whitespace-nowrap">
+                      <div className="flex-1 h-px bg-white/10" />
+                      <span className="text-[10px] text-white/30 whitespace-nowrap">
                         {turn.line ?? ""}
                       </span>
-                      <div className="flex-1 h-px bg-(--border-amber)/30" />
+                      <div className="flex-1 h-px bg-white/10" />
                     </div>
                   );
                 }
@@ -152,14 +159,14 @@ export function EventCard({
                     <span className="font-semibold text-(--accent-strong)">
                       {speakerName}：
                     </span>
-                    <span className="text-body-sm text-(--text)">
+                    <span className="text-body-sm text-white/80">
                       {turn.line ?? ""}
                     </span>
                   </div>
                 );
               })}
               {event.dialogEndedBy && event.dialogEndedBy !== "natural" && (
-                <div className="text-pixel-2xs text-(--text-faint) mt-2 pt-1 border-t border-(--border-amber)/30">
+                <div className="text-[10px] text-white/30 mt-2 pt-1 border-t border-white/10">
                   结束方式：{event.dialogEndedBy}
                 </div>
               )}
@@ -219,7 +226,7 @@ function ActionBtn({
     <button
       type="button"
       onClick={onClick}
-      className="text-pixel-xs text-(--text-muted) border border-(--border-amber) bg-transparent px-2 py-0.5 cursor-pointer hover:bg-(--border-amber)/20 hover:text-(--text) tracking-[var(--letter-pixel-tight)] uppercase"
+      className="text-[10px] text-white/40 border border-white/10 rounded bg-transparent px-2 py-0.5 cursor-pointer hover:bg-white/10 hover:text-white/60"
     >
       {children}
     </button>

@@ -526,6 +526,7 @@ export async function tick(
               const ctx = {
                 worldId, tick: fromTick, epoch: world.epoch, self: c, here,
                 companions: [], reachable: [], isSleepHour: false, facts: emptyFacts(),
+                shops: [], itemDefs: new Map(),
               };
               const outcome = actionDef.onInterrupt(ctx, `被「${interrupt.description}」打断`);
               c.shortMemory.push({
@@ -627,6 +628,7 @@ export async function tick(
             const ctx = {
               worldId, tick: fromTick, epoch: world.epoch, self: c, here,
               companions: [], reachable: [], isSleepHour: false, facts: emptyFacts(),
+              shops: [], itemDefs: new Map(),
             };
             const outcome = actionDef.onComplete(ctx);
             c.shortMemory.push({
@@ -903,6 +905,7 @@ export async function tick(
 
         if (result.kind === "turn") {
           transcript.push(result.turn);
+          thinker.emotion.social_satiety = Math.max(-4, thinker.emotion.social_satiety - 0.4);
         } else {
           thinker.shortMemory.push({
             id: `mem-${randomUUID().slice(0, 8)}`,
@@ -1014,11 +1017,13 @@ export async function tick(
           category: "inner",
           description: summary,
           participants: [ts.characterId],
-          source: "inner",
+          source: "think",
           intensity: 2,
           scope: "private",
           audienceCharacterId: ts.characterId,
           duration: 1,
+          thinkTranscript: ts.transcript,
+          thinkEndedBy: ts.summary ? "natural" : "interrupted",
         });
       }
     } else {
@@ -1091,7 +1096,7 @@ export async function tick(
           category: "inner",
           description: action.freeText || "开始沉思",
           participants: [action.actorId],
-          source: "inner",
+          source: "think",
           intensity: 2,
           scope: "private",
           audienceCharacterId: action.actorId,
@@ -1152,6 +1157,7 @@ export async function tick(
 
       if (result.kind === "turn") {
         transcript.push(result.turn);
+        thinker.emotion.social_satiety = Math.max(-4, thinker.emotion.social_satiety - 0.4);
       } else {
         thinker.shortMemory.push({
           id: `mem-${randomUUID().slice(0, 8)}`,
@@ -1174,6 +1180,22 @@ export async function tick(
       if (t) {
         t.activeConversationIds = t.activeConversationIds.filter((id) => id !== ts.id);
       }
+      const summary = ts.summary ?? "沉思结束";
+      allEvents.push({
+        id: `evt-${randomUUID().slice(0, 8)}`,
+        worldId,
+        tick: fromTick,
+        category: "inner",
+        description: summary,
+        participants: [ts.characterId],
+        source: "think",
+        intensity: 2,
+        scope: "private",
+        audienceCharacterId: ts.characterId,
+        duration: 1,
+        thinkTranscript: ts.transcript,
+        thinkEndedBy: ts.summary ? "natural" : "interrupted",
+      });
     } else {
       saveThinkSession(ts);
     }
@@ -1213,6 +1235,8 @@ export async function tick(
     characters,
     nodes,
     actions: actionsForExecution,
+    shops: [],
+    itemDefs: new Map(),
   });
   allEvents.push(...execResult.events);
 

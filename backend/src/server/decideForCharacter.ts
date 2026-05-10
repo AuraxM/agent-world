@@ -333,6 +333,8 @@ export async function decideForCharacter(
     characters,
     nodes,
     actions: [action],
+    shops: [],
+    itemDefs: new Map(),
   });
 
   // 5. 持久化

@@ -12,8 +12,10 @@ import { recordTransaction } from "./economy";
 import type {
   Action,
   Character,
+  ItemDefinition,
   MapNode,
   Memory,
+  Shop,
   WorldEvent,
 } from "../domain/index";
 import type { EventCategory } from "../domain/index";
@@ -31,6 +33,8 @@ interface ExecuteInput {
   characters: Character[];
   nodes: MapNode[];
   actions: Action[];
+  shops: Shop[];
+  itemDefs: Map<string, ItemDefinition>;
 }
 
 export interface ExecuteResult {
@@ -130,6 +134,24 @@ export function applyStateChange(
         sc.reason,
       );
       break;
+    case "addItem": {
+      for (let i = 0; i < (sc.count ?? 1); i++) {
+        c.inventory.push({ itemDefId: sc.itemDefId, acquiredTick: tick });
+      }
+      break;
+    }
+    case "removeItem": {
+      const removeCount = sc.count ?? 1;
+      for (let i = 0; i < removeCount; i++) {
+        const idx = c.inventory.findIndex((item) => item.itemDefId === sc.itemDefId);
+        if (idx !== -1) c.inventory.splice(idx, 1);
+      }
+      break;
+    }
+    case "setEmployment": {
+      // Marker — actual shop DB update happens in tick.ts via updateShopEmployment()
+      break;
+    }
   }
 }
 
@@ -230,8 +252,8 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
         todayActionCounts: {},
         todayChatTargets: {},
       },
-      shops: [],
-      itemDefs: new Map(),
+      shops: input.shops,
+      itemDefs: input.itemDefs,
     };
 
     // Build ActionInput from the Action

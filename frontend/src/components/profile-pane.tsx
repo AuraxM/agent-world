@@ -3,7 +3,7 @@
 import { type ReactNode, useState } from "react";
 import type { Character, MapNode, Personality, WorldEvent } from "@/types/api.generated";
 import { formatActionWindow, formatScheduledTime, vitalThreshold } from "@/lib/profile-format";
-import { characterEmoji } from "@/lib/sprite";
+import { CharacterAvatar } from "./character-avatar";
 import { indexNodes } from "@/lib/world";
 
 const PERSONALITY_LABELS: Record<keyof Personality, string> = {
@@ -277,9 +277,7 @@ export function ProfilePane({
         <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
           {/* 头部 */}
           <div className="flex items-start gap-3">
-            <span className="text-[36px]">
-              {characterEmoji(character)}
-            </span>
+            <CharacterAvatar c={character} size={36} />
             <div className="flex-1 min-w-0 space-y-1">
               <div className="text-[15px] text-white/85">{character.name}</div>
               <div className="text-[11px] text-white/40">
@@ -533,9 +531,7 @@ export function ProfilePane({
                     : "zero";
                   return (
                     <li key={id} className="text-game-sm grid grid-cols-[18px_1fr_auto] gap-2 items-baseline">
-                      <span className="text-base">
-                        {characterEmoji(charById.get(id) ?? { id })}
-                      </span>
+                      <CharacterAvatar c={charById.get(id) ?? { id }} size={14} />
                       <div className="min-w-0">
                         <div>
                           <button
@@ -799,9 +795,7 @@ export function ProfilePane({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-base">
-                  {characterEmoji(targetChar ?? { id: targetId })}
-                </span>
+                <CharacterAvatar c={targetChar ?? { id: targetId }} size={14} />
                 <span className="text-game-sm font-semibold text-white/80">
                   {targetChar?.name ?? targetId} 的印象
                 </span>

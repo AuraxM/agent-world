@@ -7,6 +7,7 @@ import {
   isSleepTick,
   stackEventsAtTick,
 } from "@/lib/gantt-utils";
+import { CharacterAvatar } from "./character-avatar";
 import { GanttCard } from "./gantt-card";
 
 export function GanttRow({
@@ -81,34 +82,80 @@ export function GanttRow({
         boxSizing: "border-box",
       }}
     >
-      {stacked.map(({ event, left, top }) => (
-        <div key={event.id} style={{ position: "absolute", left, top }}>
-          <GanttCard
-            event={event}
-            charById={charById}
-            nodeById={nodeById}
-            excludeId={character.id}
-            onClick={(rect) => onEventClick(event, rect)}
-          />
-        </div>
-      ))}
-
-      {sleepRanges.map((r, i) => (
-        <div
-          key={i}
+      {/* Sticky name cell */}
+      <div
+        style={{
+          minWidth: 100,
+          maxWidth: 100,
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "4px 8px",
+          borderRight: "2px solid var(--accent-strong)",
+          background: "rgba(0,0,0,0.15)",
+          position: "sticky",
+          left: 0,
+          zIndex: 2,
+        }}
+      >
+        <span
           style={{
-            position: "absolute",
-            left: r.left,
-            top: rowHeight - 12,
-            width: r.width,
-            height: 8,
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 11,
             background: "rgba(255,255,255,0.05)",
-            border: "1px dashed rgba(255,255,255,0.1)",
-            borderRadius: 1,
-            pointerEvents: "none",
+            flexShrink: 0,
           }}
-        />
-      ))}
+        >
+          <CharacterAvatar c={character} size={18} />
+        </span>
+        <span
+          className="text-pixel-xs font-semibold text-white/70"
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {character.name}
+        </span>
+      </div>
+
+      {/* Cards area */}
+      <div style={{ flex: 1, position: "relative" }}>
+        {stacked.map(({ event, left, top }) => (
+          <div key={event.id} style={{ position: "absolute", left, top }}>
+            <GanttCard
+              event={event}
+              charById={charById}
+              nodeById={nodeById}
+              excludeId={character.id}
+              onClick={(rect) => onEventClick(event, rect)}
+            />
+          </div>
+        ))}
+
+        {sleepRanges.map((r, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: r.left,
+              top: rowHeight - 12,
+              width: r.width,
+              height: 8,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px dashed rgba(255,255,255,0.1)",
+              borderRadius: 1,
+              pointerEvents: "none",
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }

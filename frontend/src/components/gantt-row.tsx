@@ -96,10 +96,11 @@ export function GanttRow({
           gap: 4,
           padding: "4px 8px",
           borderRight: "2px solid var(--accent-strong)",
-          background: "rgba(0,0,0,0.15)",
+          background: "rgba(15,10,5,0.95)",
+          backdropFilter: "blur(8px)",
           position: "sticky",
           left: 0,
-          zIndex: 2,
+          zIndex: 5,
         }}
       >
         <span

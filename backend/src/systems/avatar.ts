@@ -4,6 +4,11 @@
  */
 import { deflateSync } from "node:zlib";
 
+// NOTE: This module uses Math.random() for palette selection and hair mottling.
+// Each call to generateAvatar() produces a unique result. This is acceptable for
+// one-time generation at world creation. For deterministic (seed-based) generation,
+// replace Math.random() with a seeded PRNG.
+
 // ---- Color palettes ----
 
 const SKIN_TONES: [number, number, number][] = [
@@ -37,6 +42,11 @@ const EYE_WHITE: [number, number, number] = [0xf0, 0xf0, 0xf0];
 
 type RGBA = [number, number, number, number];
 
+// NOTE: Avatar generation is intentionally non-deterministic — each call to pick() and
+// mottle() uses Math.random() without a seed, so every character gets a unique appearance.
+// This is acceptable for one-time generation at world creation. Future improvements
+// could accept an optional seeded PRNG for reproducibility.
+
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -60,7 +70,7 @@ function mouthColor(skin: [number, number, number]): [number, number, number] {
 
 // ---- 8×8 Grid Builder ----
 
-function buildGrid(): { grid: RGBA[][]; palette: Record<string, RGBA> } {
+function buildGrid(): { grid: RGBA[][] } {
   const skin = pick(SKIN_TONES);
   const hair = pick(HAIR_COLORS);
   const hairHi = brighten(hair);
@@ -102,13 +112,7 @@ function buildGrid(): { grid: RGBA[][]; palette: Record<string, RGBA> } {
     [S, S, S, M, ML, S, S, S],
   ];
 
-  return {
-    grid,
-    palette: {
-      hair: H, hairHi: HH, hairLo: HL,
-      skin: S, eye: E, eyeWhite: EW, mouth: M, mouthLo: ML,
-    },
-  };
+  return { grid };
 }
 
 /** Replace a hair pixel with highlight or shadow variant ~30% of the time. */

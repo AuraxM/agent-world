@@ -16,4 +16,5 @@ export * from "./character-maps";
 export * from "./relations";
 export * from "./tick-utils";
 export * from "./addCharacter";
+export * from "./avatar";
 export * from "./createWorld";

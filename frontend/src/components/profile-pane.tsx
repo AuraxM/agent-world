@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Character, MapNode, Personality, WorldEvent } from "@/types/api.generated";
 import { formatActionWindow, formatScheduledTime, vitalThreshold } from "@/lib/profile-format";
 import { CharacterAvatar } from "./character-avatar";
@@ -779,47 +780,50 @@ export function ProfilePane({
         </div>
       )}
 
-      {/* Impression popover */}
-      {impressionPopover && (() => {
-        const targetId = impressionPopover.targetId;
-        const targetChar = charById.get(targetId);
-        const impText = character.impressionBook[targetId];
-        return (
-          <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setImpressionPopover(null)}>
-            <div
-              className="absolute bg-black/70 backdrop-blur-xl border border-white/10 rounded p-3 max-w-[320px] shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
-              style={{
-                left: impressionPopover.x,
-                top: impressionPopover.y,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <CharacterAvatar c={targetChar ?? { id: targetId }} size={14} />
-                <span className="text-game-sm font-semibold text-white/80">
-                  {targetChar?.name ?? targetId} 的印象
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setImpressionPopover(null)}
-                  className="ml-auto text-white/40 hover:text-white/70 cursor-pointer"
-                >
-                  ✕
-                </button>
+      {/* Impression popover — portaled to document.body to escape the slide-in panel's transform containing block */}
+      {impressionPopover && createPortal(
+        (() => {
+          const targetId = impressionPopover.targetId;
+          const targetChar = charById.get(targetId);
+          const impText = character.impressionBook[targetId];
+          return (
+            <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setImpressionPopover(null)}>
+              <div
+                className="absolute bg-black/70 backdrop-blur-xl border border-white/10 rounded p-3 max-w-[320px] shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+                style={{
+                  left: impressionPopover.x,
+                  top: impressionPopover.y,
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <CharacterAvatar c={targetChar ?? { id: targetId }} size={14} />
+                  <span className="text-game-sm font-semibold text-white/80">
+                    {targetChar?.name ?? targetId} 的印象
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setImpressionPopover(null)}
+                    className="ml-auto text-white/40 hover:text-white/70 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {impText ? (
+                  <p className="text-game-sm text-white/60 italic leading-relaxed">
+                    &ldquo;{impText}&rdquo;
+                  </p>
+                ) : (
+                  <p className="text-game-sm text-white/40">
+                    暂无印象记录。
+                  </p>
+                )}
               </div>
-              {impText ? (
-                <p className="text-game-sm text-white/60 italic leading-relaxed">
-                  &ldquo;{impText}&rdquo;
-                </p>
-              ) : (
-                <p className="text-game-sm text-white/40">
-                  暂无印象记录。
-                </p>
-              )}
             </div>
-          </div>
-        );
-      })()}
+          );
+        })(),
+        document.body,
+      )}
     </div>
   );
 }

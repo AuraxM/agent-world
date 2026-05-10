@@ -304,4 +304,55 @@ module.exports = [
     },
     extraRequired: ["target_id"],
   },
+
+  // ── sex: 交融 ──
+  {
+    type: "sex",
+    displayName: "交融",
+    duration: "instant",
+    triggerHint: "情欲烧穿了所有防线，肢体交缠、肌肤相贴——在私密的空间里把彼此揉进骨血。",
+    paramRule: "必填 target_id（对象）+ 可选 free_text（事后想说的话）。",
+    usableInDialogue: true,
+
+    check(ctx) { return true; },
+
+    hint(ctx) {
+      return ctx.companions.map(c => {
+        const rel = ctx.self.relations[c.id];
+        const label = rel ? rel.kinds.join("/") : "";
+        return { hint: `与 ${c.name} 交融${label ? ` (${label})` : ""}`, targetId: c.id };
+      });
+    },
+
+    validateParams(input, ctx) {
+      if (!input.target_id) return "sex 需要指定 target_id（对象）";
+      const target = ctx.companions.find(c => c.id === input.target_id);
+      if (!target) return `target_id="${input.target_id}" 不在身边`;
+      return null;
+    },
+
+    execute(ctx, input) {
+      const targetId = input.target_id;
+      const target = ctx.companions.find(c => c.id === targetId);
+      if (!target) return { memory: "我想和对方交融，但对方不在身边。" };
+      const words = input.free_text ? `结束后，我把额头抵在ta肩上，轻声说："${input.free_text}"` : "";
+      return {
+        memory: `我进入了 ${target.name} 的身体。肌肤贴着肌肤，汗水混在一起，分不清是谁的。ta的腿缠在我腰上，每一下都更深一点，ta的指甲掐进我的后背，嘴唇贴在我锁骨上又咬又吻。喘息声填满了整个房间，节奏越来越乱，直到最后一声闷哼——我们同时绷紧，又同时松开。我抱着ta，能感觉到两个人的心跳还在同一个频率上共振。${words}`,
+        targetMemory: `${ctx.self.name} 进入了我的身体。痛感和快感几乎同时涌上来，我咬着ta的肩膀才没叫出声。ta的动作从慢到快，每一次都像要把我揉碎。结束后ta抱着我，指腹划过我后背被指甲掐出的红痕，那一刻我觉得——这个人身体里有一部分，已经烙进我骨血里了。${input.free_text ? ` ta把额头抵在我肩上，说"${input.free_text}"` : ""}`,
+        event: { category: "social", description: `${ctx.self.name} 与 ${target.name} 交融合一。`, intensity: 5, scope: "private" },
+        stateChanges: [
+          { kind: "adjustMood", delta: 4 },
+          { kind: "adjustStress", delta: -4 },
+          { kind: "adjustSocialSatiety", delta: 4 },
+        ],
+        dialogRecord: `${ctx.self.name} 与 ${target.name} 交融合一，喘息和体温填满了整个空间。`,
+      };
+    },
+
+    extraParams: {
+      target_id: { type: "string", description: "交融对象角色 id。" },
+      free_text: { type: "string", description: "交融后想说的话（可选）。" },
+    },
+    extraRequired: ["target_id"],
+  },
 ];

@@ -10,10 +10,10 @@ import {
   isSleepTick,
   stackEventsAtTick,
 } from "@/lib/gantt-utils";
-import { characterEmoji } from "@/lib/sprite";
 import { GanttTimeline } from "./gantt-timeline";
 import { GanttRow } from "./gantt-row";
 import { GanttPopup } from "./gantt-popup";
+import { CharacterAvatar } from "./character-avatar";
 
 const NAME_COL_WIDTH = 100;
 
@@ -228,7 +228,7 @@ export function EventGantt({
                     flexShrink: 0,
                   }}
                 >
-                  {characterEmoji(c)}
+                  <CharacterAvatar c={c} size={18} />
                 </span>
                 <span
                   className="text-pixel-xs font-semibold text-white/70"

@@ -7,7 +7,6 @@ import {
   isSleepTick,
   stackEventsAtTick,
 } from "@/lib/gantt-utils";
-import { CharacterAvatar } from "./character-avatar";
 import { GanttCard } from "./gantt-card";
 
 export function GanttRow({
@@ -82,49 +81,6 @@ export function GanttRow({
         boxSizing: "border-box",
       }}
     >
-      {/* Sticky name cell */}
-      <div
-        style={{
-          minWidth: 100,
-          maxWidth: 100,
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          padding: "4px 8px",
-          borderRight: "2px solid var(--accent-strong)",
-          background: "rgba(0,0,0,0.15)",
-          position: "sticky",
-          left: 0,
-          zIndex: 2,
-        }}
-      >
-        <span
-          style={{
-            width: 18,
-            height: 18,
-            borderRadius: "50%",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 11,
-            background: "rgba(255,255,255,0.05)",
-            flexShrink: 0,
-          }}
-        >
-          <CharacterAvatar c={character} size={18} />
-        </span>
-        <span
-          className="text-pixel-xs font-semibold text-white/70"
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {character.name}
-        </span>
-      </div>
-
       {/* Cards area */}
       <div style={{ flex: 1, position: "relative" }}>
         {stacked.map(({ event, left, top }) => (

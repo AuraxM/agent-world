@@ -25,7 +25,7 @@ export function GanttTimeline({
         position: "sticky",
         top: 0,
         zIndex: 10,
-        background: "rgba(15,10,5,0.95)",
+        background: "rgba(0,0,0,0.35)",
         backdropFilter: "blur(8px)",
         borderBottom: "1px solid rgba(255,255,255,0.1)",
       }}

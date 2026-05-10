@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useParams } from "react-router-dom";
 import type { WorldEvent, Action } from "@/types/api.generated";
 import type { WorldSnapshot } from "@/lib/api";
 
@@ -37,8 +37,8 @@ export interface UseWorldState {
 }
 
 export function useWorldState(): UseWorldState {
-  const searchParams = useSearchParams();
-  const worldId = searchParams?.get("world") ?? DEFAULT_WORLD_ID;
+  const { id: routeWorldId } = useParams<{ id: string }>();
+  const worldId = routeWorldId ?? DEFAULT_WORLD_ID;
   const [snapshot, setSnapshot] = useState<WorldSnapshot | null>(null);
   const [events, setEvents] = useState<WorldEvent[]>([]);
   const [loading, setLoading] = useState(true);

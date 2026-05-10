@@ -70,6 +70,8 @@ export interface ActionContext {
     reachable: MapNode[];
     isSleepHour: boolean;
     facts: AggregatedFacts;
+    shops: Shop[];
+    itemDefs: Map<string, ItemDefinition>;
 }
 export interface Outcome {
     memory: string;
@@ -118,6 +120,18 @@ export type StateChange = {
     amount: number;
     reason: string;
     targetCharacterId?: string;
+} | {
+    kind: "addItem";
+    itemDefId: string;
+    count: number;
+} | {
+    kind: "removeItem";
+    itemDefId: string;
+    count: number;
+} | {
+    kind: "setEmployment";
+    shopId: string;
+    characterId?: string;
 };
 export interface ActionOption {
     type: string;
@@ -325,6 +339,8 @@ export interface Character {
     profession: Profession;
     /** 当前持有金额（整数）。 */
     money: number;
+    /** 角色背包中的物品实例列表。 */
+    inventory: Item[];
     /** 职业收入等级 0-3（0=无收入）。运行时从 manifest + profession 解析。 */
     incomeLevel: number;
     /** 免生存开销（未成年人 age<18 / 纯旅游型外来者）。 */
@@ -382,6 +398,8 @@ export interface Character {
     /** 人物印象记录本：targetCharId → 自由文本印象 */
     impressionBook: Record<string, string>;
     notebook: NotebookEntry[];
+    /** 配置层指定的初始物品（物品定义 ID 列表）。 */
+    initialItems?: string[];
     /** 短期目标（≥1 天更新间隔） */
     shortTermGoal: {
         goal: string;
@@ -430,6 +448,10 @@ export interface WorldEvent {
     dialogTranscript?: DialogTurn[];
     /** 对话结束方式 */
     dialogEndedBy?: "natural" | "end_tool" | "hard_limit" | "turn_failure" | "passive";
+    /** 思考事件专用：完整思考记录（其它 event 不填） */
+    thinkTranscript?: ThinkTurn[];
+    /** 思考结束方式 */
+    thinkEndedBy?: string;
 }
 /** update_relation 行动可选的语义子类型。 */
 export type RelationChangeType = "become_partner" | "end_partnership" | "become_spouse" | "end_friendship" | "end_other_relative";
@@ -442,6 +464,10 @@ export interface Action {
     freeText?: string;
     /** give 行动金额 */
     amount?: number;
+    /** 物品相关行动：物品定义 ID */
+    itemDefId?: string;
+    /** 物品相关行动：物品数量 */
+    itemCount?: number;
     reasoning: string;
     emotionTag?: string;
     /** 自评重要度 1–5，决定是否进入长期记忆 */
@@ -503,9 +529,44 @@ export interface Transaction {
     tick: number;
     characterId: string;
     amount: number;
-    category: "expense" | "income" | "transfer_in" | "transfer_out";
+    category: "expense" | "income" | "transfer_in" | "transfer_out" | "shop_sale" | "salary";
     description: string;
     counterpartyId?: string;
+}
+/** 物品定义（纯数据，供配置层和运行时共享） */
+export interface ItemDefinition {
+    id: string;
+    name: string;
+    description?: string;
+    value: number;
+    consumable: boolean;
+    effects: {
+        vitals?: {
+            hunger?: number;
+            fatigue?: number;
+            hygiene?: number;
+        };
+        emotion?: {
+            mood?: number;
+            stress?: number;
+            socialSatiety?: number;
+        };
+    };
+}
+/** 运行时物品实例（角色背包中的一件物品） */
+export interface Item {
+    itemDefId: string;
+    acquiredTick: number;
+}
+/** 店铺运行时状态 */
+export interface Shop {
+    id: string;
+    worldId: string;
+    nodeId: string;
+    ownerCharacterId: string;
+    employeeCharacterId?: string;
+    goods: string[];
+    salary: number;
 }
 /** 经济状况快照（每 24 game hours 更新）。 */
 export interface EconomicSnapshot {
@@ -636,6 +697,6 @@ export const EVENT_SCOPES = [
   "private", "node", "parent", "children", "global",
 ] as const;
 
-export const EVENT_SOURCES = ["system", "actor", "player", "inner"] as const;
+export const EVENT_SOURCES = ["system", "actor", "player", "inner", "think"] as const;
 
 export const TICKS_PER_HOUR = 5;

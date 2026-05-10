@@ -5,12 +5,16 @@
  * ================================================================ */
 
 :root, :root[data-theme="light"], :root[data-theme="dark"] {
+  /* pixel font family */
+  --font-silkscreen: 'Silkscreen', monospace;
+
   /* font size scale */
   --font-pixel-2xs: 9px;
   --font-pixel-xs:  10px;
   --font-pixel-sm:  11px;
   --font-pixel-md:  12px;
   --font-pixel-lg:  13px;
+  --font-pixel-xl:  36px;
 
   --font-body-xs:   12px;
   --font-body-sm:   13px;
@@ -210,6 +214,7 @@
 .text-pixel-sm  { font-family: var(--font-pixel), monospace; font-size: var(--font-pixel-sm); }
 .text-pixel-md  { font-family: var(--font-pixel), monospace; font-size: var(--font-pixel-md); }
 .text-pixel-lg  { font-family: var(--font-pixel), monospace; font-size: var(--font-pixel-lg); }
+.text-pixel-xl  { font-family: var(--font-pixel), monospace; font-size: var(--font-pixel-xl); }
 
 /* body text */
 .text-body-xs { font-size: var(--font-body-xs); }

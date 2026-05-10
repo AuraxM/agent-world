@@ -13,8 +13,8 @@ export default function CoverOverlay() {
           transform: "translate(-50%, -50%)",
           fontFamily: "var(--font-silkscreen, monospace)",
           fontSize: "144px",
-          color: "var(--color-pixel-accent, #c8b898)",
-          textShadow: "0 0 30px rgba(200,184,152,0.3)",
+          color: "#fff",
+          textShadow: "0 0 30px rgba(255,255,255,0.4)",
         }}
       >
         AGENT WORLD

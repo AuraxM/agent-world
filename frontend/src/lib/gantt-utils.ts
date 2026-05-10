@@ -1,6 +1,6 @@
 import type { WorldEvent, Character, SleepWindow } from "@/types/api.generated";
 
-export const TICK_WIDTH = 100;
+export const TICK_WIDTH = 200;
 export const DEFAULT_TICK_WINDOW = 8;
 
 export const CATEGORY_ICONS: Record<string, string> = {

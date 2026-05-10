@@ -10,3 +10,4 @@ export * from "./repository/conversations";
 export * from "./repository/think-sessions";
 export * from "./repository/notebook-entries";
 export * from "./repository/transactions";
+export { findShopsByWorld, insertShops, updateShopEmployment } from "./repository/shops";

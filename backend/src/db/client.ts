@@ -175,6 +175,9 @@ function ensureColumns(sqlite: Database.Database) {
   for (const [tableName, ddl] of THINK_SESSIONS_TABLE_MIGRATION) {
     if (!haveEntryTables.has(tableName)) sqlite.exec(ddl);
   }
+  for (const [tableName, ddl] of SHOPS_TABLE_MIGRATION) {
+    if (!haveEntryTables.has(tableName)) sqlite.exec(ddl);
+  }
 }
 
 /** Keep in sync with migrate.ts CHARACTERS_NEW_COLUMNS. */
@@ -203,6 +206,7 @@ const CHAR_MIGRATIONS: Array<[string, string]> = [
   ["long_term_goal_json", "ALTER TABLE characters ADD COLUMN long_term_goal_json TEXT"],
   ["liked", "ALTER TABLE characters ADD COLUMN liked TEXT NOT NULL DEFAULT ''"],
   ["disliked", "ALTER TABLE characters ADD COLUMN disliked TEXT NOT NULL DEFAULT ''"],
+  ["inventory_json", "ALTER TABLE characters ADD COLUMN inventory_json TEXT NOT NULL DEFAULT '[]'"],
 ];
 
 /** Keep in sync with migrate.ts NODES_NEW_COLUMNS. */
@@ -264,6 +268,21 @@ const THINK_SESSIONS_TABLE_MIGRATION: Array<[string, string]> = [
     PRIMARY KEY(world_id, id)
   )`],
   ["think_sessions_world_idx", `CREATE INDEX IF NOT EXISTS think_sessions_world_idx ON think_sessions(world_id)`],
+];
+
+const SHOPS_TABLE_MIGRATION: Array<[string, string]> = [
+  ["shops", `CREATE TABLE IF NOT EXISTS shops (
+    id TEXT NOT NULL,
+    world_id TEXT NOT NULL REFERENCES worlds(id) ON DELETE CASCADE,
+    node_id TEXT NOT NULL,
+    owner_character_id TEXT NOT NULL,
+    employee_character_id TEXT,
+    goods_json TEXT NOT NULL DEFAULT '[]',
+    salary INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    PRIMARY KEY (world_id, id)
+  )`],
+  ["shops_world_idx", `CREATE INDEX IF NOT EXISTS shops_world_idx ON shops(world_id)`],
 ];
 
 function createDb() {

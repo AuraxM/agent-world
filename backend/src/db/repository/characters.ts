@@ -33,7 +33,7 @@ export function rowToCharacter(c: CharRow): Character {
     speakingStyle: c.speakingStyle ?? undefined,
     activeConversationIds: JSON.parse(c.activeConversationIdsJson),
     lastConversationEndTick: 0, // runtime-only cooldown, not persisted
-    inventory: [],
+    inventory: JSON.parse(c.inventoryJson ?? "[]"),
     notebook: [],
   };
 }
@@ -48,6 +48,7 @@ export function characterToRow(c: Character) {
     appearance: c.appearance, intelligence: c.intelligence, health: c.health,
     sicknessJson: c.sickness ? JSON.stringify(c.sickness) : null,
     activeConversationIdsJson: JSON.stringify(c.activeConversationIds),
+    inventoryJson: JSON.stringify(c.inventory),
     speakingStyle: c.speakingStyle ?? null,
     personalProfileJson: JSON.stringify(c.personalProfile),
     origin: c.origin, locationId: c.locationId,
@@ -86,7 +87,8 @@ export function updateCharacter(c: Character): void {
     liked: row.liked, disliked: row.disliked, relationsJson: row.relationsJson,
     activeConversationIdsJson: row.activeConversationIdsJson,
     currentActionJson: row.currentActionJson, lastSleepTick: row.lastSleepTick,
-    sicknessJson: row.sicknessJson, updatedAt: new Date(),
+    sicknessJson: row.sicknessJson, inventoryJson: row.inventoryJson,
+    updatedAt: new Date(),
   }).where(eq(schema.characters.id, c.id)).run();
 }
 
@@ -105,7 +107,8 @@ export function saveAllCharacters(characters: Character[]): void {
         liked: row.liked, disliked: row.disliked, relationsJson: row.relationsJson,
         activeConversationIdsJson: row.activeConversationIdsJson,
         currentActionJson: row.currentActionJson, lastSleepTick: row.lastSleepTick,
-        sicknessJson: row.sicknessJson, updatedAt: new Date(),
+        sicknessJson: row.sicknessJson, inventoryJson: row.inventoryJson,
+        updatedAt: new Date(),
       }).where(eq(schema.characters.id, c.id)).run();
     }
   });

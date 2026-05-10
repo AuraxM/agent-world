@@ -7,20 +7,17 @@ import { useFollow } from "@/hooks/use-follow";
 import { findRootNode } from "@/lib/world";
 import { TopBar } from "./top-bar";
 import { TickBar } from "./tick-bar";
-import { MapStage } from "./map-stage";
 import { RelationGraph } from "./relation-graph";
 import { TreeSidebar } from "./tree-sidebar";
 import { ProfilePane } from "./profile-pane";
 import { EventStream } from "./event-stream";
 import { EventGantt } from "./event-gantt";
-import { InjectDrawer } from "./inject-drawer";
 
 export function Dashboard() {
   const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto, templates, placeCharacter } = useWorldState();
   const view = useViewState();
   const { followingId, follow, clear: clearFollow, isFollowing } = useFollow();
-  const [injectOpen, setInjectOpen] = useState(false);
-  const [centerTab, setCenterTab] = useState<"stream" | "map" | "gantt" | "relations">("stream");
+  const [centerTab, setCenterTab] = useState<"stream" | "gantt" | "relations">("stream");
 
   useEffect(() => {
     if (!snapshot) return;
@@ -37,20 +34,6 @@ export function Dashboard() {
     if (!snapshot || !followingId) return null;
     return snapshot.characters.find((c) => c.id === followingId) ?? null;
   }, [snapshot, followingId]);
-
-  // keyboard shortcut for inject drawer
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "E" || e.key === "e") {
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-        e.preventDefault();
-        setInjectOpen((prev) => !prev);
-      }
-    }
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, []);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -105,7 +88,6 @@ export function Dashboard() {
             <div className="flex px-2 bg-(--frame-2) border-b-2 border-(--border) shadow-[inset_0_-1px_0_var(--border-amber))]">
               {([
                 ["stream", "事件流"],
-                ["map", "小地图"],
                 ["gantt", "甘特图"],
                 ["relations", "关系图"],
               ] as const).map(([key, label]) => (
@@ -136,16 +118,6 @@ export function Dashboard() {
                   onJumpToNode={view.setCurrentNode}
                   onSelectCharacter={(c) => view.selectCharacter(c.id)}
                   onFollow={follow}
-                />
-              )}
-              {centerTab === "map" && (
-                <MapStage
-                  nodes={snapshot.nodes}
-                  characters={snapshot.characters}
-                  currentNodeId={view.currentNodeId}
-                  selectedCharacterId={view.selectedCharacterId}
-                  onEnterNode={view.setCurrentNode}
-                  onSelectCharacter={(c) => view.selectCharacter(c.id)}
                 />
               )}
               {centerTab === "gantt" && (
@@ -197,13 +169,11 @@ export function Dashboard() {
               onStopAuto={stopAuto}
               lastTickMs={lastTickMs}
               tickProgress={tickProgress}
-              onOpenInject={() => setInjectOpen(true)}
             />
           </div>
         </div>
       )}
 
-      <InjectDrawer isOpen={injectOpen} onClose={() => setInjectOpen(false)} />
     </div>
   );
 }

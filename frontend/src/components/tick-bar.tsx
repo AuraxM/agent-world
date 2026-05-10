@@ -24,7 +24,7 @@ export function TickBar({
   onStopAuto: () => void;
   lastTickMs: number | null;
   tickProgress?: { done: number; total: number } | null;
-  onOpenInject: () => void;
+  onOpenInject?: () => void;
 }) {
   const auto = autoMode?.running ?? false;
   const [tickCount, setTickCount] = useState(120);
@@ -120,13 +120,15 @@ export function TickBar({
       )}
 
       {/* Group 6: Inject event */}
-      <button
-        type="button"
-        onClick={onOpenInject}
-        className="px-4 py-1.5 text-pixel-sm bg-(--danger) text-(--panel) border-2 border-(--danger-shadow) shadow-[inset_0_2px_0_var(--danger-hi),inset_0_-2px_0_var(--danger-shadow)] cursor-pointer hover:brightness-110 active:translate-y-px tracking-[var(--letter-pixel-tight)]"
-      >
-        ⚡ 投放事件 (E)
-      </button>
+      {onOpenInject && (
+        <button
+          type="button"
+          onClick={onOpenInject}
+          className="px-4 py-1.5 text-pixel-sm bg-(--danger) text-(--panel) border-2 border-(--danger-shadow) shadow-[inset_0_2px_0_var(--danger-hi),inset_0_-2px_0_var(--danger-shadow)] cursor-pointer hover:brightness-110 active:translate-y-px tracking-[var(--letter-pixel-tight)]"
+        >
+          ⚡ 投放事件 (E)
+        </button>
+      )}
     </footer>
   );
 }

@@ -1,18 +1,18 @@
 import { useNavigate } from "react-router-dom";
 
-/**
- * Landing overlay on top of the cover background.
- * Shows the title + ENTER WORLD button.
- * Clicking the button navigates to /hub/mods — the cover stays as background.
- */
 export default function CoverOverlay() {
   const navigate = useNavigate();
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center gap-10">
+    <div className="h-full w-full flex flex-col items-center gap-10" style={{ paddingTop: "33vh" }}>
       <h1
-        className="text-pixel-xl tracking-[0.25em]"
-        style={{ color: "var(--color-pixel-accent, #c8b898)", textShadow: "0 0 20px rgba(200,184,152,0.3)" }}
+        className="tracking-[0.25em]"
+        style={{
+          fontFamily: "var(--font-silkscreen, monospace)",
+          fontSize: "144px",
+          color: "var(--color-pixel-accent, #c8b898)",
+          textShadow: "0 0 30px rgba(200,184,152,0.3)",
+        }}
       >
         AGENT WORLD
       </h1>

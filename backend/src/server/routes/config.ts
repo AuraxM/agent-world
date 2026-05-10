@@ -9,9 +9,13 @@ import { loadAllCharacters, loadAllMaps, loadManifest, loadCharactersForMap } fr
 
 export const configRoutes: FastifyPluginAsync = async (app) => {
   // GET /characters — list character templates
-  app.get("/characters", async (_req, reply) => {
+  app.get<{ Querystring: { mapId?: string } }>("/characters", async (req, reply) => {
     try {
-      const characters = loadAllCharacters().map((c) => ({
+      let chars = loadAllCharacters();
+      if (req.query.mapId) {
+        chars = loadCharactersForMap(req.query.mapId);
+      }
+      const characters = chars.map((c) => ({
         id: c.id,
         name: c.name,
         avatar: c.avatar ?? null,

@@ -5,7 +5,7 @@
  * GET /maps       — list available maps
  */
 import type { FastifyPluginAsync } from "fastify";
-import { loadAllCharacters, loadAllMaps, loadManifest } from "../../config/index";
+import { loadAllCharacters, loadAllMaps, loadManifest, loadCharactersForMap } from "../../config/index";
 
 export const configRoutes: FastifyPluginAsync = async (app) => {
   // GET /characters — list character templates
@@ -32,15 +32,22 @@ export const configRoutes: FastifyPluginAsync = async (app) => {
       const maps = loadAllMaps().map((m) => {
         let name = m.id;
         let description = "";
+        let language = "zh";
+        let characterCount = 0;
         try {
           const manifest = loadManifest(m.id);
           name = manifest.name;
           description = manifest.description ?? "";
+          language = manifest.language ?? "zh";
+          const chars = loadCharactersForMap(m.id);
+          characterCount = chars.length;
         } catch { /* use id as name */ }
         return {
           id: m.id,
           name,
           description,
+          language,
+          characterCount,
           nodeCount: m.nodes.length,
           entries: m.nodes
             .filter((n) => n.isEntry)

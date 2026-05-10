@@ -38,18 +38,24 @@ const CreateWorldBody = z.object({
 
 export const worldRoutes: FastifyPluginAsync = async (app) => {
   // GET / — list worlds
-  app.get("/", async (_req, reply) => {
-    const rows = db
+  app.get<{ Querystring: { mapId?: string } }>("/", async (req, reply) => {
+    const query = db
       .select({
         id: schema.worlds.id,
         name: schema.worlds.name,
         mapId: schema.worlds.mapId,
         currentTick: schema.worlds.currentTick,
+        epoch: schema.worlds.epoch,
+        createdAt: schema.worlds.createdAt,
         updatedAt: schema.worlds.updatedAt,
       })
-      .from(schema.worlds)
-      .orderBy(desc(schema.worlds.updatedAt))
-      .all();
+      .from(schema.worlds);
+
+    if (req.query.mapId) {
+      query.where(eq(schema.worlds.mapId, req.query.mapId));
+    }
+
+    const rows = query.orderBy(desc(schema.worlds.updatedAt)).all();
 
     const worlds = rows.map((w) => {
       const charCount = db

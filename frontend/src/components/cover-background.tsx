@@ -17,14 +17,14 @@ export function CoverBackground() {
         src="/cover.png"
         alt=""
         className={`absolute inset-0 w-full h-full object-cover transition-all duration-1000 ${
-          isHub ? "blur-lg scale-105 brightness-150" : "blur-0 scale-100 brightness-100"
+          isHub ? "blur-lg scale-105 brightness-110" : "blur-0 scale-100 brightness-100"
         }`}
       />
 
       {/* Dark overlay */}
       <div
         className={`absolute inset-0 transition-all duration-1000 ${
-          isHub ? "bg-black/20" : "bg-black/40"
+          isHub ? "bg-black/30" : "bg-black/40"
         }`}
       />
 

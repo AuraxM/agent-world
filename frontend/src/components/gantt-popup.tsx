@@ -59,7 +59,7 @@ export function GanttPopup({
       <button
         type="button"
         onClick={onClose}
-        className="text-pixel-sm text-(--text-muted) hover:text-(--text) cursor-pointer"
+        className="text-pixel-sm text-white/40 hover:text-white/80 cursor-pointer"
         style={{
           position: "absolute",
           top: 6,

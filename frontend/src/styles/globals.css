@@ -462,11 +462,10 @@ body {
 .gantt-card {
   width: 200px;
   height: 48px;
-  background: var(--panel);
-  border: var(--ring-2) solid var(--border);
-  box-shadow:
-    inset 0 0 0 var(--ring-2) var(--border-amber),
-    0 var(--ring-1) 0 var(--border-soft);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.375rem;
+  box-shadow: none;
   padding: 4px 6px;
   font-family: var(--font-pixel), monospace;
   font-size: var(--font-pixel-2xs);
@@ -479,14 +478,13 @@ body {
 }
 
 .gantt-card:hover {
-  filter: brightness(1.1);
+  background: rgba(255, 255, 255, 0.10);
 }
 
 .gantt-card--important {
-  border-color: var(--danger);
-  box-shadow:
-    inset 0 0 0 var(--ring-2) var(--danger),
-    0 var(--ring-1) 0 var(--border-soft);
+  border-color: color-mix(in srgb, var(--accent-strong) 30%, transparent);
+  background: color-mix(in srgb, var(--accent-strong) 5%, transparent);
+  box-shadow: none;
 }
 
 .gantt-card--important::before {
@@ -496,15 +494,15 @@ body {
   top: 0;
   bottom: 0;
   width: 4px;
-  background: var(--danger);
+  background: var(--accent-strong);
   z-index: 2;
   pointer-events: none;
 }
 
 .gantt-card__badge {
   font-size: 7px;
-  color: var(--text-on-frame);
-  background: color-mix(in srgb, var(--border-amber) 20%, transparent);
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
   padding: 0 3px;
   line-height: 1.4;
@@ -513,26 +511,26 @@ body {
 
 .gantt-card__location {
   font-size: 7px;
-  color: var(--text-on-frame-muted);
-  border: var(--ring-1) solid var(--border-amber);
+  color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0 3px;
   white-space: nowrap;
 }
 
 .gantt-card__important-badge {
   font-size: 7px;
-  color: var(--panel);
-  background: var(--danger);
+  color: rgba(255, 255, 255, 0.8);
+  background: var(--accent-strong);
   padding: 0 3px;
   white-space: nowrap;
 }
 
 .gantt-popup {
-  background: var(--panel);
-  border: var(--ring-2) solid var(--border);
-  box-shadow:
-    inset 0 0 0 var(--ring-2) var(--border-amber),
-    0 var(--ring-3) var(--sp-3) rgba(0,0,0,0.3);
-  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.60);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 0.75rem;
   position: relative;
 }

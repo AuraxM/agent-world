@@ -75,13 +75,13 @@ export function EventGantt({
 
   if (events.length === 0) {
     return (
-      <div className="h-full flex flex-col bg-(--frame)">
-        <div className="flex items-center px-6 py-2.5 bg-(--frame-2) border-b-2 border-(--border) shadow-[inset_0_-1px_0_var(--border-amber))]">
+      <div className="h-full flex flex-col">
+        <div className="flex items-center px-6 py-2.5 bg-black/15 border-b border-white/10">
           <span className="text-pixel-sm text-(--accent-strong) tracking-[var(--letter-pixel)] uppercase">
             甘特图
           </span>
         </div>
-        <div className="flex-1 flex items-center justify-center text-(--text-on-frame-muted) text-body-md">
+        <div className="flex-1 flex items-center justify-center text-white/40 text-body-md">
           尚无事件
         </div>
       </div>
@@ -89,17 +89,17 @@ export function EventGantt({
   }
 
   return (
-    <div className="h-full flex flex-col bg-(--frame)">
+    <div className="h-full flex flex-col">
       {/* Toolbar — no buttons */}
-      <div className="flex items-center gap-3 px-6 py-2.5 bg-(--frame-2) border-b-2 border-(--border) shadow-[inset_0_-1px_0_var(--border-amber))]">
+      <div className="flex items-center gap-3 px-6 py-2.5 bg-black/15 border-b border-white/10">
         <span className="text-pixel-sm text-(--accent-strong) tracking-[var(--letter-pixel)] uppercase">
           甘特图
         </span>
         <div className="flex items-center gap-3 ml-auto">
-          <span className="text-pixel-xs text-(--text-on-frame-muted) tracking-[var(--letter-pixel)]">
+          <span className="text-pixel-xs text-white/40 tracking-[var(--letter-pixel)]">
             T={startTick} ~ T={endTick}
           </span>
-          <span className="text-pixel-xs text-(--text-on-frame-faint)">
+          <span className="text-pixel-xs text-white/25">
             {characters.length} 角色
           </span>
         </div>
@@ -108,7 +108,7 @@ export function EventGantt({
       {/* Body: single scroll container */}
       <div
         ref={scrollRef}
-        className="flex-1 pixel-scroll"
+        className="flex-1"
         style={{ overflow: "auto" }}
       >
         <div style={{ width: contentWidth + 100, display: "flex", flexDirection: "column" }}>

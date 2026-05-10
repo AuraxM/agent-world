@@ -25,8 +25,8 @@ export function GanttTimeline({
         position: "sticky",
         top: 0,
         zIndex: 3,
-        background: "var(--frame)",
-        borderBottom: "1px solid rgba(184,138,74,0.2)",
+        background: "rgba(0,0,0,0.15)",
+        borderBottom: "1px solid rgba(255,255,255,0.1)",
       }}
     >
       {ticks.map((t) => {
@@ -45,11 +45,11 @@ export function GanttTimeline({
             }}
           >
             <div
-              className={`text-pixel-xs tracking-[var(--letter-pixel)] ${isNewest ? "text-(--accent-strong)" : "text-(--text-on-frame-muted)"}`}
+              className={`text-[10px] ${isNewest ? "text-(--accent-strong)" : "text-white/30"}`}
             >
               T={t}
             </div>
-            <div className="text-pixel-2xs text-(--text-on-frame-faint)">
+            <div className="text-[10px] text-white/30">
               {formatHHMM(epoch, t)}
             </div>
           </div>

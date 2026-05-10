@@ -81,8 +81,9 @@ export function GanttRow({
       style={{
         display: "flex",
         alignItems: "stretch",
-        borderBottom: "1px solid rgba(184,138,74,0.1)",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
         minHeight: rowHeight,
+        background: "rgba(255,255,255,0.02)",
       }}
     >
       {/* Sticky name cell */}
@@ -95,7 +96,7 @@ export function GanttRow({
           gap: 4,
           padding: "4px 8px",
           borderRight: "2px solid var(--accent-strong)",
-          background: "var(--frame)",
+          background: "rgba(0,0,0,0.15)",
           position: "sticky",
           left: 0,
           zIndex: 2,
@@ -110,14 +111,14 @@ export function GanttRow({
             alignItems: "center",
             justifyContent: "center",
             fontSize: 11,
-            background: "var(--frame-2)",
+            background: "rgba(255,255,255,0.05)",
             flexShrink: 0,
           }}
         >
           {characterEmoji(character)}
         </span>
         <span
-          className="text-pixel-xs font-semibold text-(--text-on-frame)"
+          className="text-pixel-xs font-semibold text-white/70"
           style={{
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -151,8 +152,8 @@ export function GanttRow({
               top: rowHeight - 12,
               width: r.width,
               height: 8,
-              background: "rgba(212,168,87,0.15)",
-              border: "1px dashed rgba(212,168,87,0.3)",
+              background: "rgba(255,255,255,0.05)",
+              border: "1px dashed rgba(255,255,255,0.1)",
               borderRadius: 1,
               pointerEvents: "none",
             }}

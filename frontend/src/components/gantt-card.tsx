@@ -38,7 +38,7 @@ export function GanttCard({
         <span
           style={{
             fontWeight: "bold",
-            color: "var(--text)",
+            color: "rgba(255,255,255,0.8)",
             fontSize: 10,
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -51,7 +51,7 @@ export function GanttCard({
         <span
           style={{
             fontSize: 8,
-            color: "var(--text-faint)",
+            color: "rgba(255,255,255,0.25)",
             flexShrink: 0,
           }}
         >

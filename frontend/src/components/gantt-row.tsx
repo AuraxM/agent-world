@@ -18,6 +18,7 @@ export function GanttRow({
   endTick,
   characters,
   nodes,
+  selectedEventId,
   onEventClick,
 }: {
   character: Character;
@@ -26,7 +27,8 @@ export function GanttRow({
   endTick: number;
   characters: Character[];
   nodes: MapNode[];
-  onEventClick: (event: WorldEvent, rect: DOMRect) => void;
+  selectedEventId: string | null;
+  onEventClick: (event: WorldEvent) => void;
 }) {
   const charById = new Map(characters.map((c) => [c.id, c]));
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
@@ -138,7 +140,8 @@ export function GanttRow({
               charById={charById}
               nodeById={nodeById}
               excludeId={character.id}
-              onClick={(rect) => onEventClick(event, rect)}
+              isSelected={event.id === selectedEventId}
+              onClick={() => onEventClick(event)}
             />
           </div>
         ))}

@@ -13,13 +13,15 @@ export function GanttCard({
   charById,
   nodeById,
   excludeId,
+  isSelected,
   onClick,
 }: {
   event: WorldEvent;
   charById: Map<string, Character>;
   nodeById: Map<string, MapNode>;
   excludeId: string;
-  onClick: (rect: DOMRect) => void;
+  isSelected?: boolean;
+  onClick: () => void;
 }) {
   const icon = getCategoryIcon(event.category);
   const others = getOtherParticipants(event, charById, excludeId);
@@ -29,9 +31,9 @@ export function GanttCard({
   return (
     <button
       type="button"
-      className={`gantt-card ${important ? "gantt-card--important" : ""}`}
+      className={`gantt-card ${important ? "gantt-card--important" : ""} ${isSelected ? "gantt-card--selected" : ""}`}
       title={`T=${event.tick} ${event.description}`}
-      onClick={(e) => onClick(e.currentTarget.getBoundingClientRect())}
+      onClick={onClick}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <span style={{ fontSize: 10, flexShrink: 0 }}>{icon}</span>

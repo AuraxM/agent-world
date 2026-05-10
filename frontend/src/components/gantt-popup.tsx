@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { Character, MapNode, WorldEvent } from "@/types/api.generated";
-import { characterEmoji } from "@/lib/sprite";
+import { CharacterAvatar } from "./character-avatar";
 import { formatHHMM } from "@/lib/format";
 
 export function GanttPopup({
@@ -85,7 +85,7 @@ export function GanttPopup({
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/10 bg-white/[0.03] flex-shrink-0">
           {actor && (
             <>
-              <span className="text-base">{characterEmoji(actor)}</span>
+              <CharacterAvatar c={actor} size={18} />
               <button
                 type="button"
                 onClick={() => onSelectCharacter(actor)}
@@ -99,7 +99,7 @@ export function GanttPopup({
             <div className="flex items-center gap-1.5">
               {dialogueSpeakers.map((s, i) => (
                 <span key={s.id} className="flex items-center gap-1">
-                  <span className="text-base">{characterEmoji(s)}</span>
+                  <CharacterAvatar c={s} size={14} />
                   <button
                     type="button"
                     onClick={() => onSelectCharacter(s)}

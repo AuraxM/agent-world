@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { WorldInstanceCard, type WorldInstanceInfo } from "@/components/world-instance-card";
 import type { ModInfo } from "@/components/mod-card";
@@ -8,7 +8,7 @@ interface WorldsResponse { worlds: WorldInstanceInfo[] }
 interface CharsResponse { characters: { id: string; name: string }[] }
 
 function generateWorldId() {
-  const slug = crypto.randomUUID().slice(0, 8);
+  const slug = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   return `world-${slug}`;
 }
 
@@ -20,6 +20,12 @@ export default function WorldsPanelPage() {
   const [allWorlds, setAllWorlds] = useState<WorldInstanceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+
+  // Create dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogName, setDialogName] = useState("");
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Always fetch ALL worlds — left panel counts depend on the full list.
   const loadAllWorlds = useCallback(() => {
@@ -41,7 +47,13 @@ export default function WorldsPanelPage() {
     loadAllWorlds();
   }, [loadAllWorlds]);
 
-  // Right panel shows: selected mod's instances, or all worlds if none selected.
+  // Focus input when dialog opens
+  useEffect(() => {
+    if (dialogOpen) {
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [dialogOpen]);
+
   const visibleWorlds = selectedModId
     ? allWorlds.filter((w) => w.mapId === selectedModId)
     : allWorlds;
@@ -66,24 +78,29 @@ export default function WorldsPanelPage() {
     [loadAllWorlds],
   );
 
+  const openCreateDialog = useCallback(() => {
+    if (!selectedModId) return;
+    const mod = mods.find((m) => m.id === selectedModId);
+    setDialogName(mod?.name ?? selectedModId);
+    setDialogError(null);
+    setDialogOpen(true);
+  }, [mods, selectedModId]);
+
   const handleCreate = useCallback(async () => {
-    if (!selectedModId) {
-      alert("请先在左侧选择一个 Mod");
+    if (!dialogName.trim()) {
+      setDialogError("请输入世界名称");
       return;
     }
-    const mod = mods.find((m) => m.id === selectedModId);
-    const worldName = prompt("输入世界名称", mod?.name ?? selectedModId);
-    if (!worldName) return;
 
     setCreating(true);
+    setDialogError(null);
     try {
-      // Fetch characters for this mod
       const charRes = await fetch(`/api/configs/characters?mapId=${encodeURIComponent(selectedModId)}`);
       const charData: CharsResponse = await charRes.json();
       const cast = charData.characters.map((c) => ({ characterId: c.id }));
 
       if (cast.length === 0) {
-        alert("该 Mod 没有可用角色");
+        setDialogError("该 Mod 没有可用角色");
         return;
       }
 
@@ -92,24 +109,25 @@ export default function WorldsPanelPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           worldId: generateWorldId(),
-          name: worldName,
+          name: dialogName.trim(),
           mapId: selectedModId,
           cast,
         }),
       });
 
       if (res.ok) {
+        setDialogOpen(false);
         loadAllWorlds();
       } else {
         const body = await res.json().catch(() => ({ error: "创建失败" }));
-        alert(body.error ?? "创建失败");
+        setDialogError(body.error ?? "创建失败");
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "创建失败");
+      setDialogError(err instanceof Error ? err.message : "创建失败");
     } finally {
       setCreating(false);
     }
-  }, [mods, selectedModId, loadAllWorlds]);
+  }, [dialogName, selectedModId, loadAllWorlds]);
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -154,13 +172,13 @@ export default function WorldsPanelPage() {
             </span>
             <button
               type="button"
-              disabled={creating || !selectedModId}
+              disabled={!selectedModId}
               className="px-3 py-1.5 text-[11px] cursor-pointer border border-(--accent-strong) text-(--accent-strong)
                          bg-black/30 hover:bg-(--accent-strong) hover:text-black rounded transition-colors
                          disabled:opacity-40 disabled:cursor-not-allowed"
-              onClick={handleCreate}
+              onClick={openCreateDialog}
             >
-              {creating ? "创建中..." : "+ 新建世界"}
+              + 新建世界
             </button>
           </div>
 
@@ -169,7 +187,7 @@ export default function WorldsPanelPage() {
               <div className="text-white/50">加载中...</div>
             ) : visibleWorlds.length === 0 ? (
               <div className="text-white/50">
-                {selectedModId ? "暂无世界实例，点击右上角按钮创建" : "暂无世界实例"}
+                {selectedModId ? "暂无世界实例，点击右上角按钮创建" : "选择一个 Mod 查看实例"}
               </div>
             ) : (
               <div className="flex flex-col gap-3">
@@ -181,6 +199,62 @@ export default function WorldsPanelPage() {
           </div>
         </div>
       </div>
+
+      {/* Create world dialog */}
+      {dialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => { if (!creating) setDialogOpen(false); }}
+        >
+          <div
+            className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-lg p-6 w-[380px] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-(--accent-strong) text-sm font-bold mb-4">新建世界</h3>
+
+            <input
+              ref={inputRef}
+              type="text"
+              value={dialogName}
+              onChange={(e) => { setDialogName(e.target.value); setDialogError(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+              placeholder="输入世界名称"
+              disabled={creating}
+              className="w-full px-3 py-2 text-sm text-white/90 bg-black/30 border border-white/10 rounded
+                         placeholder:text-white/20 outline-none focus:border-(--accent-strong)
+                         disabled:opacity-40"
+            />
+
+            {dialogError && (
+              <div className="mt-3 text-xs text-red-300 bg-red-500/10 border border-red-400/20 rounded px-3 py-2">
+                {dialogError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2.5 mt-4">
+              <button
+                type="button"
+                disabled={creating}
+                onClick={() => setDialogOpen(false)}
+                className="px-4 py-1.5 text-xs text-white/50 hover:text-white border border-white/10 rounded
+                           bg-transparent hover:bg-white/5 transition-colors disabled:opacity-40"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                disabled={creating || !dialogName.trim()}
+                onClick={handleCreate}
+                className="px-5 py-1.5 text-xs border border-(--accent-strong) text-(--accent-strong)
+                           bg-black/30 hover:bg-(--accent-strong) hover:text-black rounded transition-colors
+                           disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {creating ? "创建中..." : "创建"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { Character, MapNode, WorldEvent } from "@/types/api.generated";
 import { characterEmoji } from "@/lib/sprite";
 import { formatHHMM } from "@/lib/format";
@@ -27,7 +28,6 @@ export function GanttPopup({
   onFollow: (id: string) => void;
 }) {
   const [dialogExpanded, setDialogExpanded] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
 
   const charById = new Map(characters.map((c) => [c.id, c]));
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
@@ -54,40 +54,28 @@ export function GanttPopup({
   const panelWidth = dialogExpanded ? 640 : 320;
   const detailWidth = 320;
 
-  // Compute position: prefer to the right of the anchor card
+  // Compute viewport position
   let left: number;
   let top: number;
   if (anchorRect) {
-    // Try right side first, fallback to left side if it overflows
     if (anchorRect.right + 12 + panelWidth < window.innerWidth - 20) {
       left = anchorRect.right + 12;
     } else {
       left = Math.max(20, anchorRect.left - panelWidth - 12);
     }
-    // Align top with card, clamp to keep panel on screen
     top = Math.max(20, Math.min(anchorRect.top, window.innerHeight - 420));
   } else {
     left = (window.innerWidth - panelWidth) / 2;
     top = 120;
   }
 
-  // Close on Escape
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") onClose();
-  };
-
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50"
       onClick={onClose}
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
-      ref={panelRef}
+      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
     >
-      {/* Backdrop */}
       <div className="absolute inset-0" />
-
-      {/* Panel */}
       <div
         className="absolute bg-black/80 backdrop-blur-2xl border border-white/10 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden transition-all duration-200"
         style={{ left, top, width: panelWidth, maxHeight: 380 }}
@@ -154,24 +142,18 @@ export function GanttPopup({
 
         {/* Body: side-by-side layout */}
         <div className="flex-1 flex min-h-0 overflow-hidden">
-          {/* Left: event info */}
           <div
             className="flex-shrink-0 overflow-y-auto px-4 py-3 flex flex-col gap-3"
             style={{ width: detailWidth }}
           >
-            {/* Description */}
             <div className="text-[13px] text-white/75 leading-[1.6]">
               {event.description}
             </div>
-
-            {/* Inner event quote */}
             {event.category === "inner" && (
               <div className="px-3 py-2 bg-white/[0.04] border-l-[3px] border-white/15 text-white/40 italic text-[11px] leading-[1.75]">
                 &ldquo;{event.description}&rdquo;
               </div>
             )}
-
-            {/* Dialog expand button */}
             {hasTranscript && (
               <button
                 type="button"
@@ -183,8 +165,6 @@ export function GanttPopup({
                   : `展开对话 ▼（${transcriptMsgCount} 条）${event.dialogEndedBy ? "" : " · 进行中"}`}
               </button>
             )}
-
-            {/* Action buttons */}
             <div className="flex gap-2 mt-auto pt-2 border-t border-white/5">
               {loc && (
                 <button
@@ -216,7 +196,6 @@ export function GanttPopup({
             </div>
           </div>
 
-          {/* Right: dialog transcript — slides in */}
           {dialogExpanded && hasTranscript && (
             <div className="flex-1 overflow-y-auto border-l border-white/10 px-4 py-3">
               <div className="space-y-2">
@@ -256,6 +235,7 @@ export function GanttPopup({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

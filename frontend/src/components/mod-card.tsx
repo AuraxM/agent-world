@@ -6,6 +6,7 @@ export interface ModInfo {
   description: string;
   language: string;
   characterCount: number;
+  backgroundImage?: string | null;
 }
 
 const LANG_LABEL: Record<string, string> = {
@@ -27,7 +28,7 @@ export function ModCard({ mod }: { mod: ModInfo }) {
     >
       {/* Frosted glass overlay on left */}
       <div
-        className="absolute left-0 top-0 bottom-0 w-[55%] flex flex-col justify-center px-4 py-3
+        className="absolute left-0 top-0 bottom-0 w-[55%] flex flex-col justify-center px-4 py-3 z-10
                    bg-black/40 backdrop-blur-md
                    border-r border-white/10"
       >
@@ -42,7 +43,14 @@ export function ModCard({ mod }: { mod: ModInfo }) {
           {mod.description}
         </div>
       </div>
-      {/* Right side — cover image shows through transparently */}
+      {/* Right side — card background image */}
+      {mod.backgroundImage && (
+        <img
+          src={mod.backgroundImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
     </button>
   );
 }

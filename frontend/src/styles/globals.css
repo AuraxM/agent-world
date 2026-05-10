@@ -296,7 +296,6 @@ body {
  * ================================================================ */
 
 .gantt-card {
-  width: 200px;
   height: 48px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -308,9 +307,11 @@ body {
   box-sizing: border-box;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  flex-direction: row;
+  align-items: flex-start;
   overflow: hidden;
+  transition: width 200ms ease;
+  text-align: left;
 }
 
 .gantt-card:hover {
@@ -336,9 +337,9 @@ body {
 }
 
 .gantt-card--selected {
-  border-color: var(--accent-strong);
-  background: color-mix(in srgb, var(--accent-strong) 12%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-strong) 40%, transparent);
+  border-color: color-mix(in srgb, var(--accent-strong) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-strong) 10%, transparent);
+  z-index: 3;
 }
 
 .gantt-card__badge {

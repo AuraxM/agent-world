@@ -5,9 +5,6 @@ import type { Character, MapNode, WorldEvent } from "@/types/api.generated";
 import { DEFAULT_TICK_WINDOW, getTickWindow, TICK_WIDTH } from "@/lib/gantt-utils";
 import { GanttTimeline } from "./gantt-timeline";
 import { GanttRow } from "./gantt-row";
-import { EventCard } from "./event-card";
-
-const DETAIL_PANEL_WIDTH = 420;
 
 export function EventGantt({
   events,
@@ -32,7 +29,7 @@ export function EventGantt({
     const min = Math.min(...events.map((e) => e.tick));
     return Math.max(DEFAULT_TICK_WINDOW, max - min + 1);
   }, [events]);
-  const [selectedEvent, setSelectedEvent] = useState<WorldEvent | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const { startTick, endTick } = useMemo(
     () => getTickWindow(events, tickCount),
@@ -43,7 +40,7 @@ export function EventGantt({
   const contentWidth = tickColumns * TICK_WIDTH;
 
   const handleEventClick = useCallback((ev: WorldEvent) => {
-    setSelectedEvent((prev) => (prev?.id === ev.id ? null : ev));
+    setSelectedEventId((prev) => (prev === ev.id ? null : ev.id));
   }, []);
 
   // ---- wheel handler: deltaY -> scrollLeft ----
@@ -82,79 +79,50 @@ export function EventGantt({
   }
 
   return (
-    <div className="h-full flex">
-      {/* Main gantt area */}
-      <div className="flex-1 min-w-0 flex flex-col">
-        {/* Toolbar */}
-        <div className="flex items-center gap-3 px-4 py-2 bg-black/15 border-b border-white/10">
-          <span className="text-[11px] text-(--accent-strong) tracking-[0.1em] uppercase">
-            甘特图
+    <div className="h-full flex flex-col">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 px-4 py-2 bg-black/15 border-b border-white/10">
+        <span className="text-[11px] text-(--accent-strong) tracking-[0.1em] uppercase">
+          甘特图
+        </span>
+        <div className="flex items-center gap-3 ml-auto">
+          <span className="text-[10px] text-white/40">
+            T={startTick} ~ T={endTick}
           </span>
-          <div className="flex items-center gap-3 ml-auto">
-            <span className="text-[10px] text-white/40">
-              T={startTick} ~ T={endTick}
-            </span>
-            <span className="text-[10px] text-white/25">
-              {characters.length} 角色
-            </span>
-          </div>
-        </div>
-
-        {/* Scrollable body */}
-        <div
-          ref={scrollRef}
-          className="flex-1"
-          style={{ overflow: "auto" }}
-        >
-          <div style={{ width: contentWidth + 100, display: "flex", flexDirection: "column" }}>
-            <GanttTimeline startTick={startTick} endTick={endTick} epoch={epoch} />
-
-            {characters.map((c) => (
-              <GanttRow
-                key={c.id}
-                character={c}
-                events={events}
-                startTick={startTick}
-                endTick={endTick}
-                characters={characters}
-                nodes={nodes}
-                selectedEventId={selectedEvent?.id ?? null}
-                onEventClick={handleEventClick}
-              />
-            ))}
-          </div>
+          <span className="text-[10px] text-white/25">
+            {characters.length} 角色
+          </span>
         </div>
       </div>
 
-      {/* Detail side panel */}
-      {selectedEvent && (
-        <div
-          className="flex-shrink-0 border-l border-white/10 bg-black/40 backdrop-blur-md flex flex-col animate-fade-in"
-          style={{ width: DETAIL_PANEL_WIDTH }}
-        >
-          <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-black/15">
-            <span className="text-[11px] text-(--accent-strong)">事件详情</span>
-            <button
-              type="button"
-              onClick={() => setSelectedEvent(null)}
-              className="text-white/40 hover:text-white/80 text-sm cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3">
-            <EventCard
-              event={selectedEvent}
+      {/* Scrollable body */}
+      <div
+        ref={scrollRef}
+        className="flex-1"
+        style={{ overflow: "auto" }}
+      >
+        <div style={{ width: contentWidth + 100, display: "flex", flexDirection: "column" }}>
+          <GanttTimeline startTick={startTick} endTick={endTick} epoch={epoch} />
+
+          {characters.map((c) => (
+            <GanttRow
+              key={c.id}
+              character={c}
+              events={events}
+              startTick={startTick}
+              endTick={endTick}
               characters={characters}
               nodes={nodes}
+              selectedEventId={selectedEventId}
               epoch={epoch}
+              onEventClick={handleEventClick}
               onJumpToNode={onJumpToNode}
               onSelectCharacter={onSelectCharacter}
               onFollow={onFollow}
             />
-          </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }

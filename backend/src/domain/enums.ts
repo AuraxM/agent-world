@@ -77,7 +77,7 @@ export const EVENT_SCOPES = [
 export type EventScope = (typeof EVENT_SCOPES)[number];
 
 /** 事件来源：系统自动 / 角色行动 / 玩家投放 / 内心触发。 */
-export const EVENT_SOURCES = ["system", "actor", "player", "inner"] as const;
+export const EVENT_SOURCES = ["system", "actor", "player", "inner", "think"] as const;
 export type EventSource = (typeof EVENT_SOURCES)[number];
 
 /** 1 游戏小时 = 5 ticks。移动 1 步消耗 1 tick。 */

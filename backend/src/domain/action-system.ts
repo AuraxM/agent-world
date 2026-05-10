@@ -51,6 +51,8 @@ export interface ActionContext {
   reachable: MapNode[];
   isSleepHour: boolean;
   facts: AggregatedFacts;
+  shops: import("./types").Shop[];
+  itemDefs: Map<string, import("./types").ItemDefinition>;
 }
 
 // ---- Outcome: what the action produced ----
@@ -85,7 +87,10 @@ export type StateChange =
   | { kind: "adjustSocialSatiety"; delta: number }
   | { kind: "setOngoingAction"; action: import("./types").OngoingAction }
   | { kind: "clearOngoingAction" }
-  | { kind: "adjustMoney"; amount: number; reason: string; targetCharacterId?: string };
+  | { kind: "adjustMoney"; amount: number; reason: string; targetCharacterId?: string }
+  | { kind: "addItem"; itemDefId: string; count: number }
+  | { kind: "removeItem"; itemDefId: string; count: number }
+  | { kind: "setEmployment"; shopId: string; characterId?: string };
 
 // ---- ActionOption: presented to LLM ----
 

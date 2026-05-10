@@ -64,7 +64,9 @@ import {
   loadEconomyConfig,
   loadEvents,
   loadModActions,
+  loadAllItems,
 } from "../config/index";
+import { updateShopEmployment } from "../db/index";
 import {
   llmDecide,
   llmAcceptDecide,
@@ -209,8 +211,11 @@ export async function tick(
   options: TickOptions = {},
 ): Promise<TickResult> {
   const loaded = loadWorld(worldId);
-  const { world, nodes, characters } = loaded;
+  const { world, nodes, characters, shops } = loaded;
   const fromTick = world.currentTick;
+
+  const itemDefsArr = loadAllItems(world.mapId);
+  const itemDefs = new Map(itemDefsArr.map((d) => [d.id, d]));
 
   const lockKey = `${worldId}:${fromTick}`;
   if (_activeTicks.has(lockKey)) {
@@ -526,7 +531,7 @@ export async function tick(
               const ctx = {
                 worldId, tick: fromTick, epoch: world.epoch, self: c, here,
                 companions: [], reachable: [], isSleepHour: false, facts: emptyFacts(),
-                shops: [], itemDefs: new Map(),
+                shops, itemDefs,
               };
               const outcome = actionDef.onInterrupt(ctx, `被「${interrupt.description}」打断`);
               c.shortMemory.push({
@@ -628,7 +633,7 @@ export async function tick(
             const ctx = {
               worldId, tick: fromTick, epoch: world.epoch, self: c, here,
               companions: [], reachable: [], isSleepHour: false, facts: emptyFacts(),
-              shops: [], itemDefs: new Map(),
+              shops, itemDefs,
             };
             const outcome = actionDef.onComplete(ctx);
             c.shortMemory.push({
@@ -683,7 +688,7 @@ export async function tick(
         activityNodeId,
         restNodeId,
       });
-      const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, world.epoch, isSleepHour, facts, localLocationMap);
+      const ctx = buildActionContext(c, nodes, characters, worldId, fromTick, world.epoch, isSleepHour, facts, localLocationMap, shops, itemDefs);
       const opts = getAvailableActions(ctx);
 
       const todayEntries = getTodayEntries(c.notebook, fromTick);
@@ -954,7 +959,7 @@ export async function tick(
         activityNodeId: sActivityId,
         restNodeId: sRestId,
       });
-      const ctx = buildActionContext(input.character, nodes, characters, worldId, fromTick, world.epoch, isSleepHour, facts);
+      const ctx = buildActionContext(input.character, nodes, characters, worldId, fromTick, world.epoch, isSleepHour, facts, undefined, shops, itemDefs);
       const opts = getAvailableActions(ctx);
 
       const todayEntries = getTodayEntries(input.character.notebook, fromTick);
@@ -1235,8 +1240,8 @@ export async function tick(
     characters,
     nodes,
     actions: actionsForExecution,
-    shops: [],
-    itemDefs: new Map(),
+    shops,
+    itemDefs,
   });
   allEvents.push(...execResult.events);
 
@@ -1245,6 +1250,26 @@ export async function tick(
     const r = execResult.resolvedActions[i];
     if (allDecisions[i] && allDecisions[i].action === r.action) {
       allDecisions[i].success = r.success;
+    }
+  }
+
+  // Handle employment changes from manage_employment actions
+  for (const resolved of execResult.resolvedActions) {
+    if (resolved.action.type === "manage_employment" && resolved.success) {
+      const shop = shops.find(
+        (s) => s.ownerCharacterId === resolved.action.actorId,
+      );
+      if (shop && resolved.action.targetId) {
+        if (shop.employeeCharacterId === resolved.action.targetId) {
+          // Fire: target is current employee
+          updateShopEmployment(shop.id, null);
+          shop.employeeCharacterId = undefined;
+        } else if (!shop.employeeCharacterId) {
+          // Hire: no current employee
+          updateShopEmployment(shop.id, resolved.action.targetId);
+          shop.employeeCharacterId = resolved.action.targetId;
+        }
+      }
     }
   }
   const tAfterExecute = Date.now();

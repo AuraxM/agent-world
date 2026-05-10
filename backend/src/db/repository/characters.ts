@@ -74,6 +74,7 @@ export function findCharactersByWorld(worldId: string): Character[] {
 export function updateCharacter(c: Character): void {
   const row = characterToRow(c);
   db.update(schema.characters).set({
+    avatar: row.avatar,
     locationId: row.locationId, money: row.money,
     incomeLevel: row.incomeLevel, expenseExempt: row.expenseExempt,
     vitalsJson: row.vitalsJson, emotionJson: row.emotionJson,
@@ -92,6 +93,7 @@ export function saveAllCharacters(characters: Character[]): void {
     for (const c of characters) {
       const row = characterToRow(c);
       tx.update(schema.characters).set({
+        avatar: row.avatar,
         locationId: row.locationId, money: row.money,
         incomeLevel: row.incomeLevel, expenseExempt: row.expenseExempt,
         vitalsJson: row.vitalsJson, emotionJson: row.emotionJson,

@@ -15,6 +15,7 @@ import {
   resolveIncomeLevel,
 } from "../config/index";
 import { getTierInitialMoney } from "./bme";
+import { generateAvatar } from "./avatar";
 import type { Emotion, Vitals } from "../domain/index";
 
 const DEFAULT_EPOCH_MS = new Date("2026-05-01T00:00:00").getTime();
@@ -171,7 +172,7 @@ export function createWorldFromConfig(
           id: m.tpl.id,
           worldId,
           name: m.tpl.name,
-          avatar: m.tpl.avatar ?? null,
+          avatar: generateAvatar().dataUri,
           age: m.tpl.age,
           gender: m.tpl.gender,
           profession: m.tpl.profession,

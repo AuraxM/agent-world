@@ -11,7 +11,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Cover background wraps both landing and hub */}
+        {/* Cover background wraps landing, hub, and world view */}
         <Route element={<CoverBackground />}>
           <Route index element={<CoverOverlay />} />
           <Route path="hub" element={<HubPage />}>
@@ -20,10 +20,8 @@ export default function App() {
             <Route path="worlds" element={<WorldsPanel />} />
             <Route path="llm" element={<LLMConfig />} />
           </Route>
+          <Route path="world/:id" element={<WorldViewPage />} />
         </Route>
-
-        {/* Dashboard — no cover background */}
-        <Route path="/world/:id" element={<WorldViewPage />} />
       </Routes>
     </BrowserRouter>
   );

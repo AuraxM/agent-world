@@ -8,6 +8,7 @@ import { Outlet, useLocation } from "react-router-dom";
  */
 export function CoverBackground() {
   const location = useLocation();
+  const isIndex = location.pathname === "/";
   const isHub = location.pathname.startsWith("/hub");
 
   return (
@@ -17,14 +18,14 @@ export function CoverBackground() {
         src="/cover.png"
         alt=""
         className={`absolute inset-0 w-full h-full object-cover transition-all duration-1000 ${
-          isHub ? "blur-lg scale-105 brightness-110" : "blur-0 scale-100 brightness-100"
+          isIndex ? "blur-0 scale-100 brightness-100" : "blur-lg scale-105 brightness-110"
         }`}
       />
 
       {/* Dark overlay */}
       <div
         className={`absolute inset-0 transition-all duration-1000 ${
-          isHub ? "bg-black/30" : "bg-black/40"
+          isIndex ? "bg-black/40" : "bg-black/30"
         }`}
       />
 

@@ -1,3 +1,4 @@
+// src/app/_components/gantt-row.tsx
 "use client";
 
 import type { Character, MapNode, WorldEvent } from "@/types/api.generated";
@@ -17,12 +18,7 @@ export function GanttRow({
   endTick,
   characters,
   nodes,
-  selectedEventId,
-  epoch,
   onEventClick,
-  onJumpToNode,
-  onSelectCharacter,
-  onFollow,
 }: {
   character: Character;
   events: WorldEvent[];
@@ -30,12 +26,7 @@ export function GanttRow({
   endTick: number;
   characters: Character[];
   nodes: MapNode[];
-  selectedEventId: string | null;
-  epoch: number;
-  onEventClick: (event: WorldEvent) => void;
-  onJumpToNode: (id: string) => void;
-  onSelectCharacter: (c: Character) => void;
-  onFollow: (id: string) => void;
+  onEventClick: (event: WorldEvent, rect: DOMRect) => void;
 }) {
   const charById = new Map(characters.map((c) => [c.id, c]));
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
@@ -86,6 +77,7 @@ export function GanttRow({
 
   return (
     <div
+      className="gantt-row"
       style={{
         display: "flex",
         alignItems: "stretch",
@@ -146,14 +138,7 @@ export function GanttRow({
               charById={charById}
               nodeById={nodeById}
               excludeId={character.id}
-              isSelected={event.id === selectedEventId}
-              epoch={epoch}
-              characters={characters}
-              nodes={nodes}
-              onJumpToNode={onJumpToNode}
-              onSelectCharacter={onSelectCharacter}
-              onFollow={onFollow}
-              onClick={() => onEventClick(event)}
+              onClick={(rect) => onEventClick(event, rect)}
             />
           </div>
         ))}

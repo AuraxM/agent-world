@@ -337,12 +337,6 @@ body {
   pointer-events: none;
 }
 
-.gantt-card--selected {
-  border-color: color-mix(in srgb, var(--accent-strong) 40%, transparent);
-  background: color-mix(in srgb, var(--accent-strong) 10%, transparent);
-  z-index: 3;
-}
-
 .gantt-card__badge {
   font-size: 7px;
   color: rgba(255, 255, 255, 0.8);

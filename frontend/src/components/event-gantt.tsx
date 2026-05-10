@@ -5,6 +5,7 @@ import type { Character, MapNode, WorldEvent } from "@/types/api.generated";
 import { DEFAULT_TICK_WINDOW, getTickWindow, TICK_WIDTH } from "@/lib/gantt-utils";
 import { GanttTimeline } from "./gantt-timeline";
 import { GanttRow } from "./gantt-row";
+import { GanttPopup } from "./gantt-popup";
 
 export function EventGantt({
   events,
@@ -29,7 +30,8 @@ export function EventGantt({
     const min = Math.min(...events.map((e) => e.tick));
     return Math.max(DEFAULT_TICK_WINDOW, max - min + 1);
   }, [events]);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<WorldEvent | null>(null);
+  const [popupAnchor, setPopupAnchor] = useState<DOMRect | null>(null);
 
   const { startTick, endTick } = useMemo(
     () => getTickWindow(events, tickCount),
@@ -39,8 +41,14 @@ export function EventGantt({
   const tickColumns = endTick - startTick + 1;
   const contentWidth = tickColumns * TICK_WIDTH;
 
-  const handleEventClick = useCallback((ev: WorldEvent) => {
-    setSelectedEventId((prev) => (prev === ev.id ? null : ev.id));
+  const handleEventClick = useCallback((ev: WorldEvent, rect: DOMRect) => {
+    setSelectedEvent(ev);
+    setPopupAnchor(rect);
+  }, []);
+
+  const handleClosePopup = useCallback(() => {
+    setSelectedEvent(null);
+    setPopupAnchor(null);
   }, []);
 
   // ---- wheel handler: deltaY -> scrollLeft ----
@@ -53,8 +61,10 @@ export function EventGantt({
     function handleWheel(e: WheelEvent) {
       if (!(e.target instanceof HTMLElement && el!.contains(e.target))) return;
       if (e.shiftKey) return;
+      // Left of 100px = name column → native vertical scroll
       const rect = el!.getBoundingClientRect();
       if (e.clientX < rect.left + 100) return;
+      // Right side = card area → wheel Y → horizontal scroll
       e.preventDefault();
       el!.scrollLeft += e.deltaY;
     }
@@ -66,8 +76,8 @@ export function EventGantt({
   if (events.length === 0) {
     return (
       <div className="h-full flex flex-col">
-        <div className="flex items-center px-4 py-2 bg-black/15 border-b border-white/10">
-          <span className="text-[11px] text-(--accent-strong) tracking-[0.1em] uppercase">
+        <div className="flex items-center px-6 py-2.5 bg-black/15 border-b border-white/10">
+          <span className="text-pixel-sm text-(--accent-strong) tracking-[var(--letter-pixel)] uppercase">
             甘特图
           </span>
         </div>
@@ -80,22 +90,22 @@ export function EventGantt({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Toolbar */}
-      <div className="flex items-center gap-3 px-4 py-2 bg-black/15 border-b border-white/10">
-        <span className="text-[11px] text-(--accent-strong) tracking-[0.1em] uppercase">
+      {/* Toolbar — no buttons */}
+      <div className="flex items-center gap-3 px-6 py-2.5 bg-black/15 border-b border-white/10">
+        <span className="text-pixel-sm text-(--accent-strong) tracking-[var(--letter-pixel)] uppercase">
           甘特图
         </span>
         <div className="flex items-center gap-3 ml-auto">
-          <span className="text-[10px] text-white/40">
+          <span className="text-pixel-xs text-white/40 tracking-[var(--letter-pixel)]">
             T={startTick} ~ T={endTick}
           </span>
-          <span className="text-[10px] text-white/25">
+          <span className="text-pixel-xs text-white/25">
             {characters.length} 角色
           </span>
         </div>
       </div>
 
-      {/* Scrollable body */}
+      {/* Body: single scroll container */}
       <div
         ref={scrollRef}
         className="flex-1"
@@ -113,16 +123,26 @@ export function EventGantt({
               endTick={endTick}
               characters={characters}
               nodes={nodes}
-              selectedEventId={selectedEventId}
-              epoch={epoch}
               onEventClick={handleEventClick}
-              onJumpToNode={onJumpToNode}
-              onSelectCharacter={onSelectCharacter}
-              onFollow={onFollow}
             />
           ))}
         </div>
       </div>
+
+      {/* Popup */}
+      {selectedEvent && (
+        <GanttPopup
+          event={selectedEvent}
+          characters={characters}
+          nodes={nodes}
+          epoch={epoch}
+          anchorRect={popupAnchor}
+          onClose={handleClosePopup}
+          onJumpToNode={onJumpToNode}
+          onSelectCharacter={onSelectCharacter}
+          onFollow={onFollow}
+        />
+      )}
     </div>
   );
 }

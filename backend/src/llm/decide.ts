@@ -29,6 +29,7 @@ import {
   type DialogPersonalMemoryPayload,
 } from "../domain/index";
 import type { Action, Character, DialogTurn, EndConversationPayload, Language, MapNode, WorldEvent } from "../domain/index";
+import type { ItemDefinition, Shop } from "../domain/index";
 import type { AggregatedFacts } from "../systems/index";
 import { getLLMClientForEntry, getModelNameForEntry, hasApiKey } from "./client";
 import { getEntryConfig } from "./providers";
@@ -71,6 +72,8 @@ export interface DecideInput {
   allCharacters: Character[];
   activeEventDefs: GlobalEventDef[];
   upcomingNotebookText: string;
+  shops?: Shop[];
+  itemDefs?: Map<string, ItemDefinition>;
 }
 
 export type DecideFn = (input: DecideInput) => Promise<Action>;
@@ -212,6 +215,7 @@ async function callLLMWithRetry(
   ctx: ActionContext,
   allCharacters: Character[] = [],
   nodes: MapNode[] = [],
+  shops?: Shop[],
 ): Promise<{ actionType: string; data: ToolArgPayload }> {
   const config = getEntryConfig(entryName);
   const client = getLLMClientForEntry(entryName);
@@ -297,7 +301,7 @@ async function callLLMWithRetry(
 
     // ── Handle view_map ──
     if (tcName === VIEW_MAP_TOOL_NAME) {
-      const mapText = buildMapView(ctx.here, nodes);
+      const mapText = buildMapView(ctx.here, nodes, shops);
       messages.push({ role: "tool", tool_call_id: tc.id, content: mapText });
       round = Math.max(0, round - 1);
       continue;
@@ -372,6 +376,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     worldName: input.worldName,
     nodes: input.nodes,
     language: input.language,
+    shops: input.shops,
   });
   const user = buildUserPrompt({
     character: input.character,
@@ -387,6 +392,8 @@ async function callLLM(input: DecideInput): Promise<Action> {
     nodes: input.nodes,
     activeEventDefs: input.activeEventDefs,
     upcomingNotebookText: input.upcomingNotebookText,
+    shops: input.shops,
+    itemDefs: input.itemDefs,
   });
 
   const tool = buildDecideActionTool(input.ctx);
@@ -405,7 +412,7 @@ async function callLLM(input: DecideInput): Promise<Action> {
     model: getModelNameForEntry("decide"),
   });
 
-  const { actionType, data } = await callLLMWithRetry(messages, tool, "LLM", "decide", input.ctx, input.allCharacters, input.nodes);
+  const { actionType, data } = await callLLMWithRetry(messages, tool, "LLM", "decide", input.ctx, input.allCharacters, input.nodes, input.shops);
 
   decideLog.info("LLM decide 响应", {
     角色: input.character.name,

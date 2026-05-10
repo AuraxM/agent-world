@@ -13,6 +13,8 @@
 import type { Profession, Language } from "../domain/index";
 import { TICKS_PER_HOUR } from "../domain/index";
 import type { AggregatedFacts } from "../systems/index";
+import type { Shop } from "../domain/index";
+import type { ItemDefinition } from "../domain/index";
 import type {
   Character,
   DialogTurn,
@@ -614,8 +616,10 @@ function submitActionInstruction(lang: Language): string {
  * 不嵌入任何角色专属信息（如"你的家"）—— 这部分挪到 system 末尾的角色块，
  * 让本段在所有 NPC 之间字节一致，最大化 prompt cache 命中。
  */
-function describeMapGraph(nodes: MapNode[]): string {
+function describeMapGraph(nodes: MapNode[], shops?: Shop[]): string {
   if (nodes.length === 0) return "";
+
+  const shopNodeIds = new Set((shops ?? []).map((s) => s.nodeId));
 
   const childrenOf = new Map<string | null, MapNode[]>();
   for (const n of nodes) {
@@ -632,7 +636,8 @@ function describeMapGraph(nodes: MapNode[]): string {
     const indent = "  ".repeat(depth);
     // tags 内已包含 public/semi/private 同义词；privacy 字段不再单独渲染。
     const tagPart = n.tags.length > 0 ? n.tags.join("/") : n.privacy;
-    treeLines.push(`${indent}- ${n.name} [${n.id}]（${tagPart}）`);
+    const shopMark = shopNodeIds.has(n.id) ? " [店铺]" : "";
+    treeLines.push(`${indent}- ${n.name} [${n.id}]（${tagPart}）${shopMark}`);
     for (const kid of childrenOf.get(n.id) ?? []) render(kid, depth + 1);
   };
   for (const root of childrenOf.get(null) ?? []) render(root, 0);
@@ -675,16 +680,20 @@ function describeMapGraph(nodes: MapNode[]): string {
  * 局部地图：当前节点 + parent + children（仅一层）。
  * 不包含 siblings、shortcuts。所有节点附带 [id] 供 target_node_id 复用。
  */
-function describeLocalMap(here: MapNode, nodes: MapNode[], language: Language = "zh"): string {
+function describeLocalMap(here: MapNode, nodes: MapNode[], language: Language = "zh", shops?: Shop[]): string {
   const children = nodes.filter((n) => n.parentId === here.id);
   const parent = here.parentId ? nodes.find((n) => n.id === here.parentId) : undefined;
+
+  const shopNodeIds = new Set((shops ?? []).map((s) => s.nodeId));
+  const isShop = shopNodeIds.has(here.id);
 
   const noTag = language === "zh" ? "无标签" : language === "en" ? "no tags" : "タグなし";
   const tagStr = here.tags.length > 0 ? here.tags.join("/") : noTag;
   const lines: string[] = [];
 
   if (language === "zh") {
-    lines.push(`当前位置：${here.name} [${here.id}]（${here.privacy}, ${tagStr}）`);
+    const shopPrefix = isShop ? "[店铺] " : "";
+    lines.push(`当前位置：${shopPrefix}${here.name} [${here.id}]（${here.privacy}, ${tagStr}）`);
     if (here.description) lines.push(`  描述：${here.description}`);
     if (parent) {
       const pTag = parent.tags.length > 0 ? parent.tags.join("/") : noTag;
@@ -699,7 +708,8 @@ function describeLocalMap(here: MapNode, nodes: MapNode[], language: Language = 
       }
     }
   } else if (language === "en") {
-    lines.push(`Current location: ${here.name} [${here.id}] (${here.privacy}, ${tagStr})`);
+    const shopPrefix = isShop ? "[Shop] " : "";
+    lines.push(`Current location: ${shopPrefix}${here.name} [${here.id}] (${here.privacy}, ${tagStr})`);
     if (here.description) lines.push(`  Description: ${here.description}`);
     if (parent) {
       const pTag = parent.tags.length > 0 ? parent.tags.join("/") : noTag;
@@ -714,7 +724,8 @@ function describeLocalMap(here: MapNode, nodes: MapNode[], language: Language = 
       }
     }
   } else {
-    lines.push(`現在地：${here.name} [${here.id}]（${here.privacy}, ${tagStr}）`);
+    const shopPrefix = isShop ? "[店舗] " : "";
+    lines.push(`現在地：${shopPrefix}${here.name} [${here.id}]（${here.privacy}, ${tagStr}）`);
     if (here.description) lines.push(`  説明：${here.description}`);
     if (parent) {
       const pTag = parent.tags.length > 0 ? parent.tags.join("/") : noTag;
@@ -736,8 +747,10 @@ function describeLocalMap(here: MapNode, nodes: MapNode[], language: Language = 
  * 以当前节点为根，通过 BFS 重新绘制整个地图树。
  * parent/child + shortcuts 作为无向边；输出的缩进结构以当前位置为根。
  */
-export function buildMapView(here: MapNode, nodes: MapNode[]): string {
+export function buildMapView(here: MapNode, nodes: MapNode[], shops?: Shop[]): string {
   if (nodes.length === 0) return "（地图为空）";
+
+  const shopNodeIds = new Set((shops ?? []).map((s) => s.nodeId));
 
   // Build undirected adjacency (parent-child + shortcuts)
   const adj = new Map<string, string[]>();
@@ -794,7 +807,8 @@ export function buildMapView(here: MapNode, nodes: MapNode[]): string {
   const render = (n: MapNode, depth: number): void => {
     const indent = "  ".repeat(depth);
     const tagPart = n.tags.length > 0 ? n.tags.join("/") : n.privacy;
-    treeLines.push(`${indent}- ${n.name} [${n.id}]（${tagPart}）`);
+    const shopMark = shopNodeIds.has(n.id) ? " [店铺]" : "";
+    treeLines.push(`${indent}- ${n.name} [${n.id}]（${tagPart}）${shopMark}`);
     for (const kid of childrenOf.get(n.id) ?? []) render(kid, depth + 1);
   };
   for (const root of childrenOf.get(null) ?? []) render(root, 0);
@@ -935,9 +949,19 @@ export function buildSelfImage(c: Character): string {
   const healthStatus = c.sickness ? "不佳（生病中）" : "健康";
   const personality = describePersonalityCompact(c.personality, c.intelligence);
   const styleSuffix = c.speakingStyle ? ` 你说话风格${c.speakingStyle}。` : "";
-  const past = c.personalProfile.past.replace(/。+$/, "");
-  const present = c.personalProfile.present.replace(/。+$/, "");
-  return `你是${c.name}，一个${c.age}岁的${genderLabel}${profLabel}。你身体状况${healthStatus}，性格${personality}。你曾经${past}。你现在${present}。${styleSuffix}`.trim();
+  const past = c.personalProfile.past.replace(/。+$/, "").trim();
+  const present = c.personalProfile.present.replace(/。+$/, "").trim();
+  const parts: string[] = [];
+  parts.push(`你是${c.name}，一个${c.age}岁的${genderLabel}${profLabel}`);
+  parts.push(`身体状况${healthStatus}，性格${personality}`);
+  if (past) parts.push(`你曾经${past}`);
+  if (present) parts.push(`你现在${present}`);
+  if (c.shortTermGoal) parts.push(`短期目标：${c.shortTermGoal.goal}`);
+  if (c.longTermGoal) parts.push(`长期目标：${c.longTermGoal.goal}`);
+  if (c.liked) parts.push(`你喜欢：${c.liked}`);
+  if (c.disliked) parts.push(`你讨厌：${c.disliked}`);
+  if (styleSuffix) parts.push(styleSuffix);
+  return parts.join("。") + "。";
 }
 
 // non-directional relation labels (for buildPeerImage)
@@ -1605,6 +1629,7 @@ function decisionPriorityAndRules(): string {
 - 不想理的人就不理，不需要理由
 - 想跟谁攀比就跟谁攀比，想嫉妒就嫉妒
 - 记仇——上次谁让你不愉快，这次装没看见 ta
+- 定期 **think 沉思**回顾记忆、整理思绪、审视目标和人际关系——这能让你做出更明智的后续决策
 
 ## 行为指南（不是规则，是人性）
 
@@ -1621,14 +1646,15 @@ export function buildSystemPrompt(args: {
   worldName: string;
   nodes: MapNode[];
   language?: Language;
+  shops?: Shop[];
 }): string {
-  const { worldName, nodes } = args;
+  const { worldName, nodes, shops } = args;
   const language = args.language ?? "zh";
 
   // 仅包含所有 NPC 共享的世界规则 + 地图 + 语言指令，100% 字节一致 → 跨角色 prompt cache 完全命中。
   const lines: string[] = [worldRules(), "", `你身处的世界：${worldName}。`];
   lines.push("", languageInstruction(language));
-  const mapGraph = describeMapGraph(nodes);
+  const mapGraph = describeMapGraph(nodes, shops);
   if (mapGraph) lines.push("", mapGraph);
   lines.push("", decisionPriorityAndRules());
   return lines.join("\n");
@@ -1700,8 +1726,10 @@ export function buildUserPrompt(args: {
   nodes: MapNode[];
   activeEventDefs?: import("../domain/events").GlobalEventDef[];
   upcomingNotebookText?: string;
+  shops?: Shop[];
+  itemDefs?: Map<string, ItemDefinition>;
 }): string {
-  const { character, here, companions, perceived, options, tick, epoch, facts, allCharacters, nodes, activeEventDefs, upcomingNotebookText } = args;
+  const { character, here, companions, perceived, options, tick, epoch, facts, allCharacters, nodes, activeEventDefs, upcomingNotebookText, shops, itemDefs } = args;
   const language = args.language ?? "zh";
   const sleepWindow = character.sleepWindow ?? DEFAULT_SLEEP_WINDOW;
   const t = timeOfDay(tick, epoch, sleepWindow);
@@ -1754,7 +1782,24 @@ export function buildUserPrompt(args: {
   lines.push("");
 
   // 2. 当前位置（局部地图：仅一层）
-  lines.push(describeLocalMap(here, nodes, language));
+  lines.push(describeLocalMap(here, nodes, language, shops));
+  lines.push("");
+
+  // Shop info
+  if (shops && itemDefs) {
+    const shop = shops.find((s) => s.nodeId === here.id);
+    if (shop) {
+      lines.push(`你在【${here.name}】，这里可以购买：`);
+      for (const gid of shop.goods) {
+        const def = itemDefs.get(gid);
+        if (def) lines.push(`  - ${def.name}（$${def.value}）：${def.description ?? "无描述"}`);
+      }
+      const isOwner = shop.ownerCharacterId === character.id;
+      const isEmployee = shop.employeeCharacterId === character.id;
+      if (isOwner) lines.push(`（你是本店店主，工资：$${shop.salary}/次）`);
+      else if (isEmployee) lines.push(`（你在此工作，工资：$${shop.salary}/次）`);
+    }
+  }
   lines.push("");
 
   // 3. 生理状态（定性）
@@ -2096,17 +2141,6 @@ export function buildThinkPrompt(args: {
     lines.push(`- 社交：${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
 
-    if (self.shortTermGoal || self.longTermGoal) {
-      lines.push("你的目标：");
-      if (self.shortTermGoal) lines.push(`短期：${self.shortTermGoal.goal}`);
-      if (self.longTermGoal) lines.push(`长期：${self.longTermGoal.goal}`);
-      lines.push("");
-    }
-
-    if (self.liked) lines.push(`你喜欢：${self.liked}`);
-    if (self.disliked) lines.push(`你讨厌：${self.disliked}`);
-    if (self.liked || self.disliked) lines.push("");
-
     if (shortMemories) {
       lines.push("你的近期记忆：");
       lines.push(shortMemories);
@@ -2138,13 +2172,6 @@ export function buildThinkPrompt(args: {
     lines.push(`- Stress: ${emoWord(self.emotion.stress, STRESS_WORDS)}`);
     lines.push(`- Social: ${emoWord(self.emotion.social_satiety, SOCIAL_WORDS)}`);
     lines.push("");
-
-    if (self.shortTermGoal || self.longTermGoal) {
-      lines.push("Your goals:");
-      if (self.shortTermGoal) lines.push(`Short-term: ${self.shortTermGoal.goal}`);
-      if (self.longTermGoal) lines.push(`Long-term: ${self.longTermGoal.goal}`);
-      lines.push("");
-    }
 
     if (shortMemories) {
       lines.push("Your recent memories:");

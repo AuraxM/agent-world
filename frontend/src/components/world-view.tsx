@@ -124,7 +124,7 @@ export function WorldView() {
 
         {/* Profile slide-in overlay */}
         <div
-          className={`absolute inset-y-0 right-0 w-[60%] bg-black/85 backdrop-blur-2xl border-l border-white/10 shadow-[-4px_0_24px_rgba(0,0,0,0.4)] transition-transform duration-[250ms] ease z-20 ${
+          className={`absolute inset-y-0 right-0 w-[33%] bg-black/85 backdrop-blur-2xl border-l border-white/10 shadow-[-4px_0_24px_rgba(0,0,0,0.4)] transition-transform duration-[250ms] ease z-20 ${
             profileId ? "translate-x-0" : "translate-x-full"
           }`}
         >

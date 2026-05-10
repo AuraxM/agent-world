@@ -283,6 +283,16 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
               }
             }
           }
+          // Opposite direction: actor receives positive adjustMoney but it's meant for target
+          if (sc.kind === "adjustMoney" && sc.amount > 0 && sc.targetCharacterId) {
+            const target = charById.get(sc.targetCharacterId);
+            if (target) {
+              target.money += sc.amount;
+              recordTransaction(worldId, tick, target.id, sc.amount, "income", sc.reason);
+            }
+            // Reverse the credit from actor (since applyStateChange added it to actor already)
+            actor.money -= sc.amount;
+          }
         }
       }
 

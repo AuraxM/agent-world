@@ -4,7 +4,7 @@
 import { db, schema } from "../db/index";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { TICKS_PER_HOUR } from "../domain/index";
-import type { Character, EconomicSnapshot, Transaction } from "../domain/index";
+import type { Character, EconomicSnapshot, ItemDefinition, Shop, StateChange, Transaction } from "../domain/index";
 import type { EconomyConfig } from "../config/index";
 import { createLogger } from "../shared/index";
 const log = createLogger("economy");
@@ -162,4 +162,91 @@ export function transferMoney(
     `给 ${toChar.name} 转账`, toChar.id);
   recordTransaction(worldId, tick, toChar.id, actual, "transfer_in",
     `收到 ${fromChar.name} 转账`, fromChar.id);
+}
+
+/**
+ * Process item purchase from a shop. Returns state changes including
+ * adjustMoney (deduction) + addItem. If buyer is the shop owner, money
+ * flows back (net zero). If buyer is not owner, a separate adjustMoney
+ * with targetCharacterId credits the owner.
+ */
+export function buyItems(
+  worldId: string,
+  tick: number,
+  buyer: Character,
+  shop: Shop,
+  itemDef: ItemDefinition,
+  count: number,
+): StateChange[] {
+  const total = itemDef.value * count;
+  if (!canAfford(buyer, total)) {
+    throw new Error(`${buyer.name} cannot afford ${total} (has ${buyer.money})`);
+  }
+
+  const changes: StateChange[] = [];
+
+  if (buyer.id === shop.ownerCharacterId) {
+    // Owner buying from own shop: net zero, just record transactions
+    changes.push({ kind: "adjustMoney", amount: -total, reason: `buy ${itemDef.id} x${count}` });
+    changes.push({ kind: "adjustMoney", amount: total, reason: "shop_owner_rebate" });
+    recordTransaction(worldId, tick, buyer.id, -total, "expense",
+      `在店铺购买 ${itemDef.name} x${count}`);
+    recordTransaction(worldId, tick, buyer.id, total, "shop_sale",
+      `店铺自营销售 ${itemDef.name} x${count}`);
+  } else {
+    // Regular purchase: buyer pays, owner earns
+    changes.push({ kind: "adjustMoney", amount: -total, reason: `buy ${itemDef.id} x${count}` });
+    recordTransaction(worldId, tick, buyer.id, -total, "expense",
+      `在店铺购买 ${itemDef.name} x${count}`);
+    // Credit owner via cross-character transfer
+    changes.push({
+      kind: "adjustMoney",
+      amount: total,
+      reason: `shop_sale ${itemDef.id} to ${buyer.id}`,
+      targetCharacterId: shop.ownerCharacterId,
+    });
+    recordTransaction(worldId, tick, shop.ownerCharacterId, total, "shop_sale",
+      `销售 ${itemDef.name} x${count} 给 ${buyer.name}`, buyer.id);
+  }
+
+  // Add items
+  for (let i = 0; i < count; i++) {
+    changes.push({ kind: "addItem", itemDefId: itemDef.id, count: 1 });
+  }
+
+  return changes;
+}
+
+/** Pay salary for completing a work shift. */
+export function paySalary(
+  worldId: string,
+  tick: number,
+  character: Character,
+  shop: Shop,
+): StateChange[] {
+  recordTransaction(worldId, tick, character.id, shop.salary, "salary",
+    `${shop.id} 工资`);
+  return [{ kind: "adjustMoney", amount: shop.salary, reason: `salary ${shop.id}` }];
+}
+
+/** Check if character has employment at the given shop. */
+export function canWorkAt(character: Character, shop: Shop): boolean {
+  return shop.ownerCharacterId === character.id || shop.employeeCharacterId === character.id;
+}
+
+/** Find the shop employing this character (as owner or employee). */
+export function findEmployment(character: Character, shops: Shop[]): Shop | undefined {
+  return shops.find(
+    (s) => s.ownerCharacterId === character.id || s.employeeCharacterId === character.id
+  );
+}
+
+/** Find a shop at a given node. */
+export function findShopAtNode(nodeId: string, shops: Shop[]): Shop | undefined {
+  return shops.find((s) => s.nodeId === nodeId);
+}
+
+/** Find a shop by its id. */
+export function findShopById(shopId: string, shops: Shop[]): Shop | undefined {
+  return shops.find((s) => s.id === shopId);
 }

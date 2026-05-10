@@ -70,8 +70,18 @@ export default function LLMConfigPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="px-6 py-4 border-b border-white/10 bg-black/20 backdrop-blur-sm">
+      <div className="px-6 py-4 border-b border-white/10 bg-black/20 backdrop-blur-sm flex items-center justify-between">
         <h2 className="text-(--accent-strong) text-body-lg font-bold">LLM 配置</h2>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="px-5 py-1.5 text-xs cursor-pointer border border-(--accent-strong) text-(--accent-strong)
+                     bg-black/30 backdrop-blur-sm hover:bg-(--accent-strong) hover:text-black rounded
+                     transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {saving ? "保存中..." : "保存配置"}
+        </button>
       </div>
 
       <div className="flex-1 overflow-auto p-6 flex flex-col gap-5">
@@ -79,51 +89,51 @@ export default function LLMConfigPage() {
           <div className="text-white/50">加载中...</div>
         ) : (
           <>
-            {/* Provider list */}
-            <section className="pixel-frame bg-black/20 backdrop-blur-md border-white/10">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                <h3 className="text-(--accent-strong) text-sm font-bold">Provider 管理</h3>
+            {/* Provider cards */}
+            <div>
+              <div className="text-white/30 text-[10px] uppercase tracking-wider mb-3 px-1">
+                Provider 管理
               </div>
-              <div className="p-1">
+              <div className="flex flex-col gap-2.5">
                 {providers.map((p) => (
                   <div
                     key={p.id}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-(--frame)/50"
+                    className="flex items-center gap-3 px-5 py-3.5 bg-black/25 backdrop-blur-md border border-white/10 rounded-md"
                   >
                     <div
-                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: p.isActive ? "#4caf50" : "#5a4848" }}
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="text-(--text-on-frame) text-xs font-bold">{p.name}</div>
-                      <div className="text-(--text-on-frame-muted) text-[10px]">
+                      <div className="text-white/90 text-sm font-bold">{p.name}</div>
+                      <div className="text-white/40 text-[11px]">
                         {p.baseUrl} · {p.model}
                       </div>
                     </div>
                     {p.isActive && (
-                      <span className="text-[10px] text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
-                        Active
+                      <span className="text-[10px] text-green-300 bg-green-500/15 px-2 py-0.5 rounded-full">
+                        运行中
                       </span>
                     )}
                   </div>
                 ))}
               </div>
-            </section>
+            </div>
 
-            {/* Entry Thinking config */}
-            <section className="pixel-frame bg-black/20 backdrop-blur-md border-white/10">
-              <div className="px-4 py-3 border-b border-white/10">
-                <h3 className="text-(--accent-strong) text-sm font-bold">入口配置 & Thinking</h3>
+            {/* Entry config cards */}
+            <div>
+              <div className="text-white/30 text-[10px] uppercase tracking-wider mb-3 px-1">
+                入口配置 & Thinking
               </div>
-              <div>
+              <div className="flex flex-col gap-2.5">
                 {entries.map((entry) => (
                   <div
                     key={entry.entryName}
-                    className="flex items-center gap-4 px-3 py-2.5 border-b border-white/5 last:border-b-0"
+                    className="flex items-center gap-4 px-5 py-3.5 bg-black/25 backdrop-blur-md border border-white/10 rounded-md"
                   >
-                    <div className="flex-1 text-(--text-on-frame) text-xs">
-                      <code className="text-[11px]">{entry.entryName}</code>
-                      <span className="text-(--text-on-frame-muted) ml-2">
+                    <div className="flex-1 min-w-0">
+                      <code className="text-white/80 text-xs">{entry.entryName}</code>
+                      <span className="text-white/30 text-[11px] ml-2">
                         — {ENTRY_LABELS[entry.entryName] ?? ""}
                       </span>
                     </div>
@@ -132,42 +142,30 @@ export default function LLMConfigPage() {
                       onChange={(e) =>
                         handleEntryChange(entry.entryName, "providerId", e.target.value || null)
                       }
-                      className="text-xs bg-(--frame) text-(--text-on-frame) border border-(--border) rounded px-2 py-1 w-[150px]"
+                      className="text-xs bg-black/30 text-white/80 border border-white/10 rounded px-2.5 py-1.5 w-[150px]
+                                 backdrop-blur-sm outline-none focus:border-(--accent-strong)"
                     >
-                      <option value="">默认 (Active Provider)</option>
+                      <option value="">默认 (Active)</option>
                       {providers.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
                         </option>
                       ))}
                     </select>
-                    <label className="flex items-center gap-1.5 text-xs text-(--text-on-frame-muted) cursor-pointer whitespace-nowrap">
+                    <label className="flex items-center gap-1.5 text-xs text-white/50 cursor-pointer whitespace-nowrap select-none">
                       <input
                         type="checkbox"
                         checked={entry.thinkingEnabled}
                         onChange={(e) =>
                           handleEntryChange(entry.entryName, "thinkingEnabled", e.target.checked)
                         }
-                        className="accent-(--accent-strong)"
+                        className="accent-(--accent-strong) scale-110"
                       />
                       Thinking
                     </label>
                   </div>
                 ))}
               </div>
-            </section>
-
-            <div>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="px-6 py-2 text-sm cursor-pointer border border-(--accent-strong) text-(--accent-strong)
-                           bg-(--frame) hover:bg-(--accent-strong) hover:text-(--frame) rounded transition-colors
-                           disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saving ? "保存中..." : "保存配置"}
-              </button>
             </div>
           </>
         )}

@@ -80,15 +80,38 @@ export function EventGantt({
   const timelineRef = useRef<HTMLDivElement>(null);
   const namesRef = useRef<HTMLDivElement>(null);
 
-  const syncScroll = useCallback(() => {
+  const syncing = useRef(false);
+
+  // Cards → timeline + names
+  const syncFromCards = useCallback(() => {
+    if (syncing.current) return;
+    syncing.current = true;
     const cards = cardsRef.current;
-    if (!cards) return;
-    if (timelineRef.current) {
-      timelineRef.current.scrollLeft = cards.scrollLeft;
+    if (cards) {
+      if (timelineRef.current) timelineRef.current.scrollLeft = cards.scrollLeft;
+      if (namesRef.current) namesRef.current.scrollTop = cards.scrollTop;
     }
-    if (namesRef.current) {
-      namesRef.current.scrollTop = cards.scrollTop;
+    syncing.current = false;
+  }, []);
+
+  // Names → cards (vertical)
+  const syncFromNames = useCallback(() => {
+    if (syncing.current) return;
+    syncing.current = true;
+    if (cardsRef.current && namesRef.current) {
+      cardsRef.current.scrollTop = namesRef.current.scrollTop;
     }
+    syncing.current = false;
+  }, []);
+
+  // Timeline → cards (horizontal)
+  const syncFromTimeline = useCallback(() => {
+    if (syncing.current) return;
+    syncing.current = true;
+    if (cardsRef.current && timelineRef.current) {
+      cardsRef.current.scrollLeft = timelineRef.current.scrollLeft;
+    }
+    syncing.current = false;
   }, []);
 
   // Wheel handler: deltaY -> scrollLeft in the cards area
@@ -99,11 +122,6 @@ export function EventGantt({
     function handleWheel(e: WheelEvent) {
       if (!(e.target instanceof HTMLElement && el!.contains(e.target))) return;
       if (e.shiftKey) return;
-      // Left of name column = native vertical scroll
-      const rect = el!.getBoundingClientRect();
-      const mouseInNameCol = e.clientX < rect.left;
-      if (mouseInNameCol) return;
-      // Right side = card area → wheel Y → horizontal scroll
       e.preventDefault();
       el!.scrollLeft += e.deltaY;
     }
@@ -163,7 +181,8 @@ export function EventGantt({
           {/* Timeline — syncs horizontal scroll */}
           <div
             ref={timelineRef}
-            className="flex-1 overflow-hidden"
+            className="flex-1 overflow-x-auto overflow-y-hidden"
+            onScroll={syncFromTimeline}
           >
             <div style={{ width: contentWidth }}>
               <GanttTimeline startTick={startTick} endTick={endTick} epoch={epoch} />
@@ -176,7 +195,8 @@ export function EventGantt({
           {/* Name column — syncs vertical scroll */}
           <div
             ref={namesRef}
-            className="overflow-hidden flex-shrink-0"
+            className="overflow-y-auto overflow-x-hidden flex-shrink-0"
+            onScroll={syncFromNames}
             style={{ width: NAME_COL_WIDTH }}
           >
             {characters.map((c, i) => (
@@ -229,7 +249,7 @@ export function EventGantt({
             ref={cardsRef}
             className="flex-1"
             style={{ overflow: "auto" }}
-            onScroll={syncScroll}
+            onScroll={syncFromCards}
           >
             <div style={{ width: contentWidth }}>
               {characters.map((c, i) => (

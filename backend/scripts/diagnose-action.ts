@@ -430,6 +430,63 @@ function getAllCombinations(): Array<{ action: string; entry: string }> {
   return Object.values(PROFILES).map((p) => ({ action: p.action, entry: p.entry }));
 }
 
+async function runAll(cli: CliArgs): Promise<void> {
+  let combinations = getAllCombinations();
+  if (cli.entry) {
+    combinations = combinations.filter((c) => c.entry === cli.entry);
+  }
+  console.log(`\nRunning ${combinations.length} action+entry combinations...\n`);
+
+  const results: Array<{ action: string; entry: string; matched: boolean; elapsed: number; error?: string }> = [];
+
+  for (const { action, entry } of combinations) {
+    const entryProfile = getProfile(action, entry);
+    if (!entryProfile) {
+      results.push({ action, entry, matched: false, elapsed: 0, error: "profile not found" });
+      console.log(`💥 ${action}:${entry} — ERROR: profile not found`);
+      continue;
+    }
+
+    try {
+      const result = await dispatch(entryProfile, cli);
+      results.push({
+        action: result.action,
+        entry: result.entry,
+        matched: result.llmResult.matched,
+        elapsed: result.llmResult.elapsed,
+      });
+      const icon = result.llmResult.matched ? "🟢" : "🔴";
+      console.log(`${icon} ${action}:${entry} — ${result.llmResult.elapsed}ms → ${result.llmResult.chosenAction}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      results.push({ action, entry, matched: false, elapsed: 0, error: message });
+      console.log(`💥 ${action}:${entry} — ERROR: ${message}`);
+    }
+  }
+
+  // Print summary
+  const passCount = results.filter((r) => r.matched).length;
+  const failCount = results.filter((r) => !r.matched && !r.error).length;
+  const errorCount = results.filter((r) => r.error).length;
+
+  console.log(`\n${"=".repeat(70)}`);
+  console.log(`╡ 批量诊断完成 ╞`);
+  console.log(`${"=".repeat(70)}`);
+  console.log(`总计: ${results.length} 项`);
+  console.log(`🟢 通过: ${passCount}`);
+  console.log(`🔴 失败: ${failCount}`);
+  console.log(`💥 错误: ${errorCount}`);
+
+  if (failCount > 0 || errorCount > 0) {
+    console.log(`\n失败/错误详情:`);
+    for (const r of results) {
+      if (!r.matched) {
+        console.log(`  ${r.error ? "💥" : "🔴"} ${r.action}:${r.entry} — ${r.error ?? `LLM chose different action`}`);
+      }
+    }
+  }
+}
+
 // ═══════════════════════════════════════════════════════
 // State injection engine
 // ═══════════════════════════════════════════════════════
@@ -573,10 +630,10 @@ async function injectState(
     }
 
     return () => {
-      sqlite.exec("ROLLBACK TO diag_inject");
+      sqlite.exec("ROLLBACK TO diag_inject; RELEASE diag_inject");
     };
   } catch (err) {
-    sqlite.exec("ROLLBACK TO diag_inject");
+    sqlite.exec("ROLLBACK TO diag_inject; RELEASE diag_inject");
     throw err;
   }
 }
@@ -1266,23 +1323,26 @@ async function main() {
   await init(cli);
 
   if (cli.all) {
-    console.log(`Running ${getAllCombinations().length} action+entry combinations...`);
-    console.log("--all mode not yet implemented");
-  } else {
-    const entryProfile = getProfile(cli.action!, cli.entry!);
-    if (!entryProfile) {
-      console.error(`Error: No profile for action="${cli.action}" entry="${cli.entry}"`);
-      console.error("Available combinations:");
-      for (const key of Object.keys(PROFILES).sort()) {
-        console.error(`  ${key}`);
-      }
-      process.exit(1);
-    }
-
-    console.log(`Testing: ${cli.action} @ ${cli.entry}`);
-    const result = await dispatch(entryProfile, cli);
-    printReport(result, cli.verbose);
+    await runAll(cli);
+    return;
   }
+
+  console.log(`\n═══ LLM Action Diagnostic Tool ═══`);
+  console.log(`Action: ${cli.action} | Entry: ${cli.entry}`);
+
+  const entryProfile = getProfile(cli.action!, cli.entry!);
+  if (!entryProfile) {
+    console.error(`Error: No profile for action="${cli.action}" entry="${cli.entry}"`);
+    console.error("Available combinations:");
+    for (const key of Object.keys(PROFILES).sort()) {
+      console.error(`  ${key}`);
+    }
+    process.exit(1);
+  }
+
+  console.log(`Testing: ${cli.action} @ ${cli.entry}`);
+  const result = await dispatch(entryProfile, cli);
+  printReport(result, cli.verbose);
 }
 
 main().catch((err) => {

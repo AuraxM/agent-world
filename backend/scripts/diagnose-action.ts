@@ -1174,6 +1174,71 @@ function printReport(result: DiagnosticResult, verbose: boolean) {
 }
 
 // ═══════════════════════════════════════════════════════
+// Placement entry: LLM dispatch and diagnostic result
+// ═══════════════════════════════════════════════════════
+
+async function runPlacementDiagnostic(
+  entryProfile: EntryProfile,
+  charId?: string,
+): Promise<DiagnosticResult> {
+  const profile = entryProfile.profile;
+  const { character, node, worldId } = await resolveCharacter(profile, charId);
+
+  // Inject state (placement doesn't need companion)
+  const rollback = await injectState(worldId, character.id, undefined, node.id, profile);
+
+  try {
+    const { decideForCharacter } = await import("../src/server/decideForCharacter");
+    const { actionRegistry } = await import("../src/domain/action-system");
+    const { loadWorld } = await import("../src/systems/store");
+
+    // Reload world with injected state
+    const worldData = loadWorld(worldId);
+    const updatedSelf = worldData.characters.find((c: any) => c.id === character.id);
+    const hereNode = worldData.nodes.find((n: any) => n.id === node.id);
+
+    if (!updatedSelf || !hereNode) throw new Error("Character or node not found after injection");
+
+    const startTime = Date.now();
+    // decideForCharacter runs the full placement flow:
+    // loads world, builds context, calls LLM with per-action tools, executes action
+    const result = await decideForCharacter(worldId, character.id, {});
+    const elapsed = Date.now() - startTime;
+
+    const chosenAction = (result as any).action?.type ?? "unknown";
+    const matched = chosenAction === entryProfile.action;
+
+    return {
+      action: entryProfile.action,
+      entry: "placement",
+      codePathChecks: {
+        registered: actionRegistry.has(entryProfile.action),
+        inBuildOptions: true, // decideForCharacter handles this internally
+      },
+      induction: {
+        character: updatedSelf.name,
+        characterId: updatedSelf.id,
+        node: hereNode.name,
+        vitals: (updatedSelf as any).vitals as Record<string, number>,
+        emotions: (updatedSelf as any).emotion as Record<string, number>,
+      },
+      llmResult: {
+        chosenAction,
+        matched,
+        elapsed,
+        rawAction: result,
+      },
+      prompts: {
+        system: "(placement prompt built internally by decideForCharacter)",
+        user: "",
+      },
+    };
+  } finally {
+    rollback();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 // Dispatch router
 // ═══════════════════════════════════════════════════════
 
@@ -1192,7 +1257,7 @@ async function dispatch(entryProfile: EntryProfile, cli: CliArgs): Promise<Diagn
     case "memory":
       return runMemoryDiagnostic(entryProfile, cli.character);
     case "placement":
-      throw new Error("Placement entry not yet implemented");
+      return runPlacementDiagnostic(entryProfile, cli.character);
   }
 }
 

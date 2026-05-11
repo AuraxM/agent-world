@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env tsx
 /**
  * LLM Action Diagnostic Tool
  *
@@ -40,6 +40,15 @@ Examples:
   npx tsx scripts/diagnose-action.ts --action kiss --entry dialog
   npx tsx scripts/diagnose-action.ts --all --entry decide`;
 
+function validateTimeout(raw: string | undefined): number {
+  const timeoutRaw = parseInt(raw ?? "60000", 10);
+  if (isNaN(timeoutRaw) || timeoutRaw <= 0) {
+    console.error(`Error: --timeout must be a positive number, got "${raw}"`);
+    process.exit(1);
+  }
+  return timeoutRaw;
+}
+
 function parseCli(): CliArgs {
   const { values } = parseArgs({
     options: {
@@ -73,7 +82,7 @@ function parseCli(): CliArgs {
     character: values.character,
     scene: values.scene,
     provider: values.provider,
-    timeout: parseInt(values.timeout ?? "60000", 10),
+    timeout: validateTimeout(values.timeout),
     all: values.all,
     verbose: values.verbose,
   };

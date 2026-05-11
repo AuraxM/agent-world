@@ -18,6 +18,7 @@ import path from "node:path";
 import { z } from "zod";
 import {
   CharacterTemplateSchema,
+  ItemDefinitionSchema,
   ManifestSchema,
   MapConfigSchema,
   ShopDefinitionSchema,
@@ -28,7 +29,7 @@ function fail(msg: string): never {
   process.exit(1);
 }
 
-type Kind = "map" | "character" | "manifest" | "shops" | "unknown";
+type Kind = "map" | "character" | "manifest" | "shops" | "items" | "unknown";
 
 function inferKind(filePath: string): Kind {
   const norm = filePath.replace(/\\/g, "/");
@@ -47,6 +48,12 @@ function inferKind(filePath: string): Kind {
     /^shops\.json$/i.test(base)
   ) {
     return "shops";
+  }
+  if (
+    base === "items.json" ||
+    /^items\.json$/i.test(base)
+  ) {
+    return "items";
   }
   if (
     /\/scenes\//.test(norm) ||
@@ -72,6 +79,7 @@ function main(): void {
   }
 
   const ShopsArraySchema = z.array(ShopDefinitionSchema);
+  const ItemsArraySchema = z.array(ItemDefinitionSchema);
 
   const kind = inferKind(arg);
   const schemas =
@@ -81,21 +89,23 @@ function main(): void {
         ? [{ name: "MapConfigSchema", schema: MapConfigSchema }]
         : kind === "shops"
           ? [{ name: "ShopsArraySchema", schema: ShopsArraySchema }]
-          : kind === "character"
-            ? [
-                {
-                  name: "CharacterTemplateSchema",
-                  schema: CharacterTemplateSchema,
-                },
-              ]
-            : [
-                { name: "ManifestSchema", schema: ManifestSchema },
-                { name: "MapConfigSchema", schema: MapConfigSchema },
-                {
-                  name: "CharacterTemplateSchema",
-                  schema: CharacterTemplateSchema,
-                },
-              ];
+          : kind === "items"
+            ? [{ name: "ItemsArraySchema", schema: ItemsArraySchema }]
+            : kind === "character"
+              ? [
+                  {
+                    name: "CharacterTemplateSchema",
+                    schema: CharacterTemplateSchema,
+                  },
+                ]
+              : [
+                  { name: "ManifestSchema", schema: ManifestSchema },
+                  { name: "MapConfigSchema", schema: MapConfigSchema },
+                  {
+                    name: "CharacterTemplateSchema",
+                    schema: CharacterTemplateSchema,
+                  },
+                ];
 
   for (const { name, schema } of schemas) {
     const r = schema.safeParse(json);
@@ -113,7 +123,7 @@ function main(): void {
     }
   }
   console.error(
-    `✗ ${arg} matches none of ManifestSchema / MapConfigSchema / ShopsArraySchema / CharacterTemplateSchema`,
+    `✗ ${arg} matches none of ManifestSchema / MapConfigSchema / ShopsArraySchema / ItemsArraySchema / CharacterTemplateSchema`,
   );
   console.error(
     "tip: place the file under backend/scenes/<scene-id>/, or use a recognizable filename (manifest.json / map.json / shops.json / char-*.json).",

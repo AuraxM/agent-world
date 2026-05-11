@@ -82,3 +82,13 @@ export type EventSource = (typeof EVENT_SOURCES)[number];
 
 /** 1 游戏小时 = 5 ticks。移动 1 步消耗 1 tick。 */
 export const TICKS_PER_HOUR = 5;
+
+/** 记忆容量上限 */
+export const MEMORY_CAPACITY = {
+  short: 60,
+  daily: 20,
+  weekly: 5,
+} as const;
+
+/** short memory 达到该阈值时触发强制 Think */
+export const SHORT_MEMORY_THINK_THRESHOLD = 55;

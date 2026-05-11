@@ -418,12 +418,14 @@ export async function tick(
         tick: fromTick,
         importance: 3,
         content: `我和 ${partner.name} 一起到达了 ${destName}。`,
+        layer: "short",
       });
       partner.shortMemory.push({
         id: `mem-${randomUUID().slice(0, 8)}`,
         tick: fromTick,
         importance: 3,
         content: `我和 ${c.name} 一起到达了 ${destName}。`,
+        layer: "short",
       });
 
       allEvents.push({
@@ -539,6 +541,7 @@ export async function tick(
                 tick: fromTick,
                 importance: 4,
                 content: outcome.memory,
+                layer: "short",
               });
             }
           } else {
@@ -548,6 +551,7 @@ export async function tick(
               tick: fromTick,
               importance: 4,
               content: `${desc}被「${interrupt.description}」打断。`,
+              layer: "short",
             });
           }
 
@@ -641,6 +645,7 @@ export async function tick(
               tick: fromTick,
               importance: 3,
               content: outcome.memory,
+              layer: "short",
             });
             if (outcome.stateChanges) {
               for (const sc of outcome.stateChanges) {
@@ -917,6 +922,7 @@ export async function tick(
             tick: fromTick,
             importance: 3,
             content: `我沉思了一番：${result.summary}`,
+            layer: "short",
           });
           ts.summary = result.summary;
           ts.status = "ended";
@@ -1169,6 +1175,7 @@ export async function tick(
           tick: fromTick,
           importance: 3,
           content: `我沉思了一番：${result.summary}`,
+          layer: "short",
         });
         ts.summary = result.summary;
         ts.status = "ended";

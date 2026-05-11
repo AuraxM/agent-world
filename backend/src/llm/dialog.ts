@@ -262,6 +262,7 @@ function makeMemory(characterId: string, tick: number, importance: number, conte
       tick,
       importance: importance as Memory["importance"],
       content,
+      layer: "short",
     },
   };
 }
@@ -524,10 +525,12 @@ function executeDialogueAction(
         pushMemo(actor, {
           id: `mem-${randomUUID().slice(0, 8)}`, tick, importance: 3,
           content: `我和 ${target.name} 一起到达了 ${destName}。`,
+          layer: "short",
         });
         pushMemo(target, {
           id: `mem-${randomUUID().slice(0, 8)}`, tick, importance: 3,
           content: `我和 ${actor.name} 一起到达了 ${destName}。`,
+          layer: "short",
         });
         return `${actor.name} 和 ${target.name} 结伴到达了 ${destName}。`;
       }
@@ -538,10 +541,12 @@ function executeDialogueAction(
       pushMemo(actor, {
         id: `mem-${randomUUID().slice(0, 8)}`, tick, importance: 3,
         content: `我和 ${target.name} 开始结伴前往 ${destName}。${reason}`,
+        layer: "short",
       });
       pushMemo(target, {
         id: `mem-${randomUUID().slice(0, 8)}`, tick, importance: 3,
         content: `我和 ${actor.name} 开始结伴前往 ${destName}。${reason}`,
+        layer: "short",
       });
 
       return `${actor.name} 和 ${target.name} 开始结伴前往 ${destName}。`;
@@ -575,6 +580,7 @@ function executeDialogueAction(
       tick,
       importance: 3,
       content: outcome.memory,
+      layer: "short",
     });
     if (outcome.targetMemory) {
       pushMemo(target, {
@@ -582,6 +588,7 @@ function executeDialogueAction(
         tick,
         importance: 3,
         content: outcome.targetMemory,
+        layer: "short",
       });
     }
     return outcome.dialogRecord;

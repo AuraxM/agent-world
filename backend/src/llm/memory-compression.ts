@@ -73,6 +73,7 @@ export async function compressSleepMemories(
     tick: currentTick,
     importance: 3,
     content: dailySummary,
+    layer: "daily",
   };
   character.dailyMemory.push(dailyMemory);
 
@@ -92,6 +93,7 @@ export async function compressSleepMemories(
         tick: currentTick,
         importance: 4,
         content: weeklySummary,
+        layer: "weekly",
       };
       character.longMemory.push(weeklyMemory);
 

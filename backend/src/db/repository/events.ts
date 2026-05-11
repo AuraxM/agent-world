@@ -1,4 +1,4 @@
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { db, schema } from "../client";
 import type { WorldEvent } from "../../domain/index";
 
@@ -20,6 +20,21 @@ export function appendEvents(worldId: string, events: WorldEvent[]): void {
 export function findEventsSince(worldId: string, sinceTick: number): WorldEvent[] {
   return db.select().from(schema.eventsLog)
     .where(and(eq(schema.eventsLog.worldId, worldId), gte(schema.eventsLog.tick, sinceTick)))
+    .orderBy(desc(schema.eventsLog.tick)).all()
+    .map((r) => JSON.parse(r.payloadJson) as WorldEvent);
+}
+
+export function findEventsInRange(
+  worldId: string,
+  since: number,
+  until: number,
+): WorldEvent[] {
+  return db.select().from(schema.eventsLog)
+    .where(and(
+      eq(schema.eventsLog.worldId, worldId),
+      gte(schema.eventsLog.tick, since),
+      lte(schema.eventsLog.tick, until),
+    ))
     .orderBy(desc(schema.eventsLog.tick)).all()
     .map((r) => JSON.parse(r.payloadJson) as WorldEvent);
 }

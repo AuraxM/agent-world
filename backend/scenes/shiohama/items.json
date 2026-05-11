@@ -1,0 +1,74 @@
+[
+  {
+    "id": "dried-fish",
+    "name": "一夜干し竹荚鱼",
+    "description": "佐藤家加工场风干了一夜的竹荚鱼。肉质紧实，咸味刚好，稍微烤一下就是绝佳的下酒菜。",
+    "value": 15,
+    "consumable": true,
+    "effects": { "vitals": { "hunger": 16 } }
+  },
+  {
+    "id": "fish-bento",
+    "name": "潮浜海鲜便当",
+    "description": "用当天渔获做的便当。米饭上铺着烤鱼、鸡蛋烧和渍菜，分量扎实。",
+    "value": 25,
+    "consumable": true,
+    "effects": { "vitals": { "hunger": 16 } }
+  },
+  {
+    "id": "shiohama-bread",
+    "name": "盐味海藻面包",
+    "description": "小麦堂的招牌面包。用潮浜近海采的海藻和本地粗盐，外脆里软，有淡淡的海潮味。",
+    "value": 12,
+    "consumable": true,
+    "effects": { "vitals": { "hunger": 16 } }
+  },
+  {
+    "id": "coffee-milk",
+    "name": "渔火特调咖啡牛奶",
+    "description": "渔火咖啡馆的招牌。深烘咖啡兑冰牛奶，一比一。海在东京学会的配方。杯壁凝着水珠，喝一口心情会短暂地好起来。",
+    "value": 10,
+    "consumable": true,
+    "effects": { "emotion": { "mood": 1 } }
+  },
+  {
+    "id": "miso-soup",
+    "name": "鱼骨味噌汤",
+    "description": "用早上卖剩的鱼骨熬的味噌汤。加了海带和豆腐，热腾腾的一碗下去胃就暖了。",
+    "value": 8,
+    "consumable": true,
+    "effects": { "vitals": { "hunger": 3 } }
+  },
+  {
+    "id": "towel-set",
+    "name": "潮浜毛巾",
+    "description": "印着灯塔图案的白棉毛巾。山の汤钱汤也在用同款——洗完澡用它擦脸，吸水性很好。",
+    "value": 20,
+    "consumable": true,
+    "effects": { "vitals": { "hygiene": 16 } }
+  },
+  {
+    "id": "lighthouse-postcard",
+    "name": "灯塔明信片",
+    "description": "潮浜灯塔的摄影明信片，夕阳时分拍的，灯塔的轮廓剪影在橘子色的天空上。寄给远方的人刚好。",
+    "value": 8,
+    "consumable": false,
+    "effects": {}
+  },
+  {
+    "id": "omamori",
+    "name": "潮见神社御守",
+    "description": "潮见神社的交通安全御守，锦袋上绣着海浪纹。据做过的人说很灵——虽然也许只是心理作用。",
+    "value": 30,
+    "consumable": true,
+    "effects": { "emotion": { "mood": 2 } }
+  },
+  {
+    "id": "salted-caramel",
+    "name": "海盐焦糖",
+    "description": "明里自己熬的焦糖，撒了潮浜的粗盐。甜和咸同时炸开，一小颗就能让嘴巴不寂寞。",
+    "value": 6,
+    "consumable": true,
+    "effects": { "emotion": { "mood": 1 } }
+  }
+]

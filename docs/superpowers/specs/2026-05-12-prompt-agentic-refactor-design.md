@@ -133,10 +133,21 @@
 
 旧的 `llmAcceptDecide` 被去掉。当有人发起 chat 邀请时：
 
-- 邀请作为 pending event 出现在 `read_events` 或 `read_state` 中
+- 邀请作为待处理项出现在 `read_state` 中
 - Decide Agent 在 ReAct 过程中发现邀请，决定接受或忽略
 - 接受 → `write_decision` 选择 chat action
 - 忽略 → 不选 chat 即可，邀请者会在下个 tick 收到拒绝信号
+
+### 并发约束
+
+一个角色同一时刻最多只能有一场活跃对话。规则：
+
+1. **已有对话时**：新邀请自动被拒绝，后端在 tick 开始阶段直接过滤，不进入 Agent
+2. **无对话时**：同 tick 内可能收到多个邀请，所有待处理的邀请列在 `read_state` 中
+3. **Agent 的选择**：Decide Agent 最多选择一个邀请接受（`write_decision` 选 chat），其余自动视为拒绝
+4. **无 response 超时**：若邀请方在下个 tick 未收到任何 response（对方没选 chat 也没拒绝），系统自动发送拒绝信号
+
+简言之：后端保证"已有对话 → 不接受新邀请"，Agent 保证"多邀请 → 只选一个"。
 
 ---
 

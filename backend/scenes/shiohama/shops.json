@@ -1,0 +1,38 @@
+[
+  {
+    "nodeId": "zakkaya",
+    "ownerCharacterId": "char-kimura-yasuhei",
+    "goods": ["dried-fish", "towel-set", "lighthouse-postcard"],
+    "salary": 50
+  },
+  {
+    "nodeId": "bakery",
+    "ownerCharacterId": "char-yamada-akari",
+    "goods": ["shiohama-bread", "salted-caramel", "coffee-milk"],
+    "salary": 45
+  },
+  {
+    "nodeId": "cafe",
+    "ownerCharacterId": "char-ito-umi",
+    "goods": ["coffee-milk", "fish-bento", "miso-soup"],
+    "salary": 40
+  },
+  {
+    "nodeId": "sento",
+    "ownerCharacterId": "char-takahashi-matsuko",
+    "goods": ["towel-set", "coffee-milk"],
+    "salary": 35
+  },
+  {
+    "nodeId": "asamizu-market",
+    "ownerCharacterId": "char-sato-mayumi",
+    "goods": ["dried-fish", "fish-bento", "miso-soup"],
+    "salary": 45
+  },
+  {
+    "nodeId": "drying-workshop",
+    "ownerCharacterId": "char-sato-genji",
+    "goods": ["dried-fish", "fish-bento"],
+    "salary": 40
+  }
+]

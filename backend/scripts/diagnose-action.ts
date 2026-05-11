@@ -377,6 +377,149 @@ function getAllCombinations(): Array<{ action: string; entry: string }> {
   return Object.values(PROFILES).map((p) => ({ action: p.action, entry: p.entry }));
 }
 
+// ═══════════════════════════════════════════════════════
+// State injection engine
+// ═══════════════════════════════════════════════════════
+
+async function resolveCharacter(
+  profile: InductionProfile,
+  preferredCharId?: string,
+): Promise<{
+  character: { id: string; name: string; locationId: string; vitalsJson: string; emotionJson: string; money: number; inventoryJson: string };
+  node: { id: string; name: string; tagsJson: string; privacy: string };
+  companion?: { id: string; name: string };
+  worldId: string;
+}> {
+  const { db } = await import("../src/db/index");
+  const { worlds, characters, nodes } = await import("../src/db/schema");
+  const { eq } = await import("drizzle-orm");
+
+  const [world] = await db.select().from(worlds).limit(1);
+  if (!world) throw new Error("No world in DB");
+
+  const allChars = await db.select().from(characters).where(eq(characters.worldId, world.id));
+  const allNodes = await db.select().from(nodes).where(eq(nodes.worldId, world.id));
+
+  let char: typeof allChars[number];
+  if (preferredCharId) {
+    const found = allChars.find((c) => c.id === preferredCharId);
+    if (!found) throw new Error(`Character ${preferredCharId} not found`);
+    char = found;
+  } else {
+    char = allChars[0];
+  }
+
+  let node: typeof allNodes[number] | undefined;
+  if (profile.locationTag) {
+    node = allNodes.find((n) => {
+      const tags: string[] = JSON.parse(n.tagsJson);
+      return tags.includes(profile.locationTag!);
+    });
+    if (!node) throw new Error(`No node found with tag "${profile.locationTag}"`);
+  } else if (profile.locationPrivacy) {
+    node = allNodes.find((n) => n.privacy === profile.locationPrivacy);
+    if (!node) throw new Error(`No node found with privacy "${profile.locationPrivacy}"`);
+  } else {
+    node = allNodes.find((n) => n.id === char.locationId) ?? allNodes[0];
+  }
+
+  let companion: typeof allChars[number] | undefined;
+  if (profile.companionFilter) {
+    companion = allChars.find((c) => c.id !== char.id);
+    if (!companion) throw new Error("No companion available (need at least 2 characters)");
+  }
+
+  return {
+    character: {
+      id: char.id,
+      name: char.name,
+      locationId: char.locationId,
+      vitalsJson: char.vitalsJson,
+      emotionJson: char.emotionJson,
+      money: char.money,
+      inventoryJson: char.inventoryJson,
+    },
+    node: {
+      id: node.id,
+      name: node.name,
+      tagsJson: node.tagsJson,
+      privacy: node.privacy,
+    },
+    companion: companion ? { id: companion.id, name: companion.name } : undefined,
+    worldId: world.id,
+  };
+}
+
+async function getRawSqlite() {
+  const dbModule = await import("../src/db/index");
+  const drizzleDb = dbModule.db;
+  return (drizzleDb as unknown as { $client: { run: (sql: string) => void; exec: (sql: string) => void } }).$client;
+}
+
+async function injectState(
+  worldId: string,
+  charId: string,
+  companionId: string | undefined,
+  nodeId: string,
+  profile: InductionProfile,
+): Promise<() => void> {
+  const { db } = await import("../src/db/index");
+  const { characters } = await import("../src/db/schema");
+  const { eq, and } = await import("drizzle-orm");
+
+  const sqlite = await getRawSqlite();
+  sqlite.exec("SAVEPOINT diag_inject");
+
+  const orig = await db
+    .select({
+      vitalsJson: characters.vitalsJson,
+      emotionJson: characters.emotionJson,
+      locationId: characters.locationId,
+      money: characters.money,
+      inventoryJson: characters.inventoryJson,
+    })
+    .from(characters)
+    .where(and(eq(characters.worldId, worldId), eq(characters.id, charId)))
+    .then((r) => r[0]);
+
+  const vitals = {
+    hunger: 0,
+    fatigue: 0,
+    hygiene: 0,
+    ...(profile.vitals ?? {}),
+  };
+  const rawEmotions = profile.emotions ?? {};
+  const emotions = {
+    mood: rawEmotions.mood ?? 0,
+    stress: rawEmotions.stress ?? 0,
+    social_satiety: rawEmotions.socialSatiety ?? 0,
+  };
+
+  await db
+    .update(characters)
+    .set({
+      vitalsJson: JSON.stringify(vitals),
+      emotionJson: JSON.stringify(emotions),
+      locationId: nodeId,
+      money: profile.money ?? orig?.money ?? 100,
+      inventoryJson: profile.inventory
+        ? JSON.stringify(profile.inventory)
+        : orig?.inventoryJson ?? "[]",
+    })
+    .where(and(eq(characters.worldId, worldId), eq(characters.id, charId)));
+
+  if (companionId) {
+    await db
+      .update(characters)
+      .set({ locationId: nodeId })
+      .where(and(eq(characters.worldId, worldId), eq(characters.id, companionId)));
+  }
+
+  return () => {
+    sqlite.exec("ROLLBACK TO diag_inject");
+  };
+}
+
 async function main() {
   const cli = parseCli();
   await init(cli);
@@ -394,12 +537,45 @@ async function main() {
       }
       process.exit(1);
     }
-    console.log(`Action: ${cli.action}, Entry: ${cli.entry}`);
-    console.log(`Profile found: ${JSON.stringify(profile.profile, null, 2)}`);
-    if (profile.dialogueHistory) {
-      console.log(`Dialogue history: ${profile.dialogueHistory.length} lines`);
+
+    const resolved = await resolveCharacter(profile.profile, cli.character);
+    console.log(`Character: ${resolved.character.name} (${resolved.character.id})`);
+    console.log(`Node: ${resolved.node.name} (${resolved.node.id})`);
+    if (resolved.companion) {
+      console.log(`Companion: ${resolved.companion.name} (${resolved.companion.id})`);
     }
-    console.log("Diagnostic dispatch not yet implemented");
+
+    const rollback = await injectState(
+      resolved.worldId,
+      resolved.character.id,
+      resolved.companion?.id,
+      resolved.node.id,
+      profile.profile,
+    );
+
+    try {
+      const { db } = await import("../src/db/index");
+      const { characters } = await import("../src/db/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const updated = await db
+        .select({
+          vitalsJson: characters.vitalsJson,
+          emotionJson: characters.emotionJson,
+          locationId: characters.locationId,
+        })
+        .from(characters)
+        .where(and(eq(characters.worldId, resolved.worldId), eq(characters.id, resolved.character.id)))
+        .then((r) => r[0]);
+
+      console.log(`Injected vitals: ${updated?.vitalsJson}`);
+      console.log(`Injected emotions: ${updated?.emotionJson}`);
+      console.log(`Injected location: ${updated?.locationId}`);
+      console.log("State injection verified -- rollback will restore original state.");
+      console.log("Diagnostic dispatch not yet implemented");
+    } finally {
+      rollback();
+      console.log("State rolled back.");
+    }
   }
 }
 

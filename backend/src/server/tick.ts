@@ -24,8 +24,6 @@ import {
   type Action,
   type Character,
   type MapNode,
-  type ThinkSession,
-  type ThinkTurn,
   type WorldEvent,
 } from "../domain/index";
 import {
@@ -70,29 +68,21 @@ import { updateShopEmployment } from "../db/index";
 import {
   llmDecide,
   llmAcceptDecide,
-  llmDialogTurn,
   llmDialogSummarize,
-  llmDialogPersonalMemory,
   llmSalvageDecide,
-  llmThink,
   runDialogPhase,
   loadConversations,
   saveConversation,
   deleteConversation,
-  loadThinkSessions,
-  saveThinkSession,
-  deleteThinkSession,
-  compressSleepMemories,
-  injectThinkTimeMessage,
   DEFAULT_SLEEP_WINDOW,
   inSleepWindow,
   timeOfDay,
   type DecideFn,
   type DecideInput,
 } from "../llm/index";
+import { runThinkAgent, shouldForceThink } from "../llm/think";
 
 const FACTS_LOOKBACK_TICKS = 48 * TICKS_PER_HOUR;
-const THINK_TURNS_PER_TICK = 3;
 
 function emptyFacts(): import("../domain/index").AggregatedFacts {
   return {
@@ -354,20 +344,6 @@ export async function tick(
     }
   }
 
-  // Load ongoing think sessions
-  const ongoingThinkSessions = loadThinkSessions(worldId);
-
-  // Lock characters in active think sessions
-  for (const ts of ongoingThinkSessions) {
-    if (ts.status !== "ended") {
-      lockedCharacterIds.add(ts.characterId);
-      const thinker = characters.find((c) => c.id === ts.characterId);
-      if (thinker && !thinker.activeConversationIds.includes(ts.id)) {
-        thinker.activeConversationIds.push(ts.id);
-      }
-    }
-  }
-
   // ── travel_together: auto-step synchronised movement for paired characters ──
   const travelProcessed = new Set<string>();
   const travelArrivedThisTick = new Set<string>();
@@ -447,13 +423,12 @@ export async function tick(
   // 6. 角色决策（并发）
   const actionsForExecution: Action[] = [];
 
-  // Filter out characters locked in ongoing conversations or think sessions
+  // Filter out characters locked in ongoing conversations
   const freeCharacters = characters.filter((c) => !lockedCharacterIds.has(c.id));
 
   // Add placeholder actions for locked characters
   for (const charId of lockedCharacterIds) {
     const conv = ongoingConversations.find((c) => (c.initiatorId === charId || c.acceptorId === charId) && c.status !== "ended");
-    const ts = ongoingThinkSessions.find((s) => s.characterId === charId && s.status !== "ended");
     if (conv) {
       const otherName = conv.initiatorId === charId
         ? characters.find((c) => c.id === conv.acceptorId)?.name ?? "某人"
@@ -462,14 +437,6 @@ export async function tick(
         type: "wait",
         actorId: charId,
         reasoning: `正在和 ${otherName} 对话`,
-        selfImportance: 2,
-        skipExecution: true, skipMemory: true,
-      });
-    } else if (ts) {
-      actionsForExecution.push({
-        type: "wait",
-        actorId: charId,
-        reasoning: "正在沉思",
         selfImportance: 2,
         skipExecution: true, skipMemory: true,
       });
@@ -699,6 +666,52 @@ export async function tick(
       const todayEntries = getTodayEntries(c.notebook, fromTick);
       const upcomingNotebookText = describeEntries(todayEntries, fromTick, world.epoch);
 
+      // Check if character should be forced into Think mode
+      if (shouldForceThink(c)) {
+        log.info("强制 Think：short memory 达到阈值", {
+          character: c.name,
+          shortCount: c.shortMemory.length,
+        });
+
+        const thinkResult = await runThinkAgent({
+          self: c,
+          nodes,
+          allCharacters: characters,
+          tick: fromTick,
+          epoch: world.epoch,
+          worldId,
+          worldDescription: manifest.description,
+          language,
+        });
+
+        log.info("Think 完成", {
+          character: c.name,
+          summary: thinkResult.summary,
+          shortAfter: thinkResult.shortMemoryAfter,
+        });
+
+        // Skip decide for this character this tick
+        const placeAction: Action = {
+          type: "wait",
+          actorId: c.id,
+          reasoning: `思考完成：${thinkResult.summary}`,
+          selfImportance: 2,
+          skipExecution: true,
+          skipMemory: true,
+        };
+        options.onCharacterDecision?.({
+          characterId: c.id,
+          characterName: c.name,
+          action: placeAction,
+        });
+        return {
+          characterId: c.id,
+          action: placeAction,
+          freeMoveEvents,
+          finalLocationId: currentLoc,
+        };
+      }
+
       try {
         action = await decideFn({
           character: c,
@@ -853,91 +866,9 @@ export async function tick(
   }
   const tAfterDecisions = Date.now();
 
-  // ── Phase 4.4 + 4.5: Think sessions and Dialog ──
+  // ── Phase 4.5: Dialog ──
 
-  const thinkSessionsPromise = Promise.all(
-    ongoingThinkSessions.map(async (ts) => {
-      if (ts.status === "ended") return ts;
-
-      const thinker = characters.find((c) => c.id === ts.characterId);
-      if (!thinker) {
-        ts.status = "ended";
-        return ts;
-      }
-
-      const here = nodeById.get(thinker.locationId);
-      if (!here) {
-        ts.status = "ended";
-        return ts;
-      }
-
-      const transcript: ThinkTurn[] = [...ts.transcript];
-
-      // Inject time reminder before this tick's think rounds
-      transcript.push({
-        kind: "thought",
-        text: injectThinkTimeMessage({
-          tick: fromTick,
-          epoch: world.epoch,
-          tickStarted: ts.tickStarted,
-          language,
-        }),
-      });
-
-      for (let round = 0; round < THINK_TURNS_PER_TICK; round++) {
-        let result;
-        try {
-          result = await llmThink({
-            self: thinker,
-            here,
-            transcript,
-            language,
-            tick: fromTick,
-            epoch: world.epoch,
-            tickStarted: ts.tickStarted,
-            previousMessages: ts.sharedMessages,
-            previousTranscriptLength: ts.sharedMessagesTranscriptLength,
-            allCharacters: characters,
-            worldDescription: manifest.description,
-            nodes,
-          });
-        } catch (err) {
-          log.error("llmThink 异常，思考被迫终止", {
-            character: thinker.name,
-            error: err instanceof Error ? err.message : String(err),
-          });
-          ts.status = "ended";
-          break;
-        }
-
-        if (result.messages) ts.sharedMessages = result.messages;
-        if (result.transcriptLength !== undefined) ts.sharedMessagesTranscriptLength = result.transcriptLength;
-
-        if (result.kind === "turn") {
-          transcript.push(result.turn);
-          thinker.emotion.social_satiety = Math.max(-4, thinker.emotion.social_satiety - 0.4);
-        } else {
-          thinker.shortMemory.push({
-            id: `mem-${randomUUID().slice(0, 8)}`,
-            tick: fromTick,
-            importance: 3,
-            content: `我沉思了一番：${result.summary}`,
-            layer: "short",
-          });
-          ts.summary = result.summary;
-          ts.status = "ended";
-          break;
-        }
-      }
-
-      ts.transcript = transcript;
-      ts.currentTickRounds = THINK_TURNS_PER_TICK;
-
-      return ts;
-    }),
-  );
-
-  const dialogPromise = runDialogPhase({
+  const dialogResult = await runDialogPhase({
     rawActions: actionsForExecution,
     characters,
     nodes,
@@ -1006,40 +937,6 @@ export async function tick(
     ongoingConversations,
   });
 
-  const [updatedThinkSessions, dialogResult] = await Promise.all([
-    thinkSessionsPromise,
-    dialogPromise,
-  ]);
-
-  // Persist think session changes
-  for (const ts of updatedThinkSessions) {
-    if (ts.status === "ended") {
-      deleteThinkSession(worldId, ts.id);
-      const thinker = characters.find((c) => c.id === ts.characterId);
-      if (thinker) {
-        thinker.activeConversationIds = thinker.activeConversationIds.filter((id) => id !== ts.id);
-        const summary = ts.summary ?? "沉思结束";
-        allEvents.push({
-          id: `evt-${randomUUID().slice(0, 8)}`,
-          worldId,
-          tick: fromTick,
-          category: "inner",
-          description: summary,
-          participants: [ts.characterId],
-          source: "think",
-          intensity: 2,
-          scope: "private",
-          audienceCharacterId: ts.characterId,
-          duration: 1,
-          thinkTranscript: ts.transcript,
-          thinkEndedBy: ts.summary ? "natural" : "interrupted",
-        });
-      }
-    } else {
-      saveThinkSession(ts);
-    }
-  }
-
   // Apply dialog results
   for (const mw of dialogResult.memoryWrites) {
     const c = characters.find((ch) => ch.id === mw.characterId);
@@ -1073,144 +970,6 @@ export async function tick(
     }
   }
 
-  // ── Phase 4.5.1: Create think sessions for think actions ──
-  const newThinkSessions: ThinkSession[] = [];
-  for (const action of actionsForExecution) {
-    if (action.type === "think" && !action.skipExecution) {
-      action.skipExecution = true;
-      action.skipMemory = true;
-      const thinker = characters.find((c) => c.id === action.actorId);
-      if (thinker && !lockedCharacterIds.has(action.actorId)) {
-        const ts: ThinkSession = {
-          id: `think-${randomUUID().slice(0, 8)}`,
-          worldId,
-          characterId: action.actorId,
-          transcript: action.freeText
-            ? [{ kind: "thought", text: action.freeText }]
-            : [{ kind: "thought", text: "开始沉思" }],
-          tickStarted: fromTick,
-          currentTickRounds: 0,
-          status: "active",
-          sharedMessages: [],
-          sharedMessagesTranscriptLength: 0,
-        };
-        newThinkSessions.push(ts);
-        thinker.activeConversationIds.push(ts.id);
-        lockedCharacterIds.add(action.actorId);
-
-        allEvents.push({
-          id: `evt-${randomUUID().slice(0, 8)}`,
-          worldId,
-          tick: fromTick,
-          category: "inner",
-          description: action.freeText || "开始沉思",
-          participants: [action.actorId],
-          source: "think",
-          intensity: 2,
-          scope: "private",
-          audienceCharacterId: action.actorId,
-          duration: 1,
-        });
-      }
-    }
-  }
-
-  // Run first tick of thinking for new sessions
-  for (const ts of newThinkSessions) {
-    const thinker = characters.find((c) => c.id === ts.characterId);
-    if (!thinker) continue;
-    const here = nodeById.get(thinker.locationId);
-    if (!here) continue;
-
-    const transcript: ThinkTurn[] = [...ts.transcript];
-
-    // Inject time reminder before this tick's think rounds
-    transcript.push({
-      kind: "thought",
-      text: injectThinkTimeMessage({
-        tick: fromTick,
-        epoch: world.epoch,
-        tickStarted: ts.tickStarted,
-        language,
-      }),
-    });
-
-    for (let round = 0; round < THINK_TURNS_PER_TICK; round++) {
-      let result;
-      try {
-        result = await llmThink({
-          self: thinker,
-          here,
-          transcript,
-          language,
-          tick: fromTick,
-          epoch: world.epoch,
-          tickStarted: ts.tickStarted,
-          previousMessages: ts.sharedMessages,
-          previousTranscriptLength: ts.sharedMessagesTranscriptLength,
-          allCharacters: characters,
-          worldDescription: manifest.description,
-          nodes,
-        });
-      } catch (err) {
-        log.error("llmThink 异常（新会话）", {
-          character: thinker.name,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        ts.status = "ended";
-        break;
-      }
-
-      if (result.messages) ts.sharedMessages = result.messages;
-      if (result.transcriptLength !== undefined) ts.sharedMessagesTranscriptLength = result.transcriptLength;
-
-      if (result.kind === "turn") {
-        transcript.push(result.turn);
-        thinker.emotion.social_satiety = Math.max(-4, thinker.emotion.social_satiety - 0.4);
-      } else {
-        thinker.shortMemory.push({
-          id: `mem-${randomUUID().slice(0, 8)}`,
-          tick: fromTick,
-          importance: 3,
-          content: `我沉思了一番：${result.summary}`,
-          layer: "short",
-        });
-        ts.summary = result.summary;
-        ts.status = "ended";
-        break;
-      }
-    }
-
-    ts.transcript = transcript;
-    ts.currentTickRounds = THINK_TURNS_PER_TICK;
-
-    // Persist
-    if (ts.status === "ended") {
-      const t = characters.find((c) => c.id === ts.characterId);
-      if (t) {
-        t.activeConversationIds = t.activeConversationIds.filter((id) => id !== ts.id);
-      }
-      const summary = ts.summary ?? "沉思结束";
-      allEvents.push({
-        id: `evt-${randomUUID().slice(0, 8)}`,
-        worldId,
-        tick: fromTick,
-        category: "inner",
-        description: summary,
-        participants: [ts.characterId],
-        source: "think",
-        intensity: 2,
-        scope: "private",
-        audienceCharacterId: ts.characterId,
-        duration: 1,
-        thinkTranscript: ts.transcript,
-        thinkEndedBy: ts.summary ? "natural" : "interrupted",
-      });
-    } else {
-      saveThinkSession(ts);
-    }
-  }
-
   // Phase 4.5.5: Per-tick social_satiety
   for (const c of characters) {
     if (c.activeConversationIds.length > 0) {
@@ -1222,19 +981,6 @@ export async function tick(
         c.emotion.social_satiety - getSocialDecayPerTick(c.personality.ei),
       ));
     }
-  }
-
-  // Phase 4.6: Memory compression for characters going to sleep
-  const sleepActionsForCompression = actionsForExecution.filter(a => a.type === "sleep");
-  if (sleepActionsForCompression.length > 0) {
-    await Promise.all(
-      sleepActionsForCompression.map(async (action) => {
-        const c = characters.find(ch => ch.id === action.actorId);
-        if (c) {
-          await compressSleepMemories(c, fromTick, world.epoch, language);
-        }
-      }),
-    );
   }
 
   // 7. 执行

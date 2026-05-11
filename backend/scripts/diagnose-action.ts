@@ -695,6 +695,128 @@ async function runDecideDiagnostic(
 }
 
 // ═══════════════════════════════════════════════════════
+// Dialog entry: LLM dispatch and diagnostic result
+// ═══════════════════════════════════════════════════════
+
+async function runDialogDiagnostic(
+  entryProfile: EntryProfile,
+  charId?: string,
+): Promise<DiagnosticResult> {
+  const profile = entryProfile.profile;
+  if (!entryProfile.dialogueHistory || entryProfile.dialogueHistory.length === 0) {
+    throw new Error(`Dialog entry requires dialogueHistory in profile for action="${entryProfile.action}"`);
+  }
+
+  // Dynamic imports
+  const { llmDialogTurn } = await import("../src/llm/decide");
+  const { loadWorld } = await import("../src/systems/store");
+  const { actionRegistry } = await import("../src/domain/action-system");
+
+  // Resolve character + companion + node
+  const { character, node, companion, worldId } = await resolveCharacter(profile, charId);
+  if (!companion) throw new Error("Dialog entry requires a companion");
+
+  // Inject state (both characters at same location)
+  const rollback = await injectState(worldId, character.id, companion.id, node.id, profile);
+
+  try {
+    // Reload world with injected state
+    const worldData = loadWorld(worldId);
+    const updatedSelf = worldData.characters.find((c: any) => c.id === character.id);
+    const updatedPeer = worldData.characters.find((c: any) => c.id === companion.id);
+    const hereNode = worldData.nodes.find((n: any) => n.id === node.id);
+
+    if (!updatedSelf || !updatedPeer || !hereNode) {
+      throw new Error("Character or node not found after injection");
+    }
+
+    // Build transcript from dialogueHistory strings
+    // Format: "Name：message" — split on "：" (fullwidth colon) to extract speaker name and line
+    const transcript = entryProfile.dialogueHistory.map((line, _i) => {
+      const separatorIndex = line.indexOf("：");
+      const speakerName = separatorIndex > 0 ? line.slice(0, separatorIndex) : "Unknown";
+      const text = separatorIndex > 0 ? line.slice(separatorIndex + 1) : line;
+      // Map speaker name to character ID
+      const isSelf = speakerName.includes(updatedSelf.name);
+      const speakerId = isSelf ? updatedSelf.id : updatedPeer.id;
+      return {
+        speakerId,
+        kind: "say" as const,
+        line: text,
+        reasoning: undefined as string | undefined,
+      };
+    });
+
+    // Get dialogue actions
+    const dialogueActions = actionRegistry.getDialogueActions();
+
+    // Build input for llmDialogTurn
+    const input = {
+      self: updatedSelf,
+      peer: updatedPeer,
+      transcript,
+      here: hereNode,
+      language: "zh" as const,
+      dialogueActions,
+      tick: worldData.world.currentTick,
+      epoch: worldData.world.epoch,
+      nodes: worldData.nodes,
+    };
+
+    // Call LLM
+    const startTime = Date.now();
+    const result = await llmDialogTurn(input as any);
+    const elapsed = Date.now() - startTime;
+
+    // Check result
+    let chosenAction = "(no action)";
+    let matched = false;
+
+    if (result.kind === "turn" && result.proposeAction) {
+      chosenAction = result.proposeAction.actionType;
+      matched = chosenAction === entryProfile.action;
+    } else if (result.kind === "end") {
+      chosenAction = "end_conversation";
+    } else if (result.kind === "turn") {
+      chosenAction = "submit_dialog_turn";
+    }
+
+    const vitalsParsed: Record<string, number> = updatedSelf.vitals as unknown as Record<string, number>;
+    const emotionsParsed: Record<string, number> = updatedSelf.emotion as unknown as Record<string, number>;
+
+    return {
+      action: entryProfile.action,
+      entry: "dialog",
+      codePathChecks: {
+        registered: actionRegistry.has(entryProfile.action),
+        inBuildOptions: dialogueActions.some((d: any) => d.type === entryProfile.action),
+      },
+      induction: {
+        character: updatedSelf.name,
+        characterId: updatedSelf.id,
+        node: hereNode.name,
+        vitals: vitalsParsed,
+        emotions: emotionsParsed,
+        companion: updatedPeer.name,
+        dialogueLines: entryProfile.dialogueHistory,
+      },
+      llmResult: {
+        chosenAction,
+        matched,
+        elapsed,
+        rawAction: result,
+      },
+      prompts: {
+        system: "(dialog has no separate system prompt — see llmDialogTurn internals)",
+        user: "(dialog prompt built by llmDialogTurn)",
+      },
+    };
+  } finally {
+    rollback();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 // Report printer
 // ═══════════════════════════════════════════════════════
 
@@ -748,7 +870,7 @@ async function dispatch(entryProfile: EntryProfile, cli: CliArgs): Promise<Diagn
     case "decide":
       return runDecideDiagnostic(entryProfile, cli.character);
     case "dialog":
-      throw new Error("Dialog entry not yet implemented");
+      return runDialogDiagnostic(entryProfile, cli.character);
     case "think":
       throw new Error("Think entry not yet implemented");
     case "accept":

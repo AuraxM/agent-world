@@ -7,11 +7,7 @@
  *   cd backend && npx tsx scripts/diagnose-action.ts --all --entry decide
  */
 
-import { config } from "dotenv";
 import { parseArgs } from "node:util";
-
-// Load .env before any other imports
-config({ path: new URL("../.env", import.meta.url).pathname });
 
 const VALID_ENTRIES = ["decide", "dialog", "think", "accept", "summary", "memory", "placement"] as const;
 type Entry = typeof VALID_ENTRIES[number];
@@ -83,16 +79,19 @@ function parseCli(): CliArgs {
   };
 }
 
-// ── Delayed imports after env is loaded ──
-
-import { db } from "../src/db/index";
-import { actionRegistry } from "../src/domain/action-system";
-import { BUILTIN_ACTIONS } from "../src/systems/actions-builtin";
-import { getActiveProvider, getEntryConfig } from "../src/llm/providers";
-import { worlds, characters } from "../src/db/schema";
-import { eq } from "drizzle-orm";
-
 async function init(cli: CliArgs) {
+  // 0. Load .env before any backend imports
+  const { config } = await import("dotenv");
+  config({ path: new URL("../.env", import.meta.url).pathname });
+
+  // Dynamic imports — after .env is loaded so DATABASE_URL is available
+  const { db } = await import("../src/db/index");
+  const { actionRegistry } = await import("../src/domain/action-system");
+  const { BUILTIN_ACTIONS } = await import("../src/systems/actions-builtin");
+  const { getActiveProvider, getEntryConfig } = await import("../src/llm/providers");
+  const { worlds, characters } = await import("../src/db/schema");
+  const { eq } = await import("drizzle-orm");
+
   // 1. Register built-in actions
   actionRegistry.registerAll(BUILTIN_ACTIONS);
 

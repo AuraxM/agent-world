@@ -12,7 +12,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "../../db/index";
-import { loadWorld, loadEventsSince } from "../../systems/index";
+import { loadWorld, loadEventsSince, loadEventsInRange } from "../../systems/index";
 import { createWorldFromConfig } from "../../systems/index";
 import { tick } from "../tick.js";
 
@@ -141,14 +141,23 @@ export const worldRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // GET /:id/events — event log
-  app.get<{ Params: { id: string }; Querystring: { since?: string } }>("/:id/events", async (req, reply) => {
+  app.get<{ Params: { id: string }; Querystring: { since?: string; until?: string } }>("/:id/events", async (req, reply) => {
     const { id } = req.params;
     const sinceParam = req.query.since;
+    const untilParam = req.query.until;
     const since = sinceParam ? Number.parseInt(sinceParam, 10) : 0;
     if (Number.isNaN(since) || since < 0) {
       return reply.status(400).send({ error: "invalid `since` query param" });
     }
     try {
+      if (untilParam !== undefined) {
+        const until = Number.parseInt(untilParam, 10);
+        if (Number.isNaN(until) || until < 0 || until < since) {
+          return reply.status(400).send({ error: "invalid `until` query param" });
+        }
+        const events = loadEventsInRange(id, since, until);
+        return reply.send({ events });
+      }
       const events = loadEventsSince(id, since);
       return reply.send({ events });
     } catch (err) {

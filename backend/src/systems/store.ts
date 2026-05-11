@@ -17,6 +17,7 @@ import {
   saveAllCharacters,
   appendEvents as appendEventsRepo,
   findEventsSince as findEventsSinceRepo,
+  findEventsInRange as findEventsInRangeRepo,
   appendThoughts as appendThoughtsRepo,
   findRecentThoughts as findRecentThoughtsRepo,
   createSnapshot,
@@ -90,6 +91,14 @@ export function loadEventsSince(
   sinceTick: number,
 ): WorldEvent[] {
   return findEventsSinceRepo(worldId, sinceTick);
+}
+
+export function loadEventsInRange(
+  worldId: string,
+  since: number,
+  until: number,
+): WorldEvent[] {
+  return findEventsInRangeRepo(worldId, since, until);
 }
 
 export function appendThoughts(

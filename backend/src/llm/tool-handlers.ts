@@ -317,3 +317,160 @@ export const READ_HANDLERS: Record<string, (args: any, ctx: ToolHandlerContext) 
   read_events: handleReadEvents,
   read_state: handleReadState,
 };
+
+// ── Write Handlers ──
+
+export function handleWriteImpression(
+  args: { target_id: string; impression: string },
+  ctx: ToolHandlerContext,
+): HandlerResult {
+  ctx.self.impressionBook[args.target_id] = args.impression.trim();
+  return { success: true, action: `已更新对 ${args.target_id} 的印象` };
+}
+
+export function handleWriteNotebook(
+  args: { year: number; month: number; day: number; hour: number; content: string },
+  ctx: ToolHandlerContext,
+): HandlerResult {
+  const entry = {
+    id: `nb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    scheduledTick: ctx.tick + 10,
+    content: args.content,
+    createdAt: ctx.tick,
+  };
+  ctx.self.notebook.push(entry);
+  return { success: true, entry };
+}
+
+export function handleWriteLike(
+  args: { content: string },
+  ctx: ToolHandlerContext,
+): HandlerResult {
+  ctx.self.liked = args.content;
+  return { success: true, liked: args.content };
+}
+
+export function handleWriteDislike(
+  args: { content: string },
+  ctx: ToolHandlerContext,
+): HandlerResult {
+  ctx.self.disliked = args.content;
+  return { success: true, disliked: args.content };
+}
+
+export function handleWriteShortTermGoal(
+  args: { goal: string },
+  ctx: ToolHandlerContext,
+): HandlerResult {
+  ctx.self.shortTermGoal = { goal: args.goal, updatedAt: ctx.tick };
+  return { success: true, short_term_goal: args.goal };
+}
+
+export function handleWriteLongTermGoal(
+  args: { goal: string },
+  ctx: ToolHandlerContext,
+): HandlerResult {
+  ctx.self.longTermGoal = { goal: args.goal, updatedAt: ctx.tick };
+  return { success: true, long_term_goal: args.goal };
+}
+
+export function handleWriteRelation(
+  args: { target_id: string; action: "add" | "remove"; kind: string },
+  ctx: ToolHandlerContext,
+): HandlerResult {
+  const rel = ctx.self.relations[args.target_id];
+  if (args.action === "add") {
+    if (rel) {
+      if (!rel.kinds.includes(args.kind as any)) {
+        rel.kinds.push(args.kind as any);
+      }
+    } else {
+      ctx.self.relations[args.target_id] = {
+        kinds: [args.kind as any],
+        since: ctx.tick,
+        lastInteractionTick: ctx.tick,
+      };
+    }
+    return { success: true, action: `已添加与 ${args.target_id} 的 ${args.kind} 关系` };
+  } else {
+    if (rel) {
+      // Protect blood relations from removal
+      const BLOOD_RELATIONS = ["father", "mother", "son", "daughter", "siblings"];
+      if (BLOOD_RELATIONS.includes(args.kind)) {
+        return { error: `血缘关系 ${args.kind} 不可移除` };
+      }
+      rel.kinds = rel.kinds.filter((k) => k !== args.kind);
+      if (rel.kinds.length === 0) delete ctx.self.relations[args.target_id];
+    }
+    return { success: true, action: `已移除与 ${args.target_id} 的 ${args.kind} 关系` };
+  }
+}
+
+export function handleWriteMemory(
+  args: { layer: string; content: string; importance: number; merge_with_id?: string },
+  ctx: ToolHandlerContext,
+): HandlerResult {
+  const c = ctx.self;
+  const layer = args.layer as "short" | "daily" | "weekly";
+  const memoryArray = layer === "short" ? c.shortMemory : layer === "daily" ? c.dailyMemory : c.longMemory;
+  const maxCap = MEMORY_CAPACITY[layer];
+
+  if (args.merge_with_id) {
+    // Merge: replace content of existing entry
+    const existing = memoryArray.find((m) => m.id === args.merge_with_id);
+    if (existing) {
+      existing.content = args.content;
+      existing.importance = args.importance;
+      existing.tick = ctx.tick;
+      return { success: true, merged: existing.id, layer };
+    }
+    // Fall through to create new if merge target not found
+  }
+
+  const memory: Memory = {
+    id: `mem-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    tick: ctx.tick,
+    importance: args.importance,
+    content: args.content,
+    layer,
+  };
+
+  memoryArray.push(memory);
+
+  // FIFO eviction when over capacity
+  while (memoryArray.length > maxCap) {
+    memoryArray.shift();
+  }
+
+  return { success: true, created: memory.id, layer, remaining_capacity: maxCap - memoryArray.length };
+}
+
+export function handleDeleteMemory(
+  args: { layer: string; memory_id: string },
+  ctx: ToolHandlerContext,
+): HandlerResult {
+  const c = ctx.self;
+  const layer = args.layer as "short" | "daily" | "weekly";
+  const memoryArray = layer === "short" ? c.shortMemory : layer === "daily" ? c.dailyMemory : c.longMemory;
+
+  const idx = memoryArray.findIndex((m) => m.id === args.memory_id);
+  if (idx === -1) {
+    return { error: `未在 ${layer} 层找到记忆 ${args.memory_id}` };
+  }
+
+  memoryArray.splice(idx, 1);
+  return { success: true, deleted: args.memory_id, layer, remaining: memoryArray.length };
+}
+
+// Write handler registry
+export const WRITE_HANDLERS: Record<string, (args: any, ctx: ToolHandlerContext) => HandlerResult> = {
+  write_impression: handleWriteImpression,
+  write_notebook: handleWriteNotebook,
+  write_like: handleWriteLike,
+  write_dislike: handleWriteDislike,
+  write_short_term_goal: handleWriteShortTermGoal,
+  write_long_term_goal: handleWriteLongTermGoal,
+  write_relation: handleWriteRelation,
+  write_memory: handleWriteMemory,
+  delete_memory: handleDeleteMemory,
+};

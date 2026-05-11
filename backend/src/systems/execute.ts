@@ -91,6 +91,7 @@ function memFromAction(tick: number, action: Action, prefix: string): Memory {
     tick,
     importance: action.selfImportance,
     content: `${prefix}：${action.freeText ?? action.reasoning.slice(0, 80)}`,
+    layer: "short",
   };
 }
 
@@ -210,6 +211,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
           tick,
           importance: action.selfImportance,
           content: action.reasoning.slice(0, 80),
+          layer: "short",
         });
       }
       log.info("执行(proxy)", { action: action.type, 角色: actor.name });
@@ -224,6 +226,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
       const memo: Memory = {
         id: `mem-${randomUUID().slice(0, 8)}`, tick, importance: 1,
         content: `我尝试了未知的行动：${action.type}`,
+        layer: "short",
       };
       pushMemory(actor, memo);
       resolvedActions.push({ action, success: false, reason: `未知action type: ${action.type}` });
@@ -301,6 +304,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
                   content: outcome.dialogRecord
                     ? outcome.dialogRecord.replace(actor.name, `${actor.name}（对方）`)
                     : `${actor.name} 给了我 ${received} 金钱。`,
+                  layer: "short",
                 });
               }
             }
@@ -325,6 +329,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
           tick,
           importance: action.selfImportance,
           content: outcome.memory,
+          layer: "short",
         });
       }
 
@@ -335,6 +340,7 @@ export function executeActions(input: ExecuteInput): ExecuteResult {
           tick,
           importance: 3,
           content: `${actor.name} 到达了 ${action.arrivalNodeName}，开始 ${action.type}`,
+          layer: "short",
         });
       }
 

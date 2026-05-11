@@ -44,7 +44,7 @@ export interface Ability {
   exp: number;
 }
 
-/** 单条记忆。Stage 1 仅使用 short（FIFO 120）。 */
+/** 单条记忆。支持三层：short(60) / daily(20) / weekly(5)。 */
 export interface Memory {
   /** 由 nanoid 或 uuid 生成 */
   id: string;
@@ -56,6 +56,8 @@ export interface Memory {
   content: string;
   /** 关联事件/行动 id（可选） */
   refEventId?: string;
+  /** 记忆层级。Think Agent 负责在各层之间搬运/合并。 */
+  layer: "short" | "daily" | "weekly";
 }
 
 /** 记事本条目 */
@@ -208,11 +210,11 @@ export interface Character {
   activeConversationIds: string[];
   /** 最近一次对话结束的 tick。0 = 从未进行过对话。用于对话后冷却。 */
   lastConversationEndTick: Tick;
-  /** Stage 1: short memory FIFO 120 */
+  /** 短期记忆：容量 60，FIFO。≥55 时触发强制 Think。 */
   shortMemory: Memory[];
-  /** 中期日记忆：睡觉时由 LLM 压缩清醒期 shortMemory 生成 */
+  /** 每日记忆：容量 20。Think Agent 从 short 整理而来。 */
   dailyMemory: Memory[];
-  /** 复用为周记忆：每 7 条日记忆压缩为 1 条周记忆 */
+  /** 周记忆(人生要事)：容量 5。Think Agent 从 daily 整理而来。 */
   longMemory: Memory[];
   /** key 是 targetId */
   relations: Record<string, Relation>;

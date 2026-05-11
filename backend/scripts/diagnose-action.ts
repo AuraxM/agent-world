@@ -18,9 +18,37 @@ interface CliArgs {
   character?: string;
   scene?: string;
   provider?: string;
-  timeout: number;
   all: boolean;
   verbose: boolean;
+}
+
+interface DiagnosticResult {
+  action: string;
+  entry: string;
+  codePathChecks: {
+    registered: boolean;
+    inBuildOptions: boolean;
+  };
+  induction: {
+    character: string;
+    characterId: string;
+    node: string;
+    vitals: Record<string, number>;
+    emotions: Record<string, number>;
+    companion?: string;
+    dialogueLines?: string[];
+  };
+  llmResult: {
+    chosenAction: string;
+    matched: boolean;
+    elapsed: number;
+    rawAction: unknown;
+  };
+  prompts: {
+    system: string;
+    user: string;
+    tools?: string;
+  };
 }
 
 const USAGE = `Usage: npx tsx scripts/diagnose-action.ts --action <type> --entry <entry>
@@ -31,7 +59,6 @@ Options:
   --character <id>    Character ID (default: auto-select first matching)
   --scene <dir>       Scene directory (default: AGENT_WORLD_SCENES_DIR)
   --provider <name>   Provider name (default: from DB config)
-  --timeout <ms>      LLM timeout in ms (default: 60000)
   --all               Run all action+entry combinations
   --verbose           Always on by default
 
@@ -39,15 +66,6 @@ Examples:
   npx tsx scripts/diagnose-action.ts --action eat --entry decide
   npx tsx scripts/diagnose-action.ts --action kiss --entry dialog
   npx tsx scripts/diagnose-action.ts --all --entry decide`;
-
-function validateTimeout(raw: string | undefined): number {
-  const timeoutRaw = parseInt(raw ?? "60000", 10);
-  if (isNaN(timeoutRaw) || timeoutRaw <= 0) {
-    console.error(`Error: --timeout must be a positive number, got "${raw}"`);
-    process.exit(1);
-  }
-  return timeoutRaw;
-}
 
 function parseCli(): CliArgs {
   const { values } = parseArgs({
@@ -57,7 +75,6 @@ function parseCli(): CliArgs {
       character: { type: "string" },
       scene: { type: "string" },
       provider: { type: "string" },
-      timeout: { type: "string", default: "60000" },
       all: { type: "boolean", default: false },
       verbose: { type: "boolean", default: true },
     },
@@ -82,7 +99,6 @@ function parseCli(): CliArgs {
     character: values.character,
     scene: values.scene,
     provider: values.provider,
-    timeout: validateTimeout(values.timeout),
     all: values.all,
     verbose: values.verbose,
   };
@@ -528,6 +544,224 @@ async function injectState(
   }
 }
 
+// ═══════════════════════════════════════════════════════
+// Decide entry: LLM dispatch and diagnostic result
+// ═══════════════════════════════════════════════════════
+
+async function runDecideDiagnostic(
+  profile: EntryProfile,
+  charId?: string,
+): Promise<DiagnosticResult> {
+  // Dynamic imports
+  const { actionRegistry } = await import("../src/domain/action-system");
+  const { loadWorld } = await import("../src/systems/store");
+  const { llmDecide } = await import("../src/llm/decide");
+  const { buildActionContext, getAvailableActions } = await import("../src/systems/actions");
+  const { buildSystemPrompt, buildUserPrompt } = await import("../src/llm/prompt");
+
+  // Resolve character + node
+  const { character, node, companion, worldId } = await resolveCharacter(profile.profile, charId);
+
+  // Inject state
+  const rollback = await injectState(worldId, character.id, companion?.id, node.id, profile.profile);
+
+  try {
+    // Re-load world with injected state
+    const worldData = loadWorld(worldId);
+
+    // Find the updated character
+    const updatedChar = worldData.characters.find((c: any) => c.id === character.id);
+    if (!updatedChar) throw new Error(`Character ${character.id} not found after injection`);
+
+    // Find the here node
+    const hereNode = worldData.nodes.find((n: any) => n.id === node.id);
+    if (!hereNode) throw new Error(`Node ${node.id} not found`);
+
+    // Find companions at same location
+    const companions = worldData.characters.filter(
+      (c: any) => c.id !== character.id && c.locationId === node.id,
+    );
+
+
+	    // Build a complete (but empty) AggregatedFacts stub.
+	    const emptyFacts = {
+	      activityNodeId: null as string | null,
+	      activityNodeName: null as string | null,
+	      restNodeId: null as string | null,
+	      restNodeName: null as string | null,
+	      hoursAtCurrentLocation: 0,
+	      todayActionCounts: {} as Partial<Record<string, number>>,
+	      todayChatTargets: {} as Record<string, number>,
+	    };
+
+    // Build action context
+    const ctx = buildActionContext(
+      updatedChar,
+      worldData.nodes,
+      worldData.characters,
+      worldId,
+      worldData.world.currentTick,
+      worldData.world.epoch,
+      profile.profile.isSleepHour ?? false,
+      emptyFacts as any,
+      undefined, // locationOverrides
+      worldData.shops || [],
+      new Map(), // itemDefs
+    );
+
+    const options = getAvailableActions(ctx);
+
+    // Build DecideInput
+    const input = {
+      character: updatedChar,
+      nodes: worldData.nodes,
+      here: hereNode,
+      companions,
+      reachable: worldData.nodes.filter((n: any) => n.id !== node.id),
+      perceived: [],
+      options,
+      worldName: worldData.world.name,
+      tick: worldData.world.currentTick,
+      epoch: worldData.world.epoch,
+      facts: emptyFacts as any,
+      language: "zh" as const,
+      ctx,
+      allCharacters: worldData.characters,
+      activeEventDefs: [],
+      upcomingNotebookText: "",
+      shops: worldData.shops || [],
+      itemDefs: new Map(),
+    };
+
+    // Build prompts for report
+    const systemPrompt = buildSystemPrompt({
+      worldName: worldData.world.name,
+      nodes: worldData.nodes,
+      language: "zh" as const,
+      shops: worldData.shops || [],
+    });
+    const userPrompt = buildUserPrompt({
+      character: updatedChar,
+      here: hereNode,
+      companions,
+      perceived: [],
+      options,
+      tick: worldData.world.currentTick,
+      epoch: worldData.world.epoch,
+      facts: emptyFacts as any,
+      language: "zh" as const,
+      allCharacters: worldData.characters,
+      nodes: worldData.nodes,
+      activeEventDefs: [],
+      upcomingNotebookText: "",
+      shops: worldData.shops || [],
+      itemDefs: new Map(),
+    });
+
+    // Call LLM
+    const startTime = Date.now();
+    const action = await llmDecide(input as any);
+    const elapsed = Date.now() - startTime;
+
+    const vitalsParsed: Record<string, number> = updatedChar.vitals as unknown as Record<string, number>;
+    const emotionsParsed: Record<string, number> = updatedChar.emotion as unknown as Record<string, number>;
+
+    return {
+      action: profile.action,
+      entry: "decide",
+      codePathChecks: {
+        registered: actionRegistry.has(profile.action),
+        inBuildOptions: options.some((o: any) => o.type === profile.action),
+      },
+      induction: {
+        character: updatedChar.name,
+        characterId: updatedChar.id,
+        node: hereNode.name,
+        vitals: vitalsParsed,
+        emotions: emotionsParsed,
+        companion: companion?.name,
+      },
+      llmResult: {
+        chosenAction: (action as any).type,
+        matched: (action as any).type === profile.action,
+        elapsed,
+        rawAction: action,
+      },
+      prompts: { system: systemPrompt, user: userPrompt },
+    };
+  } finally {
+    rollback();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Report printer
+// ═══════════════════════════════════════════════════════
+
+function printReport(result: DiagnosticResult, verbose: boolean) {
+  const { codePathChecks: c, induction: i, llmResult: l, prompts: p } = result;
+
+  console.log(`\n${"=".repeat(70)}`);
+  console.log(`╡ 诊断报告：action=${result.action}, entry=${result.entry} ╞`);
+  console.log(`${"=".repeat(70)}`);
+
+  // Section 1: Code path checks
+  console.log(`\n┌─ 1. 代码链路检查 ${"─".repeat(50)}┐`);
+  console.log(`│ ${c.registered ? "✅" : "❌"} ActionRegistry: "${result.action}" ${c.registered ? "已注册" : "未注册"}`);
+  console.log(`│ ${c.inBuildOptions ? "✅" : "❌"} buildOptions: ${c.inBuildOptions ? "可见" : "不可见 → check() 返回 false"}`);
+  console.log(`└${"─".repeat(68)}┘`);
+
+  // Section 2: Induction state
+  console.log(`\n┌─ 2. 诱导状态摘要 ${"─".repeat(50)}┐`);
+  console.log(`│ 角色: ${i.character} (${i.characterId}), 位置: ${i.node}`);
+  if (i.companion) console.log(`│ 同伴: ${i.companion}`);
+  console.log(`│ 身体: 饥饿${i.vitals.hunger ?? "?"}/疲劳${i.vitals.fatigue ?? "?"}/卫生${i.vitals.hygiene ?? "?"}`);
+  console.log(`│ 情绪: 心情${i.emotions.mood ?? "?"}/10 · 压力${i.emotions.stress ?? "?"}/10 · 社交满足${i.emotions.social_satiety ?? "?"}/10`);
+  console.log(`└${"─".repeat(68)}┘`);
+
+  // Section 3: LLM result
+  console.log(`\n┌─ 3. LLM 响应 ${"─".repeat(54)}┐`);
+  console.log(`│ 耗时: ${l.elapsed}ms`);
+  console.log(`│ LLM 选择的 action: ${l.chosenAction}`);
+  console.log(`│ ${l.matched ? "🟢 判定: 目标 action 被正确调用！" : `🔴 判定: 目标 action "${result.action}" 未被调用，LLM 选择了 "${l.chosenAction}"`}`);
+  console.log(`└${"─".repeat(68)}┘`);
+
+  // Section 4: Full prompts
+  if (verbose) {
+    console.log(`\n┌─ 4. 完整 System Prompt ${"─".repeat(45)}┐`);
+    console.log(p.system);
+    console.log(`\n┌─ 4. 完整 User Prompt ${"─".repeat(47)}┐`);
+    console.log(p.user);
+    if (p.tools) {
+      console.log(`\n┌─ 4. 完整 Tools JSON ${"─".repeat(47)}┐`);
+      console.log(p.tools);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Dispatch router
+// ═══════════════════════════════════════════════════════
+
+async function dispatch(entryProfile: EntryProfile, cli: CliArgs): Promise<DiagnosticResult> {
+  switch (entryProfile.entry) {
+    case "decide":
+      return runDecideDiagnostic(entryProfile, cli.character);
+    case "dialog":
+      throw new Error("Dialog entry not yet implemented");
+    case "think":
+      throw new Error("Think entry not yet implemented");
+    case "accept":
+      throw new Error("Accept entry not yet implemented");
+    case "summary":
+      throw new Error("Summary entry not yet implemented");
+    case "memory":
+      throw new Error("Memory entry not yet implemented");
+    case "placement":
+      throw new Error("Placement entry not yet implemented");
+  }
+}
+
 async function main() {
   const cli = parseCli();
   await init(cli);
@@ -536,8 +770,8 @@ async function main() {
     console.log(`Running ${getAllCombinations().length} action+entry combinations...`);
     console.log("--all mode not yet implemented");
   } else {
-    const profile = getProfile(cli.action!, cli.entry!);
-    if (!profile) {
+    const entryProfile = getProfile(cli.action!, cli.entry!);
+    if (!entryProfile) {
       console.error(`Error: No profile for action="${cli.action}" entry="${cli.entry}"`);
       console.error("Available combinations:");
       for (const key of Object.keys(PROFILES).sort()) {
@@ -546,44 +780,9 @@ async function main() {
       process.exit(1);
     }
 
-    const resolved = await resolveCharacter(profile.profile, cli.character);
-    console.log(`Character: ${resolved.character.name} (${resolved.character.id})`);
-    console.log(`Node: ${resolved.node.name} (${resolved.node.id})`);
-    if (resolved.companion) {
-      console.log(`Companion: ${resolved.companion.name} (${resolved.companion.id})`);
-    }
-
-    const rollback = await injectState(
-      resolved.worldId,
-      resolved.character.id,
-      resolved.companion?.id,
-      resolved.node.id,
-      profile.profile,
-    );
-
-    try {
-      const { db } = await import("../src/db/index");
-      const { characters } = await import("../src/db/schema");
-      const { eq, and } = await import("drizzle-orm");
-      const updated = await db
-        .select({
-          vitalsJson: characters.vitalsJson,
-          emotionJson: characters.emotionJson,
-          locationId: characters.locationId,
-        })
-        .from(characters)
-        .where(and(eq(characters.worldId, resolved.worldId), eq(characters.id, resolved.character.id)))
-        .then((r) => r[0]);
-
-      console.log(`Injected vitals: ${updated?.vitalsJson}`);
-      console.log(`Injected emotions: ${updated?.emotionJson}`);
-      console.log(`Injected location: ${updated?.locationId}`);
-      console.log("State injection verified -- rollback will restore original state.");
-      console.log("Diagnostic dispatch not yet implemented");
-    } finally {
-      rollback();
-      console.log("State rolled back.");
-    }
+    console.log(`Testing: ${cli.action} @ ${cli.entry}`);
+    const result = await dispatch(entryProfile, cli);
+    printReport(result, cli.verbose);
   }
 }
 

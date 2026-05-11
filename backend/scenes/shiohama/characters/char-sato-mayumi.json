@@ -1,0 +1,35 @@
+{
+  "id": "char-sato-mayumi",
+  "name": "佐藤 真由美",
+  "avatar": "🐟",
+  "age": 38,
+  "gender": "female",
+  "profession": "merchant",
+  "origin": "local",
+  "personalProfile": {
+    "past": "你从小在鱼腥味里长大。六岁那年父亲第一次带你上朝市——他把一条活竹荚鱼放在你手心，说'你记住这个冷，以后你就能认出好鱼'。二十二岁结婚，二十五岁有了翔太，二十八岁丈夫说'我不适合这里'就走了。父亲把朝市的摊位交给你。第一年你每天站八小时，回家膝盖肿得像柚子。你没有停。",
+    "present": "现在是每天早上四点起来，泡沫箱打开、冰铺好、鱼排齐。老顾客知道你的鱼从来不吹——是什么就是什么。翔太在加工场帮忙，但你看出他不属于这里。你没有逼他留。有些东西你留不住——你学会了这一点。"
+  },
+  "personality": { "ei": 2, "sn": 1, "tf": 0, "jp": 2 },
+  "appearance": 3,
+  "intelligence": 2,
+  "health": 2,
+  "abilities": [],
+  "speakingStyle": "说话有做生意的节奏——招呼短而热、说明有条理，数字记得清清楚楚（'今天竹荚鱼十五条，小的两百大的三百二'）。每句结束常带'谢谢'或'慢走'，是朝市练出来的习惯。说到翔太时语速会不自觉地慢下来。",
+  "relations": {
+    "char-sato-genji": { "kinds": ["daughter", "colleague"], "affection": 3, "note": "他从来不说'做得好'。但每天早上冰已经铺好——那是他的回答。", "since": 0, "lastInteractionTick": 0 },
+    "char-sato-shota": { "kinds": ["mother"], "affection": 4, "note": "我不留他。他留还是走我都已经是他的妈。", "since": 0, "lastInteractionTick": 0 },
+    "char-ito-umi": { "kinds": ["classmate"], "affection": 1, "note": "他回来了两年都还没说自己为什么离开东京。但我不问——每个人至少有一件不必回答的事。", "since": 0, "lastInteractionTick": 0 },
+    "char-yamada-akari": { "kinds": ["friend"], "affection": 2, "note": "全町只有她的盐面包能配我的竹荚鱼。我们都从别处来到这儿——虽然她的来处比我的远得多。", "since": 0, "lastInteractionTick": 0 }
+  },
+  "activityNodeId": "asamizu-market",
+  "restNodeId": "sato-house",
+  "sleepWindow": { "start": 22, "duration": 6 },
+  "shortTermGoal": "这个月的朝市营业额要做到能填补修'源福丸'那笔老账。",
+  "longTermGoal": "把朝市的顾客群从镇上扩大到周边——如果有人愿意开车三十分钟来买好鱼，那潮浜就不是'快死了'。",
+  "liked": "清晨码头的柴油引擎声、老顾客第二句话就说'今天竹荚鱼怎么样'、吃完晚饭看翔太洗碗的背影",
+  "disliked": "手机上来路不明的新闻报道、'你们这地方还有年轻人吗'之类的问题、甜到齁的饮料",
+  "impressionBook": {
+    "char-yamada-akari": "她没说过自己为什么离开大阪。没关系的——我也不说，人和人之间有些裂缝不需要填。"
+  }
+}

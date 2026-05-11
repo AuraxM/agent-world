@@ -12,11 +12,40 @@ import { EventGantt } from "./event-gantt";
 import { ProfilePane } from "./profile-pane";
 
 export function WorldView() {
-  const { snapshot, events, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto } = useWorldState();
+  const { snapshot, events, loadedSince, hasMore, loadingMore, loadMore, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto } = useWorldState();
   const view = useViewState();
   const { followingId, follow, isFollowing } = useFollow();
   const [centerTab, setCenterTab] = useState<"stream" | "gantt">("stream");
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [selectedCharIds, setSelectedCharIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!snapshot) return;
+    setSelectedCharIds((prev) => {
+      // Only initialize if empty (first load)
+      if (prev.size === 0) {
+        return new Set(snapshot.characters.map((c) => c.id));
+      }
+      // Add any new characters that appeared since last snapshot
+      const next = new Set(prev);
+      for (const c of snapshot.characters) {
+        if (!next.has(c.id)) next.add(c.id);
+      }
+      return next;
+    });
+  }, [snapshot]);
+
+  const onToggleChar = (id: string) => {
+    setSelectedCharIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const selectedCharacter = useMemo(() => {
     if (!snapshot || !profileId) return null;
@@ -96,6 +125,11 @@ export function WorldView() {
               nodes={snapshot.nodes}
               followingId={followingId}
               epoch={snapshot.world.epoch}
+              selectedCharIds={selectedCharIds}
+              onToggleChar={onToggleChar}
+              hasMore={hasMore}
+              loadingMore={loadingMore}
+              onLoadMore={loadMore}
               onJumpToNode={view.setCurrentNode}
               onSelectCharacter={(c) => handleSelectCharacter(c.id)}
               onFollow={follow}
@@ -107,6 +141,10 @@ export function WorldView() {
               characters={snapshot.characters}
               nodes={snapshot.nodes}
               epoch={snapshot.world.epoch}
+              loadedSince={loadedSince}
+              hasMore={hasMore}
+              loadingMore={loadingMore}
+              onLoadMore={loadMore}
               onJumpToNode={view.setCurrentNode}
               onSelectCharacter={(c) => handleSelectCharacter(c.id)}
               onFollow={follow}

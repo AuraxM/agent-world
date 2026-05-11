@@ -425,8 +425,12 @@ async function resolveCharacter(
 
   let companion: typeof allChars[number] | undefined;
   if (profile.companionFilter) {
-    companion = allChars.find((c) => c.id !== char.id);
-    if (!companion) throw new Error("No companion available (need at least 2 characters)");
+    let candidates = allChars.filter((c) => c.id !== char.id);
+    if (profile.companionFilter.sameLocation) {
+      candidates = candidates.filter((c) => c.locationId === node.id);
+    }
+    companion = candidates[0];
+    if (!companion) throw new Error("No companion available matching filter criteria");
   }
 
   return {
@@ -451,9 +455,8 @@ async function resolveCharacter(
 }
 
 async function getRawSqlite() {
-  const dbModule = await import("../src/db/index");
-  const drizzleDb = dbModule.db;
-  return (drizzleDb as unknown as { $client: { run: (sql: string) => void; exec: (sql: string) => void } }).$client;
+  const { db } = await import("../src/db/index");
+  return db.$client; // Already typed as better-sqlite3 Database by drizzle-orm
 }
 
 async function injectState(
@@ -470,54 +473,59 @@ async function injectState(
   const sqlite = await getRawSqlite();
   sqlite.exec("SAVEPOINT diag_inject");
 
-  const orig = await db
-    .select({
-      vitalsJson: characters.vitalsJson,
-      emotionJson: characters.emotionJson,
-      locationId: characters.locationId,
-      money: characters.money,
-      inventoryJson: characters.inventoryJson,
-    })
-    .from(characters)
-    .where(and(eq(characters.worldId, worldId), eq(characters.id, charId)))
-    .then((r) => r[0]);
+  try {
+    const orig = await db
+      .select({
+        vitalsJson: characters.vitalsJson,
+        emotionJson: characters.emotionJson,
+        locationId: characters.locationId,
+        money: characters.money,
+        inventoryJson: characters.inventoryJson,
+      })
+      .from(characters)
+      .where(and(eq(characters.worldId, worldId), eq(characters.id, charId)))
+      .then((r) => r[0]);
 
-  const vitals = {
-    hunger: 0,
-    fatigue: 0,
-    hygiene: 0,
-    ...(profile.vitals ?? {}),
-  };
-  const rawEmotions = profile.emotions ?? {};
-  const emotions = {
-    mood: rawEmotions.mood ?? 0,
-    stress: rawEmotions.stress ?? 0,
-    social_satiety: rawEmotions.socialSatiety ?? 0,
-  };
+    const vitals = {
+      hunger: 0,
+      fatigue: 0,
+      hygiene: 0,
+      ...(profile.vitals ?? {}),
+    };
+    const rawEmotions = profile.emotions ?? {};
+    const emotions = {
+      mood: rawEmotions.mood ?? 0,
+      stress: rawEmotions.stress ?? 0,
+      social_satiety: rawEmotions.socialSatiety ?? 0,
+    };
 
-  await db
-    .update(characters)
-    .set({
-      vitalsJson: JSON.stringify(vitals),
-      emotionJson: JSON.stringify(emotions),
-      locationId: nodeId,
-      money: profile.money ?? orig?.money ?? 100,
-      inventoryJson: profile.inventory
-        ? JSON.stringify(profile.inventory)
-        : orig?.inventoryJson ?? "[]",
-    })
-    .where(and(eq(characters.worldId, worldId), eq(characters.id, charId)));
-
-  if (companionId) {
     await db
       .update(characters)
-      .set({ locationId: nodeId })
-      .where(and(eq(characters.worldId, worldId), eq(characters.id, companionId)));
-  }
+      .set({
+        vitalsJson: JSON.stringify(vitals),
+        emotionJson: JSON.stringify(emotions),
+        locationId: nodeId,
+        money: profile.money ?? orig?.money ?? 100,
+        inventoryJson: profile.inventory
+          ? JSON.stringify(profile.inventory)
+          : orig?.inventoryJson ?? "[]",
+      })
+      .where(and(eq(characters.worldId, worldId), eq(characters.id, charId)));
 
-  return () => {
+    if (companionId) {
+      await db
+        .update(characters)
+        .set({ locationId: nodeId })
+        .where(and(eq(characters.worldId, worldId), eq(characters.id, companionId)));
+    }
+
+    return () => {
+      sqlite.exec("ROLLBACK TO diag_inject");
+    };
+  } catch (err) {
     sqlite.exec("ROLLBACK TO diag_inject");
-  };
+    throw err;
+  }
 }
 
 async function main() {

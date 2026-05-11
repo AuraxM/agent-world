@@ -9,7 +9,6 @@
 import OpenAI from "openai";
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import {
-  DECIDE_ACTION_TOOL_NAME, DecideActionSchema, buildDecideActionTool,
   RECALL_TOOL_NAME, RecallSchema, RecallToolSchema,
   MEMORIZE_TOOL_NAME, MemorizeSchema, MemorizeToolSchema,
   UPDATE_LIKES_TOOL_NAME, UpdateLikesSchema, UpdateLikesToolSchema,
@@ -36,6 +35,10 @@ import { getEntryConfig } from "./providers";
 import { actionRegistry, type ActionContext, type GlobalEventDef } from "../domain/index";
 import { tickFromCalendar, formatCurrentTime, createEntryId, saveNotebookEntry } from "../systems/index";
 import type { ActionOption } from "../systems/index";
+import { buildDecideSystemPrompt } from "./system-prompts";
+import { buildReadTools, buildDecideWriteTools, WRITE_DECISION_TOOL, ALL_READ_TOOLS } from "../domain/schemas";
+import { runAgentLoop } from "./agent-loop";
+import type { ToolHandlerContext } from "./tool-handlers";
 import {
   buildAcceptDecisionPrompt,
   buildDialogSummaryPrompt,
@@ -43,8 +46,6 @@ import {
   buildDialogSystemPrompt,
   buildDialogTurnFollowup,
   buildDialogTurnPrompt,
-  buildSystemPrompt,
-  buildUserPrompt,
   buildThinkSystemPrompt,
   buildThinkFollowup,
   buildThinkPrompt,
@@ -85,8 +86,6 @@ const summaryLog = createLogger("llm-summary");
 const salvageLog = createLogger("llm-salvage");
 const memoryLog = createLogger("llm-memory");
 
-const MAX_OUTPUT_TOKENS = 16384;
-
 // ---------------------------------------------------------------------------
 // Local structural types for OpenAI-compatible API responses.
 // We use these to avoid `any` while still being permissive of vendor extras
@@ -119,34 +118,57 @@ interface LLMResponse {
 type ChatMessage = Record<string, unknown>;
 type ToolArgPayload = Record<string, unknown>;
 
-export const llmDecide: DecideFn = async (input) => {
-  if (!hasApiKey()) {
-    return waitFallback(input, "没有激活的 LLM provider");
+export async function llmDecide(input: DecideInput): Promise<Action> {
+  if (!hasApiKey()) throw new Error("没有激活的 LLM provider");
+
+  const systemPrompt = buildDecideSystemPrompt();
+  const readTools = buildReadTools();
+  const writeTools = buildDecideWriteTools();
+
+  const toolHandlerContext: ToolHandlerContext = {
+    self: input.character,
+    allCharacters: input.allCharacters,
+    nodes: input.nodes,
+    shops: input.shops,
+    itemDefs: input.itemDefs as unknown as unknown[],
+    tick: input.tick,
+    epoch: input.epoch,
+    worldId: input.character.worldId,
+    worldDescription: input.worldName,
+    perceptions: new Map([[input.character.id, input.perceived]]),
+    activeEventDefs: input.activeEventDefs,
+    upcomingNotebookText: input.upcomingNotebookText,
+  };
+
+  const result = await runAgentLoop({
+    systemPrompt,
+    readTools,
+    writeTools,
+    terminalToolNames: [WRITE_DECISION_TOOL],
+    readToolNames: ALL_READ_TOOLS,
+    llmEntryName: "decide",
+    maxRounds: 20,
+    toolHandlerContext,
+  });
+
+  if (result.kind === "terminal" && result.terminalToolName === WRITE_DECISION_TOOL && result.terminalArgs) {
+    return payloadToAction(result.terminalArgs, input);
   }
 
-  try {
-    return await callLLM(input);
-  } catch (err) {
-    decideLog.error("LLM decide 失败", {
-      角色: input.character.name,
-      error: errorMessage(err),
-    });
-    return waitFallback(input, errorMessage(err));
-  }
-};
-
-const MAX_TOOL_CALL_ROUNDS = 5;
-// prompt 在 callLLMWithRetry 外构建一次，不随 round 重建 —— 避免 Map/Object 序列化顺序波动导致 cache miss
-
-/** 从 response message 提取 assistant 消息，保留 reasoning_content（DeepSeek 要求回传）。 */
-function captureAssistantMsg(msg: LLMAssistantMessage): ChatMessage {
-  const m: ChatMessage = { role: "assistant", content: msg.content ?? "" };
-  if (msg.tool_calls) m.tool_calls = msg.tool_calls;
-  if (msg.reasoning_content) m.reasoning_content = msg.reasoning_content;
-  return m;
+  // Fallback: exhausted round limit
+  return createFallbackAction(input);
 }
 
-const TOOL_CALL_NUDGE = "请调用 decide_action、recall 或 memorize 工具。不要输出纯文本，必须调用工具。";
+const MAX_TOOL_CALL_ROUNDS = 5;
+
+function createFallbackAction(input: DecideInput): Action {
+  return {
+    type: "look_around",
+    actorId: input.character.id,
+    reasoning: "LLM 未能完成决策",
+    selfImportance: 1,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Recall / Memorize helpers
@@ -197,307 +219,21 @@ function buildMemorizeTool(): ChatCompletionTool {
 }
 
 // ---------------------------------------------------------------------------
-// Decision loop
+// Action payload conversion
 // ---------------------------------------------------------------------------
 
-/**
- * 带 reasoning 续推循环的 LLM 调用：
- * - 最多 MAX_TOOL_CALL_ROUNDS 轮
- * - 每轮若 LLM 未调 tool，把 assistant 消息 + 催促 nudge 追加到 messages 继续
- * - 保证 reasoning_content 在每一轮都被回传（DeepSeek 要求）
- * - 支持 recall / memorize 子循环（不计入决策轮数）
- */
-async function callLLMWithRetry(
-  messages: ChatMessage[],
-  tool: ChatCompletionTool,
-  fallbackLabel: string,
-  entryName: string,
-  ctx: ActionContext,
-  allCharacters: Character[] = [],
-  nodes: MapNode[] = [],
-  shops?: Shop[],
-): Promise<{ actionType: string; data: ToolArgPayload }> {
-  const config = getEntryConfig(entryName);
-  const client = getLLMClientForEntry(entryName);
-  const extra: Record<string, unknown> = {};
-  if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
-
-  const tools: ChatCompletionTool[] = [tool, buildRecallTool(), buildMemorizeTool(), buildMapTool()];
-
-  let lastResponseSnapshot = "(no response)";
-  for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
-    const response = await client.chat.completions.create({
-      model: getModelNameForEntry(entryName),
-      max_tokens: MAX_OUTPUT_TOKENS,
-      messages: messages as unknown as Parameters<typeof client.chat.completions.create>[0]["messages"],
-      tools,
-      ...(extra as Record<string, unknown>),
-    });
-    lastResponseSnapshot = llmResponseSnapshot(response);
-
-    const msg = response.choices[0]?.message as LLMAssistantMessage | undefined;
-    if (!msg) throw new Error(`LLM 返回空 message。响应快照：${lastResponseSnapshot}`);
-
-    // 保留 reasoning_content，追加为 assistant 消息
-    messages.push(captureAssistantMsg(msg));
-
-    const toolName = msg.tool_calls?.[0]?.function?.name ?? "none";
-    decideLog.info(`LLM round ${round + 1}/${MAX_TOOL_CALL_ROUNDS}`, {
-      tool_call: toolName,
-    });
-
-    const toolCall = (msg.tool_calls ?? []).find(
-      (c: LLMToolCall) => c.type === "function",
-    );
-    if (!toolCall) {
-      // 未调 tool → 推进续推
-      if (round < MAX_TOOL_CALL_ROUNDS - 1) {
-        messages.push({ role: "user", content: TOOL_CALL_NUDGE });
-      }
-      continue;
-    }
-
-    const tc: LLMToolCall = toolCall;
-    const tcName = tc.function?.name ?? "";
-    const tcArgs = tc.function?.arguments ?? "";
-
-    // ── Handle recall ──
-    if (tcName === RECALL_TOOL_NAME) {
-      let parsedArgs: unknown;
-      try { parsedArgs = JSON.parse(tcArgs); } catch (e) {
-        messages.push({ role: "user", content: `recall JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
-        continue;
-      }
-      const parseResult = RecallSchema.safeParse(parsedArgs);
-      if (!parseResult.success) {
-        messages.push({ role: "user", content: `recall 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
-        continue;
-      }
-      const recallResult = handleRecall(parseResult.data.target_ids, ctx.self, allCharacters);
-      messages.push({ role: "tool", tool_call_id: tc.id, content: recallResult });
-      // recall continues loop, doesn't count as a decision round
-      round = Math.max(0, round - 1);
-      continue;
-    }
-
-    // ── Handle memorize ──
-    if (tcName === MEMORIZE_TOOL_NAME) {
-      let parsedArgs: unknown;
-      try { parsedArgs = JSON.parse(tcArgs); } catch (e) {
-        messages.push({ role: "user", content: `memorize JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请重试。` });
-        continue;
-      }
-      const parseResult = MemorizeSchema.safeParse(parsedArgs);
-      if (!parseResult.success) {
-        messages.push({ role: "user", content: `memorize 参数不符合要求：${parseResult.error.message}。请修正后重试。` });
-        continue;
-      }
-      handleMemorize(parseResult.data.target_id, parseResult.data.impression, ctx.self);
-      messages.push({ role: "tool", tool_call_id: tc.id, content: "已记录。" });
-      // memorize continues loop, doesn't count as a decision round
-      round = Math.max(0, round - 1);
-      continue;
-    }
-
-    // ── Handle view_map ──
-    if (tcName === VIEW_MAP_TOOL_NAME) {
-      const mapText = buildMapView(ctx.here, nodes, shops);
-      messages.push({ role: "tool", tool_call_id: tc.id, content: mapText });
-      round = Math.max(0, round - 1);
-      continue;
-    }
-
-    // ── Handle decide_action ──
-    if (tcName === DECIDE_ACTION_TOOL_NAME) {
-      let parsedArgs: unknown;
-      try {
-        parsedArgs = JSON.parse(tcArgs);
-      } catch (e) {
-        const err = `decide_action JSON 解析失败：${e instanceof Error ? e.message : String(e)}。请修正 JSON 格式后重试。`;
-        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
-          messages.push({ role: "user", content: err });
-        }
-        continue;
-      }
-
-      const schemaResult = DecideActionSchema.safeParse(parsedArgs);
-      if (!schemaResult.success) {
-        const err = `decide_action 参数不符合 schema：${schemaResult.error.message}。请修正后重试。`;
-        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
-          messages.push({ role: "user", content: err });
-        }
-        continue;
-      }
-
-      const actionType = schemaResult.data.action_type;
-
-      // Check action_type exists and is available
-      const def = actionRegistry.get(actionType);
-      if (!def) {
-        const err = `action_type="${actionType}" 不存在。请修正后重试。`;
-        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
-          messages.push({ role: "user", content: err });
-        }
-        continue;
-      }
-      if (!def.check(ctx)) {
-        const err = `action_type="${actionType}" 在当前情境下不可用。请选择其他行动。`;
-        if (round < MAX_TOOL_CALL_ROUNDS - 1) {
-          messages.push({ role: "user", content: err });
-        }
-        continue;
-      }
-
-      // Call action def's validateParams
-      if (def.validateParams) {
-        const validationErr = def.validateParams(schemaResult.data as ToolArgPayload, ctx);
-        if (validationErr) {
-          if (round < MAX_TOOL_CALL_ROUNDS - 1) {
-            messages.push({ role: "user", content: `${actionType} 参数校验失败：${validationErr}。请修正后重试。` });
-          }
-          continue;
-        }
-      }
-
-      return { actionType, data: schemaResult.data as ToolArgPayload };
-    }
-
-    // Unknown tool → nudge
-    if (round < MAX_TOOL_CALL_ROUNDS - 1) {
-      messages.push({ role: "user", content: TOOL_CALL_NUDGE });
-    }
-  }
-
-  throw new Error(`${fallbackLabel} ${MAX_TOOL_CALL_ROUNDS} 轮均未返回 tool_call。最后响应：${lastResponseSnapshot}`);
-}
-
-async function callLLM(input: DecideInput): Promise<Action> {
-  const system = buildSystemPrompt({
-    worldName: input.worldName,
-    nodes: input.nodes,
-    language: input.language,
-    shops: input.shops,
-  });
-  const user = buildUserPrompt({
-    character: input.character,
-    here: input.here,
-    companions: input.companions,
-    perceived: input.perceived,
-    options: input.options,
-    tick: input.tick,
-    epoch: input.epoch,
-    facts: input.facts,
-    language: input.language,
-    allCharacters: input.allCharacters,
-    nodes: input.nodes,
-    activeEventDefs: input.activeEventDefs,
-    upcomingNotebookText: input.upcomingNotebookText,
-    shops: input.shops,
-    itemDefs: input.itemDefs,
-  });
-
-  const tool = buildDecideActionTool(input.ctx);
-
-  const messages: Array<Record<string, unknown>> = [
-    { role: "system", content: system },
-    { role: "user", content: user },
-  ];
-
-  decideLog.info("DECIDE_PROMPT", { prompt: { system, user }, character: input.character.name });
-  writePromptFile("decide", `## decide — ${input.character.name}\n### system\n${system}\n### user\n${user}`);
-
-  const startMs = Date.now();
-  decideLog.info("LLM decide 请求", {
-    角色: input.character.name,
-    model: getModelNameForEntry("decide"),
-  });
-
-  const { actionType, data } = await callLLMWithRetry(messages, tool, "LLM", "decide", input.ctx, input.allCharacters, input.nodes, input.shops);
-
-  decideLog.info("LLM decide 响应", {
-    角色: input.character.name,
-    action: actionType,
-    耗时ms: Date.now() - startMs,
-  });
-
-  return payloadToAction(actionType, data, input.character.id);
-}
-
-interface ArrivalActionPayload {
-  action_type?: string;
-  free_text?: string;
-  target_id?: string;
-  target_node_id?: string;
-}
-
-interface ActionPayload {
-  target_id?: string;
-  target_node_id?: string;
-  free_text?: string;
-  amount?: number;
-  reasoning: string;
-  emotion_tag?: string;
-  self_importance: 1 | 2 | 3 | 4 | 5;
-  change_type?: import("../domain/index").RelationChangeType;
-  reason?: string;
-  arrival_action?: ArrivalActionPayload;
-  scheduled_day?: number;
-  scheduled_hour?: number;
-  scheduled_minute?: number;
-}
-
-function payloadToAction(actionType: string, raw: ToolArgPayload, actorId: string): Action {
-  const p = raw as unknown as ActionPayload;
-  const arrival = p.arrival_action;
-  const arrivalActionType = arrival?.action_type
-    ? (arrival.action_type.startsWith("action_")
-        ? arrival.action_type.slice("action_".length)
-        : arrival.action_type)
-    : undefined;
+function payloadToAction(args: Record<string, unknown>, input: DecideInput): Action {
+  const actionType = (args.action_type as string) || "look_around";
   return {
     type: actionType,
-    actorId,
-    targetId: p.target_id,
-    targetNodeId: p.target_node_id,
-    freeText: p.free_text,
-    amount: p.amount,
-    reasoning: p.reasoning,
-    emotionTag: p.emotion_tag,
-    selfImportance: p.self_importance,
-    changeType: p.change_type,
-    reason: p.reason,
-    arrivalAction: arrival && arrivalActionType
-      ? {
-          type: arrivalActionType,
-          freeText: arrival.free_text,
-          targetId: arrival.target_id,
-          targetNodeId: arrival.target_node_id,
-        }
-      : undefined,
-    scheduled_day: p.scheduled_day,
-    scheduled_hour: p.scheduled_hour,
-    scheduled_minute: p.scheduled_minute,
-  };
-}
-
-function waitFallback(input: DecideInput, reason: string): Action {
-  return {
-    type: "look_around",
     actorId: input.character.id,
-    reasoning: `LLM 调用失败：${reason}`,
-    selfImportance: 1,
+    targetId: args.target_id as string | undefined,
+    targetNodeId: args.target_node_id as string | undefined,
+    freeText: args.free_text as string | undefined,
+    amount: args.amount as number | undefined,
+    reasoning: (args.reason as string) || `执行 ${actionType}`,
+    selfImportance: 3,
   };
-}
-
-function errorMessage(err: unknown): string {
-  if (err instanceof OpenAI.APIError) {
-    const parts = [`${err.constructor.name} status=${err.status}: ${err.message}`];
-    const body = (err as { error?: unknown }).error;
-    if (body) parts.push(`body=${JSON.stringify(body).slice(0, 2000)}`);
-    return parts.join(" | ");
-  }
-  if (err instanceof Error) return err.message;
-  return String(err);
 }
 
 /** 从 LLM response 中提取关键内容用于日志，最多保留 maxLen 字符。 */

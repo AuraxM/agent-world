@@ -46,6 +46,7 @@ export function EventStream({
   const [filter, setFilter] = useState<Filter>("dialogue");
   const [charDropdownOpen, setCharDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -60,17 +61,19 @@ export function EventStream({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [charDropdownOpen]);
 
-  // Infinite scroll sentinel
+  // Infinite scroll sentinel — root must be the scrollable body so visibility
+  // is measured relative to the scroll container, not the viewport.
   useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el || !hasMore || loadingMore) return;
+    const sentinel = sentinelRef.current;
+    const body = bodyRef.current;
+    if (!sentinel || !body || !hasMore || loadingMore) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) onLoadMore();
       },
-      { threshold: 0.1 },
+      { threshold: 0.1, root: body },
     );
-    observer.observe(el);
+    observer.observe(sentinel);
     return () => observer.disconnect();
   }, [hasMore, loadingMore, onLoadMore]);
 
@@ -225,7 +228,7 @@ export function EventStream({
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      <div ref={bodyRef} className="flex-1 overflow-y-auto px-4 py-3">
         {groups.length === 0 ? (
           <p className="text-sm text-white/30 text-center mt-20">
             此分类暂无事件

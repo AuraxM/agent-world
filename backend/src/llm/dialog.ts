@@ -15,7 +15,6 @@ import type {
   Character,
   Conversation,
   DialogTurn,
-  EndConversationPayload,
   Language,
   MapNode,
   Memory,
@@ -27,7 +26,19 @@ import { db, schema } from "../db/index";
 import { eq, and } from "drizzle-orm";
 import { actionRegistry } from "../domain/index";
 import { applyStateChange, findPath } from "../systems/index";
-import { getNextHourEntries } from "../systems/index";
+import { buildDialogSystemPrompt } from "./system-prompts";
+import {
+  buildReadTools,
+  buildDialogWriteTools,
+  ALL_READ_TOOLS,
+  WRITE_DIALOG_TOOL,
+  END_DIALOG_TOOL,
+  WRITE_PROPOSE_ACTION_TOOL,
+  WRITE_RESPOND_ACTION_TOOL,
+} from "../domain/schemas";
+import { runAgentLoop } from "./agent-loop";
+import type { AgentLoopResult } from "./agent-loop";
+import type { ToolHandlerContext } from "./tool-handlers";
 const log = createLogger("dialog");
 
 // ---------------------------------------------------------------------------
@@ -98,26 +109,6 @@ export interface DialogueActionResponse {
   reasoning: string;
 }
 
-export type TurnDecideFn = (input: {
-  self: Character;
-  peer: Character;
-  transcript: DialogTurn[];
-  here: MapNode;
-  language: Language;
-  pendingAction?: import("../domain/types").DialogueActionRequest;
-  dialogueActions: import("../domain/action-system").ActionDefinition[];
-  tick: number;
-  epoch?: number;
-  upcomingEntries?: import("../domain/types").NotebookEntry[];
-  previousMessages?: Array<Record<string, unknown>>;
-  previousTranscriptLength?: number;
-  worldDescription?: string;
-  nodes?: MapNode[];
-}) => Promise<
-  | { kind: "turn"; turn: DialogTurn; proposeAction?: DialogueActionProposal; respondToAction?: DialogueActionResponse; messages?: Array<Record<string, unknown>>; transcriptLength?: number }
-  | { kind: "end"; payload: EndConversationPayload; respondToAction?: DialogueActionResponse; messages?: Array<Record<string, unknown>>; transcriptLength?: number }
->;
-
 export type SummaryDecideFn = (input: {
   openerName: string;
   openerId: string;
@@ -126,15 +117,6 @@ export type SummaryDecideFn = (input: {
   transcript: DialogTurn[];
   language: Language;
 }) => Promise<{ summary: string; memorize?: Array<{ target_id: string; impression: string }> }>;
-
-export type PersonalMemoryDecideFn = (input: {
-  characterName: string;
-  characterId: string;
-  partnerName: string;
-  partnerId: string;
-  transcript: DialogTurn[];
-  language: Language;
-}) => Promise<{ feeling: string; impression: string; topics: string[] }>;
 
 export type SalvageDecideFn = (input: {
   character: Character;
@@ -265,10 +247,6 @@ function makeMemory(characterId: string, tick: number, importance: number, conte
       layer: "short",
     },
   };
-}
-
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, v));
 }
 
 // ---------------------------------------------------------------------------
@@ -422,6 +400,125 @@ async function retryOnce<T>(fn: () => Promise<T>): Promise<T> {
     }
   }
   throw lastError;
+}
+
+// ---------------------------------------------------------------------------
+// newDialogTurn — agentic dialog turn using the shared ReAct agent loop
+// ---------------------------------------------------------------------------
+
+const DIALOG_TERMINAL_NAMES = [WRITE_DIALOG_TOOL, END_DIALOG_TOOL, WRITE_PROPOSE_ACTION_TOOL, WRITE_RESPOND_ACTION_TOOL];
+
+async function newDialogTurn(args: {
+  self: Character;
+  peer: Character;
+  transcript: DialogTurn[];
+  sharedMessages?: any[];
+  pendingAction?: any;
+  nodes: MapNode[];
+  allCharacters: Character[];
+  tick: number;
+  epoch: number;
+  worldId: string;
+  worldDescription?: string;
+  language?: string;
+  shops?: any[];
+}): Promise<
+  | {
+      kind: "turn";
+      turn: DialogTurn;
+      proposeAction?: { actionType: string; params: any };
+      respondToAction?: { accept: boolean; reason?: string };
+      messages?: any[];
+    }
+  | { kind: "end"; payload: { summary: string }; respondToAction?: { accept: boolean; reason?: string }; messages?: any[] }
+> {
+  const systemPrompt = buildDialogSystemPrompt(args.self.name, args.peer.name);
+  const readTools = buildReadTools();
+  const writeTools = buildDialogWriteTools();
+
+  const ctx: ToolHandlerContext = {
+    self: args.self,
+    allCharacters: args.allCharacters,
+    nodes: args.nodes,
+    shops: args.shops,
+    tick: args.tick,
+    epoch: args.epoch,
+    worldId: args.worldId,
+    worldDescription: args.worldDescription,
+  };
+
+  const result: AgentLoopResult = await runAgentLoop({
+    systemPrompt,
+    readTools,
+    writeTools,
+    terminalToolNames: DIALOG_TERMINAL_NAMES,
+    readToolNames: ALL_READ_TOOLS,
+    llmEntryName: "dialog_turn",
+    maxRounds: 20,
+    sharedMessages: args.sharedMessages as any,
+    toolHandlerContext: ctx,
+  });
+
+  if (result.kind !== "terminal") {
+    return { kind: "end", payload: { summary: "（对话超时）" } };
+  }
+
+  const { terminalToolName, terminalArgs } = result;
+
+  if (terminalToolName === END_DIALOG_TOOL) {
+    return {
+      kind: "end",
+      payload: { summary: (terminalArgs?.summary as string) ?? "对话结束" },
+      messages: result.messages as any,
+    };
+  }
+
+  if (terminalToolName === WRITE_DIALOG_TOOL) {
+    const turn: DialogTurn = {
+      speakerId: args.self.id,
+      kind: "say",
+      line: (terminalArgs?.content as string) ?? "",
+    };
+    const proposeAction = terminalArgs?.action_proposal
+      ? {
+          actionType: (terminalArgs.action_proposal as any).action_type,
+          params: (terminalArgs.action_proposal as any).params,
+        }
+      : undefined;
+    const respondToAction = terminalArgs?.action_response
+      ? {
+          accept: (terminalArgs.action_response as any).accept as boolean,
+          reason: (terminalArgs.action_response as any).reason as string | undefined,
+        }
+      : undefined;
+    return { kind: "turn", turn, proposeAction, respondToAction, messages: result.messages as any };
+  }
+
+  if (terminalToolName === WRITE_PROPOSE_ACTION_TOOL) {
+    return {
+      kind: "turn",
+      turn: { speakerId: args.self.id, kind: "say" as const, line: "" },
+      proposeAction: {
+        actionType: terminalArgs?.action_type as string,
+        params: (terminalArgs?.params ?? {}) as any,
+      },
+      messages: result.messages as any,
+    };
+  }
+
+  if (terminalToolName === WRITE_RESPOND_ACTION_TOOL) {
+    return {
+      kind: "turn",
+      turn: { speakerId: args.self.id, kind: "say" as const, line: "" },
+      respondToAction: {
+        accept: terminalArgs?.accept as boolean,
+        reason: terminalArgs?.reason as string | undefined,
+      },
+      messages: result.messages as any,
+    };
+  }
+
+  return { kind: "end", payload: { summary: "（未知终止类型）" } };
 }
 
 interface TickDialogResult {
@@ -608,12 +705,12 @@ async function runOneTickDialog(
   conv: Conversation,
   chars: Map<string, Character>,
   nodeById: Map<string, MapNode>,
-  turnDecide: TurnDecideFn,
   language: Language,
   currentTick: number,
   epoch: number,
   worldDescription?: string,
   nodes?: MapNode[],
+  shops?: any[],
 ): Promise<TickDialogResult> {
   const initiator = chars.get(conv.initiatorId)!;
   const acceptor = chars.get(conv.acceptorId)!;
@@ -667,54 +764,34 @@ async function runOneTickDialog(
     const speaker = chars.get(speakerId)!;
     const peer = speakerId === conv.initiatorId ? acceptor : initiator;
 
-    // Build dialogue action context for this turn
-    const speakerHere = nodeById.get(speaker.locationId)!;
-    const actionCtx = {
-      worldId: conv.worldId, tick: currentTick, epoch, self: speaker, here: speakerHere,
-      companions: [peer],
-      reachable: [] as MapNode[],
-      isSleepHour: false,
-      facts: {
-        activityNodeId: null,
-        activityNodeName: null,
-        restNodeId: null,
-        restNodeName: null,
-        hoursAtCurrentLocation: 0,
-        todayActionCounts: {},
-        todayChatTargets: {},
-      },
-      shops: [],
-      itemDefs: new Map(),
-    };
-    const dialogueActions = actionRegistry.getDialogueActions(actionCtx);
-
     // Determine pendingAction for this speaker: only if it targets them
     const pendingAction = conv.pendingAction && conv.pendingAction.targetId === speakerId
       ? conv.pendingAction
       : undefined;
 
-    const upcomingEntries = getNextHourEntries(speaker.notebook ?? [], currentTick);
-
     let result;
     try {
-      result = await retryOnce(() => turnDecide({
+      result = await retryOnce(() => newDialogTurn({
         self: speaker,
         peer,
         transcript,
-        here: speakerHere,
-        language,
-        pendingAction,
-        dialogueActions,
+        sharedMessages: conv.sharedMessages,
+        pendingAction: pendingAction ? {
+          requesterId: conv.pendingAction?.requesterId,
+          targetId: conv.pendingAction?.targetId,
+          actionType: conv.pendingAction?.actionType,
+          params: conv.pendingAction?.params,
+        } : undefined,
+        nodes: nodes ?? Array.from(nodeById.values()),
+        allCharacters: Array.from(chars.values()),
         tick: currentTick,
         epoch,
-        upcomingEntries,
-        previousMessages: conv.sharedMessages,
-        previousTranscriptLength: conv.sharedMessagesTranscriptLength,
+        worldId: conv.worldId,
         worldDescription,
-        nodes,
+        shops,
       }));
     } catch (err) {
-      log.error("turnDecide 异常，对话被迫终止", {
+      log.error("newDialogTurn 异常，对话被迫终止", {
         speaker: speaker.name,
         peer: peer.name,
         transcriptLen: transcript.length,
@@ -735,7 +812,7 @@ async function runOneTickDialog(
     if (result.respondToAction) {
       const pa = conv.pendingAction;
       if (pa) {
-        if (result.respondToAction.accepted) {
+        if (result.respondToAction.accept) {
           const requester = chars.get(pa.requesterId);
           const tgt = chars.get(pa.targetId);
           if (requester && tgt) {
@@ -777,7 +854,7 @@ async function runOneTickDialog(
     if (result.kind === "turn" && result.proposeAction) {
       conv.pendingAction = {
         requesterId: speakerId,
-        targetId: result.proposeAction.targetId,
+        targetId: peer.id,
         actionType: result.proposeAction.actionType,
         params: result.proposeAction.params,
       };
@@ -787,20 +864,9 @@ async function runOneTickDialog(
     if (result.messages) {
       conv.sharedMessages = result.messages;
     }
-    if (result.transcriptLength !== undefined) {
-      conv.sharedMessagesTranscriptLength = result.transcriptLength;
-    }
 
     if (result.kind === "end") {
       const isSixthSentence = round === sixthSentenceIndex;
-      if (result.payload.closingLine) {
-        transcript.push({
-          speakerId,
-          kind: "say",
-          line: result.payload.closingLine,
-          reasoning: result.payload.reasoning,
-        });
-      }
       if (isSixthSentence) {
         // 3+4 rule: other party gets one extra turn
         const otherId =
@@ -808,50 +874,30 @@ async function runOneTickDialog(
         const other = chars.get(otherId)!;
         const otherPeer = otherId === conv.initiatorId ? acceptor : initiator;
         try {
-          const otherHere = nodeById.get(other.locationId)!;
-          const otherActionCtx = {
-            worldId: conv.worldId, tick: currentTick, epoch, self: other, here: otherHere,
-            companions: [otherPeer],
-            reachable: [] as MapNode[],
-            isSleepHour: false,
-            facts: {
-              activityNodeId: null,
-              activityNodeName: null,
-              restNodeId: null,
-              restNodeName: null,
-              hoursAtCurrentLocation: 0,
-              todayActionCounts: {},
-              todayChatTargets: {},
-            },
-            shops: [],
-            itemDefs: new Map(),
-          };
-          const otherDialogueActions = actionRegistry.getDialogueActions(otherActionCtx);
           const otherPendingAction = conv.pendingAction && conv.pendingAction.targetId === otherId
             ? conv.pendingAction : undefined;
-          const upcomingEntries = getNextHourEntries(other.notebook ?? [], currentTick);
-          const extraResult = await turnDecide({
+          const extraResult = await newDialogTurn({
             self: other,
             peer: otherPeer,
             transcript,
-            here: otherHere,
-            language,
-            pendingAction: otherPendingAction,
-            dialogueActions: otherDialogueActions,
+            sharedMessages: conv.sharedMessages,
+            pendingAction: otherPendingAction ? {
+              requesterId: conv.pendingAction?.requesterId,
+              targetId: conv.pendingAction?.targetId,
+              actionType: conv.pendingAction?.actionType,
+              params: conv.pendingAction?.params,
+            } : undefined,
+            nodes: nodes ?? Array.from(nodeById.values()),
+            allCharacters: Array.from(chars.values()),
             tick: currentTick,
             epoch,
-            upcomingEntries,
-            previousMessages: conv.sharedMessages,
-            previousTranscriptLength: conv.sharedMessagesTranscriptLength,
+            worldId: conv.worldId,
             worldDescription,
-            nodes,
+            shops,
           });
           // Save extra round context too
           if (extraResult.messages) {
             conv.sharedMessages = extraResult.messages;
-          }
-          if (extraResult.transcriptLength !== undefined) {
-            conv.sharedMessagesTranscriptLength = extraResult.transcriptLength;
           }
           if (extraResult.kind === "turn") {
             transcript.push(extraResult.turn);
@@ -860,7 +906,7 @@ async function runOneTickDialog(
           if (extraResult.respondToAction) {
             const pa = conv.pendingAction;
             if (pa) {
-              if (extraResult.respondToAction.accepted) {
+              if (extraResult.respondToAction.accept) {
                 const requester = chars.get(pa.requesterId);
                 const tgt = chars.get(pa.targetId);
                 if (requester && tgt) {
@@ -933,11 +979,57 @@ export interface RunDialogPhaseInput {
   worldDescription?: string;
   language: Language;
   acceptDecide: AcceptDecideFn;
-  turnDecide: TurnDecideFn;
   summaryDecide: SummaryDecideFn;
-  personalMemoryDecide: PersonalMemoryDecideFn;
   salvageDecide: SalvageDecideFn;
   ongoingConversations: Conversation[];
+}
+
+// After a conversation ends, generate personal memory by asking the LLM
+async function generatePersonalMemory(
+  self: Character,
+  peer: Character,
+  ctx: ToolHandlerContext,
+): Promise<string> {
+  const prompt = `对话结束了。请回顾你与 ${peer.name} 的这段对话，从以下三个角度用自然语言反思，然后调用 write_memory 写入 short memory：
+
+1. **心情**：对话结束后你的心情如何
+2. **印象**：你对 ${peer.name} 的印象有什么变化
+3. **主题**：你们都聊了哪些主题
+
+调用 write_memory(layer="short", importance=3, content="你将心情、印象、主题整合成的一段自然语言记录") 来记录。`;
+
+  // Only expose write_memory and read tools for this
+  const writeTools = [
+    {
+      type: "function" as const,
+      function: {
+        name: "write_memory",
+        description: "写入一条记忆到短期记忆",
+        parameters: {
+          type: "object",
+          properties: {
+            layer: { type: "string", enum: ["short", "daily", "weekly"] },
+            content: { type: "string" },
+            importance: { type: "integer", minimum: 1, maximum: 5 },
+          },
+          required: ["layer", "content", "importance"],
+        },
+      },
+    },
+  ];
+
+  const result = await runAgentLoop({
+    systemPrompt: prompt,
+    readTools: buildReadTools(),
+    writeTools: writeTools as any,
+    terminalToolNames: ["write_memory"],
+    readToolNames: ALL_READ_TOOLS,
+    llmEntryName: "dialog_turn",
+    maxRounds: 3,
+    toolHandlerContext: ctx,
+  });
+
+  return (result.terminalArgs?.content as string) ?? "";
 }
 
 export async function runDialogPhase(
@@ -979,7 +1071,7 @@ export async function runDialogPhase(
         return;
       }
 
-      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick, epoch, input.worldDescription, nodes);
+      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.language, tick, epoch, input.worldDescription, nodes);
       conv.transcript = tickResult.transcript;
       conv.currentTickRounds = TURNS_PER_TICK;
 
@@ -1148,7 +1240,7 @@ export async function runDialogPhase(
         currentTickRounds: 0,
         status: "active",
       };
-      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.turnDecide, input.language, tick, epoch, input.worldDescription, nodes);
+      const tickResult = await runOneTickDialog(conv, charById, nodeById, input.language, tick, epoch, input.worldDescription, nodes);
       conv.transcript = tickResult.transcript;
       conv.currentTickRounds = TURNS_PER_TICK;
       if (tickResult.ended) {
@@ -1177,34 +1269,16 @@ export async function runDialogPhase(
       const responder = charById.get(conv.acceptorId)!;
 
       if (conv.status === "ended") {
-        // Three concurrent LLM calls: summary + each character's personal memory
+        // Summary: one LLM call for the dialog summary (keep standalone summarizer)
         let summary: string;
-        let openerMemory: { feeling: string; impression: string; topics: string[] } | null = null;
-        let responderMemory: { feeling: string; impression: string; topics: string[] } | null = null;
         try {
-          const [summaryResult, openerMemResult, responderMemResult] = await Promise.all([
-            retryOnce(() =>
-              input.summaryDecide({
-                openerName: opener.name, openerId: conv.initiatorId,
-                responderName: responder.name, responderId: conv.acceptorId,
-                transcript: conv.transcript, language: input.language,
-              }),
-            ),
-            retryOnce(() =>
-              input.personalMemoryDecide({
-                characterName: opener.name, characterId: conv.initiatorId,
-                partnerName: responder.name, partnerId: conv.acceptorId,
-                transcript: conv.transcript, language: input.language,
-              }),
-            ),
-            retryOnce(() =>
-              input.personalMemoryDecide({
-                characterName: responder.name, characterId: conv.acceptorId,
-                partnerName: opener.name, partnerId: conv.initiatorId,
-                transcript: conv.transcript, language: input.language,
-              }),
-            ),
-          ]);
+          const summaryResult = await retryOnce(() =>
+            input.summaryDecide({
+              openerName: opener.name, openerId: conv.initiatorId,
+              responderName: responder.name, responderId: conv.acceptorId,
+              transcript: conv.transcript, language: input.language,
+            }),
+          );
           summary = summaryResult.summary;
           if (summaryResult.memorize) {
             for (const m of summaryResult.memorize) {
@@ -1212,43 +1286,39 @@ export async function runDialogPhase(
               if (m.target_id === conv.initiatorId) responder.impressionBook[m.target_id] = m.impression.trim();
             }
           }
-          openerMemory = openerMemResult;
-          responderMemory = responderMemResult;
         } catch {
           summary = `（摘要生成失败：双方聊了 ${conv.transcript.length} 句）`;
         }
 
-        // Apply personal memory impressions to impressionBook
-        if (openerMemory?.impression) {
-          opener.impressionBook[conv.acceptorId] = openerMemory.impression.trim();
-        }
-        if (responderMemory?.impression) {
-          responder.impressionBook[conv.initiatorId] = responderMemory.impression.trim();
+        // Generate personal memories for each participant via agentic loop
+        const personalMemCtx: ToolHandlerContext = {
+          self: opener,
+          allCharacters: characters,
+          nodes,
+          tick,
+          epoch,
+          worldId: opener.worldId,
+          worldDescription: input.worldDescription,
+        };
+        const personalMemCtxResp: ToolHandlerContext = {
+          self: responder,
+          allCharacters: characters,
+          nodes,
+          tick,
+          epoch,
+          worldId: responder.worldId,
+          worldDescription: input.worldDescription,
+        };
+
+        try {
+          await Promise.all([
+            generatePersonalMemory(opener, responder, personalMemCtx),
+            generatePersonalMemory(responder, opener, personalMemCtxResp),
+          ]);
+        } catch {
+          // Personal memory generation failure is non-critical
         }
 
-        const maxImportance = clamp(
-          Math.max(
-            rawActions.find((a) => a.actorId === conv.initiatorId)?.selfImportance ?? 2,
-            rawActions.find((a) => a.actorId === conv.acceptorId)?.selfImportance ?? 2,
-          ),
-          2, 4,
-        );
-
-        // Write personal memories to each character's shortMemory
-        if (openerMemory) {
-          const topics = openerMemory.topics.length > 0 ? ` 主题：${openerMemory.topics.join("、")}。` : "";
-          memoryWrites.push(makeMemory(conv.initiatorId, tick, maxImportance,
-            `和 ${responder.name} 聊完了。心情：${openerMemory.feeling}。对 ${responder.name} 的印象：${openerMemory.impression}。${topics}`));
-        } else {
-          memoryWrites.push(makeMemory(conv.initiatorId, tick, maxImportance, `和 ${responder.name} 聊了：${summary}`));
-        }
-        if (responderMemory) {
-          const topics = responderMemory.topics.length > 0 ? ` 主题：${responderMemory.topics.join("、")}。` : "";
-          memoryWrites.push(makeMemory(conv.acceptorId, tick, maxImportance,
-            `和 ${opener.name} 聊完了。心情：${responderMemory.feeling}。对 ${opener.name} 的印象：${responderMemory.impression}。${topics}`));
-        } else {
-          memoryWrites.push(makeMemory(conv.acceptorId, tick, maxImportance, `和 ${opener.name} 聊了：${summary}`));
-        }
         dialogEvents.push({
           id: `evt-conv-${conv.id}`,
           worldId: opener.worldId, tick, category: "social", description: summary,

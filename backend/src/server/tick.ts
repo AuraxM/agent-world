@@ -948,9 +948,7 @@ export async function tick(
     worldDescription: manifest.description,
     language,
     acceptDecide: (input) => llmAcceptDecide(input),
-    turnDecide: (input) => llmDialogTurn(input),
     summaryDecide: (input) => llmDialogSummarize(input),
-    personalMemoryDecide: (input) => llmDialogPersonalMemory(input),
     salvageDecide: async (input) => {
       const recentThoughts = loadRecentThoughts(worldId, input.character.id, sinceTick);
       const sActivityId = activityMap.get(input.character.id) ?? null;

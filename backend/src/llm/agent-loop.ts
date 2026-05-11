@@ -7,14 +7,46 @@
  * - 保留 DeepSeek reasoning_content 并在每轮回传
  */
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { z } from "zod";
 import { getLLMClientForEntry, getModelNameForEntry } from "./client";
 import { getEntryConfig } from "./providers";
 import type { ActionToolDef } from "../domain/schemas";
+import {
+  ReadMemoriesParamsSchema, ReadCharacterParamsSchema, ReadRelationsParamsSchema,
+  ReadEventsParamsSchema,
+  WriteDecisionParamsSchema, WriteDialogParamsSchema, WriteProposeActionParamsSchema,
+  WriteRespondActionParamsSchema, EndDialogParamsSchema, WriteMemoryParamsSchema,
+  DeleteMemoryParamsSchema, WriteImpressionParamsSchema, WriteNotebookParamsSchema,
+  WriteLikeParamsSchema, WriteDislikeParamsSchema, WriteShortTermGoalParamsSchema,
+  WriteLongTermGoalParamsSchema, WriteRelationParamsSchema, EndThinkingParamsSchema,
+} from "../domain/schemas";
 import type { ToolHandlerContext } from "./tool-handlers";
 import {
   READ_HANDLERS,
   WRITE_HANDLERS,
 } from "./tool-handlers";
+
+const PARAM_SCHEMAS: Record<string, z.ZodType> = {
+  read_memories: ReadMemoriesParamsSchema,
+  read_character: ReadCharacterParamsSchema,
+  read_relations: ReadRelationsParamsSchema,
+  read_events: ReadEventsParamsSchema,
+  write_decision: WriteDecisionParamsSchema,
+  write_dialog: WriteDialogParamsSchema,
+  write_propose_action: WriteProposeActionParamsSchema,
+  write_respond_action: WriteRespondActionParamsSchema,
+  end_dialog: EndDialogParamsSchema,
+  write_memory: WriteMemoryParamsSchema,
+  delete_memory: DeleteMemoryParamsSchema,
+  write_impression: WriteImpressionParamsSchema,
+  write_notebook: WriteNotebookParamsSchema,
+  write_like: WriteLikeParamsSchema,
+  write_dislike: WriteDislikeParamsSchema,
+  write_short_term_goal: WriteShortTermGoalParamsSchema,
+  write_long_term_goal: WriteLongTermGoalParamsSchema,
+  write_relation: WriteRelationParamsSchema,
+  end_thinking: EndThinkingParamsSchema,
+};
 
 export interface AgentLoopInput {
   systemPrompt: string;
@@ -121,6 +153,25 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
         args = JSON.parse(tc.function.arguments || "{}");
       } catch {
         args = {};
+      }
+
+      // Validate args against schema if one exists
+      const paramSchema = PARAM_SCHEMAS[toolName];
+      if (paramSchema) {
+        const parsed = paramSchema.safeParse(args);
+        if (!parsed.success) {
+          messages.push({
+            role: "tool",
+            tool_call_id: tc.id,
+            content: JSON.stringify({
+              error: `参数校验失败：${parsed.error.message}`,
+              received: args,
+            }),
+          } as ChatCompletionMessageParam);
+          if (!(readToolNames as readonly string[]).includes(toolName)) round++;
+          continue;
+        }
+        args = parsed.data as Record<string, unknown>;
       }
 
       // Check if this is a terminal tool

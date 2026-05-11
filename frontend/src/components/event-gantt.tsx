@@ -141,6 +141,18 @@ export function EventGantt({
     return () => el.removeEventListener("wheel", handleWheel);
   }, []);
 
+  // Preserve scroll position when content width grows (batch loaded)
+  const prevContentWidth = useRef(contentWidth);
+  useEffect(() => {
+    const el = cardsRef.current;
+    if (!el) return;
+    const diff = contentWidth - prevContentWidth.current;
+    if (diff > 0) {
+      el.scrollLeft += diff;
+    }
+    prevContentWidth.current = contentWidth;
+  }, [contentWidth]);
+
   if (events.length === 0) {
     return (
       <div className="h-full flex flex-col">

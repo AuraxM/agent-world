@@ -1,9 +1,58 @@
 ---
 name: agent-world-action-test
-description: Use when writing or debugging tests for any dialogue-based interactive action (give, kiss, trade, comfort, teach, etc.) in the agent-world project. Triggers include "测试对话action"、"dialogue action test"、"mock turnDecide"、"propose_dialogue_action"、any mention of testing the propose→pending→respond→execute flow, or when a dialogue action test fails. Also use when adding usableInDialogue to a new action and needing to verify end-to-end behavior.
+description: Use when writing or debugging tests for any dialogue-based interactive action (give, kiss, trade, comfort, teach, etc.) in the agent-world project, OR when running the LLM action diagnostic tool (diagnose-action.ts) to test whether an action is correctly guided by prompts. Triggers include "测试对话action"、"dialogue action test"、"测试action"、"action调不到"、"diagnose action"、"诊断action"、"测试 eat"、"测一下 kiss"、"这个action为什么没有被调用"、"mock turnDecide"、"propose_dialogue_action"、any mention of testing the propose→pending→respond→execute flow, or when a dialogue action test fails. Also use when adding usableInDialogue to a new action and needing to verify end-to-end behavior.
 ---
 
-# Agent World Dialogue Action Testing
+# Agent World Action Testing
+
+Two distinct testing approaches: dialogue action unit tests (mock-based) and LLM action diagnostic (real LLM calls).
+
+## LLM Action Diagnostic Tool
+
+When an action is added but never gets called by the LLM, use `diagnose-action.ts` to determine whether the issue is in the prompt or the code path.
+
+### Run a single diagnostic
+
+```bash
+cd backend && npx tsx scripts/diagnose-action.ts --action <type> --entry <entry>
+```
+
+Supported entries: `decide`, `dialog`, `think`, `accept`, `summary`, `memory`, `placement`.
+
+### Run all diagnostics for one entry
+
+```bash
+cd backend && npx tsx scripts/diagnose-action.ts --all --entry decide
+```
+
+### Run all diagnostics across all entries
+
+```bash
+cd backend && npx tsx scripts/diagnose-action.ts --all
+```
+
+### How it works
+
+1. Injects inducing game state (vitals, emotions, location, companions) into DB via SAVEPOINT
+2. Calls the real LLM function for the specified entry point
+3. Reports whether the target action/tool was correctly invoked
+4. Rolls back all DB changes
+
+### Diagnostic report sections
+
+1. **Code path check** — Is the action registered? Does `check()` pass? Is it in the tool enum?
+2. **Induction state** — What game state was injected to induce the action
+3. **LLM result** — What did the LLM choose? Did it match the target action?
+4. **Full prompts** — System prompt, user prompt, tools JSON (for manual inspection)
+
+### When to use
+
+- A newly added action never gets called during gameplay
+- You suspect the prompt doesn't describe the action clearly enough
+- You suspect the code path (`check()`, `buildOptions`, tool injection) is broken
+- You want to verify an LLM provider/model combination handles a specific action correctly
+
+## Dialogue Action Unit Testing
 
 How to write and debug tests for actions proposed and accepted during dialogue — any action where `usableInDialogue: true`.
 

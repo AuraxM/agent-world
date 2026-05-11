@@ -1,7 +1,8 @@
 import type { Character, MapNode, Memory, WorldEvent } from "../domain";
-import { MEMORY_CAPACITY } from "../domain/enums";
+import { MEMORY_CAPACITY, OBJECTIVE_RELATION_KINDS } from "../domain/enums";
 // Import existing helpers from prompt.ts
 import { buildMapView } from "./prompt";
+import { tickFromCalendar } from "../systems/notebook";
 
 export interface ToolHandlerContext {
   self: Character;
@@ -332,9 +333,10 @@ export function handleWriteNotebook(
   args: { year: number; month: number; day: number; hour: number; content: string },
   ctx: ToolHandlerContext,
 ): HandlerResult {
+  const scheduledTick = tickFromCalendar(args.year, args.month, args.day, args.hour, ctx.epoch);
   const entry = {
     id: `nb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    scheduledTick: ctx.tick + 10,
+    scheduledTick: scheduledTick ?? ctx.tick + 10,
     content: args.content,
     createdAt: ctx.tick,
   };
@@ -379,7 +381,16 @@ export function handleWriteRelation(
   ctx: ToolHandlerContext,
 ): HandlerResult {
   const rel = ctx.self.relations[args.target_id];
+  const BLOOD_RELATIONS = OBJECTIVE_RELATION_KINDS.filter((k) =>
+    ["father", "mother", "son", "daughter", "older_brother", "younger_brother",
+     "older_sister", "younger_sister", "other_relative"].includes(k),
+  );
+
   if (args.action === "add") {
+    // Prevent adding blood relations — they are innate, not acquired via tool
+    if (BLOOD_RELATIONS.includes(args.kind as typeof BLOOD_RELATIONS[number])) {
+      return { error: `不能通过工具添加血缘关系 ${args.kind}` };
+    }
     if (rel) {
       if (!rel.kinds.includes(args.kind as any)) {
         rel.kinds.push(args.kind as any);
@@ -395,8 +406,7 @@ export function handleWriteRelation(
   } else {
     if (rel) {
       // Protect blood relations from removal
-      const BLOOD_RELATIONS = ["father", "mother", "son", "daughter", "siblings"];
-      if (BLOOD_RELATIONS.includes(args.kind)) {
+      if (BLOOD_RELATIONS.includes(args.kind as typeof BLOOD_RELATIONS[number])) {
         return { error: `血缘关系 ${args.kind} 不可移除` };
       }
       rel.kinds = rel.kinds.filter((k) => k !== args.kind);

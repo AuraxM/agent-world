@@ -63,6 +63,7 @@ export function useWorldState(): UseWorldState {
   } | null>(null);
   const shouldStopRef = useRef(false);
   const loadingRef = useRef(false);
+  const loadingMoreRef = useRef(false);
   const autoRunningRef = useRef(false);
   const [templates, setTemplates] = useState<Array<{ id: string; name: string; avatar: string | null }>>([]);
 
@@ -101,7 +102,8 @@ export function useWorldState(): UseWorldState {
   }, [worldId]);
 
   const loadMore = useCallback(async () => {
-    if (!worldId || loadedSince === null || !hasMore || loadingMore) return;
+    if (!worldId || loadedSince === null || !hasMore || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
       const until = loadedSince - 1;
@@ -118,9 +120,10 @@ export function useWorldState(): UseWorldState {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [worldId, loadedSince, hasMore, loadingMore]);
+  }, [worldId, loadedSince, hasMore]);
 
   useEffect(() => {
     queueMicrotask(() => {

@@ -22,6 +22,10 @@ interface ErrorEvent {
 export interface UseWorldState {
   snapshot: WorldSnapshot | null;
   events: WorldEvent[];
+  loadedSince: number | null;
+  hasMore: boolean;
+  loadingMore: boolean;
+  loadMore: () => Promise<void>;
   loading: boolean;
   error: string | null;
   lastTickMs: number | null;
@@ -41,6 +45,9 @@ export function useWorldState(): UseWorldState {
   const worldId = routeWorldId ?? DEFAULT_WORLD_ID;
   const [snapshot, setSnapshot] = useState<WorldSnapshot | null>(null);
   const [events, setEvents] = useState<WorldEvent[]>([]);
+  const [loadedSince, setLoadedSince] = useState<number | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastTickMs, setLastTickMs] = useState<number | null>(null);
@@ -67,16 +74,23 @@ export function useWorldState(): UseWorldState {
     }
     loadingRef.current = true;
     try {
-      const [snapRes, evRes] = await Promise.all([
-        fetch(`/api/worlds/${worldId}`, { cache: "no-store" }),
-        fetch(`/api/worlds/${worldId}/events?since=0`, { cache: "no-store" }),
-      ]);
+      const snapRes = await fetch(`/api/worlds/${worldId}`, { cache: "no-store" });
       if (!snapRes.ok) throw new Error(`snapshot ${snapRes.status}`);
-      if (!evRes.ok) throw new Error(`events ${evRes.status}`);
       const snap = (await snapRes.json()) as WorldSnapshot;
+
+      const currentTick = snap.world.currentTick;
+      const initialSince = Math.max(0, currentTick - 39);
+      const evRes = await fetch(
+        `/api/worlds/${worldId}/events?since=${initialSince}&until=${currentTick}`,
+        { cache: "no-store" },
+      );
+      if (!evRes.ok) throw new Error(`events ${evRes.status}`);
       const ev = (await evRes.json()) as { events: WorldEvent[] };
+
       setSnapshot(snap);
       setEvents(ev.events);
+      setLoadedSince(initialSince);
+      setHasMore(initialSince > 0);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -85,6 +99,28 @@ export function useWorldState(): UseWorldState {
       loadingRef.current = false;
     }
   }, [worldId]);
+
+  const loadMore = useCallback(async () => {
+    if (!worldId || loadedSince === null || !hasMore || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const until = loadedSince - 1;
+      const since = Math.max(0, loadedSince - 40);
+      const res = await fetch(
+        `/api/worlds/${worldId}/events?since=${since}&until=${until}`,
+        { cache: "no-store" },
+      );
+      if (!res.ok) throw new Error(`events ${res.status}`);
+      const data = (await res.json()) as { events: WorldEvent[] };
+      setEvents((prev) => [...prev, ...data.events]);
+      setLoadedSince(since);
+      setHasMore(since > 0);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [worldId, loadedSince, hasMore, loadingMore]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -328,6 +364,10 @@ export function useWorldState(): UseWorldState {
   return {
     snapshot,
     events,
+    loadedSince,
+    hasMore,
+    loadingMore,
+    loadMore,
     loading,
     error,
     lastTickMs,

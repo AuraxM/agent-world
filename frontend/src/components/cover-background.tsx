@@ -9,7 +9,6 @@ import { Outlet, useLocation } from "react-router-dom";
 export function CoverBackground() {
   const location = useLocation();
   const isIndex = location.pathname === "/";
-  const isHub = location.pathname.startsWith("/hub");
 
   return (
     <div className="h-screen w-screen relative overflow-hidden">

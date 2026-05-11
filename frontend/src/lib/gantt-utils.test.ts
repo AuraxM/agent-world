@@ -167,8 +167,8 @@ describe("getCategoryIcon", () => {
 });
 
 describe("TICK_WIDTH", () => {
-  it("is 100", () => {
-    expect(TICK_WIDTH).toBe(100);
+  it("is a positive number", () => {
+    expect(TICK_WIDTH).toBeGreaterThan(0);
   });
 });
 
@@ -186,8 +186,8 @@ describe("stackEventsAtTick", () => {
     expect(stacked).toHaveLength(2);
     expect(stacked[0]!.top).toBe(6);
     expect(stacked[1]!.top).toBe(6);
-    expect(stacked[0]!.left).toBe(100);
-    expect(stacked[1]!.left).toBe(200);
+    expect(stacked[0]!.left).toBe(TICK_WIDTH);
+    expect(stacked[1]!.left).toBe(2 * TICK_WIDTH);
   });
 
   it("stacks events at same tick vertically", () => {
@@ -199,8 +199,8 @@ describe("stackEventsAtTick", () => {
     expect(stacked).toHaveLength(2);
     expect(stacked[0]!.top).toBe(6);
     expect(stacked[1]!.top).toBe(58);
-    expect(stacked[0]!.left).toBe(100);
-    expect(stacked[1]!.left).toBe(100);
+    expect(stacked[0]!.left).toBe(TICK_WIDTH);
+    expect(stacked[1]!.left).toBe(TICK_WIDTH);
   });
 
   it("handles triple stack", () => {

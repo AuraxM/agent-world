@@ -329,6 +329,43 @@ const PROFILES: Record<string, EntryProfile> = {
     },
   },
 
+  // ═══ Accept entry ═══
+  "accept_chat:accept": {
+    action: "accept_chat", entry: "accept",
+    profile: {
+      emotions: { mood: 7, stress: 2, socialSatiety: 3 },
+      companionFilter: { sameLocation: true },
+    },
+  },
+
+  // ═══ Summary entry ═══
+  "dialog_summary:summary": {
+    action: "dialog_summary", entry: "summary",
+    profile: {},
+    dialogueHistory: [
+      "太郎：今天天气真好，我们去海边散步吧。",
+      "花子：好啊，我也正想出去走走。",
+      "太郎：你看那边的夕阳，好美。",
+      "花子：嗯，好久没看到这么美的日落了。",
+      "太郎：和你在一起真的很开心。",
+      "花子：我也是。",
+    ],
+  },
+
+  // ═══ Memory entry ═══
+  "dialog_personal_memory:memory": {
+    action: "dialog_personal_memory", entry: "memory",
+    profile: {
+      emotions: { mood: 8, stress: 2, socialSatiety: 8 },
+    },
+    dialogueHistory: [
+      "太郎：今天天气真好，我们去海边散步吧。",
+      "花子：好啊，我也正想出去走走。",
+      "太郎：和你在一起真的很开心。",
+      "花子：我也是，已经很久没有这么放松了。",
+    ],
+  },
+
   // ═══ Placement entry (7 actions — those that appear in decide but also work in placement) ═══
   "eat:placement": {
     action: "eat", entry: "placement",
@@ -817,6 +854,277 @@ async function runDialogDiagnostic(
 }
 
 // ═══════════════════════════════════════════════════════
+// Think entry: LLM dispatch and diagnostic result
+// ═══════════════════════════════════════════════════════
+
+async function runThinkDiagnostic(
+  entryProfile: EntryProfile,
+  charId?: string,
+): Promise<DiagnosticResult> {
+  const profile = entryProfile.profile;
+  const { character, node, worldId } = await resolveCharacter(profile, charId);
+  const rollback = await injectState(worldId, character.id, undefined, node.id, profile);
+
+  try {
+    const { llmThink } = await import("../src/llm/decide");
+    const { loadWorld } = await import("../src/systems/store");
+
+    const worldData = await loadWorld(worldId);
+    const updatedSelf = worldData.characters.find((c: any) => c.id === character.id);
+    const hereNode = worldData.nodes.find((n: any) => n.id === node.id);
+
+    if (!updatedSelf || !hereNode) throw new Error("Character or node not found");
+
+    const startTime = Date.now();
+    const result = await llmThink({
+      self: updatedSelf,
+      here: hereNode,
+      transcript: [],
+      language: "zh" as const,
+      tick: worldData.world.currentTick,
+      epoch: worldData.world.epoch,
+      tickStarted: Date.now(),
+      allCharacters: worldData.characters,
+      nodes: worldData.nodes,
+    });
+    const elapsed = Date.now() - startTime;
+
+    const isThinkTurn = result.kind === "turn";
+    const isEnd = result.kind === "end";
+
+    return {
+      action: entryProfile.action,
+      entry: "think",
+      codePathChecks: { registered: true, inBuildOptions: true },
+      induction: {
+        character: updatedSelf.name,
+        characterId: updatedSelf.id,
+        node: hereNode.name,
+        vitals: JSON.parse(updatedSelf.vitalsJson || "{}"),
+        emotions: JSON.parse(updatedSelf.emotionJson || "{}"),
+      },
+      llmResult: {
+        chosenAction: isThinkTurn ? "submit_think_turn" : isEnd ? "end_thinking" : "unknown",
+        matched: isThinkTurn || isEnd,
+        elapsed,
+        rawAction: result,
+      },
+      prompts: { system: "(think prompt built internally)", user: "" },
+    };
+  } finally {
+    rollback();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Accept entry: LLM dispatch and diagnostic result
+// ═══════════════════════════════════════════════════════
+
+async function runAcceptDiagnostic(
+  entryProfile: EntryProfile,
+  charId?: string,
+): Promise<DiagnosticResult> {
+  const profile = entryProfile.profile;
+  const { character, node, companion, worldId } = await resolveCharacter(profile, charId);
+  if (!companion) throw new Error("Accept entry requires a companion (as inviter)");
+
+  const rollback = await injectState(worldId, character.id, companion.id, node.id, profile);
+
+  try {
+    const { llmAcceptDecide } = await import("../src/llm/decide");
+    const { loadWorld } = await import("../src/systems/store");
+
+    const worldData = await loadWorld(worldId);
+    const updatedSelf = worldData.characters.find((c: any) => c.id === character.id);
+    const updatedPeer = worldData.characters.find((c: any) => c.id === companion.id);
+    const hereNode = worldData.nodes.find((n: any) => n.id === node.id);
+
+    if (!updatedSelf || !updatedPeer || !hereNode) throw new Error("Required entities not found");
+
+    const startTime = Date.now();
+    const result = await llmAcceptDecide({
+      character: updatedSelf,
+      requesterName: updatedPeer.name,
+      requesterId: updatedPeer.id,
+      freeText: "嘿，有空聊两句吗？",
+      here: hereNode,
+      peer: updatedPeer,
+      tick: worldData.world.currentTick,
+      epoch: worldData.world.epoch,
+      language: "zh" as const,
+    });
+    const elapsed = Date.now() - startTime;
+
+    return {
+      action: "accept_decision",
+      entry: "accept",
+      codePathChecks: { registered: true, inBuildOptions: true },
+      induction: {
+        character: updatedSelf.name,
+        characterId: updatedSelf.id,
+        node: hereNode.name,
+        vitals: JSON.parse(updatedSelf.vitalsJson || "{}"),
+        emotions: JSON.parse(updatedSelf.emotionJson || "{}"),
+        companion: updatedPeer.name,
+      },
+      llmResult: {
+        chosenAction: (result as any).type,
+        matched: true,
+        elapsed,
+        rawAction: result,
+      },
+      prompts: { system: "", user: "" },
+    };
+  } finally {
+    rollback();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Summary entry: LLM dispatch and diagnostic result
+// ═══════════════════════════════════════════════════════
+
+async function runSummaryDiagnostic(
+  entryProfile: EntryProfile,
+  _charId?: string,
+): Promise<DiagnosticResult> {
+  if (!entryProfile.dialogueHistory || entryProfile.dialogueHistory.length === 0) {
+    throw new Error("Summary entry requires dialogueHistory");
+  }
+
+  const { character, companion, worldId } = await resolveCharacter(entryProfile.profile, undefined);
+  if (!companion) throw new Error("Summary requires two characters");
+
+  // Build transcript from dialogueHistory
+  const transcript: Array<{
+    speakerId: string;
+    speakerName: string;
+    line: string;
+    turn: number;
+    createdAt: number;
+  }> = entryProfile.dialogueHistory.map((line, i) => {
+    const separatorIndex = line.indexOf("：");
+    const speakerName = separatorIndex > 0 ? line.slice(0, separatorIndex) : "Unknown";
+    const text = separatorIndex > 0 ? line.slice(separatorIndex + 1) : line;
+    return {
+      speakerId: speakerName.includes(character.name) ? character.id : companion.id,
+      speakerName,
+      line: text,
+      turn: i,
+      createdAt: Date.now(),
+    };
+  });
+
+  const { llmDialogSummarize } = await import("../src/llm/decide");
+
+  const startTime = Date.now();
+  const result = await llmDialogSummarize({
+    openerName: companion.name,
+    openerId: companion.id,
+    responderName: character.name,
+    responderId: character.id,
+    transcript,
+    language: "zh" as const,
+  });
+  const elapsed = Date.now() - startTime;
+
+  return {
+    action: "dialog_summary",
+    entry: "summary",
+    codePathChecks: { registered: true, inBuildOptions: true },
+    induction: {
+      character: character.name,
+      characterId: character.id,
+      node: "",
+      vitals: {},
+      emotions: {},
+      companion: companion.name,
+      dialogueLines: entryProfile.dialogueHistory,
+    },
+    llmResult: {
+      chosenAction: "submit_dialog_summary",
+      matched: typeof result.summary === "string" && result.summary.length > 0,
+      elapsed,
+      rawAction: result,
+    },
+    prompts: { system: "", user: "" },
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// Memory entry: LLM dispatch and diagnostic result
+// ═══════════════════════════════════════════════════════
+
+async function runMemoryDiagnostic(
+  entryProfile: EntryProfile,
+  _charId?: string,
+): Promise<DiagnosticResult> {
+  if (!entryProfile.dialogueHistory || entryProfile.dialogueHistory.length === 0) {
+    throw new Error("Memory entry requires dialogueHistory");
+  }
+
+  const { character, companion, worldId } = await resolveCharacter(entryProfile.profile, undefined);
+  if (!companion) throw new Error("Memory requires two characters");
+
+  // Build transcript
+  const transcript: Array<{
+    speakerId: string;
+    speakerName: string;
+    line: string;
+    turn: number;
+    createdAt: number;
+  }> = entryProfile.dialogueHistory.map((line, i) => {
+    const separatorIndex = line.indexOf("：");
+    const speakerName = separatorIndex > 0 ? line.slice(0, separatorIndex) : "Unknown";
+    const text = separatorIndex > 0 ? line.slice(separatorIndex + 1) : line;
+    return {
+      speakerId: speakerName.includes(character.name) ? character.id : companion.id,
+      speakerName,
+      line: text,
+      turn: i,
+      createdAt: Date.now(),
+    };
+  });
+
+  const { llmDialogPersonalMemory } = await import("../src/llm/decide");
+
+  const startTime = Date.now();
+  const result = await llmDialogPersonalMemory({
+    characterName: character.name,
+    characterId: character.id,
+    partnerName: companion.name,
+    partnerId: companion.id,
+    transcript,
+    language: "zh" as const,
+  });
+  const elapsed = Date.now() - startTime;
+
+  const payload = result as { feeling?: string; impression?: string; topics?: string[] };
+
+  return {
+    action: "dialog_personal_memory",
+    entry: "memory",
+    codePathChecks: { registered: true, inBuildOptions: true },
+    induction: {
+      character: character.name,
+      characterId: character.id,
+      node: "",
+      vitals: {},
+      emotions: {},
+      companion: companion.name,
+      dialogueLines: entryProfile.dialogueHistory,
+    },
+    llmResult: {
+      chosenAction: "submit_personal_memory",
+      matched: payload.feeling != null && payload.impression != null,
+      elapsed,
+      rawAction: result,
+    },
+    prompts: { system: "", user: "" },
+  };
+}
+
+// ═══════════════════════════════════════════════════════
 // Report printer
 // ═══════════════════════════════════════════════════════
 
@@ -872,13 +1180,13 @@ async function dispatch(entryProfile: EntryProfile, cli: CliArgs): Promise<Diagn
     case "dialog":
       return runDialogDiagnostic(entryProfile, cli.character);
     case "think":
-      throw new Error("Think entry not yet implemented");
+      return runThinkDiagnostic(entryProfile, cli.character);
     case "accept":
-      throw new Error("Accept entry not yet implemented");
+      return runAcceptDiagnostic(entryProfile, cli.character);
     case "summary":
-      throw new Error("Summary entry not yet implemented");
+      return runSummaryDiagnostic(entryProfile, cli.character);
     case "memory":
-      throw new Error("Memory entry not yet implemented");
+      return runMemoryDiagnostic(entryProfile, cli.character);
     case "placement":
       throw new Error("Placement entry not yet implemented");
   }

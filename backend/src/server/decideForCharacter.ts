@@ -28,16 +28,13 @@ import {
   buildRestNodeMap,
 } from "../systems/index";
 import {
-  getEntryConfig,
-  buildSystemPrompt,
-  buildUserPrompt,
   DEFAULT_SLEEP_WINDOW,
   inSleepWindow,
   timeOfDay,
 } from "../llm/index";
 import { db, schema } from "../db/index";
 import { loadAllCharacters, loadManifest, loadAllItems } from "../config/index";
-import { actionRegistry, actionTypeFromToolName } from "../domain/index";
+import { actionRegistry } from "../domain/index";
 import type { Action, Character, WorldEvent } from "../domain/index";
 import type { DecideInput } from "../llm/index";
 import { createLogger } from "../shared/index";
@@ -61,10 +58,6 @@ function fallbackLookAround(c: Character, reason: string): Action {
   };
 }
 
-function normalizeArrivalType(raw: string): string {
-  const stripped = actionTypeFromToolName(raw) ?? raw;
-  return actionRegistry.has(stripped) ? stripped : "think";
-}
 
 function getSleepWindow(characterId: string) {
   try {
@@ -142,162 +135,29 @@ export async function decideForCharacter(
   let action: Action;
   try {
     if (!options.decide) {
-      const { hasApiKey, getLLMClientForEntry, getModelNameForEntry } = await import(
-        "../llm/index"
-      );
-      if (!hasApiKey()) {
+      const { llmDecide } = await import("../llm/index");
+      const { hasApiKey: hk } = await import("../llm/index");
+      if (!hk()) {
         action = fallbackLookAround(c, "没有激活的 LLM provider");
       } else {
-        const {
-          buildPerActionSchema,
-          buildActionTools,
-          actionTypeFromToolName: atftn,
-        } = await import("../domain/index");
-        const OpenAI = (await import("openai")).default;
-        const PerActionSchema = buildPerActionSchema();
-        const tools = buildActionTools(ctx);
-
-        const system = buildSystemPrompt({
-          worldName: world.name,
-          nodes,
-          language,
-        });
-        const user = buildUserPrompt({
+        action = await llmDecide({
           character: c,
+          nodes,
           here: ctx.here,
           companions: ctx.companions,
+          reachable: ctx.reachable,
           perceived,
           options: opts,
+          worldName: world.name,
           tick: fromTick,
           epoch: world.epoch,
           facts,
           language,
-          arrivalIntro: true,
+          ctx,
           allCharacters: characters,
-          nodes,
+          activeEventDefs: [],
+          upcomingNotebookText: "",
         });
-
-        let lastRespSnapshot = "(no response)";
-        try {
-          const config = getEntryConfig("character_placement");
-          const client = getLLMClientForEntry("character_placement");
-          const model = getModelNameForEntry("character_placement");
-          const extra: Record<string, unknown> = {};
-          if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
-
-          const messages: Array<Record<string, unknown>> = [
-            { role: "system", content: system },
-            { role: "user", content: user },
-          ];
-
-          let actionType: string | null = null;
-          type PerActionData = ReturnType<typeof PerActionSchema.parse> & {
-            scheduled_day?: number;
-            scheduled_hour?: number;
-            scheduled_minute?: number;
-          };
-          let p: PerActionData | null = null;
-
-          interface ToolCallLike {
-            type?: string;
-            function?: { name?: string; arguments?: string };
-          }
-          interface AssistantMsgLike {
-            role?: string;
-            content?: unknown;
-            tool_calls?: ToolCallLike[];
-            reasoning_content?: unknown;
-          }
-
-          const MAX_ROUNDS = 3;
-          for (let round = 0; round < MAX_ROUNDS; round++) {
-            const resp = await client.chat.completions.create({
-              model,
-              max_tokens: 16384,
-              messages: messages as unknown as Parameters<typeof client.chat.completions.create>[0]["messages"],
-              tools,
-              ...extra,
-            });
-            lastRespSnapshot = resp ? JSON.stringify({
-              choices: resp.choices?.map((ch) => ({
-                finish_reason: ch.finish_reason,
-                message: {
-                  role: ch.message?.role,
-                  content: typeof ch.message?.content === "string" ? ch.message.content.slice(0, 2000) : ch.message?.content,
-                  tool_calls: ch.message?.tool_calls?.map((tc: ToolCallLike) => ({
-                    name: tc.function?.name,
-                    args: tc.function?.arguments?.slice(0, 500),
-                  })),
-                },
-              })),
-            }).slice(0, 4000) : "(no response)";
-
-            const msg = resp.choices[0]?.message as AssistantMsgLike | undefined;
-            if (!msg) throw new Error(`LLM 返回空 message。响应：${lastRespSnapshot}`);
-
-            const assistantMsg: Record<string, unknown> = { role: "assistant", content: msg.content ?? "" };
-            if (msg.tool_calls) assistantMsg.tool_calls = msg.tool_calls;
-            if (msg.reasoning_content) assistantMsg.reasoning_content = msg.reasoning_content;
-            messages.push(assistantMsg);
-
-            const tc = (msg.tool_calls ?? []).find(
-              (x: ToolCallLike) => x.type === "function" && x.function?.name?.startsWith("action_"),
-            );
-            if (tc && tc.type === "function" && tc.function?.name && tc.function?.arguments !== undefined) {
-              actionType = atftn(tc.function.name);
-              if (!actionType) throw new Error(`无法从 tool name "${tc.function.name}" 提取 action type`);
-              const parsed = PerActionSchema.safeParse(JSON.parse(tc.function.arguments));
-              if (!parsed.success) throw new Error(`tool_call 参数不符合 schema：${parsed.error.message}`);
-              p = parsed.data as PerActionData;
-              break;
-            }
-
-            if (round < MAX_ROUNDS - 1) {
-              messages.push({ role: "user", content: "请调用对应的 action_* 工具提交你的行动决定。不要输出纯文本，必须调用工具。" });
-            }
-          }
-
-          if (!actionType || !p) {
-            throw new Error(`LLM ${MAX_ROUNDS} 轮均未返回 tool_call。最后响应：${lastRespSnapshot}`);
-          }
-
-          action = {
-            type: actionType,
-            actorId: c.id,
-            targetId: p.target_id,
-            targetNodeId: p.target_node_id,
-            freeText: p.free_text,
-            reasoning: p.reasoning,
-            emotionTag: p.emotion_tag,
-            selfImportance: p.self_importance,
-            changeType: p.change_type,
-            reason: p.reason,
-            arrivalAction: p.arrival_action
-              ? {
-                  type: normalizeArrivalType(p.arrival_action.action_type),
-                  freeText: p.arrival_action.free_text,
-                  targetId: p.arrival_action.target_id,
-                  targetNodeId: p.arrival_action.target_node_id,
-                }
-              : undefined,
-            scheduled_day: p.scheduled_day,
-            scheduled_hour: p.scheduled_hour,
-            scheduled_minute: p.scheduled_minute,
-          };
-        } catch (err) {
-          const msg =
-            err instanceof OpenAI.APIError
-              ? `${err.constructor.name} status=${err.status}: ${err.message}`
-              : err instanceof Error
-                ? err.message
-                : String(err);
-          log.warn("角色放置决策 LLM 失败", {
-            角色: c.name,
-            error: msg,
-            llmResponse: lastRespSnapshot,
-          });
-          action = fallbackLookAround(c, msg);
-        }
       }
     } else {
       // 测试 stub：直接调用，不走真实 LLM

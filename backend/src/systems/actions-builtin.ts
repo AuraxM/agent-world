@@ -429,7 +429,7 @@ export const giveAction: ActionDefinition = {
     target_id: { type: "string", description: "给予对象角色 id。" },
     amount: { type: "integer", description: "给予金额（默认全部余额）。" },
   },
-  extraRequired: ["target_id"],
+  extraRequired: ["target_id", "amount"],
   usableInDialogue: true,
 };
 

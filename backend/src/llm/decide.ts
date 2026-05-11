@@ -21,7 +21,7 @@ import {
   DIALOG_SUMMARY_TOOL_NAME, DialogSummarySchema, DialogSummaryToolSchema,
   DIALOG_PERSONAL_MEMORY_TOOL_NAME, DialogPersonalMemorySchema, DialogPersonalMemoryToolSchema,
   END_CONVERSATION_TOOL_NAME, EndConversationToolSchema, EndConversationSchema,
-  PROPOSE_DIALOGUE_ACTION_TOOL_NAME, ProposeDialogueActionSchema, ProposeDialogueActionToolSchema,
+  DIALOGUE_ACTION_TOOL_PREFIX, dialogueActionTypeFromToolName, buildDialogueActionSchema, buildDialogueActionTools,
   RESPOND_DIALOGUE_ACTION_TOOL_NAME, RespondDialogueActionSchema, RespondDialogueActionToolSchema,
   NOTEBOOK_TOOL_NAME, NotebookSchema, NotebookToolSchema,
   THINK_TOOL_NAME, ThinkTurnSchema, ThinkTurnToolSchema,
@@ -627,17 +627,13 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
     buildUpdateRelationTool(),
   ];
 
-  // Add interactive action tools if dialogue actions are available
-  const hasDialogueActions = input.dialogueActions && input.dialogueActions.length > 0;
-  if (hasDialogueActions) {
-    tools.push({
-      type: "function",
-      function: {
-        name: PROPOSE_DIALOGUE_ACTION_TOOL_NAME,
-        description: "在对话中发起一个交互行为（如给钱）。与 submit_dialog_turn 同时调用，不计入对话轮次。",
-        parameters: ProposeDialogueActionToolSchema,
-      },
-    });
+  // Add per-action dialogue tools — one tool per registered dialogue action
+  if (input.dialogueActions && input.dialogueActions.length > 0) {
+    const dialogueTools = buildDialogueActionTools(
+      input.dialogueActions,
+      { money: input.self.money, inventory: (input.self as any).inventory },
+    );
+    tools.push(...dialogueTools);
   }
   if (input.pendingAction) {
     tools.push({
@@ -1027,36 +1023,39 @@ export async function llmDialogTurn(input: DialogTurnInput): Promise<DialogTurnR
               closingLine: result.data.closing_line,
             },
           };
-        } else if (name === PROPOSE_DIALOGUE_ACTION_TOOL_NAME) {
+        } else if (name.startsWith(DIALOGUE_ACTION_TOOL_PREFIX)) {
+          const actionType = dialogueActionTypeFromToolName(name);
+          if (!actionType) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `无法识别的工具 "${name}"。` });
+            hasError = true;
+            continue;
+          }
+          const def = actionRegistry.get(actionType);
+          if (!def || !def.usableInDialogue) {
+            messages.push({ role: "tool", tool_call_id: t.id, content: `"${actionType}" 不存在或不可在对话中使用。` });
+            hasError = true;
+            continue;
+          }
           let args: unknown;
           try { args = JSON.parse(t.function.arguments); } catch (e) {
-            messages.push({ role: "tool", tool_call_id: t.id, content: `propose_dialogue_action JSON 解析失败：${e instanceof Error ? e.message : String(e)}。` });
+            messages.push({ role: "tool", tool_call_id: t.id, content: `${name} JSON 解析失败：${e instanceof Error ? e.message : String(e)}。` });
             hasError = true;
             continue;
           }
-          const result = ProposeDialogueActionSchema.safeParse(args);
+          const schema = buildDialogueActionSchema();
+          const result = schema.safeParse(args);
           if (!result.success) {
-            messages.push({ role: "tool", tool_call_id: t.id, content: `propose_dialogue_action 参数不符合要求：${result.error.message}。` });
+            messages.push({ role: "tool", tool_call_id: t.id, content: `${name} 参数不符合要求：${result.error.message}。` });
             hasError = true;
             continue;
           }
-          const def = actionRegistry.get(result.data.action_type);
-          if (!def || !def.usableInDialogue) {
-            messages.push({ role: "tool", tool_call_id: t.id, content: `action_type="${result.data.action_type}" 不存在或不可在对话中使用。` });
-            hasError = true;
-            continue;
-          }
-          messages.push({ role: "tool", tool_call_id: t.id, content: `已提出 ${result.data.action_type} 请求。` });
+          messages.push({ role: "tool", tool_call_id: t.id, content: `已提出 ${actionType} 请求。` });
           proposeAction = {
-            actionType: result.data.action_type,
+            actionType,
             targetId: input.peer.id,
             params: {
               target_id: input.peer.id,
-              amount: result.data.amount,
-              free_text: result.data.free_text,
-              target_node_id: result.data.target_node_id,
-              target_node_name: result.data.target_node_name,
-              reason: result.data.reason,
+              ...(result.data as Record<string, unknown>),
             },
           };
         } else if (name === RESPOND_DIALOGUE_ACTION_TOOL_NAME) {

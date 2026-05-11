@@ -31,12 +31,32 @@ cd backend && npx tsx scripts/diagnose-action.ts --all --entry decide
 cd backend && npx tsx scripts/diagnose-action.ts --all
 ```
 
+### Customize rounds per case
+
+```bash
+# Default: 10 rounds per case. Each case stops on first success.
+cd backend && npx tsx scripts/diagnose-action.ts --all --rounds 10
+
+# Single case with 5 rounds
+cd backend && npx tsx scripts/diagnose-action.ts --action eat --entry decide --rounds 5
+```
+
 ### How it works
 
-1. Injects inducing game state (vitals, emotions, location, companions) into DB via SAVEPOINT
+1. Injects **strongly induced** game state (extreme vitals, matching location tags, companions) into DB via SAVEPOINT
 2. Calls the real LLM function for the specified entry point
-3. Reports whether the target action/tool was correctly invoked
-4. Rolls back all DB changes
+3. Repeats up to `--rounds` times (default 10), stopping on first successful trigger
+4. Reports: **pass** if the target action/tool triggers at least once; **fail** if it never triggers
+5. Rolls back all DB changes after each test
+
+### Induction strategy
+
+Each profile uses **extreme contrasting values** to eliminate competing actions:
+
+- Target vital set to 99, competing vitals set to 0
+- Location tag chosen to strongly imply the target action AND avoid overlap with other actions (especially bathing)
+- For dialogue actions: conversation lines that unmistakably point to the target action
+- Companion placed at same location when needed for social/dialogue actions
 
 ### Diagnostic report sections
 
@@ -52,6 +72,95 @@ cd backend && npx tsx scripts/diagnose-action.ts --all
 - You suspect the code path (`check()`, `buildOptions`, tool injection) is broken
 - You want to verify an LLM provider/model combination handles a specific action correctly
 
+### Per-action dialogue tool architecture
+
+Dialogue actions use **per-action tools** (like `decide`), not a generic `propose_dialogue_action` with `action_type` enum.
+
+**Tool naming:** `propose_dialogue_<type>` (e.g., `propose_dialogue_give`, `propose_dialogue_travel_together`)
+
+**Key files:**
+| What | File | Lines |
+|---|---|---|
+| `DIALOGUE_ACTION_TOOL_PREFIX` | `domain/schemas.ts` | ~290 |
+| `buildDialogueActionTools()` | `domain/schemas.ts` | ~330 |
+| `buildDialogueToolParams()` — filters `target_id` (always peer) | `domain/schemas.ts` | ~310 |
+| Tool setup in `llmDialogTurn` | `llm/decide.ts` | ~630 |
+| Tool parsing (prefix match) | `llm/decide.ts` | ~1030 |
+| `buildDialogueActionsBlock()` — prompt listing | `llm/prompt.ts` | ~1211 |
+| `buildDialogTurnFollowup()` — followup listing | `llm/prompt.ts` | ~1411 |
+
+**Tool description enrichment** in `buildDialogueActionTools()`:
+- `give`: shows current money — `在对话中给予对方金钱（你当前有 ${money}💰）。`
+- `give_item`: lists inventory — `你背包里有：${items}。`
+- `manage_employment`: clarifies — `需要你是店主且有雇员名额。`
+- Others: use `triggerHint` as-is
+
+**Tool params** are built from `ActionDefinition.extraParams`, filtering out `target_id` (implicitly the conversation peer). Common params `reasoning` + `free_text` are always added.
+
+### Induction profile design principles
+
+**Vitals strategy:**
+- Target vital = 99, competing vitals = 0
+- This eliminates action competition (e.g., hunger=99 + hygiene=0 means eat wins over bathe)
+
+**Location strategy:**
+- EVERY profile must specify `locationTag` — characters without one may land at `hotel-onsen` (bathing), causing `bathe` to dominate all other actions
+- Choose tags that imply the target action AND don't overlap with bathing: `dining`, `quiet`, `street`, `park`, `education`, `residence`
+- Check actual node tags with: `SELECT id, name, tags_json FROM nodes` — don't guess tag names
+
+**Companion strategy:**
+- `companionFilter: { sameLocation: true }` — `injectState` moves companion to target node; `resolveCharacter` picks any other character (no longer requires them to already be there)
+
+**Dialogue strategy:**
+- 1 line of dialogue history is sufficient if the request is clear and specific
+- Use the peer's ACTUAL character name (e.g., `小林夏希`) in dialogue history — the parser does `speakerName.includes(updatedSelf.name)` to map speakers
+- The request must match the character's psychology: a rational introvert won't give money to a stranger, but will share food with someone hungry
+
+**Inject format:**
+- `inventory` must be `Item[]` format: `[{ itemDefId: "苹果", acquiredTick: 0 }]` — the injection code auto-wraps string IDs into proper format
+
+### Common failure patterns
+
+| Symptom | Root cause | Fix |
+|---|---|---|
+| `bathe` wins every decide test | Character at bathing-tag node (hotel-onsen) — bathing check() passes easily | Add `locationTag` to EVERY profile |
+| `look_around` wins when no needs | All vitals at 0 + no location incentive — look_around is the universal fallback | Set target vital to 99 to create urgency |
+| `rest` chosen over `sleep` | Both satisfy fatigue; rest is shorter/instant | Increase fatigue to 99 + set `isSleepHour: true` |
+| Dialog action never proposed | LLM chats in pure text without tool calls; or character psychology blocks the action | Enrich tool description with context (money, items); align dialogue request with character personality |
+| `check() failed` / unavailable | Action requires data not present in DB (shops, employment) | Seed the scene's shops first; mark as data-dependent in profile |
+| `No node found with privacy "X"` | All nodes have `privacy: "public"` in this scene | Use `locationTag` with an existing tag instead of `locationPrivacy` |
+| `No companion available` | Companion not at target location before injection | `resolveCharacter` no longer filters by `sameLocation` — `injectState` moves them |
+| Dialogue: LLM outputs text, no tool call (round 1) | DeepSeek model occasionally responds with narrative actions instead of tool calls | The re-prompt mechanism handles this (max 3 rounds); usually recovers by round 2 |
+
+### Data-dependent actions
+
+Some actions cannot pass diagnostic without specific DB data:
+
+- **work**: requires `shops` table with employee records — `check()` returns `false` if no shop employs the character
+- **buy**: requires a shop at the current node — `check()` returns `false` if `findShopAtNode()` returns null
+- **manage_employment**: requires the character to be a shop owner with employee slots — works only in scenes with shop-owning characters
+
+Diagnostic pre-checks (`inBuildOptions`) catch these before wasting LLM rounds.
+
+### Diagnostic code path
+
+**Decide pre-check** (avoids LLM call when action unavailable):
+```
+diagnose-action.ts → runDecideDiagnostic()
+  → buildActionContext() + getAvailableActions()
+  → if target action NOT in options → return early (0ms, "unavailable")
+  → else call llmDecide()
+```
+
+**Dialog flow:**
+```
+diagnose-action.ts → runDialogDiagnostic()
+  → resolveCharacter() → injectState() → loadWorld()
+  → build transcript from dialogueHistory strings
+  → llmDialogTurn({ self, peer, transcript, dialogueActions, ... })
+  → checks result.proposeAction for match
+```
+
 ## Dialogue Action Unit Testing
 
 How to write and debug tests for actions proposed and accepted during dialogue — any action where `usableInDialogue: true`.
@@ -61,7 +170,7 @@ How to write and debug tests for actions proposed and accepted during dialogue �
 Every dialogue action follows the same 4-phase protocol, regardless of what the action does:
 
 ```
-Phase 1 — Propose:  A calls submit_dialog_turn + propose_dialogue_action(<type>, B, params)
+Phase 1 — Propose:  A calls submit_dialog_turn + propose_dialogue_<type>(params)
                      → conv.pendingAction = { requesterId: A, actionType: <type>, params }
                      → state unchanged (execution is deferred)
 
@@ -75,6 +184,8 @@ Phase 3 — Execute:   executeDialogueAction() calls def.execute(ctx, params)
                      → injects outcome.dialogRecord as __system__ action_result turn
                      → writes memory to both parties
 ```
+
+Each dialogue action is a **separate tool**: `propose_dialogue_give`, `propose_dialogue_give_item`, `propose_dialogue_travel_together`, `propose_dialogue_manage_employment`. The tool name itself identifies the action type — no `action_type` parameter. Tool descriptions are enriched with character context (money, inventory) for better LLM guidance.
 
 Code path: `decide.ts/llmDialogTurn` → `dialog.ts/runOneTickDialog` → `dialog.ts/executeDialogueAction`
 

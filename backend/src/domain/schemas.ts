@@ -284,6 +284,81 @@ export const EndConversationToolSchema = {
 };
 
 // Propose dialogue action: 对话中发起双人交互行为
+// Each dialogue action gets its own tool (propose_dialogue_<type>), like decide actions.
+export const DIALOGUE_ACTION_TOOL_PREFIX = "propose_dialogue_";
+
+export function dialogueToolNameForAction(type: string): string {
+  return `${DIALOGUE_ACTION_TOOL_PREFIX}${type}`;
+}
+
+export function dialogueActionTypeFromToolName(name: string): string | null {
+  if (!name.startsWith(DIALOGUE_ACTION_TOOL_PREFIX)) return null;
+  return name.slice(DIALOGUE_ACTION_TOOL_PREFIX.length);
+}
+
+/** Unified Zod schema for dialogue action proposal parsing (no action_type — tool name is the type). */
+export function buildDialogueActionSchema() {
+  return z.object({
+    reasoning: z.string().min(1).max(400),
+    free_text: z.string().max(300).optional(),
+  }).passthrough();
+}
+
+function buildDialogueToolParams(def: ActionDefinition) {
+  const extraProps = def.extraParams ?? {};
+  const extraRequired = def.extraRequired ?? [];
+  // Filter out target_id — always the conversation peer
+  const filteredProps: Record<string, unknown> = {
+    reasoning: { type: "string", description: "发起该行为的理由（内心独白）。" },
+    free_text: { type: "string", description: "附言或说明（可选）。" },
+  };
+  const filteredRequired: string[] = ["reasoning"];
+  for (const [key, schema] of Object.entries(extraProps)) {
+    if (key === "target_id") continue;
+    filteredProps[key] = schema;
+    if (extraRequired.includes(key)) {
+      filteredRequired.push(key);
+    }
+  }
+  return {
+    type: "object" as const,
+    properties: filteredProps,
+    required: filteredRequired,
+    additionalProperties: true,
+  };
+}
+
+/** Generate per-action tools from dialogue action definitions, enriched with character context. */
+export function buildDialogueActionTools(
+  dialogueActions: ActionDefinition[],
+  self?: { money?: number; inventory?: Array<{ itemDefId: string }> },
+): ActionToolDef[] {
+  return dialogueActions.map((def) => {
+    let description = def.triggerHint;
+
+    // Enrich description with character context, like decide's hint(ctx) does
+    if (def.type === "give" && self?.money !== undefined) {
+      description = `在对话中给予对方金钱（你当前有 ${self.money}💰）。调用此工具会将钱实际转给对方。`;
+    } else if (def.type === "give_item" && self?.inventory?.length) {
+      const items = self.inventory.map((i) => i.itemDefId).join("、");
+      description = `在对话中赠送物品给对方。你背包里有：${items}。调用此工具会将物品实际转给对方。`;
+    } else if (def.type === "manage_employment") {
+      description = "在对话中雇佣或解雇对方（需要你是店主且有雇员名额）。调用 hire 雇佣，fire 解雇。";
+    }
+
+    return {
+      type: "function" as const,
+      function: {
+        name: dialogueToolNameForAction(def.type),
+        description,
+        parameters: buildDialogueToolParams(def),
+      },
+    };
+  });
+}
+
+// Legacy: keep the old generic propose_dialogue_action schema for backwards compat
+// if any code still references it.
 export const PROPOSE_DIALOGUE_ACTION_TOOL_NAME = "propose_dialogue_action";
 export const ProposeDialogueActionSchema = z.object({
   action_type: z.string().min(1),

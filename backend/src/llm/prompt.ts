@@ -1207,25 +1207,22 @@ export function buildDialogTurnPrompt(args: {
     return `\n⚠️ 相手からのアクション：${requesterName} があなたに「${displayName}」をしようとしています。${detail}\nsubmit_dialog_turn + respond_to_dialogue_action（accept または reject）を同時に呼び出すか、発言だけして無視することもできます。\n`;
   }
 
-  // Common: available dialogue actions
+  // Common: available dialogue actions (each is a dedicated tool: propose_dialogue_<type>)
   function buildDialogueActionsBlock(lang: Language): string {
     if (!dialogueActions || dialogueActions.length === 0) return "";
     const actionList = dialogueActions
       .map((a) => {
-        const extra = a.extraParams
-          ? Object.keys(a.extraParams).filter(k => k !== "free_text" && k !== "target_id" && k !== "target_node_name").join(", ")
-          : "";
         const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
-        return `- ${a.type}${extra ? ` (需要 ${extra})` : ""}${guide}`;
+        return `- propose_dialogue_${a.type}${guide}`;
       })
       .join("\n");
     if (lang === "zh") {
-      return `\n请积极发起互动行为，让对话更好地进行。\n你可以在此对话中发起的行为（调用 propose_dialogue_action，与 submit_dialog_turn 同时调用）：\n${actionList}\n`;
+      return `\n请积极发起互动行为，让对话更好地进行。\n你可以在此对话中使用的行为工具（与 submit_dialog_turn 同时调用，不计入对话轮次）：\n${actionList}\n`;
     }
     if (lang === "en") {
-      return `\nActions you can propose during this dialogue (call propose_dialogue_action together with submit_dialog_turn):\n${actionList}\n`;
+      return `\nYou can propose interactive actions during this dialogue (call the tool together with submit_dialog_turn):\n${actionList}\n`;
     }
-    return `\nこの会話中に提案できるアクション（propose_dialogue_action を submit_dialog_turn と同時に呼び出してください）：\n${actionList}\n`;
+    return `\nこの会話中に提案できるアクション（submit_dialog_turn と同時に呼び出してください）：\n${actionList}\n`;
   }
 
   function buildUpcomingBlock(lang: Language): string {
@@ -1414,14 +1411,11 @@ export function buildDialogTurnFollowup(args: {
     if (dialogueActions && dialogueActions.length > 0) {
       const actionList = dialogueActions
         .map((a) => {
-          const extra = a.extraParams
-            ? Object.keys(a.extraParams).filter(k => k !== "free_text" && k !== "target_id" && k !== "target_node_name").join(", ")
-            : "";
           const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
-          return `- ${a.type}${extra ? ` (需要 ${extra})` : ""}${guide}`;
+          return `- propose_dialogue_${a.type}${guide}`;
         })
         .join("\n");
-      lines.push(`你可以发起的行为（调用 propose_dialogue_action，与 submit_dialog_turn 同时调用）：\n${actionList}`);
+      lines.push(`你可以使用的行为工具（与 submit_dialog_turn 同时调用，不计入对话轮次）：\n${actionList}`);
       lines.push("");
     }
     if (upcomingEntries && upcomingEntries.length > 0 && promptEpoch !== undefined) {
@@ -1461,14 +1455,11 @@ export function buildDialogTurnFollowup(args: {
     if (dialogueActions && dialogueActions.length > 0) {
       const actionList = dialogueActions
         .map((a) => {
-          const extra = a.extraParams
-            ? Object.keys(a.extraParams).filter(k => k !== "free_text" && k !== "target_id" && k !== "target_node_name").join(", ")
-            : "";
           const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
-          return `- ${a.type}${extra ? ` (needs ${extra})` : ""}${guide}`;
+          return `- propose_dialogue_${a.type}${guide}`;
         })
         .join("\n");
-      lines.push(`Actions you can propose (call propose_dialogue_action together with submit_dialog_turn):\n${actionList}`);
+      lines.push(`Action tools you can use (call together with submit_dialog_turn):\n${actionList}`);
       lines.push("");
     }
     if (upcomingEntries && upcomingEntries.length > 0 && promptEpoch !== undefined) {
@@ -1508,14 +1499,11 @@ export function buildDialogTurnFollowup(args: {
     if (dialogueActions && dialogueActions.length > 0) {
       const actionList = dialogueActions
         .map((a) => {
-          const extra = a.extraParams
-            ? Object.keys(a.extraParams).filter(k => k !== "free_text" && k !== "target_id" && k !== "target_node_name").join(", ")
-            : "";
           const guide = a.triggerHint ? ` — ${a.triggerHint}` : "";
-          return `- ${a.type}${extra ? ` (${extra}が必要)` : ""}${guide}`;
+          return `- propose_dialogue_${a.type}${guide}`;
         })
         .join("\n");
-      lines.push(`提案できるアクション（propose_dialogue_action を submit_dialog_turn と同時に呼び出してください）：\n${actionList}`);
+      lines.push(`使用可能なアクションツール（submit_dialog_turn と同時に呼び出してください）：\n${actionList}`);
       lines.push("");
     }
     if (upcomingEntries && upcomingEntries.length > 0 && promptEpoch !== undefined) {

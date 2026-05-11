@@ -19,6 +19,7 @@ interface CliArgs {
   scene?: string;
   provider?: string;
   all: boolean;
+  rounds: number;
   verbose: boolean;
 }
 
@@ -60,6 +61,7 @@ Options:
   --scene <dir>       Scene directory (default: AGENT_WORLD_SCENES_DIR)
   --provider <name>   Provider name (default: from DB config)
   --all               Run all action+entry combinations
+  --rounds <n>        Rounds per case, stops on first success (default: 10)
   --verbose           Always on by default
 
 Examples:
@@ -76,6 +78,7 @@ function parseCli(): CliArgs {
       scene: { type: "string" },
       provider: { type: "string" },
       all: { type: "boolean", default: false },
+      rounds: { type: "string", default: "10" },
       verbose: { type: "boolean", default: true },
     },
     allowPositionals: true,
@@ -100,6 +103,7 @@ function parseCli(): CliArgs {
     scene: values.scene,
     provider: values.provider,
     all: values.all,
+    rounds: parseInt(values.rounds ?? "10", 10) || 10,
     verbose: values.verbose,
   };
 }
@@ -185,10 +189,12 @@ interface EntryProfile {
 
 const PROFILES: Record<string, EntryProfile> = {
   // ═══ Decide entry (11 actions) ═══
+  // Strategy: extreme target vital, all competing vitals at 0, locationTag that
+  // strongly implies the target action and does NOT overlap with bathing.
   "eat:decide": {
     action: "eat", entry: "decide",
     profile: {
-      vitals: { hunger: 90, fatigue: 10, hygiene: 50 },
+      vitals: { hunger: 99, fatigue: 0, hygiene: 0 },
       emotions: { mood: 5, stress: 3, socialSatiety: 5 },
       locationTag: "dining", money: 100,
     },
@@ -196,7 +202,7 @@ const PROFILES: Record<string, EntryProfile> = {
   "bathe:decide": {
     action: "bathe", entry: "decide",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 95 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 99 },
       emotions: { mood: 5, stress: 3, socialSatiety: 5 },
       locationTag: "bathing", money: 100,
     },
@@ -204,119 +210,126 @@ const PROFILES: Record<string, EntryProfile> = {
   "rest:decide": {
     action: "rest", entry: "decide",
     profile: {
-      vitals: { hunger: 10, fatigue: 85, hygiene: 50 },
-      emotions: { mood: 5, stress: 5, socialSatiety: 5 },
-      locationPrivacy: "private",
+      vitals: { hunger: 0, fatigue: 99, hygiene: 0 },
+      emotions: { mood: 3, stress: 5, socialSatiety: 5 },
+      locationTag: "residence", isSleepHour: true,
     },
   },
   "work:decide": {
     action: "work", entry: "decide",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 50 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
       emotions: { mood: 5, stress: 3, socialSatiety: 5 },
-      employment: true,
+      locationTag: "education", employment: true,
     },
   },
   "think:decide": {
     action: "think", entry: "decide",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 50 },
-      emotions: { mood: 5, stress: 5, socialSatiety: 3 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+      emotions: { mood: 4, stress: 5, socialSatiety: 5 },
+      locationTag: "quiet",
     },
   },
   "chat:decide": {
     action: "chat", entry: "decide",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 50 },
-      emotions: { mood: 7, stress: 2, socialSatiety: 2 },
-      companionFilter: { sameLocation: true },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+      emotions: { mood: 9, stress: 1, socialSatiety: 0 },
+      locationTag: "dining", companionFilter: { sameLocation: true },
     },
   },
   "sleep:decide": {
     action: "sleep", entry: "decide",
     profile: {
-      vitals: { hunger: 10, fatigue: 90, hygiene: 50 },
+      vitals: { hunger: 0, fatigue: 99, hygiene: 0 },
       emotions: { mood: 3, stress: 5, socialSatiety: 5 },
-      locationPrivacy: "private", isSleepHour: true,
+      locationTag: "residence", isSleepHour: true,
     },
   },
   "move:decide": {
     action: "move", entry: "decide",
     profile: {
-      vitals: { hunger: 85, fatigue: 10, hygiene: 50 },
+      vitals: { hunger: 99, fatigue: 0, hygiene: 0 },
       emotions: { mood: 5, stress: 3, socialSatiety: 5 },
+      locationTag: "quiet",  // far from food — must move to eat
     },
   },
   "look_around:decide": {
     action: "look_around", entry: "decide",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 50 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
       emotions: { mood: 5, stress: 3, socialSatiety: 5 },
+      locationTag: "park",  // interesting place, no pressing needs
     },
   },
   "buy:decide": {
     action: "buy", entry: "decide",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 50 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
       emotions: { mood: 5, stress: 3, socialSatiety: 5 },
-      money: 200,
+      locationTag: "dining", money: 500,  // near shops, lots of cash
     },
   },
   "use_item:decide": {
     action: "use_item", entry: "decide",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 50 },
-      emotions: { mood: 5, stress: 5, socialSatiety: 5 },
-      inventory: ["apple"],
+      vitals: { hunger: 15, fatigue: 0, hygiene: 0 },
+      emotions: { mood: 5, stress: 3, socialSatiety: 5 },
+      locationTag: "quiet", inventory: ["苹果"],
     },
   },
 
   // ═══ Dialog entry (4 actions) ═══
+  // Strategy: conversation lines that unmistakably point to the target action.
+  // Target character has the resources (money, items) and the peer explicitly asks.
   "give:dialog": {
     action: "give", entry: "dialog",
     profile: {
-      emotions: { mood: 7, stress: 2, socialSatiety: 5 },
-      companionFilter: { sameLocation: true },
-      money: 500,
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+      emotions: { mood: 10, stress: 0, socialSatiety: 5 },
+      locationTag: "dining", companionFilter: { sameLocation: true },
+      money: 5000,
     },
     dialogueHistory: [
-      "太郎：最近手头有点紧，这个月的工资还没发...",
-      "花子：是吗？有什么我能帮忙的吗？",
+      "小林夏希：不好意思……我钱包丢了，现在连回去的车费都没有，能借我一点吗？就 500 就够了。",
     ],
   },
   "give_item:dialog": {
     action: "give_item", entry: "dialog",
     profile: {
-      emotions: { mood: 7, stress: 2, socialSatiety: 5 },
-      companionFilter: { sameLocation: true },
-      inventory: ["apple"],
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+      emotions: { mood: 8, stress: 1, socialSatiety: 5 },
+      locationTag: "dining", companionFilter: { sameLocation: true },
+      inventory: ["苹果", "面包"],
     },
     dialogueHistory: [
-      "太郎：听说你能做很好吃的苹果派？",
-      "花子：对啊，可惜我这里没有苹果了。",
+      "小林夏希：我肚子好饿，一整天没吃东西了……你有没有带吃的？随便什么都行。",
     ],
   },
   "travel_together:dialog": {
     action: "travel_together", entry: "dialog",
     profile: {
-      emotions: { mood: 7, stress: 2, socialSatiety: 5 },
-      companionFilter: { sameLocation: true },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+      emotions: { mood: 9, stress: 1, socialSatiety: 5 },
+      locationTag: "dining", companionFilter: { sameLocation: true },
     },
     dialogueHistory: [
-      "太郎：我们接下来去哪？",
-      "花子：要不要一起去海边走走？",
+      "太郎：你知道吗，听说首里城的夕阳特别美，我一直想去看看。",
+      "花子：真的吗？那我们一起去吧，正好现在天气也好。",
+      "太郎：好啊，走吧！",
     ],
   },
   "manage_employment:dialog": {
     action: "manage_employment", entry: "dialog",
     profile: {
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
       emotions: { mood: 7, stress: 2, socialSatiety: 5 },
-      companionFilter: { sameLocation: true },
+      locationTag: "dining", companionFilter: { sameLocation: true },
       employment: true,
     },
     dialogueHistory: [
-      "太郎：这家店生意越来越好了，我一个人忙不过来。",
-      "花子：你可以考虑招个帮手呀。",
+      "小林夏希：听说你店里生意很好，缺不缺人手？我最近在找工作。",
     ],
   },
 
@@ -324,8 +337,9 @@ const PROFILES: Record<string, EntryProfile> = {
   "think:think": {
     action: "think", entry: "think",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 50 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
       emotions: { mood: 5, stress: 5, socialSatiety: 3 },
+      locationTag: "quiet",
     },
   },
 
@@ -333,22 +347,26 @@ const PROFILES: Record<string, EntryProfile> = {
   "accept_chat:accept": {
     action: "accept_chat", entry: "accept",
     profile: {
-      emotions: { mood: 7, stress: 2, socialSatiety: 3 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+      emotions: { mood: 8, stress: 2, socialSatiety: 1 },
       companionFilter: { sameLocation: true },
+      locationTag: "street",
     },
   },
 
   // ═══ Summary entry ═══
   "dialog_summary:summary": {
     action: "dialog_summary", entry: "summary",
-    profile: {},
+    profile: {
+      companionFilter: { sameLocation: true },
+    },
     dialogueHistory: [
       "太郎：今天天气真好，我们去海边散步吧。",
       "花子：好啊，我也正想出去走走。",
       "太郎：你看那边的夕阳，好美。",
       "花子：嗯，好久没看到这么美的日落了。",
       "太郎：和你在一起真的很开心。",
-      "花子：我也是。",
+      "花子：我也是，希望以后还能这样一起散步。",
     ],
   },
 
@@ -356,21 +374,24 @@ const PROFILES: Record<string, EntryProfile> = {
   "dialog_personal_memory:memory": {
     action: "dialog_personal_memory", entry: "memory",
     profile: {
-      emotions: { mood: 8, stress: 2, socialSatiety: 8 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+      emotions: { mood: 9, stress: 1, socialSatiety: 9 },
+      companionFilter: { sameLocation: true },
     },
     dialogueHistory: [
       "太郎：今天天气真好，我们去海边散步吧。",
       "花子：好啊，我也正想出去走走。",
-      "太郎：和你在一起真的很开心。",
-      "花子：我也是，已经很久没有这么放松了。",
+      "太郎：和你在一起真的很开心，已经很久没有这种感觉了。",
+      "花子：我也是，和你说话总是很放松。",
     ],
   },
 
-  // ═══ Placement entry (7 actions — those that appear in decide but also work in placement) ═══
+  // ═══ Placement entry (7 actions) ═══
+  // Same induction strategy as decide, mirrored profiles.
   "eat:placement": {
     action: "eat", entry: "placement",
     profile: {
-      vitals: { hunger: 90, fatigue: 10, hygiene: 50 },
+      vitals: { hunger: 99, fatigue: 0, hygiene: 0 },
       emotions: { mood: 5, stress: 3, socialSatiety: 5 },
       locationTag: "dining", money: 100,
     },
@@ -378,7 +399,7 @@ const PROFILES: Record<string, EntryProfile> = {
   "bathe:placement": {
     action: "bathe", entry: "placement",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 95 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 99 },
       emotions: { mood: 5, stress: 3, socialSatiety: 5 },
       locationTag: "bathing", money: 100,
     },
@@ -386,38 +407,41 @@ const PROFILES: Record<string, EntryProfile> = {
   "rest:placement": {
     action: "rest", entry: "placement",
     profile: {
-      vitals: { hunger: 10, fatigue: 85, hygiene: 50 },
-      emotions: { mood: 5, stress: 5, socialSatiety: 5 },
-      locationPrivacy: "private",
+      vitals: { hunger: 0, fatigue: 99, hygiene: 0 },
+      emotions: { mood: 3, stress: 5, socialSatiety: 5 },
+      locationTag: "residence", isSleepHour: true,
     },
   },
   "work:placement": {
     action: "work", entry: "placement",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 50 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
       emotions: { mood: 5, stress: 3, socialSatiety: 5 },
-      employment: true,
+      locationTag: "education", employment: true,
     },
   },
   "think:placement": {
     action: "think", entry: "placement",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 50 },
-      emotions: { mood: 5, stress: 5, socialSatiety: 3 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
+      emotions: { mood: 4, stress: 5, socialSatiety: 5 },
+      locationTag: "quiet",
     },
   },
   "move:placement": {
     action: "move", entry: "placement",
     profile: {
-      vitals: { hunger: 85, fatigue: 10, hygiene: 50 },
+      vitals: { hunger: 99, fatigue: 0, hygiene: 0 },
       emotions: { mood: 5, stress: 3, socialSatiety: 5 },
+      locationTag: "quiet",  // far from food — must move to eat
     },
   },
   "look_around:placement": {
     action: "look_around", entry: "placement",
     profile: {
-      vitals: { hunger: 10, fatigue: 10, hygiene: 50 },
+      vitals: { hunger: 0, fatigue: 0, hygiene: 0 },
       emotions: { mood: 5, stress: 3, socialSatiety: 5 },
+      locationTag: "park",
     },
   },
 };
@@ -435,32 +459,65 @@ async function runAll(cli: CliArgs): Promise<void> {
   if (cli.entry) {
     combinations = combinations.filter((c) => c.entry === cli.entry);
   }
-  console.log(`\nRunning ${combinations.length} action+entry combinations...\n`);
+  const rounds = cli.rounds;
+  console.log(`\nRunning ${combinations.length} action+entry combinations (max ${rounds} rounds each, stop on first success)...\n`);
 
-  const results: Array<{ action: string; entry: string; matched: boolean; elapsed: number; error?: string }> = [];
+  const results: Array<{ action: string; entry: string; matched: boolean; elapsed: number; rounds: number; error?: string }> = [];
 
   for (const { action, entry } of combinations) {
     const entryProfile = getProfile(action, entry);
     if (!entryProfile) {
-      results.push({ action, entry, matched: false, elapsed: 0, error: "profile not found" });
+      results.push({ action, entry, matched: false, elapsed: 0, rounds: 0, error: "profile not found" });
       console.log(`💥 ${action}:${entry} — ERROR: profile not found`);
       continue;
     }
 
-    try {
-      const result = await dispatch(entryProfile, cli);
-      results.push({
-        action: result.action,
-        entry: result.entry,
-        matched: result.llmResult.matched,
-        elapsed: result.llmResult.elapsed,
-      });
-      const icon = result.llmResult.matched ? "🟢" : "🔴";
-      console.log(`${icon} ${action}:${entry} — ${result.llmResult.elapsed}ms → ${result.llmResult.chosenAction}`);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      results.push({ action, entry, matched: false, elapsed: 0, error: message });
-      console.log(`💥 ${action}:${entry} — ERROR: ${message}`);
+    let matched = false;
+    let totalElapsed = 0;
+    let succeededRound = 0;
+    let lastChosen = "";
+    let errorResult: typeof results[number] | null = null;
+    let permanentError = false;
+
+    for (let round = 1; round <= rounds && !permanentError; round++) {
+      try {
+        const result = await dispatch(entryProfile, cli);
+        totalElapsed += result.llmResult.elapsed;
+        lastChosen = result.llmResult.chosenAction;
+        if (result.llmResult.matched) {
+          matched = true;
+          succeededRound = round;
+          break;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        // Non-retryable errors: missing companion, missing node, etc.
+        if (message.includes("requires two characters") ||
+            message.includes("requires a companion") ||
+            message.includes("No node found") ||
+            message.includes("No companion available")) {
+          errorResult = { action, entry, matched: false, elapsed: 0, rounds: 0, error: message };
+          console.log(`💥 ${action}:${entry} — ERROR: ${message}`);
+          permanentError = true;
+          break;
+        }
+        // Retryable errors: log and retry
+        if (round === rounds) {
+          errorResult = { action, entry, matched: false, elapsed: totalElapsed, rounds: round, error: message };
+          console.log(`💥 ${action}:${entry} — ERROR after ${round} rounds: ${message}`);
+        }
+      }
+    }
+
+    if (permanentError || errorResult) {
+      results.push(errorResult!);
+    } else if (matched) {
+      results.push({ action, entry, matched: true, elapsed: totalElapsed, rounds: succeededRound });
+      const roundInfo = succeededRound > 1 ? ` (round ${succeededRound}/${rounds})` : "";
+      console.log(`🟢 ${action}:${entry} — ${totalElapsed}ms → ${lastChosen}${roundInfo}`);
+    } else {
+      results.push({ action, entry, matched: false, elapsed: totalElapsed, rounds });
+      console.log(`🔴 ${action}:${entry} — ${totalElapsed}ms → ${lastChosen} (tried ${rounds} rounds)`);
     }
   }
 
@@ -468,20 +525,22 @@ async function runAll(cli: CliArgs): Promise<void> {
   const passCount = results.filter((r) => r.matched).length;
   const failCount = results.filter((r) => !r.matched && !r.error).length;
   const errorCount = results.filter((r) => r.error).length;
+  const totalRounds = results.reduce((sum, r) => sum + r.rounds, 0);
 
   console.log(`\n${"=".repeat(70)}`);
   console.log(`╡ 批量诊断完成 ╞`);
   console.log(`${"=".repeat(70)}`);
-  console.log(`总计: ${results.length} 项`);
-  console.log(`🟢 通过: ${passCount}`);
-  console.log(`🔴 失败: ${failCount}`);
+  console.log(`总计: ${results.length} 项, 总轮次: ${totalRounds}`);
+  console.log(`🟢 通过 (至少1次触发): ${passCount}`);
+  console.log(`🔴 失败 (${rounds}轮均未触发): ${failCount}`);
   console.log(`💥 错误: ${errorCount}`);
 
   if (failCount > 0 || errorCount > 0) {
     console.log(`\n失败/错误详情:`);
     for (const r of results) {
       if (!r.matched) {
-        console.log(`  ${r.error ? "💥" : "🔴"} ${r.action}:${r.entry} — ${r.error ?? `LLM chose different action`}`);
+        const errInfo = r.error ?? `LLM chose different action (${r.rounds} rounds)`;
+        console.log(`  ${r.error ? "💥" : "🔴"} ${r.action}:${r.entry} — ${errInfo}`);
       }
     }
   }
@@ -536,9 +595,8 @@ async function resolveCharacter(
   let companion: typeof allChars[number] | undefined;
   if (profile.companionFilter) {
     let candidates = allChars.filter((c) => c.id !== char.id);
-    if (profile.companionFilter.sameLocation) {
-      candidates = candidates.filter((c) => c.locationId === node.id);
-    }
+    // Don't filter by sameLocation here — injectState will move them.
+    // Just pick any other character.
     companion = candidates[0];
     if (!companion) throw new Error("No companion available matching filter criteria");
   }
@@ -617,7 +675,7 @@ async function injectState(
         locationId: nodeId,
         money: profile.money ?? orig?.money ?? 100,
         inventoryJson: profile.inventory
-          ? JSON.stringify(profile.inventory)
+          ? JSON.stringify(profile.inventory.map((id) => ({ itemDefId: id, acquiredTick: 0 })))
           : orig?.inventoryJson ?? "[]",
       })
       .where(and(eq(characters.worldId, worldId), eq(characters.id, charId)));
@@ -704,6 +762,21 @@ async function runDecideDiagnostic(
     );
 
     const options = getAvailableActions(ctx);
+    const inOptions = options.some((o: any) => o.type === profile.action);
+
+    if (!inOptions) {
+      return {
+        action: profile.action,
+        entry: "decide",
+        codePathChecks: {
+          registered: actionRegistry.has(profile.action),
+          inBuildOptions: false,
+        },
+        induction: { character: updatedChar.name, characterId: updatedChar.id, node: hereNode.name, vitals: updatedChar.vitals as any, emotions: updatedChar.emotion as any },
+        llmResult: { chosenAction: "(unavailable — check() failed)", matched: false, elapsed: 0, rawAction: null },
+        prompts: { system: "", user: "(skipped — action not in buildOptions)" },
+      };
+    }
 
     // Build DecideInput
     const input = {

@@ -3,11 +3,8 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { Character, MapNode, WorldEvent } from "@/types/api.generated";
 import {
-  DEFAULT_TICK_WINDOW,
-  getTickWindow,
   TICK_WIDTH,
   groupEventsByTick,
-  isSleepTick,
   stackEventsAtTick,
 } from "@/lib/gantt-utils";
 import { GanttTimeline } from "./gantt-timeline";
@@ -16,12 +13,18 @@ import { GanttPopup } from "./gantt-popup";
 import { CharacterAvatar } from "./character-avatar";
 
 const NAME_COL_WIDTH = 100;
+const GANTT_BATCH_TICKS = 40;
+const SCROLL_THRESHOLD = 200;
 
 export function EventGantt({
   events,
   characters,
   nodes,
   epoch,
+  loadedSince,
+  hasMore,
+  loadingMore,
+  onLoadMore,
   onJumpToNode,
   onSelectCharacter,
   onFollow,
@@ -30,28 +33,27 @@ export function EventGantt({
   characters: Character[];
   nodes: MapNode[];
   epoch: number;
+  loadedSince: number | null;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
   onJumpToNode: (id: string) => void;
   onSelectCharacter: (c: Character) => void;
   onFollow: (id: string) => void;
 }) {
-  const tickCount = useMemo(() => {
-    if (events.length === 0) return DEFAULT_TICK_WINDOW;
-    const max = Math.max(...events.map((e) => e.tick));
-    const min = Math.min(...events.map((e) => e.tick));
-    return Math.max(DEFAULT_TICK_WINDOW, max - min + 1);
+  const endTick = useMemo(() => {
+    if (events.length === 0) return 0;
+    return Math.max(...events.map((e) => e.tick));
   }, [events]);
-  const [selectedEvent, setSelectedEvent] = useState<WorldEvent | null>(null);
-  const [popupAnchor, setPopupAnchor] = useState<DOMRect | null>(null);
 
-  const { startTick, endTick } = useMemo(
-    () => getTickWindow(events, tickCount),
-    [events, tickCount],
-  );
+  const startTick = loadedSince ?? (endTick > 0 ? Math.max(0, endTick - GANTT_BATCH_TICKS + 1) : 0);
 
   const tickColumns = endTick - startTick + 1;
   const contentWidth = tickColumns * TICK_WIDTH;
 
-  // Pre-compute row heights (same logic as GanttRow)
+  const [selectedEvent, setSelectedEvent] = useState<WorldEvent | null>(null);
+  const [popupAnchor, setPopupAnchor] = useState<DOMRect | null>(null);
+
   const rowHeights = useMemo(() => {
     return characters.map((c) => {
       const grouped = groupEventsByTick(events, c.id, startTick, endTick);
@@ -79,10 +81,9 @@ export function EventGantt({
   const cardsRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const namesRef = useRef<HTMLDivElement>(null);
-
   const syncing = useRef(false);
 
-  // Cards → timeline + names
+  // Cards -> timeline + names
   const syncFromCards = useCallback(() => {
     if (syncing.current) return;
     syncing.current = true;
@@ -94,7 +95,7 @@ export function EventGantt({
     syncing.current = false;
   }, []);
 
-  // Names → cards (vertical)
+  // Names -> cards (vertical)
   const syncFromNames = useCallback(() => {
     if (syncing.current) return;
     syncing.current = true;
@@ -104,7 +105,7 @@ export function EventGantt({
     syncing.current = false;
   }, []);
 
-  // Timeline → cards (horizontal)
+  // Timeline -> cards (horizontal)
   const syncFromTimeline = useCallback(() => {
     if (syncing.current) return;
     syncing.current = true;
@@ -113,6 +114,16 @@ export function EventGantt({
     }
     syncing.current = false;
   }, []);
+
+  // Horizontal infinite scroll detection
+  const handleCardsScroll = useCallback(() => {
+    syncFromCards();
+    const el = cardsRef.current;
+    if (!el || !hasMore || loadingMore) return;
+    if (el.scrollLeft + el.clientWidth >= el.scrollWidth - SCROLL_THRESHOLD) {
+      onLoadMore();
+    }
+  }, [syncFromCards, hasMore, loadingMore, onLoadMore]);
 
   // Wheel handler: deltaY -> scrollLeft in the cards area
   useEffect(() => {
@@ -153,6 +164,9 @@ export function EventGantt({
           甘特图
         </span>
         <div className="flex items-center gap-3 ml-auto">
+          {loadingMore && (
+            <span className="text-[10px] text-(--accent-strong)">加载中…</span>
+          )}
           <span className="text-[10px] text-white/40">
             T={startTick} ~ T={endTick}
           </span>
@@ -166,7 +180,6 @@ export function EventGantt({
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top row: corner + timeline */}
         <div className="flex flex-shrink-0 overflow-hidden">
-          {/* Corner */}
           <div
             style={{
               width: NAME_COL_WIDTH,
@@ -178,7 +191,6 @@ export function EventGantt({
               zIndex: 2,
             }}
           />
-          {/* Timeline — syncs horizontal scroll */}
           <div
             ref={timelineRef}
             className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-hide"
@@ -192,7 +204,6 @@ export function EventGantt({
 
         {/* Bottom row: names + cards */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Name column — syncs vertical scroll */}
           <div
             ref={namesRef}
             className="overflow-y-auto overflow-x-hidden flex-shrink-0 scrollbar-hide"
@@ -244,12 +255,12 @@ export function EventGantt({
             ))}
           </div>
 
-          {/* Cards area — scrolls both directions */}
+          {/* Cards area - scrolls both directions, triggers infinite scroll */}
           <div
             ref={cardsRef}
             className="flex-1"
             style={{ overflow: "auto" }}
-            onScroll={syncFromCards}
+            onScroll={handleCardsScroll}
           >
             <div style={{ width: contentWidth }}>
               {characters.map((c, i) => (

@@ -1269,7 +1269,7 @@ export async function runDialogPhase(
       const responder = charById.get(conv.acceptorId)!;
 
       if (conv.status === "ended") {
-        // Summary: one LLM call for the dialog summary (keep standalone summarizer)
+        // Generate summary (WorldEvent only, no memory writes)
         let summary: string;
         try {
           const summaryResult = await retryOnce(() =>
@@ -1280,14 +1280,10 @@ export async function runDialogPhase(
             }),
           );
           summary = summaryResult.summary;
-          if (summaryResult.memorize) {
-            for (const m of summaryResult.memorize) {
-              if (m.target_id === conv.acceptorId) opener.impressionBook[m.target_id] = m.impression.trim();
-              if (m.target_id === conv.initiatorId) responder.impressionBook[m.target_id] = m.impression.trim();
-            }
-          }
+          // IMPORTANT: Do NOT apply summaryResult.memorize to impressionBook anymore
+          // Impressions are handled by personal memory generation
         } catch {
-          summary = `（摘要生成失败：双方聊了 ${conv.transcript.length} 句）`;
+          summary = `双方聊了 ${conv.transcript.length} 句`;
         }
 
         // Generate personal memories for each participant via agentic loop

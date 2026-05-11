@@ -900,8 +900,8 @@ async function runThinkDiagnostic(
         character: updatedSelf.name,
         characterId: updatedSelf.id,
         node: hereNode.name,
-        vitals: JSON.parse(updatedSelf.vitalsJson || "{}"),
-        emotions: JSON.parse(updatedSelf.emotionJson || "{}"),
+        vitals: (updatedSelf as any).vitals as Record<string, number>,
+        emotions: (updatedSelf as any).emotion as Record<string, number>,
       },
       llmResult: {
         chosenAction: isThinkTurn ? "submit_think_turn" : isEnd ? "end_thinking" : "unknown",
@@ -956,20 +956,20 @@ async function runAcceptDiagnostic(
     const elapsed = Date.now() - startTime;
 
     return {
-      action: "accept_decision",
+      action: entryProfile.action,
       entry: "accept",
       codePathChecks: { registered: true, inBuildOptions: true },
       induction: {
         character: updatedSelf.name,
         characterId: updatedSelf.id,
         node: hereNode.name,
-        vitals: JSON.parse(updatedSelf.vitalsJson || "{}"),
-        emotions: JSON.parse(updatedSelf.emotionJson || "{}"),
+        vitals: (updatedSelf as any).vitals as Record<string, number>,
+        emotions: (updatedSelf as any).emotion as Record<string, number>,
         companion: updatedPeer.name,
       },
       llmResult: {
         chosenAction: (result as any).type,
-        matched: true,
+        matched: (result as any).type === entryProfile.action,
         elapsed,
         rawAction: result,
       },
@@ -1002,6 +1002,7 @@ async function runSummaryDiagnostic(
     line: string;
     turn: number;
     createdAt: number;
+    kind: string;
   }> = entryProfile.dialogueHistory.map((line, i) => {
     const separatorIndex = line.indexOf("：");
     const speakerName = separatorIndex > 0 ? line.slice(0, separatorIndex) : "Unknown";
@@ -1012,6 +1013,7 @@ async function runSummaryDiagnostic(
       line: text,
       turn: i,
       createdAt: Date.now(),
+      kind: "say" as const,
     };
   });
 
@@ -1073,6 +1075,7 @@ async function runMemoryDiagnostic(
     line: string;
     turn: number;
     createdAt: number;
+    kind: string;
   }> = entryProfile.dialogueHistory.map((line, i) => {
     const separatorIndex = line.indexOf("：");
     const speakerName = separatorIndex > 0 ? line.slice(0, separatorIndex) : "Unknown";
@@ -1083,6 +1086,7 @@ async function runMemoryDiagnostic(
       line: text,
       turn: i,
       createdAt: Date.now(),
+      kind: "say" as const,
     };
   });
 

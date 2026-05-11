@@ -1905,87 +1905,8 @@ export function buildUserPrompt(args: {
   return lines.join("\n");
 }
 
-// ---------------------------------------------------------------------------
-// memory compression prompt builders
-// ---------------------------------------------------------------------------
-
-/**
- * 构建睡觉时的记忆压缩 prompt。输入清醒期的短期记忆，输出第一人称日摘要。
- */
-export function buildMemoryCompressionPrompt(args: {
-  characterName: string;
-  memories: Memory[];
-  language?: Language;
-}): string {
-  const { characterName, memories } = args;
-  const language = args.language ?? "zh";
-
-  if (memories.length === 0) {
-    if (language === "zh") return `你是 ${characterName}。自从上次睡觉后，你没有值得记住的经历。直接输出你的总结。`;
-    if (language === "en") return `You are ${characterName}. You had no notable experiences since you last slept. Output your summary directly.`;
-    return `あなたは${characterName}です。前回の睡眠以降、特に記憶に残る出来事はありませんでした。要約を直接出力してください。`;
-  }
-
-  const memoryLines = memories
-    .map((m) => `- t=${m.tick}: ${m.content}`)
-    .join("\n");
-
-  if (language === "zh") {
-    return `你是 ${characterName}，正在回顾从上次睡醒到现在的经历。以下是这段时间发生的事情：
-
-${memoryLines}
-
-请用 2-5 句简体中文（第一人称"我"）总结这段清醒期间最主要的事情、与人互动和感受。直接输出你的摘要。`;
-  }
-  if (language === "en") {
-    return `You are ${characterName}, reviewing experiences since you last woke up. Here's what happened:
-
-${memoryLines}
-
-Summarize the most important events, interactions, and feelings in 2-5 English sentences using first person. Output your summary directly.`;
-  }
-  return `あなたは${characterName}です。前回起きてから今までの出来事を振り返っています：
-
-${memoryLines}
-
-この間の主な出来事、人との交流、感情を日本語の第一人称で2〜5文にまとめてください。要約を直接出力してください。`;
-}
-
-/**
- * 构建周记忆压缩 prompt。输入 7 条日摘要，输出周摘要。
- */
-export function buildWeeklyCompressionPrompt(args: {
-  characterName: string;
-  dailySummaries: string[];
-  language?: Language;
-}): string {
-  const { characterName, dailySummaries } = args;
-  const language = args.language ?? "zh";
-
-  const lines = dailySummaries
-    .map((s, i) => `第 ${i + 1} 天：${s}`)
-    .join("\n");
-
-  if (language === "zh") {
-    return `你是 ${characterName}，正在回顾这一周（7 天）的生活。以下是每天的摘要：
-
-${lines}
-
-请用 2-4 句简体中文（第一人称"我"）总结这一周最主要的生活变化、重要事件和情感起伏。直接输出你的摘要。`;
-  }
-  if (language === "en") {
-    return `You are ${characterName}, reviewing your past week (7 days). Here are your daily summaries:
-
-${lines}
-
-Summarize the key life changes, important events, and emotional shifts of this week in 2-4 English sentences using first person. Output your summary directly.`;
-  }
-  return `あなたは${characterName}です。この一週間（7日間）を振り返っています：
-
-${lines}
-
-この一週間の主な生活の変化、重要な出来事、感情の起伏を日本語の第一人称で2〜4文にまとめてください。要約を直接出力してください。`;
-}
+// Memory compression has been refactored into the agent-loop flow.
+// Prompt builders removed — no callers remain.
 
 /**
  * 对话中注入时间信息。让 LLM 感知当前时间和对话持续时长。
@@ -2236,47 +2157,5 @@ export function buildThinkFollowup(args: {
   return `（熟考を続けてください）\n\n思考記録の更新：\n${history}\n\n熟考を続けてください。submit_think_turn で思考内容を出力するか、end_thinking でセッションを終了してください。`;
 }
 
-/** think session 时间提示（3 轮完成后注入）。 */
-export function injectThinkTimeMessage(args: {
-  tick: number;
-  epoch: number;
-  tickStarted: number;
-  language?: Language;
-}): string {
-  const { tick, epoch, tickStarted } = args;
-  const language = args.language ?? "zh";
-  const displayTick = tick;
-  const t = timeOfDay(displayTick, epoch);
-  const elapsedTicks = displayTick - tickStarted;
-  const elapsedHours = Math.floor(elapsedTicks / TICKS_PER_HOUR);
-  const elapsedMinutes = Math.floor((elapsedTicks % TICKS_PER_HOUR) * (60 / TICKS_PER_HOUR));
-  const totalMinutes = elapsedHours * 60 + elapsedMinutes;
-
-  const timeStr = `${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
-  const endHint = language === "zh"
-    ? "如果思考得差不多了，调用 end_thinking 工具结束思考并写入记忆。"
-    : language === "en"
-      ? "If you're done thinking, use the end_thinking tool to conclude and save your thoughts."
-      : "思考がまとまったら、end_thinking ツールを呼び出して記憶に書き込んでください。";
-
-  if (language === "zh") {
-    if (totalMinutes === 0) {
-      return `现在是 ${timeStr}。${endHint}`;
-    }
-    const dur = elapsedHours > 0 ? `${elapsedHours} 小时 ${elapsedMinutes} 分钟` : `${elapsedMinutes} 分钟`;
-    return `现在是 ${timeStr}，你已经思考了 ${dur}（${totalMinutes} 分钟）。${endHint}`;
-  }
-  if (language === "en") {
-    if (totalMinutes === 0) {
-      return `It's now ${timeStr}. ${endHint}`;
-    }
-    const dur = elapsedHours > 0 ? `${elapsedHours}h ${elapsedMinutes}m` : `${elapsedMinutes}m`;
-    return `It's now ${timeStr}, you've been thinking for ${dur} (${totalMinutes} min). ${endHint}`;
-  }
-  if (totalMinutes === 0) {
-    return `今は ${timeStr} です。${endHint}`;
-  }
-  const dur = elapsedHours > 0 ? `${elapsedHours} 時間 ${elapsedMinutes} 分` : `${elapsedMinutes} 分`;
-  return `今は ${timeStr} です、${dur}（${totalMinutes} 分）考え続けています。${endHint}`;
-}
+// injectThinkTimeMessage removed — no longer used by the agent-loop think flow.
 

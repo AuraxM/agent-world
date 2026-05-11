@@ -26,8 +26,7 @@ import type {
   WorldEvent,
 } from "../domain/index";
 import type { ActionOption } from "../systems/index";
-import type { ChatCompletionTool } from "openai/resources/chat/completions";
-import { actionRegistry, OBJECTIVE_RELATION_KINDS, VIEW_MAP_TOOL_NAME, ViewMapToolSchema } from "../domain/index";
+import { actionRegistry, OBJECTIVE_RELATION_KINDS } from "../domain/index";
 
 const SHORT_MEMORY_LIMIT = 4;
 const DAILY_MEMORY_LIMIT = 6;
@@ -842,20 +841,6 @@ export function buildMapView(here: MapNode, nodes: MapNode[], shops?: Shop[]): s
     out += `\n\n特殊通道（shortcuts，cost=0）：\n${shortcutLines.join("\n")}`;
   }
   return out;
-}
-
-/**
- * 地图查询工具。LLM 可调用此工具获取以当前位置为根重绘的完整地图树。
- */
-export function buildMapTool(): ChatCompletionTool {
-  return {
-    type: "function",
-    function: {
-      name: VIEW_MAP_TOOL_NAME,
-      description: "查看当前所在位置周围的地图结构。以你的位置为中心重绘整个地图树，帮助你了解附近可以去的地方和路径关系。",
-      parameters: ViewMapToolSchema,
-    },
-  };
 }
 
 const PROFESSION_LABELS: Record<Profession, string> = {

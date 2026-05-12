@@ -132,26 +132,49 @@ export function StrangerChat({
     setMessages([]);
   };
 
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const selectedCharName = characters.find((c) => c.id === selectedCharId)?.name;
 
   return (
     <div className="h-full flex flex-col">
       {/* Character selector */}
-      <div className="flex-shrink-0 px-3 py-2 border-b border-white/10 bg-black/15">
-        <select
-          value={selectedCharId ?? ""}
-          onChange={(e) => handleCharChange(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 rounded px-3 py-1.5 text-[12px] text-white/90 focus:outline-none focus:border-(--accent-strong)/50 appearance-none"
+      <div className="flex-shrink-0 px-3 py-2 border-b border-white/10 bg-black/15 relative">
+        <button
+          type="button"
+          onClick={() => setDropdownOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-3 py-2 rounded text-left cursor-pointer transition-colors border border-transparent text-white/85 hover:bg-white/[0.04] hover:border-white/5"
         >
-          <option value="" disabled>
-            选择角色…
-          </option>
-          {characters.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+          <span className="text-[12px] truncate">
+            {selectedCharName ?? "选择角色…"}
+          </span>
+          <span className="text-[9px] text-white/30 ml-2 flex-shrink-0">
+            {dropdownOpen ? "▲" : "▼"}
+          </span>
+        </button>
+        {dropdownOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => setDropdownOpen(false)}
+            />
+            <div className="absolute left-2 right-2 top-full mt-0.5 z-20 bg-black/90 backdrop-blur-xl border border-white/10 rounded shadow-lg max-h-[240px] overflow-y-auto py-0.5">
+              {characters.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => { handleCharChange(c.id); setDropdownOpen(false); }}
+                  className={`w-full flex items-center px-3 py-2 rounded text-left text-[12px] cursor-pointer transition-colors ${
+                    c.id === selectedCharId
+                      ? "bg-white/[0.08] border border-(--accent-strong)/30 text-(--accent-strong)"
+                      : "border border-transparent text-white/85 hover:bg-white/[0.04] hover:border-white/5"
+                  }`}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Message list */}

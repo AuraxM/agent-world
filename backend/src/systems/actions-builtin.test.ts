@@ -21,7 +21,11 @@ import {
   giveItemAction,
   manageEmploymentAction,
   workAction,
+  sleepAction,
+  moveAction,
+  restAction,
 } from "./actions-builtin";
+import { findPath } from "./pathfinding";
 import type { ItemDefinition, Shop, Character, MapNode } from "../domain/index";
 import type { ActionContext } from "../domain/index";
 
@@ -260,5 +264,128 @@ describe("work action", () => {
     };
     const ctx = makeCtx({ self: makeChar({ id: "char-1" }), shops: [shop] });
     expect(workAction.check(ctx)).toBe(true);
+  });
+});
+
+// ── sleep / move / rest 夜间导航测试 ──
+
+/** 两个彼此可达的节点：广场上有酒馆，广场下有家 */
+const plazaNode: MapNode = {
+  id: "node-plaza", worldId: "w1", parentId: null,
+  name: "广场", description: "镇中心",
+  tags: ["public"], capacity: null, privacy: "public",
+  visibleFromParent: true, shortcuts: [], isEntry: true,
+};
+const homeNode: MapNode = {
+  id: "node-home", worldId: "w1", parentId: "node-plaza",
+  name: "我的家", description: "温馨的小屋",
+  tags: ["residence"], capacity: null, privacy: "private",
+  visibleFromParent: true, shortcuts: [], isEntry: false,
+};
+const tavernNode: MapNode = {
+  id: "node-tavern", worldId: "w1", parentId: "node-plaza",
+  name: "酒馆", description: "热闹的酒馆",
+  tags: ["dining"], capacity: null, privacy: "public",
+  visibleFromParent: true, shortcuts: [], isEntry: false,
+};
+
+describe("sleep / move / rest 夜间导航", () => {
+  it("sleep.check 不在住处时返回 false（即使处于睡眠窗口）", () => {
+    const c = makeChar({ locationId: "node-tavern", restNodeId: "node-home" });
+    const ctx = makeCtx({
+      self: c,
+      here: { ...tavernNode, id: c.locationId },
+      reachable: [plazaNode, homeNode, tavernNode],
+      isSleepHour: true,
+      facts: { restNodeId: "node-home", restNodeName: "我的家" },
+    });
+    expect(sleepAction.check(ctx)).toBe(false);
+  });
+
+  it("sleep.check 在住处且处于睡眠窗口时返回 true", () => {
+    const c = makeChar({ locationId: "node-home", restNodeId: "node-home" });
+    const ctx = makeCtx({
+      self: c,
+      here: { ...homeNode, id: c.locationId },
+      reachable: [plazaNode, homeNode, tavernNode],
+      isSleepHour: true,
+      facts: { restNodeId: "node-home", restNodeName: "我的家" },
+    });
+    expect(sleepAction.check(ctx)).toBe(true);
+  });
+
+  it("sleep.check 在住处但不在睡眠窗口时返回 false", () => {
+    const c = makeChar({ locationId: "node-home", restNodeId: "node-home" });
+    const ctx = makeCtx({
+      self: c,
+      here: { ...homeNode, id: c.locationId },
+      reachable: [plazaNode, homeNode, tavernNode],
+      isSleepHour: false,
+      facts: { restNodeId: "node-home", restNodeName: "我的家" },
+    });
+    expect(sleepAction.check(ctx)).toBe(false);
+  });
+
+  it("moveAction.hint 在疲劳 >=12 且 restNodeId 存在时包含回家提示", () => {
+    const c = makeChar({
+      locationId: "node-tavern",
+      vitals: { hunger: 5, fatigue: 13, hygiene: 2 },
+    });
+    const ctx = makeCtx({
+      self: c,
+      here: { ...tavernNode, id: c.locationId },
+      reachable: [plazaNode, homeNode, tavernNode],
+      isSleepHour: true,
+      facts: {
+        restNodeId: "node-home",
+        restNodeName: "我的家",
+        activityNodeId: null,
+        activityNodeName: null,
+        hoursAtCurrentLocation: 1,
+        todayActionCounts: {},
+        todayChatTargets: {},
+      },
+    });
+    const hints = moveAction.hint(ctx);
+    expect(hints.length).toBeGreaterThan(0);
+    const homeHint = hints.find((h) => h.targetNodeId === "node-home");
+    expect(homeHint).toBeDefined();
+    expect(homeHint!.hint).toContain("休息");
+  });
+
+  it("moveAction.hint 在疲劳低时不包含回家提示", () => {
+    const c = makeChar({
+      locationId: "node-tavern",
+      vitals: { hunger: 5, fatigue: 5, hygiene: 2 },
+    });
+    const ctx = makeCtx({
+      self: c,
+      here: { ...tavernNode, id: c.locationId },
+      reachable: [plazaNode, homeNode, tavernNode],
+      isSleepHour: false,
+      facts: {
+        restNodeId: "node-home",
+        restNodeName: "我的家",
+        activityNodeId: null,
+        activityNodeName: null,
+        hoursAtCurrentLocation: 1,
+        todayActionCounts: {},
+        todayChatTargets: {},
+      },
+    });
+    const hints = moveAction.hint(ctx);
+    const homeHint = hints.find((h) => h.targetNodeId === "node-home");
+    expect(homeHint).toBeUndefined();
+  });
+
+  it("findPath 能从酒馆到家（通过广场）", () => {
+    const path = findPath("node-tavern", "node-home", [plazaNode, homeNode, tavernNode]);
+    expect(path).toBeDefined();
+    expect(path).toEqual(["node-tavern", "node-plaza", "node-home"]);
+  });
+
+  it("findPath 从家到酒馆路径反向对称", () => {
+    const path = findPath("node-home", "node-tavern", [plazaNode, homeNode, tavernNode]);
+    expect(path).toEqual(["node-home", "node-plaza", "node-tavern"]);
   });
 });

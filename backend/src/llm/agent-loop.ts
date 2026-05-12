@@ -1,9 +1,9 @@
 /**
  * 共享 ReAct agent 循环 —— 供 Decide / Dialog / Think 三个 agent 复用。
  *
- * - 最多 maxRounds 轮（默认 20），read tools 不消耗轮数
+ * - 受 timeBudgetMs 时间预算控制（默认 5000ms），read tools 不消耗计数
  * - 检测到 terminal tool 时立即返回，由调用方解析具体参数
- * - 轮数耗尽返回 "exhausted"
+ * - 时间预算耗尽返回 "exhausted"
  * - 保留 DeepSeek reasoning_content 并在每轮回传
  */
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
@@ -58,7 +58,7 @@ export interface AgentLoopInput {
   terminalToolNames: string[];
   readToolNames: readonly string[];
   llmEntryName: string;
-  maxRounds?: number;
+  timeBudgetMs?: number;
   sharedMessages?: ChatCompletionMessageParam[];
   language?: string;
   toolHandlerContext: ToolHandlerContext;
@@ -81,7 +81,7 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
     terminalToolNames,
     readToolNames,
     llmEntryName,
-    maxRounds = 20,
+    timeBudgetMs = 5000,
     sharedMessages = [],
     toolHandlerContext: ctx,
     customWriteHandlers = {},
@@ -93,18 +93,30 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
 
   const allTools: ActionToolDef[] = [...readTools, ...writeTools];
   const messages: ChatCompletionMessageParam[] = [...sharedMessages];
+  const t0 = Date.now();
   let round = 0;
 
   const agentType = llmEntryName === "decide" ? "Decide" : llmEntryName === "dialog_turn" ? "Dialog" : llmEntryName;
-  console.log(`[${agentType}] agent loop 开始 | 角色: ${ctx.self.name} | 终端工具: ${terminalToolNames.join(", ")} | 最大轮数: ${maxRounds} | 已含消息: ${sharedMessages.length}`);
+  console.log(`[${agentType}] agent loop 开始 | 角色: ${ctx.self.name} | 终端工具: ${terminalToolNames.join(", ")} | 时间预算: ${timeBudgetMs}ms | 已含消息: ${sharedMessages.length}`);
   agentLog.info(`${agentType} agent loop 开始`, {
     character: ctx.self.name,
     terminalTools: terminalToolNames.join(", "),
-    maxRounds,
+    timeBudgetMs,
     sharedMsgCount: sharedMessages.length,
   });
 
-  while (round < maxRounds) {
+  while (true) {
+    const elapsed = Date.now() - t0;
+    if (elapsed >= timeBudgetMs) {
+      agentLog.warn(`${agentType} agent loop 时间预算耗尽`, {
+        character: ctx.self.name,
+        totalRounds: round,
+        elapsedMs: elapsed,
+        budgetMs: timeBudgetMs,
+      });
+      return { kind: "exhausted", messages };
+    }
+
     const extra: Record<string, unknown> = {};
     if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
 
@@ -143,9 +155,11 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
       ? (typeof choice.content === "string" ? choice.content.slice(0, 200) : "")
       : "";
 
-    console.log(`[${agentType}] round ${round + 1}/${maxRounds} | 角色: ${ctx.self.name} | 工具: [${toolCallNames.join(", ")}] | reasoning: ${reasoningPreview.slice(0, 100)}${textPreview ? ` | text: ${textPreview.slice(0, 80)}` : ""}`);
-    agentLog.info(`${agentType} round ${round + 1}/${maxRounds}`, {
+    console.log(`[${agentType}] round ${round + 1} | 角色: ${ctx.self.name} | 已用: ${elapsed}ms/${timeBudgetMs}ms | 工具: [${toolCallNames.join(", ")}] | reasoning: ${reasoningPreview.slice(0, 100)}${textPreview ? ` | text: ${textPreview.slice(0, 80)}` : ""}`);
+    agentLog.info(`${agentType} round ${round + 1}`, {
       character: ctx.self.name,
+      elapsedMs: elapsed,
+      budgetMs: timeBudgetMs,
       reasoning: reasoningPreview,
       toolCalls: toolCallNames,
       textResponse: textPreview || undefined,
@@ -280,10 +294,11 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
   }
 
   // Exhausted — return without terminal
-  agentLog.warn(`${agentType} agent loop 轮次耗尽`, {
+  agentLog.warn(`${agentType} agent loop 时间预算耗尽`, {
     character: ctx.self.name,
     totalRounds: round,
-    maxRounds,
+    elapsedMs: Date.now() - t0,
+    budgetMs: timeBudgetMs,
   });
   return { kind: "exhausted", messages };
 }

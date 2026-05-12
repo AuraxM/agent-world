@@ -803,19 +803,27 @@ async function runOneTickDialog(
             : undefined,
         }
       : {};
+  const timeLine = injectTimeMessage({
+      tick: currentTick, epoch, tickStarted: conv.tickStarted, language,
+      ...timeLocationInfo,
+    });
   const timeTurn: DialogTurn = {
     speakerId: "__system__",
     kind: "say",
-    line: injectTimeMessage({
-      tick: currentTick, epoch, tickStarted: conv.tickStarted, language,
-      ...timeLocationInfo,
-    }),
+    line: timeLine,
   };
   if (conv.currentTickRounds === 0) {
     transcript.unshift(timeTurn);
   } else {
     transcript.push(timeTurn);
   }
+
+  // Also inject time info into sharedMessages so the LLM actually sees it.
+  // The transcript alone is only used for frontend display and end-of-conversation summary.
+  conv.sharedMessages = [
+    ...(conv.sharedMessages ?? []),
+    { role: "user" as const, content: `[系统] ${timeLine}` },
+  ];
 
   let round = 0;
   while (true) {

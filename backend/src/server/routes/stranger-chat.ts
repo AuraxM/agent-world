@@ -11,7 +11,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { loadWorld } from "../../systems/index";
-import { buildDialogSystemPrompt } from "../../llm/system-prompts";
+import { buildStrangerChatSystemPrompt } from "../../llm/system-prompts";
 import { buildReadTools, ALL_READ_TOOLS, WRITE_DIALOG_TOOL, END_DIALOG_TOOL } from "../../domain/schemas";
 import { runAgentLoop } from "../../llm/agent-loop";
 import type { AgentLoopResult } from "../../llm/agent-loop";
@@ -38,6 +38,7 @@ interface ChatSession {
   characterId: string;
   sharedMessages: any[];
   lastActivity: number;
+  ended: boolean;
 }
 
 const sessions = new Map<string, ChatSession>();
@@ -77,7 +78,7 @@ function makeEndDialogTool() {
     type: "function" as const,
     function: {
       name: "end_dialog",
-      description: "结束当前对话。可选 summary（对这段对话的简短总结）",
+      description: "结束当前对话（调用后对话将终止，对方无法再回复）。可选 summary（对这段对话的简短总结）",
       parameters: {
         type: "object" as const,
         properties: {
@@ -191,6 +192,9 @@ export const strangerChatRoutes: FastifyPluginAsync = async (app) => {
       if (session.worldId !== worldId || session.characterId !== characterId) {
         return reply.status(400).send({ error: "session 与 world/character 不匹配" });
       }
+      if (session.ended) {
+        return reply.status(400).send({ error: "对话已结束，请选择角色重新开始" });
+      }
     } else {
       sessionId = `sc-${randomUUID().slice(0, 8)}`;
       session = {
@@ -198,15 +202,14 @@ export const strangerChatRoutes: FastifyPluginAsync = async (app) => {
         characterId,
         sharedMessages: [],
         lastActivity: Date.now(),
+        ended: false,
       };
       sessions.set(sessionId, session);
     }
 
     // 4. Build system prompt
     const selfName = character.name;
-    const systemPrompt = buildDialogSystemPrompt(selfName, "一个陌生的路人")
-      .replace("3. 你可以在对话中提议动作（赠送物品、邀请同行等）\n", "")
-      .replace("5. write_propose_action / write_respond_action 不能结束本轮，调用后仍需调到 write_dialog 或 end_dialog\n", "");
+    const systemPrompt = buildStrangerChatSystemPrompt(selfName);
 
     // 5. Add user message
     session.sharedMessages.push({
@@ -257,6 +260,7 @@ export const strangerChatRoutes: FastifyPluginAsync = async (app) => {
         replyText = (result.terminalArgs?.content as string) ?? "";
       } else if (result.terminalToolName === END_DIALOG_TOOL) {
         replyText = ((result.terminalArgs?.summary as string) || "对话结束。");
+        session.ended = true;
       } else {
         replyText = "（未生成回复）";
       }

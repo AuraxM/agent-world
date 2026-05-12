@@ -205,7 +205,7 @@ export const strangerChatRoutes: FastifyPluginAsync = async (app) => {
     // 4. Build system prompt
     const selfName = character.name;
     const systemPrompt = buildDialogSystemPrompt(selfName, "一个陌生的路人")
-      .replace("4. 你可以在对话中提议动作（赠送物品、邀请同行等）\n", "")
+      .replace("3. 你可以在对话中提议动作（赠送物品、邀请同行等）\n", "")
       .replace("5. write_propose_action / write_respond_action 不能结束本轮，调用后仍需调到 write_dialog 或 end_dialog\n", "");
 
     // 5. Add user message

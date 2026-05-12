@@ -293,14 +293,7 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
     }
   }
 
-  // Exhausted — return without terminal
-  agentLog.warn(`${agentType} agent loop 时间预算耗尽`, {
-    character: ctx.self.name,
-    totalRounds: round,
-    elapsedMs: Date.now() - t0,
-    budgetMs: timeBudgetMs,
-  });
-  return { kind: "exhausted", messages };
+  // unreachable: all exhaustion paths return inside the while(true) loop
 }
 
 /** 为日志浓缩工具返回值，避免打印完整记忆/地图文本 */

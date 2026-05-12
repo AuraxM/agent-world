@@ -34,7 +34,7 @@ export function HamburgerDrawer({ children }: { children: ReactNode }) {
 
       {/* Drawer panel */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-black/95 backdrop-blur-xl border-r border-white/10 transform transition-transform duration-250 ease md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-black/95 backdrop-blur-xl border-r border-white/10 transform transition-transform duration-[250ms] ease md:hidden ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >

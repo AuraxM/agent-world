@@ -62,8 +62,8 @@ NPC 使用和普通 NPC 间对话相同的 system prompt，可以翻阅自己的
 - Read tools：全部（read_profile, read_memories, read_vitals, read_emotion, read_relations, read_character, read_map, read_companions, read_events, read_state, read_goals, read_economy, read_notebook）
 - Terminal tools：`write_dialog`、`end_dialog`
 - 不暴露：`write_memory`、`write_propose_action`、`write_respond_action`、`write_impression`、`write_relation`、`write_like`、`write_dislike`、`write_short_term_goal`、`write_long_term_goal`、`write_notebook`、`delete_memory`
-- `maxRounds`: 20
-- 无 `customWriteHandlers`（不需要 propose/respond action 捕获）
+- 不传 `maxRounds`（已废弃，由 `timeBudgetMs` 替代），时间预算复用 `dialog_turn` 配置
+- 不传 `customWriteHandlers`（不需要 propose/respond action 捕获）
 
 ### end_dialog 行为
 

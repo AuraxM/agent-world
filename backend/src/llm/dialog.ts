@@ -789,10 +789,27 @@ async function runOneTickDialog(
   // Inject time reminder before this tick's dialogue rounds.
   // On the very first tick, insert it before the opening line so the LLM
   // sees the time context first.
+  // When characters are traveling together, include current location and destination.
+  const travelingAction =
+    initiator.currentAction?.type === "travel_together" ? initiator.currentAction :
+    acceptor.currentAction?.type === "travel_together" ? acceptor.currentAction :
+    null;
+  const timeLocationInfo =
+    travelingAction
+      ? {
+          currentNodeName: nodeById.get(initiator.locationId)?.name,
+          destinationName: travelingAction.path
+            ? nodeById.get(travelingAction.path[travelingAction.path.length - 1])?.name
+            : undefined,
+        }
+      : {};
   const timeTurn: DialogTurn = {
     speakerId: "__system__",
     kind: "say",
-    line: injectTimeMessage({ tick: currentTick, epoch, tickStarted: conv.tickStarted, language }),
+    line: injectTimeMessage({
+      tick: currentTick, epoch, tickStarted: conv.tickStarted, language,
+      ...timeLocationInfo,
+    }),
   };
   if (conv.currentTickRounds === 0) {
     transcript.unshift(timeTurn);

@@ -768,6 +768,10 @@ export function injectTimeMessage(args: {
   epoch: number;
   tickStarted: number;
   language?: Language;
+  /** Current location name (set when characters are traveling together) */
+  currentNodeName?: string;
+  /** Destination name (set when characters are traveling together) */
+  destinationName?: string;
 }): string {
   const { tick, epoch, tickStarted } = args;
   const language = args.language ?? "zh";
@@ -784,24 +788,30 @@ export function injectTimeMessage(args: {
 
   const totalMinutes = elapsedHours * 60 + elapsedMinutes;
 
+  const locationNote = args.currentNodeName
+    ? (args.destinationName
+        ? `你们正在前往${args.destinationName}的途中，目前位于${args.currentNodeName}。`
+        : `你们目前位于${args.currentNodeName}。`)
+    : "";
+
   if (language === "zh") {
     if (totalMinutes === 0) {
-      return `现在是 ${timeStr}。`;
+      return `现在是 ${timeStr}。${locationNote}`;
     }
     const dur = elapsedHours > 0 ? `${elapsedHours} 小时 ${elapsedMinutes} 分钟` : `${elapsedMinutes} 分钟`;
-    return `现在是 ${timeStr}。你们从 ${startTimeStr} 左右开始聊，已经过了大约 ${dur}。`;
+    return `现在是 ${timeStr}。你们从 ${startTimeStr} 左右开始聊，已经过了大约 ${dur}。${locationNote}`;
   }
   if (language === "en") {
     if (totalMinutes === 0) {
-      return `It's now ${timeStr}.`;
+      return `It's now ${timeStr}. ${locationNote}`;
     }
     const dur = elapsedHours > 0 ? `${elapsedHours}h ${elapsedMinutes}m` : `${elapsedMinutes}m`;
-    return `It's now ${timeStr}. You've been talking for about ${dur}.`;
+    return `It's now ${timeStr}. You've been talking for about ${dur}. ${locationNote}`;
   }
   if (totalMinutes === 0) {
-    return `今は ${timeStr} です。`;
+    return `今は ${timeStr} です。${locationNote}`;
   }
   const dur = elapsedHours > 0 ? `${elapsedHours} 時間 ${elapsedMinutes} 分` : `${elapsedMinutes} 分`;
-  return `今は ${timeStr} です。約${dur}話しています。`;
+  return `今は ${timeStr} です。約${dur}話しています。${locationNote}`;
 }
 

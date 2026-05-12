@@ -23,7 +23,7 @@ type HandlerResult = string | Record<string, unknown>;
 
 // ── Read Handlers ──
 
-export function handleReadProfile(ctx: ToolHandlerContext): HandlerResult {
+export function handleReadProfile(_args: any, ctx: ToolHandlerContext): HandlerResult {
   const c = ctx.self;
   const p = c.personality;
 
@@ -74,7 +74,7 @@ export function handleReadProfile(ctx: ToolHandlerContext): HandlerResult {
   };
 }
 
-export function handleReadVitals(ctx: ToolHandlerContext): HandlerResult {
+export function handleReadVitals(_args: any, ctx: ToolHandlerContext): HandlerResult {
   const v = ctx.self.vitals;
   const qualifyVital = (name: string, value: number): string => {
     if (value <= 2) return "正常";
@@ -93,7 +93,7 @@ export function handleReadVitals(ctx: ToolHandlerContext): HandlerResult {
   };
 }
 
-export function handleReadEmotion(ctx: ToolHandlerContext): HandlerResult {
+export function handleReadEmotion(_args: any, ctx: ToolHandlerContext): HandlerResult {
   const e = ctx.self.emotion;
   const moodLabel = e.mood <= -3 ? "非常低落" : e.mood <= -1 ? "有点低落" : e.mood <= 1 ? "平静" : e.mood >= 3 ? "非常好" : "不错";
   const stressLabel = e.stress >= 4 ? "极度紧张" : e.stress >= 3 ? "相当紧张" : e.stress >= 2 ? "有些压力" : e.stress >= 1 ? "轻微压力" : "轻松";
@@ -149,7 +149,7 @@ export function handleReadMemories(
   };
 }
 
-export function handleReadGoals(ctx: ToolHandlerContext): HandlerResult {
+export function handleReadGoals(_args: any, ctx: ToolHandlerContext): HandlerResult {
   const c = ctx.self;
   return {
     short_term: c.shortTermGoal?.goal ?? "暂无短期目标",
@@ -159,7 +159,7 @@ export function handleReadGoals(ctx: ToolHandlerContext): HandlerResult {
   };
 }
 
-export function handleReadEconomy(ctx: ToolHandlerContext): HandlerResult {
+export function handleReadEconomy(_args: any, ctx: ToolHandlerContext): HandlerResult {
   const c = ctx.self;
   let warning = "";
   if (c.money <= 0) warning = "你身无分文！需要尽快赚钱";
@@ -220,7 +220,7 @@ export function handleReadCharacter(
   };
 }
 
-export function handleReadNotebook(ctx: ToolHandlerContext): HandlerResult {
+export function handleReadNotebook(_args: any, ctx: ToolHandlerContext): HandlerResult {
   const entries = ctx.self.notebook
     .filter((e) => e.scheduledTick >= ctx.tick)
     .sort((a, b) => a.scheduledTick - b.scheduledTick)
@@ -235,7 +235,7 @@ export function handleReadNotebook(ctx: ToolHandlerContext): HandlerResult {
   };
 }
 
-export function handleReadMap(ctx: ToolHandlerContext): HandlerResult {
+export function handleReadMap(_args: any, ctx: ToolHandlerContext): HandlerResult {
   const here = ctx.nodes.find((n) => n.id === ctx.self.locationId);
   if (!here) return { error: "当前位置未知" };
 
@@ -246,7 +246,7 @@ export function handleReadMap(ctx: ToolHandlerContext): HandlerResult {
   };
 }
 
-export function handleReadCompanions(ctx: ToolHandlerContext): HandlerResult {
+export function handleReadCompanions(_args: any, ctx: ToolHandlerContext): HandlerResult {
   const here = ctx.self.locationId;
   const companions = ctx.allCharacters.filter(
     (ch) => ch.id !== ctx.self.id && ch.locationId === here,
@@ -291,7 +291,7 @@ export function handleReadEvents(
   };
 }
 
-export function handleReadState(ctx: ToolHandlerContext): HandlerResult {
+export function handleReadState(_args: any, ctx: ToolHandlerContext): HandlerResult {
   const c = ctx.self;
   return {
     current_action: c.currentAction

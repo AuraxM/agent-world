@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import type { Character, MapNode } from "@/types/api.generated";
 import { CharacterAvatar } from "./character-avatar";
 import { groupCharactersByLocation } from "@/lib/world";
@@ -96,9 +96,80 @@ export function WorldMap({ nodes, characters, onSelectCharacter }: WorldMapProps
     [characters],
   );
 
+  const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lastDist = useRef<number | null>(null);
+  const lastPan = useRef<{ x: number; y: number } | null>(null);
+
+  // Initial zoom-to-fit on mobile
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (window.innerWidth >= 768) return;
+    const fitScale = Math.min(
+      el.clientWidth / CANVAS,
+      el.clientHeight / CANVAS,
+      1,
+    );
+    setTransform({ scale: fitScale, x: 0, y: 0 });
+  }, []);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastDist.current = Math.hypot(dx, dy);
+    } else if (e.touches.length === 1) {
+      lastPan.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (e.touches.length === 2 && lastDist.current != null) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const scaleChange = dist / lastDist.current;
+      lastDist.current = dist;
+      setTransform((prev) => ({
+        ...prev,
+        scale: Math.max(0.15, Math.min(3, prev.scale * scaleChange)),
+      }));
+    } else if (e.touches.length === 1 && lastPan.current) {
+      const dx = e.touches[0].clientX - lastPan.current.x;
+      const dy = e.touches[0].clientY - lastPan.current.y;
+      lastPan.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      setTransform((prev) => ({
+        ...prev,
+        x: prev.x + dx,
+        y: prev.y + dy,
+      }));
+    }
+  }
+
+  function handleTouchEnd() {
+    lastDist.current = null;
+    lastPan.current = null;
+  }
+
   return (
-    <div className="h-full w-full overflow-auto">
-      <div className="relative" style={{ width: CANVAS, height: CANVAS }}>
+    <div
+      ref={containerRef}
+      className="h-full w-full overflow-hidden md:overflow-auto"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div
+        style={{
+          width: CANVAS,
+          height: CANVAS,
+          transform: `scale(${transform.scale}) translate(${transform.x / transform.scale}px, ${transform.y / transform.scale}px)`,
+          transformOrigin: "0 0",
+          position: "relative",
+        }}
+      >
         {/* Background + connection lines SVG */}
         <svg
           className="absolute inset-0 pointer-events-none"

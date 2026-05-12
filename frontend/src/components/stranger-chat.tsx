@@ -69,7 +69,7 @@ export function StrangerChat({
         body: JSON.stringify({
           characterId: selectedCharId,
           message: text,
-          sessionId,
+          ...(sessionId ? { sessionId } : {}),
         }),
       });
 

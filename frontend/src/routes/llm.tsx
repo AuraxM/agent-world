@@ -13,6 +13,7 @@ interface EntryConfig {
   entryName: string;
   providerId: string | null;
   thinkingEnabled: boolean;
+  timeBudgetMs?: number;
 }
 
 interface ProvidersResponse { providers: LLMProvider[] }
@@ -71,7 +72,7 @@ export default function LLMConfigPage() {
   }, [dialogOpen]);
 
   const handleEntryChange = useCallback(
-    (entryName: string, field: "providerId" | "thinkingEnabled", value: string | boolean | null) => {
+    (entryName: string, field: "providerId" | "thinkingEnabled" | "timeBudgetMs", value: string | boolean | number | null) => {
       setEntries((prev) =>
         prev.map((e) => (e.entryName === entryName ? { ...e, [field]: value } : e)),
       );
@@ -285,7 +286,7 @@ export default function LLMConfigPage() {
             {/* Entry config cards */}
             <div>
               <div className="text-white/30 text-[10px] uppercase tracking-wider mb-3 px-1">
-                入口配置 & Thinking
+                入口配置 & 时间预算
               </div>
               <div className="flex flex-col gap-2.5">
                 {entries.map((entry) => (
@@ -324,6 +325,23 @@ export default function LLMConfigPage() {
                         className="accent-(--accent-strong) scale-110"
                       />
                       Thinking
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-white/50 select-none">
+                      <span className="whitespace-nowrap">预算</span>
+                      <input
+                        type="number"
+                        min={500}
+                        max={60000}
+                        step={500}
+                        value={entry.timeBudgetMs ?? 5000}
+                        onChange={(e) =>
+                          handleEntryChange(entry.entryName, "timeBudgetMs", Number(e.target.value))
+                        }
+                        className="w-[70px] px-1.5 py-1 text-xs text-white/80 bg-black/30 border border-white/10 rounded
+                                   backdrop-blur-sm outline-none focus:border-(--accent-strong)
+                                   [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      />
+                      <span className="text-white/30">ms</span>
                     </label>
                   </div>
                 ))}

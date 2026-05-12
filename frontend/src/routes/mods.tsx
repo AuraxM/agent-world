@@ -27,7 +27,7 @@ export default function ModGalleryPage() {
         {loading ? (
           <div className="text-white/50">加载中...</div>
         ) : (
-          <div className="grid gap-y-16 gap-x-5" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-y-16 gap-x-5">
             {mods.map((mod) => (
               <ModCard key={mod.id} mod={mod} />
             ))}

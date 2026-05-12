@@ -12,12 +12,15 @@ import { EventGantt } from "./event-gantt";
 import { ProfilePane } from "./profile-pane";
 import { StrangerChat } from "./stranger-chat";
 import { WorldMap } from "./world-map";
+import { CharacterAvatar } from "./character-avatar";
+import { BottomTabBar } from "./bottom-tab-bar";
 
 export function WorldView() {
   const { snapshot, events, loadedSince, hasMore, loadingMore, loadMore, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto } = useWorldState();
   const view = useViewState();
   const { followingId, follow, isFollowing } = useFollow();
   const [centerTab, setCenterTab] = useState<"stream" | "gantt" | "chat" | "map">("stream");
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [selectedCharIds, setSelectedCharIds] = useState<Set<string>>(new Set());
 
@@ -78,30 +81,132 @@ export function WorldView() {
 
   return (
     <div className="h-full flex overflow-hidden animate-fade-in">
-      {/* Left column */}
-      <div className="w-[260px] flex-shrink-0 flex flex-col border-r border-white/10 bg-black/80 backdrop-blur-md">
-        <CharacterList
-          characters={snapshot.characters}
-          selectedId={profileId ?? undefined}
-          onSelect={handleSelectCharacter}
-        />
-        <TickControl
-          tick={snapshot.world.currentTick}
-          epoch={snapshot.world.epoch}
-          loading={loading}
-          onAdvance={advance}
-          autoMode={autoMode}
-          onStartAuto={startAuto}
-          onStopAuto={stopAuto}
-          lastTickMs={lastTickMs}
-          tickProgress={tickProgress}
-        />
+      {/* Mobile: expanded sidebar overlay */}
+      {sidebarExpanded && (
+        <>
+          <div
+            className="fixed inset-0 z-30 bg-black/50 md:hidden"
+            onClick={() => setSidebarExpanded(false)}
+          />
+          <div className="fixed inset-y-0 left-0 z-40 w-[70vw] max-w-[260px] flex flex-col border-r border-white/10 bg-black/90 backdrop-blur-2xl md:hidden">
+            <CharacterList
+              characters={snapshot.characters}
+              selectedId={profileId ?? undefined}
+              onSelect={(id) => { handleSelectCharacter(id); setSidebarExpanded(false); }}
+            />
+            <TickControl
+              tick={snapshot.world.currentTick}
+              epoch={snapshot.world.epoch}
+              loading={loading}
+              onAdvance={advance}
+              autoMode={autoMode}
+              onStartAuto={startAuto}
+              onStopAuto={stopAuto}
+              lastTickMs={lastTickMs}
+              tickProgress={tickProgress}
+            />
+            <div className="border-t border-white/10 p-1.5 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setSidebarExpanded(false)}
+                className="w-full py-1 text-white/30 hover:text-white/70 cursor-pointer text-[10px]"
+              >
+                ◀ 收起
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* PC: inline collapsible sidebar */}
+      <div
+        className={`hidden md:flex flex-col border-r border-white/10 bg-black/80 backdrop-blur-md flex-shrink-0 transition-[width] duration-200 ${
+          sidebarExpanded ? "w-[260px]" : "w-[48px]"
+        }`}
+      >
+        {sidebarExpanded ? (
+          <>
+            <CharacterList
+              characters={snapshot.characters}
+              selectedId={profileId ?? undefined}
+              onSelect={handleSelectCharacter}
+            />
+            <TickControl
+              tick={snapshot.world.currentTick}
+              epoch={snapshot.world.epoch}
+              loading={loading}
+              onAdvance={advance}
+              autoMode={autoMode}
+              onStartAuto={startAuto}
+              onStopAuto={stopAuto}
+              lastTickMs={lastTickMs}
+              tickProgress={tickProgress}
+            />
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center gap-1.5 pt-2 overflow-y-auto">
+            {snapshot.characters.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => handleSelectCharacter(c.id)}
+                title={c.name}
+                className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                  c.id === profileId
+                    ? "bg-white/[0.12] ring-1 ring-(--accent-strong)/40"
+                    : "bg-white/[0.04] hover:bg-white/[0.08]"
+                }`}
+              >
+                <CharacterAvatar c={c} size={20} />
+              </button>
+            ))}
+          </div>
+        )}
+        {/* Toggle button at bottom */}
+        <div className="border-t border-white/10 p-1.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setSidebarExpanded((v) => !v)}
+            className="w-full py-1 flex items-center justify-center text-white/30 hover:text-white/70 cursor-pointer text-[10px]"
+            title={sidebarExpanded ? "收起侧边栏" : "展开侧边栏"}
+          >
+            {sidebarExpanded ? "◀" : "▶"}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile: collapsed avatar strip */}
+      <div className="md:hidden flex flex-col items-center gap-1 pt-1.5 overflow-y-auto border-r border-white/10 bg-black/80 backdrop-blur-md flex-shrink-0 w-[36px]">
+        {snapshot.characters.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => handleSelectCharacter(c.id)}
+            title={c.name}
+            className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+              c.id === profileId
+                ? "bg-white/[0.12] ring-1 ring-(--accent-strong)/40"
+                : "bg-white/[0.04] hover:bg-white/[0.08]"
+            }`}
+          >
+            <CharacterAvatar c={c} size={16} />
+          </button>
+        ))}
+        <div className="flex-1" />
+        <button
+          type="button"
+          onClick={() => setSidebarExpanded(true)}
+          className="w-full py-1.5 text-white/30 hover:text-white/70 cursor-pointer text-[9px] border-t border-white/10"
+          title="展开角色列表"
+        >
+          ▶
+        </button>
       </div>
 
       {/* Right column */}
       <div className="flex-1 min-w-0 flex flex-col bg-black/25 backdrop-blur-md relative overflow-hidden">
         {/* Tab bar */}
-        <div className="flex px-3 border-b border-white/10 bg-black/15 flex-shrink-0">
+        <div className="hidden md:flex px-3 border-b border-white/10 bg-black/15 flex-shrink-0">
           {(["stream", "gantt", "chat", "map"] as const).map((key) => (
             <button
               key={key}
@@ -168,6 +273,8 @@ export function WorldView() {
           )}
         </div>
 
+        <BottomTabBar active={centerTab} onSelect={setCenterTab} />
+
         {/* Backdrop — click to dismiss profile */}
         {profileId && (
           <div
@@ -178,7 +285,7 @@ export function WorldView() {
 
         {/* Profile slide-in overlay */}
         <div
-          className={`absolute inset-y-0 right-0 w-[420px] bg-black/85 backdrop-blur-2xl border-l border-white/10 shadow-[-4px_0_24px_rgba(0,0,0,0.4)] transition-transform duration-[250ms] ease z-20 ${
+          className={`absolute inset-y-0 right-0 w-[90vw] md:w-[420px] min-w-[300px] max-w-[420px] bg-black/85 backdrop-blur-2xl border-l border-white/10 shadow-[-4px_0_24px_rgba(0,0,0,0.4)] transition-transform duration-[250ms] ease z-20 ${
             profileId ? "translate-x-0" : "translate-x-full"
           }`}
         >

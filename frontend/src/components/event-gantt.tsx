@@ -271,7 +271,7 @@ export function EventGantt({
           <div
             ref={cardsRef}
             className="flex-1"
-            style={{ overflow: "auto" }}
+            style={{ overflow: "auto", touchAction: "pan-x pan-y" }}
             onScroll={handleCardsScroll}
           >
             <div style={{ width: contentWidth }}>

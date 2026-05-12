@@ -135,9 +135,38 @@ export default function WorldsPanelPage() {
         <h2 className="text-(--accent-strong) text-body-lg font-bold">世界实例</h2>
       </div>
 
+      {/* Mobile mod selector — horizontal scrollable pills */}
+      <div className="md:hidden px-3 py-2 border-b border-white/10 bg-black/15 flex gap-2 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => selectMod("")}
+          className={`flex-shrink-0 px-3 py-1 text-[11px] rounded border transition-colors ${
+            !selectedModId
+              ? "bg-white/10 border-(--accent-strong) text-(--accent-strong)"
+              : "border-white/10 text-white/40 hover:text-white/70"
+          }`}
+        >
+          全部
+        </button>
+        {mods.map((mod) => (
+          <button
+            key={mod.id}
+            type="button"
+            onClick={() => selectMod(mod.id === selectedModId ? "" : mod.id)}
+            className={`flex-shrink-0 px-3 py-1 text-[11px] rounded border transition-colors ${
+              selectedModId === mod.id
+                ? "bg-white/10 border-(--accent-strong) text-(--accent-strong)"
+                : "border-white/10 text-white/40 hover:text-white/70"
+            }`}
+          >
+            {mod.name}
+          </button>
+        ))}
+      </div>
+
       <div className="flex-1 flex min-h-0">
         {/* Left panel: Mod list */}
-        <aside className="w-[280px] flex-shrink-0 border-r border-white/10 bg-black/20 backdrop-blur-md flex flex-col overflow-hidden">
+        <aside className="hidden md:block w-[280px] flex-shrink-0 border-r border-white/10 bg-black/20 backdrop-blur-md flex flex-col overflow-hidden">
           <div className="px-4 py-3 border-b border-white/10 text-white/40 text-[11px] uppercase tracking-wider">
             Mod 列表
           </div>

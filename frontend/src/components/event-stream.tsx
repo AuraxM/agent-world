@@ -135,7 +135,7 @@ export function EventStream({
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-white/10 bg-black/15 flex-shrink-0">
+      <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 border-b border-white/10 bg-black/15 flex-shrink-0">
         {followedChar && (
           <span className="text-[11px] text-white/40">跟随中：{followedChar.name} 视角</span>
         )}
@@ -228,7 +228,7 @@ export function EventStream({
       </div>
 
       {/* Body */}
-      <div ref={bodyRef} className="flex-1 overflow-y-auto px-4 py-3">
+      <div ref={bodyRef} className="flex-1 overflow-y-auto px-3 md:px-4 py-3">
         {groups.length === 0 ? (
           <p className="text-sm text-white/30 text-center mt-20">
             此分类暂无事件

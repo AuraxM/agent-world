@@ -1,14 +1,14 @@
 import type { Character, MapNode } from "../domain";
 import { buildThinkSystemPrompt } from "./system-prompts";
 import { buildReadTools, buildThinkWriteTools, ALL_READ_TOOLS,
-  END_THINKING_TOOL, WRITE_MEMORY_TOOL, DELETE_MEMORY_TOOL } from "../domain/schemas";
+  END_THINKING_TOOL } from "../domain/schemas";
 import { runAgentLoop } from "./agent-loop";
 import type { ToolHandlerContext } from "./tool-handlers";
 import { hasApiKey } from "./client";
 import { getEntryConfig } from "./providers";
 import { SHORT_MEMORY_THINK_THRESHOLD } from "../domain/enums";
 
-const THINK_TERMINAL_NAMES = [WRITE_MEMORY_TOOL, DELETE_MEMORY_TOOL, END_THINKING_TOOL];
+const THINK_TERMINAL_NAMES = [END_THINKING_TOOL];
 
 export interface ThinkResult {
   kind: "completed" | "exhausted";

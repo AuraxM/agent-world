@@ -5,6 +5,7 @@ import { buildReadTools, buildThinkWriteTools, ALL_READ_TOOLS,
 import { runAgentLoop } from "./agent-loop";
 import type { ToolHandlerContext } from "./tool-handlers";
 import { hasApiKey } from "./client";
+import { getEntryConfig } from "./providers";
 import { SHORT_MEMORY_THINK_THRESHOLD } from "../domain/enums";
 
 const THINK_TERMINAL_NAMES = [WRITE_MEMORY_TOOL, DELETE_MEMORY_TOOL, END_THINKING_TOOL];
@@ -70,6 +71,9 @@ export async function runThinkAgent(args: {
     worldDescription: args.worldDescription,
   };
 
+  const config = getEntryConfig("dialog_turn");
+  const timeBudgetMs = config.timeBudgetMs;
+
   const result = await runAgentLoop({
     systemPrompt,
     readTools,
@@ -77,7 +81,7 @@ export async function runThinkAgent(args: {
     terminalToolNames: THINK_TERMINAL_NAMES,
     readToolNames: ALL_READ_TOOLS,
     llmEntryName: "dialog_turn",
-    maxRounds: 20,
+    timeBudgetMs,
     sharedMessages: effectiveSharedMessages as any,
     toolHandlerContext: ctx,
   });

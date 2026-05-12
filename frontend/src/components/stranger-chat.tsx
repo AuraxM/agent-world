@@ -45,8 +45,13 @@ export function StrangerChat({
   const [sending, setSending] = useState(false);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(false);
 
   useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -132,7 +137,7 @@ export function StrangerChat({
   const selectedCharName = characters.find((c) => c.id === selectedCharId)?.name;
 
   return (
-    <div className="flex flex-col min-h-0 overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Character selector */}
       <div className="flex-shrink-0 px-3 py-2 border-b border-white/10 bg-black/15">
         <select

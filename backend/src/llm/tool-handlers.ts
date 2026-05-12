@@ -50,10 +50,10 @@ export function handleReadProfile(_args: any, ctx: ToolHandlerContext): HandlerR
     : "偏自律";
 
   const intelLabels: Record<number, string> = {
-    1: "你头脑比较简单，不太擅长复杂思考",
-    2: "你和普通人一样，能处理日常事务",
-    3: "你头脑灵活，遇事容易想到不同的做法",
-    4: "你极其聪明，总能洞察事物的本质",
+    1: "头脑比较简单，不太擅长复杂思考",
+    2: "和普通人一样，能处理日常事务",
+    3: "头脑灵活，遇事容易想到不同的做法",
+    4: "极其聪明，总能洞察事物的本质",
   };
 
   return {

@@ -440,6 +440,17 @@ async function newDialogTurn(args: {
 > {
   let sharedMessages = (args.sharedMessages ?? []) as any[];
 
+  // Inject turn-boundary marker to prevent identity confusion across speakers.
+  // Without this, the LLM sees a continuous stream of assistant/tool messages from
+  // both characters and can lose track of which character it is currently playing.
+  sharedMessages = [
+    ...sharedMessages,
+    {
+      role: "user",
+      content: `[系统] 你是 ${args.self.name}，现在轮到你说话了。你在与 ${args.peer.name} 对话。`,
+    },
+  ];
+
   // If there's a pending action proposal targeting this speaker, inject a reminder
   // so the LLM knows it must respond (accept or reject) via action_response in write_dialog.
   if (args.pendingAction) {

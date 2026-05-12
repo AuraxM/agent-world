@@ -137,7 +137,7 @@ export function StrangerChat({
   const selectedCharName = characters.find((c) => c.id === selectedCharId)?.name;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col">
       {/* Character selector */}
       <div className="flex-shrink-0 px-3 py-2 border-b border-white/10 bg-black/15">
         <select

@@ -196,7 +196,7 @@ export function StrangerChat({
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[75%] rounded-lg px-3 py-2 ${
+              className={`max-w-[85%] md:max-w-[75%] rounded-lg px-3 py-2 ${
                 msg.role === "user"
                   ? "bg-(--accent-strong)/15 text-white/90"
                   : "bg-white/5 text-white/85 border border-white/10"
@@ -265,7 +265,7 @@ export function StrangerChat({
       </div>
 
       {/* Input area */}
-      <div className="flex-shrink-0 border-t border-white/10 p-3 bg-black/15">
+      <div className="flex-shrink-0 border-t border-white/10 p-2.5 md:p-3 bg-black/15">
         <div className="flex gap-2">
           <input
             type="text"

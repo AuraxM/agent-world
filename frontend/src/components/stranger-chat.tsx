@@ -247,12 +247,12 @@ export function StrangerChat({
       {/* Input area */}
       <div className="flex-shrink-0 border-t border-white/10 p-3 bg-black/15">
         <div className="flex gap-2">
-          <textarea
+          <input
+            type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={!selectedCharId || tickLoading || sending}
-            rows={1}
             placeholder={
               tickLoading
                 ? "Tick 运行中，请等待…"
@@ -260,7 +260,7 @@ export function StrangerChat({
                   ? "请先选择角色"
                   : "输入消息…"
             }
-            className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-1.5 text-[12px] text-white/90 placeholder:text-white/20 focus:outline-none focus:border-(--accent-strong)/50 disabled:opacity-30 disabled:cursor-not-allowed resize-none"
+            className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-1.5 text-[12px] text-white/90 placeholder:text-white/20 focus:outline-none focus:border-(--accent-strong)/50 disabled:opacity-30 disabled:cursor-not-allowed"
           />
           <button
             type="button"

@@ -83,13 +83,15 @@ export function handleReadVitals(_args: any, ctx: ToolHandlerContext): HandlerRe
     if (value <= 13) return `非常${name === "hunger" ? "饥饿" : name === "fatigue" ? "疲惫" : "很脏"}`;
     return `极度${name === "hunger" ? "饥饿" : name === "fatigue" ? "疲惫" : "急需洗浴"}`;
   };
+  const round1 = (n: number) => Math.round(n * 10) / 10;
   return {
     hunger: qualifyVital("hunger", v.hunger),
     fatigue: qualifyVital("fatigue", v.fatigue),
     hygiene: qualifyVital("hygiene", v.hygiene),
-    hunger_raw: v.hunger,
-    fatigue_raw: v.fatigue,
-    hygiene_raw: v.hygiene,
+    hunger_value: round1(v.hunger),
+    fatigue_value: round1(v.fatigue),
+    hygiene_value: round1(v.hygiene),
+    scale: "0-16（0=正常，16=极度）",
   };
 }
 

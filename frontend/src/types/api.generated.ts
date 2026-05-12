@@ -23,6 +23,8 @@ export type EventScope = (typeof EVENT_SCOPES)[number];
 /** 事件来源：系统自动 / 角色行动 / 玩家投放 / 内心触发。 */
 export type EventSource = (typeof EVENT_SOURCES)[number];
 /** 1 游戏小时 = 5 ticks。移动 1 步消耗 1 tick。 */
+/** 记忆容量上限 */
+/** short memory 达到该阈值时触发强制 Think */
 
 
 
@@ -138,6 +140,8 @@ export interface ActionOption {
     hint: string;
     targetId?: string;
     targetNodeId?: string;
+    /** 参数要求提示，来自 ActionDefinition.paramRule */
+    paramRule?: string;
 }
 export interface ActionDefinition {
     type: string;
@@ -215,7 +219,7 @@ export interface Ability {
     tier: number;
     exp: number;
 }
-/** 单条记忆。Stage 1 仅使用 short（FIFO 120）。 */
+/** 单条记忆。支持三层：short(60) / daily(20) / weekly(5)。 */
 export interface Memory {
     /** 由 nanoid 或 uuid 生成 */
     id: string;
@@ -227,6 +231,8 @@ export interface Memory {
     content: string;
     /** 关联事件/行动 id（可选） */
     refEventId?: string;
+    /** 记忆层级。Think Agent 负责在各层之间搬运/合并。 */
+    layer: "short" | "daily" | "weekly";
 }
 /** 记事本条目 */
 export interface NotebookEntry {
@@ -371,11 +377,11 @@ export interface Character {
     activeConversationIds: string[];
     /** 最近一次对话结束的 tick。0 = 从未进行过对话。用于对话后冷却。 */
     lastConversationEndTick: Tick;
-    /** Stage 1: short memory FIFO 120 */
+    /** 短期记忆：容量 60，FIFO。≥55 时触发强制 Think。 */
     shortMemory: Memory[];
-    /** 中期日记忆：睡觉时由 LLM 压缩清醒期 shortMemory 生成 */
+    /** 每日记忆：容量 20。Think Agent 从 short 整理而来。 */
     dailyMemory: Memory[];
-    /** 复用为周记忆：每 7 条日记忆压缩为 1 条周记忆 */
+    /** 周记忆(人生要事)：容量 5。Think Agent 从 daily 整理而来。 */
     longMemory: Memory[];
     /** key 是 targetId */
     relations: Record<string, Relation>;
@@ -414,6 +420,10 @@ export interface Character {
     liked: string;
     /** 最讨厌的人或事（自由文本） */
     disliked: string;
+    /** ReAct loop 未完成的消息历史（decide 轮次耗尽时保存，下 tick 继续）。DB 不存。 */
+    pendingDecideMessages?: Record<string, unknown>[];
+    /** ReAct loop 未完成的消息历史（think 轮次耗尽时保存，下 tick 继续）。DB 不存。 */
+    pendingThinkMessages?: Record<string, unknown>[];
 }
 /** 角色在某 tick 完成的一次决策快照（含完整 reasoning）。 */
 export interface AgentThought {
@@ -596,11 +606,6 @@ export interface Conversation {
     /** 上次保存 sharedMessages 时 transcript 的长度，用于计算增量。 */
     sharedMessagesTranscriptLength?: number;
 }
-/** end_conversation tool 的 LLM 输出载荷。 */
-export interface EndConversationPayload {
-    reasoning: string;
-    closingLine?: string;
-}
 /** 思考单轮快照。 */
 export interface ThinkTurn {
     kind: "thought";
@@ -700,3 +705,11 @@ export const EVENT_SCOPES = [
 export const EVENT_SOURCES = ["system", "actor", "player", "inner", "think"] as const;
 
 export const TICKS_PER_HOUR = 5;
+
+export const MEMORY_CAPACITY = {
+  short: 60,
+  daily: 20,
+  weekly: 5,
+} as const;
+
+export const SHORT_MEMORY_THINK_THRESHOLD = 55;

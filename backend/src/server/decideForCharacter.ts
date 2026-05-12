@@ -49,12 +49,14 @@ export interface DecideForCharacterResult {
   events: WorldEvent[];
 }
 
-function fallbackLookAround(c: Character, reason: string): Action {
+function fallbackWait(c: Character, reason: string): Action {
   return {
-    type: "look_around",
+    type: "wait",
     actorId: c.id,
     reasoning: `LLM 调用失败：${reason}`,
     selfImportance: 1,
+    skipExecution: true,
+    skipMemory: true,
   };
 }
 
@@ -138,7 +140,7 @@ export async function decideForCharacter(
       const { llmDecide } = await import("../llm/index");
       const { hasApiKey: hk } = await import("../llm/index");
       if (!hk()) {
-        action = fallbackLookAround(c, "没有激活的 LLM provider");
+        action = fallbackWait(c, "没有激活的 LLM provider");
       } else {
         action = await llmDecide({
           character: c,
@@ -181,7 +183,7 @@ export async function decideForCharacter(
       });
     }
   } catch (err) {
-    action = fallbackLookAround(
+    action = fallbackWait(
       c,
       err instanceof Error ? err.message : String(err),
     );

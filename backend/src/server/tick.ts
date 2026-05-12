@@ -121,12 +121,14 @@ const DEFAULT_DECIDE: DecideFn = async (input) => {
   return llmDecide(input);
 };
 
-function fallbackLookAround(c: Character): Action {
+function fallbackWait(c: Character): Action {
   return {
-    type: "look_around",
+    type: "wait",
     actorId: c.id,
-    reasoning: "（fallback）LLM 决策失败，环顾四周获取当前状态。",
+    reasoning: "（fallback）LLM 决策失败",
     selfImportance: 1,
+    skipExecution: true,
+    skipMemory: true,
   };
 }
 
@@ -320,7 +322,7 @@ export async function tick(
   }
   const baseTime = timeOfDay(fromTick, world.epoch);
   const decideFn = options.forceWait
-    ? async (input: DecideInput) => fallbackLookAround(input.character)
+    ? async (input: DecideInput) => fallbackWait(input.character)
     : (options.decide ?? DEFAULT_DECIDE);
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
@@ -742,7 +744,7 @@ export async function tick(
               }
             : {}),
         });
-        action = fallbackLookAround(c);
+        action = fallbackWait(c);
         action.reasoning = `LLM 调用失败：${
           err instanceof Error ? err.message : String(err)
         }`;
@@ -853,7 +855,7 @@ export async function tick(
               }
             : {}),
         });
-        const lookAction = fallbackLookAround(c);
+        const lookAction = fallbackWait(c);
         lookAction.reasoning = `决策任务异常：${errMsg}`;
         actionsForExecution.push(lookAction);
         allDecisions.push({
@@ -927,11 +929,13 @@ export async function tick(
         });
       } catch {
         return {
-          type: "look_around" as const,
+          type: "wait" as const,
           actorId: input.character.id,
-          reasoning: `补救决策违规，回退等待：${input.rejectReason}`,
+          reasoning: `补救决策异常：${input.rejectReason}`,
           selfImportance: 1,
-        };
+          skipExecution: true,
+          skipMemory: true,
+        } as Action;
       }
     },
     ongoingConversations,

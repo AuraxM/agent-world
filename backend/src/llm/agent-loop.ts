@@ -186,6 +186,13 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
         args = {};
       }
 
+      // Coerce string-valued numbers (LLMs often serialize numbers as strings in JSON)
+      for (const [k, v] of Object.entries(args)) {
+        if (typeof v === "string" && /^-?\d+$/.test(v)) {
+          args[k] = Number(v);
+        }
+      }
+
       // Validate args against schema if one exists
       const paramSchema = PARAM_SCHEMAS[toolName];
       if (paramSchema) {

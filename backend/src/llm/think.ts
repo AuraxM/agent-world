@@ -29,6 +29,33 @@ export async function runThinkAgent(args: {
 }): Promise<ThinkResult> {
   if (!hasApiKey()) throw new Error("没有激活的 LLM provider");
 
+  // Inject time reminder when continuing from a previous exhausted session
+  let effectiveSharedMessages = args.sharedMessages as any[] | undefined;
+  if (!effectiveSharedMessages && args.self.pendingThinkMessages) {
+    const TICKS_PER_HOUR = 5;
+    const MS_PER_TICK = (60 / TICKS_PER_HOUR) * 60 * 1000;
+    const gameDate = new Date(args.epoch + args.tick * MS_PER_TICK);
+    const hour = gameDate.getHours();
+    const minute = gameDate.getMinutes();
+    let period: string;
+    if (hour < 5) period = "深夜";
+    else if (hour < 7) period = "凌晨";
+    else if (hour < 9) period = "早晨";
+    else if (hour < 12) period = "上午";
+    else if (hour < 14) period = "中午";
+    else if (hour < 18) period = "下午";
+    else if (hour < 22) period = "晚上";
+    else period = "深夜";
+    const timeStr = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}（${period}）`;
+    const reminderMsg = `[系统] 时间已推进到 ${timeStr}。继续你之前未完成的记忆整理。你必须最终调用 end_thinking 完成整理。`;
+    effectiveSharedMessages = [
+      ...args.self.pendingThinkMessages,
+      { role: "user", content: reminderMsg },
+    ];
+  }
+  // Clear pending immediately
+  delete args.self.pendingThinkMessages;
+
   const systemPrompt = buildThinkSystemPrompt();
   const readTools = buildReadTools();
   const writeTools = buildThinkWriteTools();
@@ -51,9 +78,14 @@ export async function runThinkAgent(args: {
     readToolNames: ALL_READ_TOOLS,
     llmEntryName: "dialog_turn",
     maxRounds: 20,
-    sharedMessages: args.sharedMessages as any,
+    sharedMessages: effectiveSharedMessages as any,
     toolHandlerContext: ctx,
   });
+
+  if (result.kind !== "terminal") {
+    // Exhausted — save messages for next tick continuation
+    args.self.pendingThinkMessages = result.messages as any;
+  }
 
   const summary = result.kind === "terminal" && result.terminalToolName === END_THINKING_TOOL
     ? (result.terminalArgs?.summary as string) ?? "思考完成"

@@ -247,6 +247,10 @@ export interface Character {
   liked: string;
   /** 最讨厌的人或事（自由文本） */
   disliked: string;
+  /** ReAct loop 未完成的消息历史（decide 轮次耗尽时保存，下 tick 继续）。DB 不存。 */
+  pendingDecideMessages?: Record<string, unknown>[];
+  /** ReAct loop 未完成的消息历史（think 轮次耗尽时保存，下 tick 继续）。DB 不存。 */
+  pendingThinkMessages?: Record<string, unknown>[];
 }
 
 /** 角色在某 tick 完成的一次决策快照（含完整 reasoning）。 */
@@ -438,12 +442,6 @@ export interface Conversation {
   sharedMessages?: Array<Record<string, unknown>>;
   /** 上次保存 sharedMessages 时 transcript 的长度，用于计算增量。 */
   sharedMessagesTranscriptLength?: number;
-}
-
-/** end_conversation tool 的 LLM 输出载荷。 */
-export interface EndConversationPayload {
-  reasoning: string;
-  closingLine?: string;
 }
 
 // ---------------------------------------------------------------------------

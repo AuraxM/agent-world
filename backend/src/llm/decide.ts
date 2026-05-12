@@ -14,6 +14,7 @@ import { getLLMClientForEntry, getModelNameForEntry, hasApiKey } from "./client"
 import { getEntryConfig } from "./providers";
 import { type ActionContext, type GlobalEventDef } from "../domain/index";
 import type { ActionOption } from "../systems/index";
+import { TICKS_PER_HOUR } from "../domain/enums";
 import { buildDecideSystemPrompt } from "./system-prompts";
 import { buildReadTools, buildDecideWriteTools, WRITE_DECISION_TOOL, ALL_READ_TOOLS } from "../domain/schemas";
 import { runAgentLoop } from "./agent-loop";
@@ -89,7 +90,7 @@ export async function llmDecide(input: DecideInput): Promise<Action> {
   decideLog.info("llmDecide 开始", { character: input.character.name, tick: input.tick });
 
   if (!hasApiKey()) {
-    decideLog.warn("llmDecide 无 API key，回退 look_around", { character: input.character.name });
+    decideLog.warn("llmDecide 无 API key，回退 wait", { character: input.character.name });
     return createFallbackAction(input);
   }
 
@@ -100,7 +101,7 @@ export async function llmDecide(input: DecideInput): Promise<Action> {
   try {
     systemPrompt = buildDecideSystemPrompt();
     readTools = buildReadTools();
-    writeTools = buildDecideWriteTools();
+    writeTools = buildDecideWriteTools(input.options);
     decideLog.info("llmDecide tools 构建完成", {
       character: input.character.name,
       readToolCount: readTools.length,
@@ -129,6 +130,32 @@ export async function llmDecide(input: DecideInput): Promise<Action> {
     upcomingNotebookText: input.upcomingNotebookText,
   };
 
+  // Inject a time-progression reminder when continuing from a previous exhausted session
+  let sharedMessages: any[] | undefined;
+  if (input.character.pendingDecideMessages) {
+    const MS_PER_TICK = (60 / TICKS_PER_HOUR) * 60 * 1000;
+    const gameDate = new Date(input.epoch + input.tick * MS_PER_TICK);
+    const hour = gameDate.getHours();
+    const minute = gameDate.getMinutes();
+    let period: string;
+    if (hour < 5) period = "深夜";
+    else if (hour < 7) period = "凌晨";
+    else if (hour < 9) period = "早晨";
+    else if (hour < 12) period = "上午";
+    else if (hour < 14) period = "中午";
+    else if (hour < 18) period = "下午";
+    else if (hour < 22) period = "晚上";
+    else period = "深夜";
+    const timeStr = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}（${period}）`;
+    const reminderMsg = `[系统] 时间已推进到 ${timeStr}。继续你之前未完成的行动决策。你必须最终调用 write_decision 做出决定。`;
+    sharedMessages = [
+      ...input.character.pendingDecideMessages,
+      { role: "user", content: reminderMsg },
+    ];
+  }
+  // Clear pending immediately so failed continues don't loop forever
+  delete input.character.pendingDecideMessages;
+
   let result;
   try {
     result = await runAgentLoop({
@@ -139,6 +166,7 @@ export async function llmDecide(input: DecideInput): Promise<Action> {
       readToolNames: ALL_READ_TOOLS,
       llmEntryName: "decide",
       maxRounds: 20,
+      sharedMessages: sharedMessages as any,
       toolHandlerContext,
     });
     decideLog.info("llmDecide agent loop 结束", {
@@ -163,22 +191,24 @@ export async function llmDecide(input: DecideInput): Promise<Action> {
     return payloadToAction(result.terminalArgs, input);
   }
 
-  // Fallback: exhausted round limit
-  decideLog.warn("llmDecide 回退 look_around", {
+  // Fallback: exhausted round limit — save messages for next tick continuation
+  input.character.pendingDecideMessages = result.messages as any;
+  decideLog.warn("llmDecide 回退 wait（消息已保存，下 tick 继续）", {
     character: input.character.name,
     reason: result.kind === "exhausted" ? "轮次耗尽" : "无有效终端工具",
-    kind: result.kind,
-    terminalTool: result.terminalToolName,
+    savedMsgCount: result.messages.length,
   });
   return createFallbackAction(input);
 }
 
 function createFallbackAction(input: DecideInput): Action {
   return {
-    type: "look_around",
+    type: "wait",
     actorId: input.character.id,
     reasoning: "LLM 未能完成决策",
     selfImportance: 1,
+    skipExecution: true,
+    skipMemory: true,
   };
 }
 
@@ -501,20 +531,22 @@ export async function llmAcceptDecide(
 }
 
 /**
- * 补救轮：chat 请求被拒/失败后直接 fallback 到 look_around，不再走 LLM 决策。
+ * 补救轮：chat 请求被拒/失败后直接 fallback 到 wait，不再走 LLM 决策。
  */
 export async function llmSalvageDecide(
   input: DecideInput & { rejectReason: string },
 ): Promise<Action> {
-  salvageLog.warn("补救轮 fallback look_around", {
+  salvageLog.warn("补救轮 fallback wait", {
     角色: input.character.name,
     reject_reason: input.rejectReason,
   });
 
   return {
-    type: "look_around",
+    type: "wait",
     actorId: input.character.id,
-    reasoning: `补救轮直接环顾四周：${input.rejectReason}`,
+    reasoning: `补救轮：${input.rejectReason}`,
     selfImportance: 1,
+    skipExecution: true,
+    skipMemory: true,
   };
 }

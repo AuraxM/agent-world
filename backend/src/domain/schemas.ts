@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ActionDefinition, ActionOption } from "./action-system";
 import {
   EVENT_CATEGORIES,
   EVENT_SCOPES,
@@ -234,7 +235,7 @@ export const WriteDecisionParamsSchema = z.object({
 });
 
 export const WriteDialogParamsSchema = z.object({
-  content: z.string().describe("你要说的话"),
+  content: z.string().min(1).describe("你要说的话（不能为空）"),
   action_proposal: z.object({
     action_type: z.string(),
     params: z.record(z.string(), z.unknown()).optional(),
@@ -322,9 +323,9 @@ function zodToParameters(schema: z.ZodType): Record<string, unknown> {
   const def = (schema as unknown as Record<string, unknown>)._def as Record<string, unknown> | undefined;
   if (!def) return { type: "object", properties: {}, required: [], additionalProperties: false };
 
-  const typeName = def.typeName as string;
+  const defType = def.type as string;
 
-  if (typeName === "ZodObject") {
+  if (defType === "object") {
     const shape = (def.shape as Record<string, unknown>) ?? {};
     const properties: Record<string, unknown> = {};
     const required: string[] = [];
@@ -333,19 +334,19 @@ function zodToParameters(schema: z.ZodType): Record<string, unknown> {
       const fieldDef = (fieldSchema as unknown as Record<string, unknown>)._def as Record<string, unknown> | undefined;
       if (!fieldDef) continue;
 
-      const fieldTypeName = fieldDef.typeName as string;
+      const fieldType = fieldDef.type as string;
       let innerSchema = fieldSchema as z.ZodType;
       let isOptional = false;
 
       // Unwrap ZodOptional
-      if (fieldTypeName === "ZodOptional") {
+      if (fieldType === "optional") {
         isOptional = true;
         innerSchema = (fieldDef.innerType as z.ZodType) ?? innerSchema;
       }
 
       // Unwrap ZodDefault
       const innerDef = (innerSchema as unknown as Record<string, unknown>)._def as Record<string, unknown> | undefined;
-      if (innerDef?.typeName === "ZodDefault") {
+      if (innerDef?.type === "default") {
         isOptional = true;
         innerSchema = (innerDef.innerType as z.ZodType) ?? innerSchema;
       }
@@ -372,16 +373,16 @@ function zodFieldToProperty(schema: z.ZodType): Record<string, unknown> {
   const def = (schema as unknown as Record<string, unknown>)._def as Record<string, unknown> | undefined;
   if (!def) return { type: "string" };
 
-  const typeName = def.typeName as string;
+  const defType = def.type as string;
   const description = def.description as string | undefined;
 
-  if (typeName === "ZodString") {
+  if (defType === "string") {
     const prop: Record<string, unknown> = { type: "string" };
     if (description) prop.description = description;
     return prop;
   }
 
-  if (typeName === "ZodNumber") {
+  if (defType === "number") {
     const prop: Record<string, unknown> = { type: "number" };
     if (description) prop.description = description;
     // Check for integer validation
@@ -392,19 +393,19 @@ function zodFieldToProperty(schema: z.ZodType): Record<string, unknown> {
     return prop;
   }
 
-  if (typeName === "ZodBoolean") {
+  if (defType === "boolean") {
     const prop: Record<string, unknown> = { type: "boolean" };
     if (description) prop.description = description;
     return prop;
   }
 
-  if (typeName === "ZodEnum") {
+  if (defType === "enum") {
     const prop: Record<string, unknown> = { type: "string", enum: def.values };
     if (description) prop.description = description;
     return prop;
   }
 
-  if (typeName === "ZodArray") {
+  if (defType === "array") {
     const prop: Record<string, unknown> = {
       type: "array",
       items: zodFieldToProperty(def.type as z.ZodType),
@@ -413,7 +414,7 @@ function zodFieldToProperty(schema: z.ZodType): Record<string, unknown> {
     return prop;
   }
 
-  if (typeName === "ZodRecord") {
+  if (defType === "record") {
     const prop: Record<string, unknown> = { type: "object" };
     if (description) prop.description = description;
     return prop;
@@ -442,61 +443,89 @@ export function buildReadTools(): ActionToolDef[] {
     makeTool(READ_PROFILE_TOOL, "查询自己的基本信息：姓名、年龄、性别、职业、性格、语言风格、喜好、能力", z.object({})),
     makeTool(READ_VITALS_TOOL, "查询自己当前的生理状态：饥饿、疲劳、卫生", z.object({})),
     makeTool(READ_EMOTION_TOOL, "查询自己当前的情绪状态：心情、压力、社交饱足度", z.object({})),
-    makeTool(READ_MEMORIES_TOOL, "按记忆层和时间范围查询记忆，按重要性降序再按时间降序返回", ReadMemoriesParamsSchema),
+    makeTool(READ_MEMORIES_TOOL, "查询指定记忆层的内容。必填 layer：short（短期记忆，容量60）、daily（每日记忆，容量20）、weekly（长期记忆，容量5）。可选 limit（1-20，默认10）。按重要性降序再按时间降序返回", ReadMemoriesParamsSchema),
     makeTool(READ_GOALS_TOOL, "查询自己当前的短期和长期目标", z.object({})),
     makeTool(READ_ECONOMY_TOOL, "查询自己的经济状况：金钱、日常开销、经济警告", z.object({})),
-    makeTool(READ_RELATIONS_TOOL, "查询自己与他人的关系标签和印象记录", ReadRelationsParamsSchema),
-    makeTool(READ_CHARACTER_TOOL, "查询指定角色的公开信息：外观、身份、自己与该角色的关系和印象", ReadCharacterParamsSchema),
+    makeTool(READ_RELATIONS_TOOL, "查询自己与他人的关系标签和印象记录。可选 target_id 筛选与特定角色的关系", ReadRelationsParamsSchema),
+    makeTool(READ_CHARACTER_TOOL, "查询指定角色的公开信息。必填 character_id（目标角色的 ID）。返回外观、身份、自己与该角色的关系和印象", ReadCharacterParamsSchema),
     makeTool(READ_NOTEBOOK_TOOL, "查询即将到来的个人预约事项", z.object({})),
     makeTool(READ_MAP_TOOL, "查看完整地图结构，标注自己当前所在位置", z.object({})),
     makeTool(READ_COMPANIONS_TOOL, "查看当前所在节点的其他角色", z.object({})),
-    makeTool(READ_EVENTS_TOOL, "查询近期感知到的事件和活跃的全局事件", ReadEventsParamsSchema),
+    makeTool(READ_EVENTS_TOOL, "查询近期感知到的事件和活跃的全局事件。可选 category 筛选类别，可选 limit（1-20，默认10）", ReadEventsParamsSchema),
     makeTool(READ_STATE_TOOL, "查询自己当前正在执行的动作和进行中的对话状态", z.object({})),
   ];
 }
 
-export function buildDecideWriteTools(): ActionToolDef[] {
+function buildDecisionToolDescription(options?: ActionOption[]): string {
+  if (!options || options.length === 0) {
+    return "做出行动决定。收集足够信息后，选择一个行动执行";
+  }
+  const lines = options.map((o) => {
+    const parts = [`- \`"${o.type}"\``];
+    if (o.hint) parts.push(` — ${o.hint}`);
+    if (o.paramRule) parts.push(` [${o.paramRule}]`);
+    if (o.targetId) parts.push(` (目标: ${o.targetId})`);
+    if (o.targetNodeId) parts.push(` (节点: ${o.targetNodeId})`);
+    return parts.join("");
+  });
+  return `做出行动决定。你必须调用 write_decision 工具，将选中的 action_type 作为参数传入。\n\n可选的 action_type 值（不要直接调用这些名称作为工具）：\n\n${lines.join("\n")}\n\n必须从上述列表中选择一个，填入 write_decision 的 action_type 参数。`;
+}
+
+export function buildDecideWriteTools(options?: ActionOption[]): ActionToolDef[] {
   return [
-    makeTool(WRITE_DECISION_TOOL, "做出行动决定。收集足够信息后，选择一个行动执行", WriteDecisionParamsSchema),
-    makeTool(WRITE_MEMORY_TOOL, "写入一条记忆到指定记忆层", WriteMemoryParamsSchema),
-    makeTool(WRITE_IMPRESSION_TOOL, "记录或更新对某个角色的印象", WriteImpressionParamsSchema),
-    makeTool(WRITE_NOTEBOOK_TOOL, "在记事本中添加一条预约事项", WriteNotebookParamsSchema),
-    makeTool(WRITE_LIKE_TOOL, "添加一项喜好", WriteLikeParamsSchema),
-    makeTool(WRITE_DISLIKE_TOOL, "添加一项厌恶", WriteDislikeParamsSchema),
-    makeTool(WRITE_SHORT_TERM_GOAL_TOOL, "更新短期目标", WriteShortTermGoalParamsSchema),
-    makeTool(WRITE_LONG_TERM_GOAL_TOOL, "更新长期目标", WriteLongTermGoalParamsSchema),
-    makeTool(WRITE_RELATION_TOOL, "添加或移除与他人的关系标签", WriteRelationParamsSchema),
+    makeTool(WRITE_DECISION_TOOL, buildDecisionToolDescription(options), WriteDecisionParamsSchema),
+    makeTool(WRITE_MEMORY_TOOL, "写入一条记忆。必填 layer（short/daily/weekly）、必填 content（记忆内容）、必填 importance（1-5 重要程度）。可选 merge_with_id 合并到已有记忆", WriteMemoryParamsSchema),
+    makeTool(WRITE_IMPRESSION_TOOL, "记录或更新对某个角色的印象。必填 target_id（目标角色 ID）、必填 impression（新印象内容）", WriteImpressionParamsSchema),
+    makeTool(WRITE_NOTEBOOK_TOOL, "在记事本中添加一条预约事项。必填 year/month/day/hour（日期时间）、必填 content（事项内容）", WriteNotebookParamsSchema),
+    makeTool(WRITE_LIKE_TOOL, "添加一项喜好。必填 content", WriteLikeParamsSchema),
+    makeTool(WRITE_DISLIKE_TOOL, "添加一项厌恶。必填 content", WriteDislikeParamsSchema),
+    makeTool(WRITE_SHORT_TERM_GOAL_TOOL, "更新短期目标。必填 goal（新的短期目标内容）", WriteShortTermGoalParamsSchema),
+    makeTool(WRITE_LONG_TERM_GOAL_TOOL, "更新长期目标。必填 goal（新的长期目标内容）", WriteLongTermGoalParamsSchema),
+    makeTool(WRITE_RELATION_TOOL, "添加或移除与他人的关系标签。必填 target_id（目标角色 ID）、必填 action（add 或 remove）、必填 kind（关系类型如 friend/classmate/rival 等）", WriteRelationParamsSchema),
   ];
 }
 
-export function buildDialogWriteTools(): ActionToolDef[] {
+function buildProposeActionDescription(dialogueActions?: ActionDefinition[]): string {
+  if (!dialogueActions || dialogueActions.length === 0) {
+    return "向对方提议一个动作（如赠送物品、邀请同行）";
+  }
+  const lines = dialogueActions.map((def) => {
+    const name = def.displayName ?? def.type;
+    const hint = def.triggerHint ? ` — ${def.triggerHint}` : "";
+    const paramRule = def.paramRule ? ` [参数: ${def.paramRule}]` : "";
+    return `- \`"${def.type}"\` (${name})${hint}${paramRule}`;
+  });
+  return `向对方提议一个对话动作。你必须调用 write_propose_action 工具，将选中的 action_type 作为参数传入。\n\n可选的 action_type 值（不要直接调用这些名称作为工具）：\n\n${lines.join("\n")}\n\n必须从上述列表中选择一个。`;
+}
+
+export function buildDialogWriteTools(dialogueActions?: ActionDefinition[]): ActionToolDef[] {
   return [
-    makeTool(WRITE_DIALOG_TOOL, "说一句话。可以在同一轮中附带动作提议或回应", WriteDialogParamsSchema),
-    makeTool(WRITE_PROPOSE_ACTION_TOOL, "向对方提议一个动作（如赠送物品、邀请同行）", WriteProposeActionParamsSchema),
-    makeTool(WRITE_RESPOND_ACTION_TOOL, "接受或拒绝对方提议的动作", WriteRespondActionParamsSchema),
-    makeTool(END_DIALOG_TOOL, "结束当前对话", EndDialogParamsSchema),
-    makeTool(WRITE_MEMORY_TOOL, "写入一条记忆到指定记忆层", WriteMemoryParamsSchema),
-    makeTool(WRITE_IMPRESSION_TOOL, "记录或更新对某个角色的印象", WriteImpressionParamsSchema),
-    makeTool(WRITE_NOTEBOOK_TOOL, "在记事本中添加一条预约事项", WriteNotebookParamsSchema),
-    makeTool(WRITE_LIKE_TOOL, "添加一项喜好", WriteLikeParamsSchema),
-    makeTool(WRITE_DISLIKE_TOOL, "添加一项厌恶", WriteDislikeParamsSchema),
-    makeTool(WRITE_SHORT_TERM_GOAL_TOOL, "更新短期目标", WriteShortTermGoalParamsSchema),
-    makeTool(WRITE_LONG_TERM_GOAL_TOOL, "更新长期目标", WriteLongTermGoalParamsSchema),
-    makeTool(WRITE_RELATION_TOOL, "添加或移除与他人的关系标签", WriteRelationParamsSchema),
+    makeTool(WRITE_DIALOG_TOOL, "说一句话。必填 content（你要说的话）。可附带 action_proposal（提议动作）或 action_response（回应对方提议）", WriteDialogParamsSchema),
+    makeTool(WRITE_PROPOSE_ACTION_TOOL, buildProposeActionDescription(dialogueActions), WriteProposeActionParamsSchema),
+    makeTool(WRITE_RESPOND_ACTION_TOOL, "接受或拒绝对方提议的动作。必填 accept（true=接受，false=拒绝），可选 reason（理由）", WriteRespondActionParamsSchema),
+    makeTool(END_DIALOG_TOOL, "结束当前对话。可选 summary（对话总结）", EndDialogParamsSchema),
+    makeTool(WRITE_MEMORY_TOOL, "写入一条记忆。必填 layer（short/daily/weekly）、必填 content（记忆内容）、必填 importance（1-5 重要程度）。可选 merge_with_id 合并到已有记忆", WriteMemoryParamsSchema),
+    makeTool(WRITE_IMPRESSION_TOOL, "记录或更新对某个角色的印象。必填 target_id（目标角色 ID）、必填 impression（新印象内容）", WriteImpressionParamsSchema),
+    makeTool(WRITE_NOTEBOOK_TOOL, "在记事本中添加一条预约事项。必填 year/month/day/hour（日期时间）、必填 content（事项内容）", WriteNotebookParamsSchema),
+    makeTool(WRITE_LIKE_TOOL, "添加一项喜好。必填 content", WriteLikeParamsSchema),
+    makeTool(WRITE_DISLIKE_TOOL, "添加一项厌恶。必填 content", WriteDislikeParamsSchema),
+    makeTool(WRITE_SHORT_TERM_GOAL_TOOL, "更新短期目标。必填 goal（新的短期目标内容）", WriteShortTermGoalParamsSchema),
+    makeTool(WRITE_LONG_TERM_GOAL_TOOL, "更新长期目标。必填 goal（新的长期目标内容）", WriteLongTermGoalParamsSchema),
+    makeTool(WRITE_RELATION_TOOL, "添加或移除与他人的关系标签。必填 target_id（目标角色 ID）、必填 action（add 或 remove）、必填 kind（关系类型如 friend/classmate/rival 等）", WriteRelationParamsSchema),
   ];
 }
 
 export function buildThinkWriteTools(): ActionToolDef[] {
   return [
-    makeTool(WRITE_MEMORY_TOOL, "写入或合并一条记忆到指定记忆层", WriteMemoryParamsSchema),
-    makeTool(DELETE_MEMORY_TOOL, "删除指定层中的一条记忆（低价值或已合并的）", DeleteMemoryParamsSchema),
+    makeTool(WRITE_MEMORY_TOOL, "写入或合并一条记忆。必填 layer（short/daily/weekly）、必填 content（记忆内容）、必填 importance（1-5 重要程度）。可选 merge_with_id 合并到已有记忆", WriteMemoryParamsSchema),
+    makeTool(DELETE_MEMORY_TOOL, "删除一条记忆。必填 layer（short/daily/weekly）、必填 memory_id（要删除的记忆条目 ID）", DeleteMemoryParamsSchema),
     makeTool(END_THINKING_TOOL, "结束本次记忆整理并产出总结", EndThinkingParamsSchema),
-    makeTool(WRITE_IMPRESSION_TOOL, "记录或更新对某个角色的印象", WriteImpressionParamsSchema),
-    makeTool(WRITE_NOTEBOOK_TOOL, "在记事本中添加一条预约事项", WriteNotebookParamsSchema),
-    makeTool(WRITE_LIKE_TOOL, "添加一项喜好", WriteLikeParamsSchema),
-    makeTool(WRITE_DISLIKE_TOOL, "添加一项厌恶", WriteDislikeParamsSchema),
-    makeTool(WRITE_SHORT_TERM_GOAL_TOOL, "更新短期目标", WriteShortTermGoalParamsSchema),
-    makeTool(WRITE_LONG_TERM_GOAL_TOOL, "更新长期目标", WriteLongTermGoalParamsSchema),
-    makeTool(WRITE_RELATION_TOOL, "添加或移除与他人的关系标签", WriteRelationParamsSchema),
+    makeTool(WRITE_IMPRESSION_TOOL, "记录或更新对某个角色的印象。必填 target_id（目标角色 ID）、必填 impression（新印象内容）", WriteImpressionParamsSchema),
+    makeTool(WRITE_NOTEBOOK_TOOL, "在记事本中添加一条预约事项。必填 year/month/day/hour（日期时间）、必填 content（事项内容）", WriteNotebookParamsSchema),
+    makeTool(WRITE_LIKE_TOOL, "添加一项喜好。必填 content", WriteLikeParamsSchema),
+    makeTool(WRITE_DISLIKE_TOOL, "添加一项厌恶。必填 content", WriteDislikeParamsSchema),
+    makeTool(WRITE_SHORT_TERM_GOAL_TOOL, "更新短期目标。必填 goal（新的短期目标内容）", WriteShortTermGoalParamsSchema),
+    makeTool(WRITE_LONG_TERM_GOAL_TOOL, "更新长期目标。必填 goal（新的长期目标内容）", WriteLongTermGoalParamsSchema),
+    makeTool(WRITE_RELATION_TOOL, "添加或移除与他人的关系标签。必填 target_id（目标角色 ID）、必填 action（add 或 remove）、必填 kind（关系类型如 friend/classmate/rival 等）", WriteRelationParamsSchema),
   ];
 }

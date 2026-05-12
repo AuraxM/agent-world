@@ -99,6 +99,8 @@ export interface ActionOption {
   hint: string;
   targetId?: string;
   targetNodeId?: string;
+  /** 参数要求提示，来自 ActionDefinition.paramRule */
+  paramRule?: string;
 }
 
 // ---- ActionDefinition: the core interface ----
@@ -171,10 +173,10 @@ export class ActionRegistry {
       const hint = def.hint(ctx);
       if (Array.isArray(hint)) {
         for (const h of hint) {
-          opts.push({ type, hint: h.hint, targetId: h.targetId, targetNodeId: h.targetNodeId });
+          opts.push({ type, hint: h.hint, targetId: h.targetId, targetNodeId: h.targetNodeId, paramRule: def.paramRule });
         }
       } else {
-        opts.push({ type, hint });
+        opts.push({ type, hint, paramRule: def.paramRule });
       }
     }
     return opts;

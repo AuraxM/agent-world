@@ -330,14 +330,21 @@ export function pairChatRequests(
       const aChar = charById.get(a.actorId)!;
       const bChar = charById.get(peer.actorId)!;
       if (aChar.locationId === bChar.locationId) {
-        mutualPairs.push({
-          a: a.actorId,
-          b: peer.actorId,
-          aFreeText: a.freeText ?? "",
-          bFreeText: peer.freeText ?? "",
-        });
-        consumed.add(a.actorId);
-        consumed.add(peer.actorId);
+        // Treat empty freeText as autoFail — same as pendingAcceptances
+        const aText = (a.freeText ?? "").trim();
+        const bText = (peer.freeText ?? "").trim();
+        if (!aText && !bText) {
+          // Both empty — fall through to autoFails
+        } else {
+          mutualPairs.push({
+            a: a.actorId,
+            b: peer.actorId,
+            aFreeText: aText,
+            bFreeText: bText,
+          });
+          consumed.add(a.actorId);
+          consumed.add(peer.actorId);
+        }
       }
       // cross-node mutual: fall through to autoFails individually
     }
@@ -406,7 +413,7 @@ async function retryOnce<T>(fn: () => Promise<T>): Promise<T> {
 // newDialogTurn — agentic dialog turn using the shared ReAct agent loop
 // ---------------------------------------------------------------------------
 
-const DIALOG_TERMINAL_NAMES = [WRITE_DIALOG_TOOL, END_DIALOG_TOOL, WRITE_PROPOSE_ACTION_TOOL, WRITE_RESPOND_ACTION_TOOL];
+const DIALOG_TERMINAL_NAMES = [WRITE_DIALOG_TOOL, END_DIALOG_TOOL];
 
 async function newDialogTurn(args: {
   self: Character;
@@ -432,93 +439,121 @@ async function newDialogTurn(args: {
     }
   | { kind: "end"; payload: { summary: string }; respondToAction?: { accept: boolean; reason?: string }; messages?: any[] }
 > {
-  const systemPrompt = buildDialogSystemPrompt(args.self.name, args.peer.name);
-  const readTools = buildReadTools();
-  const writeTools = buildDialogWriteTools();
+  const MAX_INNER_LOOPS = 3;
+  let sharedMessages = (args.sharedMessages ?? []) as any[];
 
-  const ctx: ToolHandlerContext = {
-    self: args.self,
-    allCharacters: args.allCharacters,
-    nodes: args.nodes,
-    shops: args.shops,
-    tick: args.tick,
-    epoch: args.epoch,
-    worldId: args.worldId,
-    worldDescription: args.worldDescription,
-  };
-
-  const result: AgentLoopResult = await runAgentLoop({
-    systemPrompt,
-    readTools,
-    writeTools,
-    terminalToolNames: DIALOG_TERMINAL_NAMES,
-    readToolNames: ALL_READ_TOOLS,
-    llmEntryName: "dialog_turn",
-    maxRounds: 20,
-    sharedMessages: args.sharedMessages as any,
-    toolHandlerContext: ctx,
-  });
-
-  if (result.kind !== "terminal") {
-    return { kind: "end", payload: { summary: "（对话超时）" } };
-  }
-
-  const { terminalToolName, terminalArgs } = result;
-
-  if (terminalToolName === END_DIALOG_TOOL) {
-    return {
-      kind: "end",
-      payload: { summary: (terminalArgs?.summary as string) ?? "对话结束" },
-      messages: result.messages as any,
-    };
-  }
-
-  if (terminalToolName === WRITE_DIALOG_TOOL) {
-    const turn: DialogTurn = {
-      speakerId: args.self.id,
-      kind: "say",
-      line: (terminalArgs?.content as string) ?? "",
-    };
-    const proposeAction = terminalArgs?.action_proposal
-      ? {
-          actionType: (terminalArgs.action_proposal as any).action_type,
-          params: (terminalArgs.action_proposal as any).params,
-        }
-      : undefined;
-    const respondToAction = terminalArgs?.action_response
-      ? {
-          accept: (terminalArgs.action_response as any).accept as boolean,
-          reason: (terminalArgs.action_response as any).reason as string | undefined,
-        }
-      : undefined;
-    return { kind: "turn", turn, proposeAction, respondToAction, messages: result.messages as any };
-  }
-
-  if (terminalToolName === WRITE_PROPOSE_ACTION_TOOL) {
-    return {
-      kind: "turn",
-      turn: { speakerId: args.self.id, kind: "say" as const, line: "" },
-      proposeAction: {
-        actionType: terminalArgs?.action_type as string,
-        params: (terminalArgs?.params ?? {}) as any,
+  // If there's a pending action proposal targeting this speaker, inject a reminder
+  // so the LLM knows it must respond (accept or reject) via action_response in write_dialog.
+  if (args.pendingAction) {
+    const requesterName =
+      args.allCharacters.find((c) => c.id === args.pendingAction.requesterId)?.name ?? "对方";
+    const displayName = actionRegistry.getDisplayName(args.pendingAction.actionType);
+    sharedMessages = [
+      ...sharedMessages,
+      {
+        role: "user",
+        content: `[系统] ${requesterName} 向你提议了「${displayName}」。你必须对此做出回应。在 write_dialog 中通过 action_response 参数表达你的决定：accept: true 表示接受，accept: false 表示拒绝，并附带 reason 说明理由。`,
       },
-      messages: result.messages as any,
-    };
+    ];
   }
 
-  if (terminalToolName === WRITE_RESPOND_ACTION_TOOL) {
-    return {
-      kind: "turn",
-      turn: { speakerId: args.self.id, kind: "say" as const, line: "" },
-      respondToAction: {
-        accept: terminalArgs?.accept as boolean,
-        reason: terminalArgs?.reason as string | undefined,
+  let pendingProposeAction: { actionType: string; params: any } | undefined;
+  let pendingRespondAction: { accept: boolean; reason?: string } | undefined;
+
+  for (let innerLoop = 0; innerLoop < MAX_INNER_LOOPS; innerLoop++) {
+    const systemPrompt = buildDialogSystemPrompt(args.self.name, args.peer.name, args.peer.id);
+    const readTools = buildReadTools();
+    const dialogueActions = actionRegistry.getDialogueActions();
+    const writeTools = buildDialogWriteTools(dialogueActions);
+
+    const ctx: ToolHandlerContext = {
+      self: args.self,
+      allCharacters: args.allCharacters,
+      nodes: args.nodes,
+      shops: args.shops,
+      tick: args.tick,
+      epoch: args.epoch,
+      worldId: args.worldId,
+      worldDescription: args.worldDescription,
+    };
+
+    // Capture state from non-terminal propose/respond tools within the agent-loop
+    const capturedState: {
+      proposeAction?: { actionType: string; params: any };
+      respondAction?: { accept: boolean; reason?: string };
+    } = {};
+
+    const customWriteHandlers: Record<string, (a: any, c: ToolHandlerContext) => Record<string, unknown>> = {
+      write_propose_action: (a: any, _c: ToolHandlerContext) => {
+        capturedState.proposeAction = { actionType: a.action_type, params: a.params ?? {} };
+        const displayName = actionRegistry.getDisplayName(a.action_type);
+        return { proposed: displayName, note: "提议已记录。请继续用 write_dialog 说出你的邀请或提议。" };
       },
-      messages: result.messages as any,
+      write_respond_action: (a: any, _c: ToolHandlerContext) => {
+        capturedState.respondAction = { accept: a.accept, reason: a.reason };
+        const verb = a.accept ? "接受了" : "拒绝了";
+        return { responded: verb, note: `回应已记录。请继续用 write_dialog 说出你的回复。` };
+      },
     };
+
+    const result: AgentLoopResult = await runAgentLoop({
+      systemPrompt,
+      readTools,
+      writeTools,
+      terminalToolNames: DIALOG_TERMINAL_NAMES,
+      readToolNames: ALL_READ_TOOLS,
+      llmEntryName: "dialog_turn",
+      maxRounds: 20,
+      sharedMessages: sharedMessages as any,
+      toolHandlerContext: ctx,
+      customWriteHandlers,
+    });
+
+    // Merge captured state from non-terminal handlers
+    if (capturedState.proposeAction) pendingProposeAction = capturedState.proposeAction;
+    if (capturedState.respondAction) pendingRespondAction = capturedState.respondAction;
+
+    if (result.kind !== "terminal") {
+      return { kind: "end", payload: { summary: "（对话超时）" } };
+    }
+
+    const { terminalToolName, terminalArgs } = result;
+
+    if (terminalToolName === END_DIALOG_TOOL) {
+      return {
+        kind: "end",
+        payload: { summary: (terminalArgs?.summary as string) ?? "对话结束" },
+        respondToAction: pendingRespondAction,
+        messages: result.messages as any,
+      };
+    }
+
+    if (terminalToolName === WRITE_DIALOG_TOOL) {
+      const turn: DialogTurn = {
+        speakerId: args.self.id,
+        kind: "say",
+        line: (terminalArgs?.content as string) ?? "",
+      };
+      const proposeAction = terminalArgs?.action_proposal
+        ? {
+            actionType: (terminalArgs.action_proposal as any).action_type,
+            params: (terminalArgs.action_proposal as any).params,
+          }
+        : pendingProposeAction;
+      const respondToAction = terminalArgs?.action_response
+        ? {
+            accept: (terminalArgs.action_response as any).accept as boolean,
+            reason: (terminalArgs.action_response as any).reason as string | undefined,
+          }
+        : pendingRespondAction;
+      return { kind: "turn", turn, proposeAction, respondToAction, messages: result.messages as any };
+    }
+
+    // Other write tool (write_memory, etc.) — loop back, same speaker
+    sharedMessages = (result.messages ?? []) as any[];
   }
 
-  return { kind: "end", payload: { summary: "（未知终止类型）" } };
+  return { kind: "end", payload: { summary: "（未产生有效对话）" } };
 }
 
 interface TickDialogResult {
@@ -738,7 +773,6 @@ async function runOneTickDialog(
   const hasExistingTurns = transcript.some((t) => t.speakerId !== "__system__");
   const maxRounds =
     TURNS_PER_TICK * 2 - (conv.currentTickRounds === 0 && hasExistingTurns ? 1 : 0);
-  const sixthSentenceIndex = maxRounds - 1;
 
   // Inject time reminder before this tick's dialogue rounds.
   // On the very first tick, insert it before the opening line so the LLM
@@ -866,91 +900,82 @@ async function runOneTickDialog(
     }
 
     if (result.kind === "end") {
-      const isSixthSentence = round === sixthSentenceIndex;
-      if (isSixthSentence) {
-        // 3+4 rule: other party gets one extra turn
-        const otherId =
-          speakerId === conv.initiatorId ? conv.acceptorId : conv.initiatorId;
-        const other = chars.get(otherId)!;
-        const otherPeer = otherId === conv.initiatorId ? acceptor : initiator;
-        try {
-          const otherPendingAction = conv.pendingAction && conv.pendingAction.targetId === otherId
-            ? conv.pendingAction : undefined;
-          const extraResult = await newDialogTurn({
-            self: other,
-            peer: otherPeer,
-            transcript,
-            sharedMessages: conv.sharedMessages,
-            pendingAction: otherPendingAction ? {
-              requesterId: conv.pendingAction?.requesterId,
-              targetId: conv.pendingAction?.targetId,
-              actionType: conv.pendingAction?.actionType,
-              params: conv.pendingAction?.params,
-            } : undefined,
-            nodes: nodes ?? Array.from(nodeById.values()),
-            allCharacters: Array.from(chars.values()),
-            tick: currentTick,
-            epoch,
-            worldId: conv.worldId,
-            worldDescription,
-            shops,
-          });
-          // Save extra round context too
-          if (extraResult.messages) {
-            conv.sharedMessages = extraResult.messages;
-          }
-          if (extraResult.kind === "turn") {
-            transcript.push(extraResult.turn);
-          }
-          // Process any respondToAction in extra round too
-          if (extraResult.respondToAction) {
-            const pa = conv.pendingAction;
-            if (pa) {
-              if (extraResult.respondToAction.accept) {
-                const requester = chars.get(pa.requesterId);
-                const tgt = chars.get(pa.targetId);
-                if (requester && tgt) {
-                  const dialogRecord = executeDialogueAction(
-                    pa.actionType, requester, tgt, pa.params,
-                    chars, nodeById, conv.worldId, currentTick, epoch,
-                  );
-                  if (dialogRecord) {
-                    transcript.push({
-                      speakerId: "__system__",
-                      kind: "action_result",
-                      line: dialogRecord,
-                    });
-                  }
-                }
-              } else {
-                // Rejected — push system message
-                const displayName = actionRegistry.getDisplayName(pa.actionType);
-                const tgt = chars.get(pa.targetId);
-                const rejecterName = tgt?.name ?? "???";
-                let rejectMsg: string;
-                if (language === "zh") rejectMsg = `${rejecterName} 拒绝了 ${displayName}。`;
-                else if (language === "en") rejectMsg = `${rejecterName} rejected ${displayName}.`;
-                else rejectMsg = `${rejecterName} が ${displayName} を拒否しました。`;
-                transcript.push({
-                  speakerId: "__system__",
-                  kind: "action_result",
-                  line: rejectMsg,
-                });
-              }
-            }
-            conv.pendingAction = undefined;
-          }
-        } catch {
-          // ignore extra round failure
-        }
-      } else {
-        return {
+      // Give the other party a farewell turn so they can say goodbye.
+      // The conversation ends after this exchange — no unilateral cut-off.
+      const farewellId =
+        speakerId === conv.initiatorId ? conv.acceptorId : conv.initiatorId;
+      const farewellChar = chars.get(farewellId)!;
+      const farewellPeer = farewellId === conv.initiatorId ? acceptor : initiator;
+      try {
+        const farewellPendingAction = conv.pendingAction && conv.pendingAction.targetId === farewellId
+          ? conv.pendingAction : undefined;
+        const farewellResult = await newDialogTurn({
+          self: farewellChar,
+          peer: farewellPeer,
           transcript,
-          ended: true,
-          endedBy: speakerId === conv.initiatorId ? "initiator" : "acceptor",
-        };
+          sharedMessages: conv.sharedMessages,
+          pendingAction: farewellPendingAction ? {
+            requesterId: conv.pendingAction?.requesterId,
+            targetId: conv.pendingAction?.targetId,
+            actionType: conv.pendingAction?.actionType,
+            params: conv.pendingAction?.params,
+          } : undefined,
+          nodes: nodes ?? Array.from(nodeById.values()),
+          allCharacters: Array.from(chars.values()),
+          tick: currentTick,
+          epoch,
+          worldId: conv.worldId,
+          worldDescription,
+          shops,
+        });
+        // Save farewell context
+        if (farewellResult.messages) {
+          conv.sharedMessages = farewellResult.messages;
+        }
+        if (farewellResult.kind === "turn") {
+          transcript.push(farewellResult.turn);
+        }
+        // Process respondToAction in farewell turn
+        if (farewellResult.respondToAction) {
+          const pa = conv.pendingAction;
+          if (pa) {
+            if (farewellResult.respondToAction.accept) {
+              const requester = chars.get(pa.requesterId);
+              const tgt = chars.get(pa.targetId);
+              if (requester && tgt) {
+                const dialogRecord = executeDialogueAction(
+                  pa.actionType, requester, tgt, pa.params,
+                  chars, nodeById, conv.worldId, currentTick, epoch,
+                );
+                if (dialogRecord) {
+                  transcript.push({
+                    speakerId: "__system__",
+                    kind: "action_result",
+                    line: dialogRecord,
+                  });
+                }
+              }
+            } else {
+              // Rejected — push system message
+              const displayName = actionRegistry.getDisplayName(pa.actionType);
+              const tgt = chars.get(pa.targetId);
+              const rejecterName = tgt?.name ?? "???";
+              let rejectMsg: string;
+              if (language === "zh") rejectMsg = `${rejecterName} 拒绝了 ${displayName}。`;
+              else if (language === "en") rejectMsg = `${rejecterName} rejected ${displayName}.`;
+              else rejectMsg = `${rejecterName} が ${displayName} を拒否しました。`;
+              transcript.push({
+                speakerId: "__system__",
+                kind: "action_result",
+                line: rejectMsg,
+              });
+            }
+          }
+          conv.pendingAction = undefined;
+        }
+      } catch {
+        // ignore farewell turn failure — still end the conversation
       }
-      // After 6th-sentence extra round, end the conversation.
       return {
         transcript,
         ended: true,
@@ -1160,7 +1185,7 @@ export async function runDialogPhase(
     let reason: string;
     if (af.reason === "cross_node") reason = `想找对方说话但她不在这里`;
     else if (af.reason === "target_left") reason = `想找对方说话但她已经走了`;
-    else reason = `想开口又咽了回去`;
+    else reason = `没有和别人搭上话`;
     memoryWrites.push(makeMemory(af.requester, tick, 1, reason));
     salvageTasks.push(() =>
       input.salvageDecide({ character: char, tick, rejectReason: reason, language: input.language })
@@ -1218,12 +1243,23 @@ export async function runDialogPhase(
   for (const mp of pairing.mutualPairs) {
     consumedActorIds.add(mp.a);
     consumedActorIds.add(mp.b);
-    const openerFirst = Math.random() < 0.5;
-    newDialogGroups.push({
-      requesterId: openerFirst ? mp.a : mp.b,
-      responderId: openerFirst ? mp.b : mp.a,
-      openingLine: openerFirst ? mp.aFreeText : mp.bFreeText,
-    });
+    // Prefer the non-empty freeText as opening line; if both present, pick speaker randomly
+    const aHasText = mp.aFreeText.length > 0;
+    const bHasText = mp.bFreeText.length > 0;
+    let requesterId: string;
+    let responderId: string;
+    let openingLine: string;
+    if (aHasText && !bHasText) {
+      requesterId = mp.a; responderId = mp.b; openingLine = mp.aFreeText;
+    } else if (bHasText && !aHasText) {
+      requesterId = mp.b; responderId = mp.a; openingLine = mp.bFreeText;
+    } else {
+      const openerFirst = Math.random() < 0.5;
+      requesterId = openerFirst ? mp.a : mp.b;
+      responderId = openerFirst ? mp.b : mp.a;
+      openingLine = openerFirst ? mp.aFreeText : mp.bFreeText;
+    }
+    newDialogGroups.push({ requesterId, responderId, openingLine });
   }
 
   // ── Part 3: Create new conversations, run tick 1 (concurrent) ──

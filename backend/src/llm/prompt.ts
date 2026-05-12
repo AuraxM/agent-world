@@ -781,31 +781,24 @@ export function injectTimeMessage(args: {
 
   const totalMinutes = elapsedHours * 60 + elapsedMinutes;
 
-  // Gentle reminder — NPCs tend to forget the end_conversation tool exists
-  const endHint = language === "zh"
-    ? "如果聊得差不多了，可以调用 end_conversation 工具来自然结束对话。"
-    : language === "en"
-      ? "If the conversation is winding down, use the end_conversation tool to end it naturally."
-      : "会話が一段落したら、end_conversation ツールを呼び出して自然に終了してください。";
-
   if (language === "zh") {
     if (totalMinutes === 0) {
       return `现在是 ${timeStr}。`;
     }
     const dur = elapsedHours > 0 ? `${elapsedHours} 小时 ${elapsedMinutes} 分钟` : `${elapsedMinutes} 分钟`;
-    return `现在是 ${timeStr}，你们已经聊了 ${dur}（${totalMinutes} 分钟）。${endHint}`;
+    return `现在是 ${timeStr}。你们从 ${timeStr} 左右开始聊，已经过了大约 ${dur}。`;
   }
   if (language === "en") {
     if (totalMinutes === 0) {
       return `It's now ${timeStr}.`;
     }
     const dur = elapsedHours > 0 ? `${elapsedHours}h ${elapsedMinutes}m` : `${elapsedMinutes}m`;
-    return `It's now ${timeStr}, you've been talking for ${dur} (${totalMinutes} min). ${endHint}`;
+    return `It's now ${timeStr}. You've been talking for about ${dur}.`;
   }
   if (totalMinutes === 0) {
     return `今は ${timeStr} です。`;
   }
   const dur = elapsedHours > 0 ? `${elapsedHours} 時間 ${elapsedMinutes} 分` : `${elapsedMinutes} 分`;
-  return `今は ${timeStr} です、${dur}（${totalMinutes} 分）話し続けています。${endHint}`;
+  return `今は ${timeStr} です。約${dur}話しています。`;
 }
 

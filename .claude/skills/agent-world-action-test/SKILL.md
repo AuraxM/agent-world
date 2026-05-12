@@ -19,26 +19,18 @@ cd backend && npx tsx scripts/diagnose-action.ts --action <type> --entry <entry>
 
 Supported entries: `decide`, `dialog`, `think`, `accept`, `summary`, `memory`, `placement`.
 
+**WARNING: The `dialog` entry is BROKEN** — it imports `llmDialogTurn` which was removed in the agentic refactor (commit `8363581`). The diagnostic tool needs to be updated to use `newDialogTurn` from `dialog.ts`. Until fixed, dialog diagnostics will throw at import time.
+
 ### Run all diagnostics for one entry
 
 ```bash
 cd backend && npx tsx scripts/diagnose-action.ts --all --entry decide
 ```
 
-### Run all diagnostics across all entries
-
-```bash
-cd backend && npx tsx scripts/diagnose-action.ts --all
-```
-
 ### Customize rounds per case
 
 ```bash
-# Default: 10 rounds per case. Each case stops on first success.
 cd backend && npx tsx scripts/diagnose-action.ts --all --rounds 10
-
-# Single case with 5 rounds
-cd backend && npx tsx scripts/diagnose-action.ts --action eat --entry decide --rounds 5
 ```
 
 ### How it works
@@ -57,45 +49,6 @@ Each profile uses **extreme contrasting values** to eliminate competing actions:
 - Location tag chosen to strongly imply the target action AND avoid overlap with other actions (especially bathing)
 - For dialogue actions: conversation lines that unmistakably point to the target action
 - Companion placed at same location when needed for social/dialogue actions
-
-### Diagnostic report sections
-
-1. **Code path check** — Is the action registered? Does `check()` pass? Is it in the tool enum?
-2. **Induction state** — What game state was injected to induce the action
-3. **LLM result** — What did the LLM choose? Did it match the target action?
-4. **Full prompts** — System prompt, user prompt, tools JSON (for manual inspection)
-
-### When to use
-
-- A newly added action never gets called during gameplay
-- You suspect the prompt doesn't describe the action clearly enough
-- You suspect the code path (`check()`, `buildOptions`, tool injection) is broken
-- You want to verify an LLM provider/model combination handles a specific action correctly
-
-### Per-action dialogue tool architecture
-
-Dialogue actions use **per-action tools** (like `decide`), not a generic `propose_dialogue_action` with `action_type` enum.
-
-**Tool naming:** `propose_dialogue_<type>` (e.g., `propose_dialogue_give`, `propose_dialogue_travel_together`)
-
-**Key files:**
-| What | File | Lines |
-|---|---|---|
-| `DIALOGUE_ACTION_TOOL_PREFIX` | `domain/schemas.ts` | ~290 |
-| `buildDialogueActionTools()` | `domain/schemas.ts` | ~330 |
-| `buildDialogueToolParams()` — filters `target_id` (always peer) | `domain/schemas.ts` | ~310 |
-| Tool setup in `llmDialogTurn` | `llm/decide.ts` | ~630 |
-| Tool parsing (prefix match) | `llm/decide.ts` | ~1030 |
-| `buildDialogueActionsBlock()` — prompt listing | `llm/prompt.ts` | ~1211 |
-| `buildDialogTurnFollowup()` — followup listing | `llm/prompt.ts` | ~1411 |
-
-**Tool description enrichment** in `buildDialogueActionTools()`:
-- `give`: shows current money — `在对话中给予对方金钱（你当前有 ${money}💰）。`
-- `give_item`: lists inventory — `你背包里有：${items}。`
-- `manage_employment`: clarifies — `需要你是店主且有雇员名额。`
-- Others: use `triggerHint` as-is
-
-**Tool params** are built from `ActionDefinition.extraParams`, filtering out `target_id` (implicitly the conversation peer). Common params `reasoning` + `free_text` are always added.
 
 ### Induction profile design principles
 
@@ -130,103 +83,185 @@ Dialogue actions use **per-action tools** (like `decide`), not a generic `propos
 | `check() failed` / unavailable | Action requires data not present in DB (shops, employment) | Seed the scene's shops first; mark as data-dependent in profile |
 | `No node found with privacy "X"` | All nodes have `privacy: "public"` in this scene | Use `locationTag` with an existing tag instead of `locationPrivacy` |
 | `No companion available` | Companion not at target location before injection | `resolveCharacter` no longer filters by `sameLocation` — `injectState` moves them |
-| Dialogue: LLM outputs text, no tool call (round 1) | DeepSeek model occasionally responds with narrative actions instead of tool calls | The re-prompt mechanism handles this (max 3 rounds); usually recovers by round 2 |
+| **DeepSeek: LLM outputs text, no tool call** | DeepSeek models frequently output narrative text/actions instead of tool calls, sometimes for 4+ consecutive rounds | Agent-loop re-prompt mechanism handles this (max 3 rounds per agent-loop, max 3 inner-loops in dialog). Usually recovers, but may exhaust rounds on complex turns. Consider increasing `maxRounds` or using a different model for dialog. |
+| **DeepSeek: nested object serialized as string** | DeepSeek sometimes serializes nested JSON objects (like `action_response`) as escaped strings: `"{\"accept\": false, ...}"` instead of `{accept: false, ...}` | Zod validation catches this and returns a clear error. LLM usually corrects it on the next attempt. |
+| **DeepSeek: wrong parameter name** | LLM uses slightly wrong parameter names (e.g., `important` instead of `importance`) | Same as above — Zod catches it, LLM corrects on re-prompt. |
 
-### Data-dependent actions
+## Dialogue Action Architecture (Current — Agentic Loop)
 
-Some actions cannot pass diagnostic without specific DB data:
+Dialogue actions use the shared `runAgentLoop` via `newDialogTurn()`. The agent has access to these tools:
 
-- **work**: requires `shops` table with employee records — `check()` returns `false` if no shop employs the character
-- **buy**: requires a shop at the current node — `check()` returns `false` if `findShopAtNode()` returns null
-- **manage_employment**: requires the character to be a shop owner with employee slots — works only in scenes with shop-owning characters
+- **`write_propose_action`** (non-terminal): Proposes a dialogue action. Returns a note telling the LLM to continue with `write_dialog`.
+- **`write_respond_action`** (non-terminal): Accepts/rejects a pending proposal. Returns a note telling the LLM to continue with `write_dialog`.
+- **`write_dialog`** (terminal): Speaks a line. Can optionally include `action_proposal` (to propose inline) or `action_response` (to accept/reject inline). This is the primary terminal tool.
+- **`end_dialog`** (terminal): Ends the conversation.
 
-Diagnostic pre-checks (`inBuildOptions`) catch these before wasting LLM rounds.
+**Inner loop** (max 3 iterations): Non-terminal tools (write_propose_action, write_respond_action, write_memory, etc.) loop back so the LLM can think→propose→speak in a single turn.
 
-### Diagnostic code path
-
-**Decide pre-check** (avoids LLM call when action unavailable):
+**Pending action flow across turns/ticks:**
 ```
-diagnose-action.ts → runDecideDiagnostic()
-  → buildActionContext() + getAvailableActions()
-  → if target action NOT in options → return early (0ms, "unavailable")
-  → else call llmDecide()
-```
+Turn N, Speaker A:
+  write_propose_action(give, amount=50) → captured in newDialogTurn's capturedState
+  write_dialog("给你50块")              → terminal, returns proposeAction in result
 
-**Dialog flow:**
-```
-diagnose-action.ts → runDialogDiagnostic()
-  → resolveCharacter() → injectState() → loadWorld()
-  → build transcript from dialogueHistory strings
-  → llmDialogTurn({ self, peer, transcript, dialogueActions, ... })
-  → checks result.proposeAction for match
-```
+runOneTickDialog:
+  conv.pendingAction = { requesterId: A, targetId: B, actionType: "give", params: {amount:50} }
 
-## Dialogue Action Unit Testing
-
-How to write and debug tests for actions proposed and accepted during dialogue — any action where `usableInDialogue: true`.
-
-## Architecture
-
-Every dialogue action follows the same 4-phase protocol, regardless of what the action does:
-
-```
-Phase 1 — Propose:  A calls submit_dialog_turn + propose_dialogue_<type>(params)
-                     → conv.pendingAction = { requesterId: A, actionType: <type>, params }
-                     → state unchanged (execution is deferred)
-
-Phase 2 — Respond:   B calls submit_dialog_turn + respond_to_dialogue_action("accept"|"reject")
-                     → if accept: executeDialogueAction() runs, action_result pushed to transcript
-                     → if reject: pendingAction cleared, nothing executes
-
-Phase 3 — Execute:   executeDialogueAction() calls def.execute(ctx, params)
-                     → applies stateChanges to initiator via applyStateChange
-                     → applies cross-character stateChanges via targetCharacterId
-                     → injects outcome.dialogRecord as __system__ action_result turn
-                     → writes memory to both parties
+Turn N+1, Speaker B:
+  newDialogTurn({ pendingAction })      → reminder injected into sharedMessages:
+    "[系统] A 向你提议了「赠送金钱」。你必须对此做出回应。
+     在 write_dialog 中通过 action_response 参数表达你的决定。"
+  
+  write_dialog("谢谢！", action_response={accept:true, reason:"感谢"})
+    → respondToAction in result
+    → executeDialogueAction() runs
+    → action_result injected into transcript
+    → conv.pendingAction = undefined
 ```
 
-Each dialogue action is a **separate tool**: `propose_dialogue_give`, `propose_dialogue_give_item`, `propose_dialogue_travel_together`, `propose_dialogue_manage_employment`. The tool name itself identifies the action type — no `action_type` parameter. Tool descriptions are enriched with character context (money, inventory) for better LLM guidance.
+**Key files:**
+| What | File | Lines |
+|---|---|---|
+| `runAgentLoop` (shared engine) | `llm/agent-loop.ts` | 76-289 |
+| `newDialogTurn` (per-turn dialog) | `llm/dialog.ts` | 418-541 |
+| `runOneTickDialog` (per-tick orchestration) | `llm/dialog.ts` | 723-984 |
+| `runDialogPhase` (full dialog phase) | `llm/dialog.ts` | 1070-1419 |
+| `executeDialogueAction` | `llm/dialog.ts` | 550-714 |
+| Pending action reminder injection | `llm/dialog.ts` | 442-460 |
+| System prompts (decide/dialog/think) | `llm/system-prompts.ts` | 1-87 |
+| Tool handlers (read/write) | `llm/tool-handlers.ts` | 1-489 |
+| Tool definitions (schemas) | `domain/schemas.ts` | 441-531 |
 
-Code path: `decide.ts/llmDialogTurn` → `dialog.ts/runOneTickDialog` → `dialog.ts/executeDialogueAction`
+**Dialogue action types** are NOT per-action tools. The LLM uses the generic `write_propose_action` with an `action_type` string parameter. Available action types come from `actionRegistry.getDialogueActions()` which returns all actions with `usableInDialogue: true`.
 
-## Test file location and setup
+## Testing Accept/Reject with Real LLM
+
+When you need to verify that the accept/reject flow works end-to-end (not just proposal), use a **pre-built Conversation with pendingAction**:
 
 ```typescript
-// src/engine/dialog-<action-name>.test.ts
+// 1. Load a real world
+const loaded = loadWorld(worldId);
+const { world, characters, nodes } = loaded;
+
+// 2. Pick two characters at the same node
+// (use locationGroups to find same-location pairs)
+
+// 3. Build a Conversation with a pendingAction already set
+const ongoingConv: Conversation = {
+  id: `conv-test-${randomUUID().slice(0, 8)}`,
+  worldId,
+  initiatorId: charA.id,
+  acceptorId: charB.id,
+  transcript: [
+    { speakerId: "__system__", kind: "say", line: "现在是 10:00（上午）。" },
+    { speakerId: charA.id, kind: "say", line: "给你点零花钱。" },
+  ],
+  tickStarted: world.currentTick,
+  currentTickRounds: 0,
+  status: "active",
+  pendingAction: {
+    requesterId: charA.id,
+    targetId: charB.id,
+    actionType: "give",
+    params: { amount: 30, reason: "零花钱" },
+  },
+  sharedMessages: [],
+};
+
+// 4. Run through runDialogPhase with the pre-built conversation
+const result = await runDialogPhase({
+  rawActions: [],               // No new actions — only ongoing conversation
+  characters: [charA, charB],
+  nodes,
+  perceptions: new Map(),
+  tick: world.currentTick,
+  epoch: world.epoch,
+  worldName: world.name,
+  worldDescription: manifest.description ?? "",
+  language: "zh",
+  acceptDecide: mockAccept,
+  summaryDecide: mockSummary,
+  salvageDecide: mockSalvage,
+  ongoingConversations: [ongoingConv],
+});
+
+// 5. Check results
+const conv = result.updatedConversations.find(c => c.id === convId);
+const actionResults = conv.transcript.filter(t => t.kind === "action_result");
+// Expect: action_result injected, conv.pendingAction cleared,
+// money transferred (if accepted) or unchanged (if rejected)
+```
+
+**Why pre-build instead of relying on natural proposal:** In testing, the LLM rarely proposes dialogue actions naturally — characters tend to just chat. Pre-building the conversation with a pendingAction guarantees the responder sees the reminder and you can test the accept/reject path deterministically.
+
+**Gotcha:** `runOneTickDialog` injects its own time message via `injectTimeMessage()`. If your pre-built transcript already has a time message, you'll see duplicates. This is harmless but confusing in logs.
+
+## Dialogue Action Unit Testing (Mock-Based)
+
+How to write tests for dialogue action execution — the `executeDialogueAction` path after accept.
+
+### Architecture (accept path only)
+
+```
+runDialogPhase → runOneTickDialog → newDialogTurn
+  → LLM calls write_dialog with action_response: {accept: true}
+  → respondToAction processed in runOneTickDialog
+  → executeDialogueAction(actionType, actor, target, params, ...)
+    → def.execute(ctx, params)
+    → applies stateChanges to both parties
+    → pushes action_result turn to transcript
+    → writes memory to both parties
+```
+
+### Test approach
+
+Since dialog turns are LLM-driven (no `turnDecide` mock parameter), unit testing the accept/reject flow requires either:
+
+1. **Mock `runAgentLoop`** — intercept the agent-loop to return a pre-crafted `write_dialog` with `action_response`
+2. **Test `executeDialogueAction` directly** — test the execution phase in isolation by calling it with known params
+3. **Integration test with real LLM** — use the pre-built Conversation approach described above
+
+For testing the *execution* of a dialogue action (state changes, memory, transcript injection), test `executeDialogueAction` directly. For testing the *propose→respond→execute flow*, use the pre-built Conversation LLM integration test.
+
+### Test file location and setup
+
+```typescript
+// backend/src/systems/dialog-<action-name>.test.ts
 import {
   runDialogPhase,
-  type AcceptDecideFn, type TurnDecideFn,
-  type SummaryDecideFn, type PersonalMemoryDecideFn, type SalvageDecideFn,
-  type DialogueActionProposal, type DialogueActionResponse,
-} from "./dialog";
-import { actionRegistry, type ActionInput } from "@/domain/action-system";
+  type AcceptDecideFn,
+  type SummaryDecideFn,
+  type SalvageDecideFn,
+} from "../llm/dialog";
+import { actionRegistry } from "../domain/action-system";
 import { BUILTIN_ACTIONS } from "./actions-builtin";
 
-// Register builtins (actionRegistry is a global singleton)
 BUILTIN_ACTIONS.forEach((a) => actionRegistry.register(a));
 ```
 
-## Test harness
+### Test harness — calling runDialogPhase with mocks
 
-Always test through `runDialogPhase` directly (not `tick.ts`). All LLM decision points are injected as mocks:
+`runDialogPhase` accepts these injectable functions (all others are real LLM calls):
 
 ```typescript
 const result = await runDialogPhase({
-  rawActions,            // Action[] — at least one "chat" to start conversation
-  characters,            // Character[] — the participants
-  nodes,                 // MapNode[] — usually just [baseNode()]
-  perceptions,           // Map<string, WorldEvent[]> — usually new Map()
-  tick,                  // number
-  worldName: "测试世界",
-  language: "zh",
-  acceptDecide,          // AcceptDecideFn mock
-  turnDecide,            // TurnDecideFn mock ← where you control the action flow
-  summaryDecide,         // SummaryDecideFn mock
-  personalMemoryDecide,  // PersonalMemoryDecideFn mock
-  salvageDecide,         // SalvageDecideFn mock
-  ongoingConversations,  // Conversation[] | undefined — for multi-tick tests
+  rawActions,              // Action[] — at least one "chat" to start conversation
+  characters,              // Character[] — the participants
+  nodes,                   // MapNode[]
+  perceptions,             // Map<string, WorldEvent[]> — usually new Map()
+  tick,                    // number
+  epoch,                   // number (ms timestamp)
+  worldName,               // string
+  worldDescription,        // string
+  language,                // "zh" | "en" | "ja"
+  acceptDecide,            // AcceptDecideFn — mockable (accept/reject chat invite)
+  summaryDecide,           // SummaryDecideFn — mockable (end-of-conversation summary)
+  salvageDecide,           // SalvageDecideFn — mockable (fallback after rejection)
+  ongoingConversations,    // Conversation[] — for multi-tick continuation
 });
 ```
+
+**Note: there is NO `turnDecide` or `personalMemoryDecide` parameter.** Dialog turns are driven by real LLM calls to `newDialogTurn` → `runAgentLoop`. To mock individual turns, you must mock `runAgentLoop` directly or use the pre-built Conversation integration approach.
 
 ### Character factory
 
@@ -242,23 +277,35 @@ function makeChar(id: string, name: string, loc: string, overrides?: Partial<Cha
     shortMemory: [], dailyMemory: [], longMemory: [], relations: {}, lastSleepTick: 0,
     money: 100, incomeLevel: 0, expenseExempt: false,
     impressionBook: {}, shortTermGoal: null, longTermGoal: null, liked: "", disliked: "",
+    notebook: [], lastConversationEndTick: 0,
     ...overrides,
   };
 }
 ```
 
-### Default mocks (reusable)
+### Default mocks
 
 ```typescript
-const mockAccept = (result: "accept_speak" | "reject_speak" = "accept_speak"): AcceptDecideFn =>
-  async ({ requesterId }) => ({ type: result, targetId: requesterId, reasoning: "ok", selfImportance: 2 });
+const mockAccept = (): AcceptDecideFn =>
+  async ({ requesterId }) => ({
+    type: "accept_chat",      // NOT "accept_speak"
+    targetId: requesterId,
+    reasoning: "ok",
+    selfImportance: 2,
+  });
 
-const mockSummary = (text = "一段闲聊"): SummaryDecideFn => async () => ({ summary: text });
-
-const mockPersonalMemory = (): PersonalMemoryDecideFn => async () => ({ feeling: "还行", impression: "印象一般", topics: ["闲聊"] });
+const mockSummary = (text = "一段闲聊"): SummaryDecideFn =>
+  async () => ({ summary: text });
 
 const mockSalvage = (): SalvageDecideFn =>
-  async ({ character }) => ({ type: "wait" as any, actorId: character.id, reasoning: "等等", selfImportance: 2 });
+  async ({ character }) => ({
+    type: "wait",
+    actorId: character.id,
+    reasoning: "等等",
+    selfImportance: 2,
+    skipExecution: true,
+    skipMemory: true,
+  });
 
 function baseNode(): any {
   return {
@@ -269,75 +316,7 @@ function baseNode(): any {
 }
 ```
 
-## Mock patterns for TurnDecideFn
-
-### CRITICAL: one-shot guard for propose
-
-Each character speaks 3 times per tick (6 turns total per tick). Without a guard, `if (!pendingAction)` re-triggers on every turn after pendingAction is cleared. Always use a closure flag:
-
-```typescript
-let proposed = false;
-let accepted = false;
-
-turnDecide: async ({ self, pendingAction }) => {
-  if (self.id === "b" && !pendingAction && !proposed) {
-    proposed = true;
-    return {
-      kind: "turn" as const,
-      turn: { speakerId: "b", kind: "say" as const, line: "来，给你。" },
-      proposeAction: {
-        actionType: "<action_type>",
-        targetId: "a",
-        params: { /* action-specific params */ },
-      } as DialogueActionProposal,
-    };
-  }
-  if (self.id === "a" && pendingAction && !accepted) {
-    accepted = true;
-    return {
-      kind: "turn" as const,
-      turn: { speakerId: "a", kind: "say" as const, line: "谢谢！" },
-      respondToAction: { accepted: true, reasoning: "..." } as DialogueActionResponse,
-    };
-  }
-  return { kind: "turn" as const, turn: { speakerId: self.id, kind: "say" as const, line: "…" } };
-},
-```
-
-All patterns below assume the one-shot guard pattern. It is not repeated in every example, but it is always required.
-
-### Reject a pending action
-
-```typescript
-respondToAction: { accepted: false, reasoning: "不需要" } as DialogueActionResponse
-```
-
-### End conversation + respond to pending
-
-```typescript
-return {
-  kind: "end" as const,
-  payload: { reasoning: "聊完了", closingLine: "再见" },
-  respondToAction: { accepted: true, reasoning: "收下" } as DialogueActionResponse,
-};
-```
-
-### Simultaneously accept AND propose (back-and-forth)
-
-Character accepts old pending, then immediately proposes a new one:
-
-```typescript
-return {
-  kind: "turn" as const,
-  turn: { speakerId: "a", kind: "say" as const, line: "收到了，这给你回礼。" },
-  respondToAction: { accepted: true, reasoning: "收下" } as DialogueActionResponse,
-  proposeAction: { actionType: "<type>", targetId: "b", params: {...} } as DialogueActionProposal,
-};
-```
-
-The engine processes `respondToAction` first (clearing old pending), then `proposeAction` (setting new pending). This ordering prevents the new proposal from overwriting the old one before it's responded to.
-
-## How to determine what to verify
+## Verifying execution results
 
 Read the action definition's `execute()` return value. The `Outcome` fields tell you what to check:
 
@@ -349,8 +328,6 @@ Read the action definition's `execute()` return value. The `Outcome` fields tell
 | `memory` | Short memory written for the initiator |
 | `event` | WorldEvent generated |
 
-For each state change kind, determine the right assertion:
-
 | StateChange kind | Assertion |
 |---|---|
 | `adjustMoney` | `expect(char.money).toBe(expected)` |
@@ -359,28 +336,10 @@ For each state change kind, determine the right assertion:
 | `adjustMood` | `expect(char.emotion.mood).toBe(expected)` |
 | `setOngoingAction` / `clearOngoingAction` | `expect(char.currentAction).toBe(expected)` |
 
-**Example for a give action** (stateChanges = `[{ kind: "adjustMoney", amount: -N, targetCharacterId: "a" }]`):
+### Verifying transcript injection
 
 ```typescript
-expect(b.money).toBe(100 - N);  // initiator: deducted
-expect(a.money).toBe(5 + N);    // target: credited via targetCharacterId
-```
-
-**Example for a hypothetical "kiss" action** (stateChanges = `[{ kind: "adjustMood", delta: 1, targetCharacterId: "a" }]`):
-
-```typescript
-expect(b.emotion.mood).toBe(prevB + 1);  // initiator mood up
-expect(a.emotion.mood).toBe(prevA + 1);  // target mood up via targetCharacterId
-```
-
-## Verifying transcript injection
-
-Every accepted dialogue action should inject an `action_result` turn:
-
-```typescript
-const conv = result.updatedConversations.find(
-  c => c.status !== "ended" || c.endedBy
-);
+const conv = result.updatedConversations.find(c => c.status !== "ended" || c.endedBy);
 const actionResults = conv.transcript.filter(t => t.kind === "action_result");
 expect(actionResults.length).toBeGreaterThan(0);
 expect(actionResults[0].line).toContain("<expected dialogRecord text>");
@@ -394,9 +353,9 @@ The `action_result` turn has `speakerId: "__system__"` and `kind: "action_result
 
 **Symptom:** Initiator's state changes but target's stays the same (e.g., giver loses money but recipient doesn't gain it).
 
-**Root cause:** `executeDialogueAction` calls `applyStateChange()` which triggers `recordTransaction()` — a DB write. In test environments without the DB table, `recordTransaction` throws. The `catch` in `executeDialogueAction` swallows it, but `applyStateChange` already modified initiator's state before the throw. The cross-character code (which runs after `applyStateChange`) never executes.
+**Root cause:** `executeDialogueAction` calls `applyStateChange()` which triggers `recordTransaction()` — a DB write. In test environments without the DB table, `recordTransaction` throws. The `catch` in `executeDialogueAction` swallows it, but `applyStateChange` already modified initiator's state before the throw.
 
-**Fix:** In `executeDialogueAction`, handle state changes that involve `targetCharacterId` inline, without going through `applyStateChange`. For money:
+**Fix:** In `executeDialogueAction`, handle state changes that involve `targetCharacterId` inline. For money:
 
 ```typescript
 if (sc.kind === "adjustMoney") {
@@ -410,70 +369,29 @@ if (sc.kind === "adjustMoney") {
 }
 ```
 
-For other state change types with `targetCharacterId`, apply the same pattern: mutate target directly instead of relying on `applyStateChange`. If the state change is pure (no DB side effect in `applyStateChange`), calling `applyStateChange` for both initiator and target is fine.
+### 2. Pending action silently dropped — LLM never responds
 
-### 2. Action executes multiple times in the same tick
+**Symptom:** A dialogue action is proposed but the other party never responds (accept/reject). The conversation ends with `pendingAction` still set.
 
-**Symptom:** State change magnitude is 2x or 3x expected (money, vitals, etc.).
+**Root cause:** Before the fix in `dialog.ts:442-460`, `args.pendingAction` was accepted as a parameter in `newDialogTurn` but never used. The LLM only knew about the pending action from historical tool calls in `sharedMessages`, which could be forgotten across ticks or buried in long contexts.
 
-**Root cause:** 6 turns per tick. Without a `!proposed` guard, the propose branch re-triggers every time `!pendingAction` is true again (after accept clears it).
+**Fix:** A reminder message is now injected into `sharedMessages` when `args.pendingAction` is truthy: `"[系统] {name} 向你提议了「{action}」。你必须对此做出回应..."`. This ensures the LLM explicitly knows about the pending action regardless of context length.
 
-**Fix:** Always use one-shot flags in mock turnDecide.
+### 3. DeepSeek outputs text instead of tool calls
 
-### 3. Wrong pendingAction read during back-and-forth
+**Symptom:** Agent loop round shows "工具: []" with a text response — no tools called. Can happen for 4+ consecutive rounds.
 
-**Symptom:** When A accepts B's action AND proposes a new one, the wrong action executes.
+**Root cause:** DeepSeek models sometimes respond in narrative mode, outputting character actions/thoughts as text rather than calling tools.
 
-**Root cause:** If `proposeAction` were processed before `respondToAction`, the new proposal overwrites `conv.pendingAction` before respond reads it.
+**Fix:** The agent-loop's re-prompt mechanism (`"请使用工具来完成你的任务"`) handles this. The dialog inner loop (max 3) gives additional chances. If both exhaust, the conversation ends. Consider using non-DeepSeek models for dialog if this is frequent.
 
-**Fix:** The engine already processes `respondToAction` first. If you encounter this bug, check the processing order hasn't been accidentally changed.
+### 4. DeepSeek serializes nested objects as JSON strings
 
-### 4. Conversation state between ticks
+**Symptom:** Zod validation fails with `expected object, received string` for nested params like `action_response`.
 
-**Symptom:** Multi-tick tests fail with unexpected state.
+**Example:** `"action_response": "{\"accept\": false, \"reason\": \"...\"}"` instead of `"action_response": {"accept": false, "reason": "..."}`
 
-**Root cause:** Between ticks, conversations move from "active" to "ending" status. The filter `c.status !== "ended"` passes "ending". But if you accidentally use `c.status === "active"`, the second tick won't process the conversation.
-
-**Fix:** Pass ongoing conversations with: `r1.updatedConversations.filter(c => c.status !== "ended")`.
-
-## Debugging
-
-### Log inside executeDialogueAction
-
-Add temporary logs in `src/engine/dialog.ts`:
-
-```typescript
-console.log("[executeDialogueAction]", actionType, "actor:", actor.name, "params:", JSON.stringify(params));
-```
-
-### Run a single test with verbose output
-
-```bash
-npx vitest run src/engine/dialog-<action>.test.ts -t "<test name>" --reporter verbose
-```
-
-### Filter log output
-
-```bash
-npx vitest run src/engine/dialog-<action>.test.ts --reporter verbose 2>&1 | grep -E "AFTER|executeDialogueAction|transcript"
-```
-
-### Trace turn-by-turn
-
-Log from inside the mock turnDecide:
-
-```typescript
-console.log("turnDecide:", self.name, "pending:", !!pendingAction,
-  "proposed:", proposed, "accepted:", accepted);
-```
-
-### Check the transcript structure
-
-```typescript
-console.log(conv.transcript.map(t =>
-  `[${t.speakerId}] ${t.kind}: ${(t as any).line ?? ""}`
-));
-```
+**Fix:** The Zod validation in `agent-loop.ts:196-218` catches this and returns a clear error. The LLM corrects it on the next attempt. No code change needed — the validation is already working correctly.
 
 ## Test scenarios checklist
 
@@ -482,11 +400,42 @@ For any new dialogue action, cover at minimum:
 - [ ] Propose → accept → state changes applied correctly to both parties
 - [ ] Propose → accept → `action_result` injected into transcript with correct `dialogRecord` text
 - [ ] Propose → accept → memory written to both initiator and target
-- [ ] Propose → reject → no state changes, no transcript injection
+- [ ] Propose → reject → no state changes, `action_result` shows rejection
 - [ ] Propose → target ignores (doesn't respond) → state unchanged, pendingAction preserved in conversation
-- [ ] Propose → conversation ends before response → state unchanged, pendingAction cleared
+- [ ] Propose → conversation ends before response → state unchanged, pendingAction cleared with conversation
 - [ ] Conversation ends WITH accept in same turn → state changes applied
 - [ ] Back-and-forth: accept old pending + propose new one in same turn — both execute correctly
 - [ ] Action params validation: invalid/edge params handled gracefully
 - [ ] Cross-character effects: verify `targetCharacterId` path works
 - [ ] Unknown action_type in pendingAction → no crash, no state change
+- [ ] **Cross-tick pending: action proposed in tick N, responded in tick N+1 → reminder injected, response processed**
+
+## Debugging
+
+### Run existing tests
+
+```bash
+cd backend && npx vitest run --reporter verbose
+```
+
+### Run a single test
+
+```bash
+npx vitest run src/systems/actions-builtin.test.ts -t "<test name>" --reporter verbose
+```
+
+### Trace dialog flow in integration test
+
+```typescript
+console.log(conv.transcript.map(t =>
+  `[${t.speakerId}] ${t.kind}: ${(t as any).line ?? ""}`
+));
+```
+
+### Check agent-loop logs
+
+All agent-loop rounds are logged at INFO level with tool calls, reasoning previews, and validation errors. Look for:
+- `llm-agent-loop` — round-by-round tool calls and reasoning
+- `llm-agent-loop 参数校验失败` — Zod validation errors (DeepSeek type coercion issues)
+- `llm-agent-loop 终端工具调用` — which terminal tool was hit
+- `llm-agent-loop 轮次耗尽` — agent exhausted without hitting a terminal tool

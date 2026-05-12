@@ -111,7 +111,13 @@ export function handleReadEmotion(_args: any, ctx: ToolHandlerContext): HandlerR
   const e = ctx.self.emotion;
   const moodLabel = e.mood <= -3 ? "非常低落" : e.mood <= -1 ? "有点低落" : e.mood <= 1 ? "平静" : e.mood >= 3 ? "非常好" : "不错";
   const stressLabel = e.stress >= 4 ? "极度紧张" : e.stress >= 3 ? "相当紧张" : e.stress >= 2 ? "有些压力" : e.stress >= 1 ? "轻微压力" : "轻松";
-  const socialLabel = e.social_satiety <= -3 ? "深深孤独，渴望社交" : e.social_satiety <= -1 ? "有点孤单" : e.social_satiety <= 1 ? "社交需求正常" : e.social_satiety >= 3 ? "社交非常满足" : "社交比较满足";
+  const socialLabel = e.social_satiety <= -3 ? "极度渴望社交——受不了独处，想找人说话"
+    : e.social_satiety <= -2 ? "想要社交——一个人待着有点闷，倾向于找人互动"
+    : e.social_satiety <= -1 ? "轻微想社交——不排斥独处，但有人聊两句也不错"
+    : e.social_satiety <= 1 ? "社交中性——独处或社交都可以，随性"
+    : e.social_satiety <= 2 ? "社交满足——不太需要主动找人，自己待着也舒服"
+    : e.social_satiety >= 4 ? "社交过饱——社交够了，现在只想一个人待着，不想被任何人打扰"
+    : "社交比较满足——社交需求已充分满足，可以安心独处";
   return {
     mood: moodLabel,
     stress: stressLabel,

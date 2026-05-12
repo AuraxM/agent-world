@@ -113,32 +113,32 @@
  * ================================================================ */
 
 :root, :root[data-theme="light"] {
-  --frame:        #eeeeee;
-  --frame-2:      #e2e2e2;
-  --chrome:       #d0d0d0;
-  --chrome-hi:    #e0e0e0;
+  --frame:        #f6f3ed;
+  --frame-2:      #ede8e0;
+  --chrome:       #e8dcc8;
+  --chrome-hi:    #f0e8d8;
   --panel:        #ffffff;
-  --panel-2:      #f6f6f6;
+  --panel-2:      #fafaf7;
 
-  --border:       #c0c0c0;
-  --border-soft:  #d0d0d0;
-  --border-amber: #888888;
+  --border:       #d0c8b8;
+  --border-soft:  #e0d8c8;
+  --border-amber: #c4a060;
 
-  --text:         #1a1a1a;
-  --text-muted:   #666666;
-  --text-faint:   #999999;
+  --text:         #2a2216;
+  --text-muted:   #8a7a60;
+  --text-faint:   #b0a080;
 
-  --accent:       #555555;
-  --accent-strong:#222222;
-  --accent-hi:    #888888;
+  --accent:       #c4a060;
+  --accent-strong:#8a6030;
+  --accent-hi:    #e0c890;
 
   --danger:       #c44e2a;
   --danger-hi:    #ff8a5c;
   --danger-shadow:#6a1a0a;
   --success:      #4a8d4a;
 
-  --map-bg-from:  #d8dce4;
-  --map-bg-to:    #9aa8b8;
+  --map-bg-from:  #e8e4dc;
+  --map-bg-to:    #c0b8a8;
 
   /* text-on-frame (same as text for light — frame is also light) */
   --text-on-frame:       var(--text);

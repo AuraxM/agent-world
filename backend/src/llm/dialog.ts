@@ -37,6 +37,7 @@ import {
   WRITE_RESPOND_ACTION_TOOL,
 } from "../domain/schemas";
 import { runAgentLoop } from "./agent-loop";
+import { getEntryConfig } from "./providers";
 import type { AgentLoopResult } from "./agent-loop";
 import type { ToolHandlerContext } from "./tool-handlers";
 const log = createLogger("dialog");
@@ -394,8 +395,6 @@ export function pairChatRequests(
 // Tick-based dialog expansion
 // ---------------------------------------------------------------------------
 
-const TURNS_PER_TICK = 3;
-
 async function retryOnce<T>(fn: () => Promise<T>): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -439,7 +438,6 @@ async function newDialogTurn(args: {
     }
   | { kind: "end"; payload: { summary: string }; respondToAction?: { accept: boolean; reason?: string }; messages?: any[] }
 > {
-  const MAX_INNER_LOOPS = 3;
   let sharedMessages = (args.sharedMessages ?? []) as any[];
 
   // If there's a pending action proposal targeting this speaker, inject a reminder
@@ -460,7 +458,12 @@ async function newDialogTurn(args: {
   let pendingProposeAction: { actionType: string; params: any } | undefined;
   let pendingRespondAction: { accept: boolean; reason?: string } | undefined;
 
-  for (let innerLoop = 0; innerLoop < MAX_INNER_LOOPS; innerLoop++) {
+  const config = getEntryConfig("dialog_turn");
+  const innerBudgetMs = Math.max(1000, Math.floor(config.timeBudgetMs / 3));
+  const innerT0 = Date.now();
+
+  while (true) {
+    if (Date.now() - innerT0 >= innerBudgetMs) break;
     const systemPrompt = buildDialogSystemPrompt(args.self.name, args.peer.name, args.peer.id);
     const readTools = buildReadTools();
     const dialogueActions = actionRegistry.getDialogueActions();
@@ -503,7 +506,7 @@ async function newDialogTurn(args: {
       terminalToolNames: DIALOG_TERMINAL_NAMES,
       readToolNames: ALL_READ_TOOLS,
       llmEntryName: "dialog_turn",
-      maxRounds: 20,
+      timeBudgetMs: Math.max(500, innerBudgetMs - (Date.now() - innerT0)),
       sharedMessages: sharedMessages as any,
       toolHandlerContext: ctx,
       customWriteHandlers,
@@ -553,7 +556,7 @@ async function newDialogTurn(args: {
     sharedMessages = (result.messages ?? []) as any[];
   }
 
-  return { kind: "end", payload: { summary: "（未产生有效对话）" } };
+  return { kind: "end", payload: { summary: "（对话超时）" } };
 }
 
 interface TickDialogResult {
@@ -768,11 +771,9 @@ async function runOneTickDialog(
   const firstSpeakerId =
     lastRealSpeakerId === conv.initiatorId ? conv.acceptorId : conv.initiatorId;
 
-  // First tick of a new conversation: if opening line already present,
-  // it counts as 1 turn — generate only 5 more to reach 6 total (3 per person)
-  const hasExistingTurns = transcript.some((t) => t.speakerId !== "__system__");
-  const maxRounds =
-    TURNS_PER_TICK * 2 - (conv.currentTickRounds === 0 && hasExistingTurns ? 1 : 0);
+  const config = getEntryConfig("dialog_turn");
+  const tickBudgetMs = config.timeBudgetMs;
+  const tickStart = Date.now();
 
   // Inject time reminder before this tick's dialogue rounds.
   // On the very first tick, insert it before the opening line so the LLM
@@ -788,7 +789,9 @@ async function runOneTickDialog(
     transcript.push(timeTurn);
   }
 
-  for (let round = 0; round < maxRounds; round++) {
+  let round = 0;
+  while (true) {
+    if (Date.now() - tickStart >= tickBudgetMs) break;
     const speakerId =
       round % 2 === 0
         ? firstSpeakerId
@@ -984,6 +987,7 @@ async function runOneTickDialog(
     }
 
     transcript.push(result.turn);
+    round++;
   }
 
   return { transcript, ended: false };
@@ -1043,6 +1047,7 @@ async function generatePersonalMemory(
     },
   ];
 
+  const config = getEntryConfig("dialog_turn");
   const result = await runAgentLoop({
     systemPrompt: prompt,
     readTools: buildReadTools(),
@@ -1050,7 +1055,7 @@ async function generatePersonalMemory(
     terminalToolNames: ["write_memory"],
     readToolNames: ALL_READ_TOOLS,
     llmEntryName: "dialog_turn",
-    maxRounds: 3,
+    timeBudgetMs: Math.floor(config.timeBudgetMs / 2),
     toolHandlerContext: ctx,
   });
 
@@ -1098,7 +1103,7 @@ export async function runDialogPhase(
 
       const tickResult = await runOneTickDialog(conv, charById, nodeById, input.language, tick, epoch, input.worldDescription, nodes);
       conv.transcript = tickResult.transcript;
-      conv.currentTickRounds = TURNS_PER_TICK;
+      conv.currentTickRounds = tickResult.transcript.filter(t => t.speakerId !== "__system__").length;
 
       if (tickResult.ended) {
         conv.status = "ended";
@@ -1278,7 +1283,7 @@ export async function runDialogPhase(
       };
       const tickResult = await runOneTickDialog(conv, charById, nodeById, input.language, tick, epoch, input.worldDescription, nodes);
       conv.transcript = tickResult.transcript;
-      conv.currentTickRounds = TURNS_PER_TICK;
+      conv.currentTickRounds = tickResult.transcript.filter(t => t.speakerId !== "__system__").length;
       if (tickResult.ended) {
         conv.status = "ended";
         conv.endedBy = tickResult.endedBy;

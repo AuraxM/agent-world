@@ -135,6 +135,7 @@ export interface EntryConfig {
   entryName: string;
   providerId: string | null;
   thinkingEnabled: boolean;
+  timeBudgetMs: number;
 }
 
 // ── Test overrides (set before calling functions) ──
@@ -179,23 +180,24 @@ export function getEntryConfig(entryName: string): EntryConfig {
     .from(schema.llmEntryConfigs)
     .where(eq(schema.llmEntryConfigs.id, entryName))
     .get();
-  if (!row) return { entryName, providerId: null, thinkingEnabled: false };
+  if (!row) return { entryName, providerId: null, thinkingEnabled: false, timeBudgetMs: 5000 };
   return {
     entryName: row.id,
     providerId: row.providerId,
     thinkingEnabled: row.thinkingEnabled,
+    timeBudgetMs: row.timeBudgetMs,
   };
 }
 
 /** List all entry configs. Missing entries are returned with defaults. */
 export function listEntryConfigs(allEntryNames: string[]): EntryConfig[] {
   const rows = db.select().from(schema.llmEntryConfigs).all();
-  const map = new Map(rows.map((r) => [r.id, { entryName: r.id, providerId: r.providerId, thinkingEnabled: r.thinkingEnabled }]));
-  return allEntryNames.map((name) => map.get(name) ?? { entryName: name, providerId: null, thinkingEnabled: false });
+  const map = new Map(rows.map((r) => [r.id, { entryName: r.id, providerId: r.providerId, thinkingEnabled: r.thinkingEnabled, timeBudgetMs: r.timeBudgetMs }]));
+  return allEntryNames.map((name) => map.get(name) ?? { entryName: name, providerId: null, thinkingEnabled: false, timeBudgetMs: 5000 });
 }
 
 /** Batch upsert entry configs. */
-export function batchUpsertEntryConfigs(configs: { entryName: string; providerId: string | null; thinkingEnabled: boolean }[]): void {
+export function batchUpsertEntryConfigs(configs: { entryName: string; providerId: string | null; thinkingEnabled: boolean; timeBudgetMs?: number }[]): void {
   const now = new Date();
   db.transaction((tx) => {
     for (const c of configs) {
@@ -205,13 +207,15 @@ export function batchUpsertEntryConfigs(configs: { entryName: string; providerId
         .where(eq(schema.llmEntryConfigs.id, c.entryName))
         .get();
       if (existing) {
+        const updates: Record<string, unknown> = { providerId: c.providerId, thinkingEnabled: c.thinkingEnabled, updatedAt: now };
+        if (c.timeBudgetMs !== undefined) updates.timeBudgetMs = c.timeBudgetMs;
         tx.update(schema.llmEntryConfigs)
-          .set({ providerId: c.providerId, thinkingEnabled: c.thinkingEnabled, updatedAt: now })
+          .set(updates)
           .where(eq(schema.llmEntryConfigs.id, c.entryName))
           .run();
       } else {
         tx.insert(schema.llmEntryConfigs)
-          .values({ id: c.entryName, providerId: c.providerId, thinkingEnabled: c.thinkingEnabled, createdAt: now, updatedAt: now })
+          .values({ id: c.entryName, providerId: c.providerId, thinkingEnabled: c.thinkingEnabled, timeBudgetMs: c.timeBudgetMs ?? 5000, createdAt: now, updatedAt: now })
           .run();
       }
     }

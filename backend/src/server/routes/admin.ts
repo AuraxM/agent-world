@@ -358,7 +358,12 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       batchUpsertEntryConfigs(
-        body.entryConfigs as { entryName: string; providerId: string | null; thinkingEnabled: boolean }[],
+        body.entryConfigs as {
+          entryName: string;
+          providerId: string | null;
+          thinkingEnabled: boolean;
+          timeBudgetMs?: number;
+        }[],
       );
       return reply.send({ ok: true });
     } catch (err) {

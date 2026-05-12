@@ -113,32 +113,32 @@
  * ================================================================ */
 
 :root, :root[data-theme="light"] {
-  --frame:        #f6f3ed;
-  --frame-2:      #ede8e0;
-  --chrome:       #e8dcc8;
-  --chrome-hi:    #f0e8d8;
-  --panel:        #ffffff;
-  --panel-2:      #fafaf7;
+  --frame:        #c4a060;
+  --frame-2:      #b89050;
+  --chrome:       #a08040;
+  --chrome-hi:    #d4b070;
+  --panel:        #e0c890;
+  --panel-2:      #d8c080;
 
-  --border:       #d0c8b8;
-  --border-soft:  #e0d8c8;
-  --border-amber: #c4a060;
+  --border:       #8a6030;
+  --border-soft:  #a08040;
+  --border-amber: #fafaf7;
 
-  --text:         #2a2216;
-  --text-muted:   #8a7a60;
-  --text-faint:   #b0a080;
+  --text:         #ffffff;
+  --text-muted:   #f6f3ed;
+  --text-faint:   #e0d0b0;
 
-  --accent:       #c4a060;
-  --accent-strong:#8a6030;
-  --accent-hi:    #e0c890;
+  --accent:       #ffffff;
+  --accent-strong:#fafaf7;
+  --accent-hi:    #f0e8d8;
 
-  --danger:       #c44e2a;
-  --danger-hi:    #ff8a5c;
-  --danger-shadow:#6a1a0a;
-  --success:      #4a8d4a;
+  --danger:       #ff6a4a;
+  --danger-hi:    #ffaea0;
+  --danger-shadow:#8a1a0a;
+  --success:      #6ec07a;
 
-  --map-bg-from:  #e8e4dc;
-  --map-bg-to:    #c0b8a8;
+  --map-bg-from:  #d4c090;
+  --map-bg-to:    #b89050;
 
   /* text-on-frame (same as text for light — frame is also light) */
   --text-on-frame:       var(--text);

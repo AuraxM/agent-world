@@ -437,11 +437,11 @@ export interface Conversation {
   pendingExtraRound?: boolean;
   /** 对话中一方发起的双人交互 action，等待对方回应 */
   pendingAction?: DialogueActionRequest;
-  /** 共享的 LLM messages 上下文，按产生时间顺序排列（含 tool_calls、tool 结果、
-   *  reasoning_content）。双方轮流追加，保证前缀稳定以最大化 prompt cache 命中率。 */
-  sharedMessages?: Array<Record<string, unknown>>;
-  /** 上次保存 sharedMessages 时 transcript 的长度，用于计算增量。 */
-  sharedMessagesTranscriptLength?: number;
+  /** Initiator 独占的 LLM messages 上下文（含 tool_calls、tool 结果、reasoning_content）。
+   *  对话内容通过 system user message 注入到对方的消息中。双方各自维护，互不可见推理过程。 */
+  initiatorMessages?: Array<Record<string, unknown>>;
+  /** Acceptor 独占的 LLM messages 上下文。 */
+  acceptorMessages?: Array<Record<string, unknown>>;
 }
 
 // ---------------------------------------------------------------------------

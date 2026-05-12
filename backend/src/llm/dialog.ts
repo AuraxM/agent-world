@@ -470,7 +470,7 @@ async function newDialogTurn(args: {
   let pendingRespondAction: { accept: boolean; reason?: string } | undefined;
 
   const config = getEntryConfig("dialog_turn");
-  const innerBudgetMs = Math.max(1000, Math.floor(config.timeBudgetMs / 3));
+  const innerBudgetMs = Math.max(1000, config.timeBudgetMs);
   const innerT0 = Date.now();
 
   while (true) {
@@ -765,9 +765,15 @@ async function runOneTickDialog(
   const acceptor = chars.get(conv.acceptorId)!;
   const transcript: DialogTurn[] = [...conv.transcript];
 
-  // Initialize shared LLM context if not present
-  if (!conv.sharedMessages) conv.sharedMessages = [];
-  if (conv.sharedMessagesTranscriptLength === undefined) conv.sharedMessagesTranscriptLength = 0;
+  // Initialize per-speaker LLM contexts if not present
+  function speakerMessages(speakerId: string): Array<Record<string, unknown>> {
+    if (speakerId === conv.initiatorId) {
+      if (!conv.initiatorMessages) conv.initiatorMessages = [];
+      return conv.initiatorMessages;
+    }
+    if (!conv.acceptorMessages) conv.acceptorMessages = [];
+    return conv.acceptorMessages;
+  }
 
   // Find the last real speaker (skip __system__ time messages)
   let lastRealSpeakerId = conv.initiatorId;
@@ -818,12 +824,13 @@ async function runOneTickDialog(
     transcript.push(timeTurn);
   }
 
-  // Also inject time info into sharedMessages so the LLM actually sees it.
+  // Also inject time info into both speakers' messages so the LLM actually sees it.
   // The transcript alone is only used for frontend display and end-of-conversation summary.
-  conv.sharedMessages = [
-    ...(conv.sharedMessages ?? []),
-    { role: "user" as const, content: `[系统] ${timeLine}` },
-  ];
+  const timeUserMsg = { role: "user" as const, content: `[系统] ${timeLine}` };
+  if (!conv.initiatorMessages) conv.initiatorMessages = [];
+  if (!conv.acceptorMessages) conv.acceptorMessages = [];
+  conv.initiatorMessages.push(timeUserMsg);
+  conv.acceptorMessages.push(timeUserMsg);
 
   let round = 0;
   while (true) {
@@ -842,13 +849,14 @@ async function runOneTickDialog(
       ? conv.pendingAction
       : undefined;
 
+    const currentMsgs = speakerMessages(speakerId);
     let result;
     try {
       result = await retryOnce(() => newDialogTurn({
         self: speaker,
         peer,
         transcript,
-        sharedMessages: conv.sharedMessages,
+        sharedMessages: currentMsgs,
         pendingAction: pendingAction ? {
           requesterId: conv.pendingAction?.requesterId,
           targetId: conv.pendingAction?.targetId,
@@ -933,9 +941,22 @@ async function runOneTickDialog(
       };
     }
 
-    // ── Save shared LLM context ──
+    // ── Save per-speaker LLM context ──
     if (result.messages) {
-      conv.sharedMessages = result.messages;
+      if (speakerId === conv.initiatorId) {
+        conv.initiatorMessages = result.messages;
+      } else {
+        conv.acceptorMessages = result.messages;
+      }
+      // Inject dialogue content into the other speaker's messages so they
+      // know what was just said, but NOT their internal reasoning.
+      if (result.kind === "turn") {
+        const otherMsgs = speakerMessages(peer.id);
+        otherMsgs.push({
+          role: "user",
+          content: `[${speaker.name}] ${result.turn.line}`,
+        });
+      }
     }
 
     if (result.kind === "end") {
@@ -948,11 +969,12 @@ async function runOneTickDialog(
       try {
         const farewellPendingAction = conv.pendingAction && conv.pendingAction.targetId === farewellId
           ? conv.pendingAction : undefined;
+        const farewellMsgs = speakerMessages(farewellId);
         const farewellResult = await newDialogTurn({
           self: farewellChar,
           peer: farewellPeer,
           transcript,
-          sharedMessages: conv.sharedMessages,
+          sharedMessages: farewellMsgs,
           pendingAction: farewellPendingAction ? {
             requesterId: conv.pendingAction?.requesterId,
             targetId: conv.pendingAction?.targetId,
@@ -967,9 +989,23 @@ async function runOneTickDialog(
           worldDescription,
           shops,
         });
-        // Save farewell context
+        // Save farewell context to the farewell speaker's messages
         if (farewellResult.messages) {
-          conv.sharedMessages = farewellResult.messages;
+          if (farewellId === conv.initiatorId) {
+            conv.initiatorMessages = farewellResult.messages;
+          } else {
+            conv.acceptorMessages = farewellResult.messages;
+          }
+          // Inject farewell dialogue into the other speaker
+          if (farewellResult.kind === "turn") {
+            const farewellOtherMsgs = speakerMessages(
+              farewellId === conv.initiatorId ? conv.acceptorId : conv.initiatorId,
+            );
+            farewellOtherMsgs.push({
+              role: "user",
+              content: `[${farewellChar.name}] ${farewellResult.turn.line}`,
+            });
+          }
         }
         if (farewellResult.kind === "turn") {
           transcript.push(farewellResult.turn);
@@ -1307,6 +1343,7 @@ export async function runDialogPhase(
   await Promise.all(
     newDialogGroups.map(async (dg) => {
       const worldId = charById.get(dg.requesterId)!.worldId;
+      const initiatorName = charById.get(dg.requesterId)!.name;
       const conv: Conversation = {
         id: `conv-${randomUUID().slice(0, 8)}`,
         worldId,
@@ -1316,6 +1353,12 @@ export async function runDialogPhase(
         tickStarted: tick,
         currentTickRounds: 0,
         status: "active",
+        // Seed the acceptor's messages with the opening line so they know
+        // what the initiator said. The initiator starts empty — they already
+        // know what they said.
+        acceptorMessages: [
+          { role: "user", content: `[${initiatorName}] ${dg.openingLine}` },
+        ],
       };
       const tickResult = await runOneTickDialog(conv, charById, nodeById, input.language, tick, epoch, input.worldDescription, nodes);
       conv.transcript = tickResult.transcript;

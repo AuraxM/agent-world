@@ -1091,7 +1091,9 @@ async function generatePersonalMemory(
   peer: Character,
   ctx: ToolHandlerContext,
 ): Promise<string> {
-  const prompt = `对话结束了。请回顾你与 ${peer.name} 的这段对话，从以下三个角度用自然语言反思，然后调用 write_memory 写入 short memory：
+  const prompt = `你是 ${self.name}。
+
+对话已经结束了。请回顾你与 ${peer.name} 的这段对话，从以下三个角度用自然语言反思，然后调用 write_memory 写入 short memory：
 
 1. **心情**：对话结束后你的心情如何
 2. **印象**：你对 ${peer.name} 的印象有什么变化

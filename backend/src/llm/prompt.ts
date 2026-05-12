@@ -547,6 +547,7 @@ export function buildCharacterStaticBlock(
     lines.push(`- 你的休息处：${restNode.name} [${restNode.id}]`);
   }
   lines.push(`- 作息窗口：${formatSleepWindow(sleepWindow)}`);
+  lines.push("- ⚡ 你应该在作息窗口开始前就回到休息处。如果现在时间已接近作息窗口，优先考虑回家，不要在外逗留");
   lines.push(`- 过往经历：${character.personalProfile.past}`);
   if (character.personalProfile.present) {
     lines.push(`- 当前状况：${character.personalProfile.present}`);

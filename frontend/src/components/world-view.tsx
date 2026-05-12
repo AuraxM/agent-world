@@ -10,12 +10,13 @@ import { TickControl } from "./tick-control";
 import { EventStream } from "./event-stream";
 import { EventGantt } from "./event-gantt";
 import { ProfilePane } from "./profile-pane";
+import { StrangerChat } from "./stranger-chat";
 
 export function WorldView() {
   const { snapshot, events, loadedSince, hasMore, loadingMore, loadMore, loading, error, lastTickMs, tickProgress, advance, autoMode, startAuto, stopAuto } = useWorldState();
   const view = useViewState();
   const { followingId, follow, isFollowing } = useFollow();
-  const [centerTab, setCenterTab] = useState<"stream" | "gantt">("stream");
+  const [centerTab, setCenterTab] = useState<"stream" | "gantt" | "chat">("stream");
   const [profileId, setProfileId] = useState<string | null>(null);
   const [selectedCharIds, setSelectedCharIds] = useState<Set<string>>(new Set());
 
@@ -100,7 +101,7 @@ export function WorldView() {
       <div className="flex-1 min-w-0 flex flex-col bg-black/25 backdrop-blur-md relative overflow-hidden">
         {/* Tab bar */}
         <div className="flex px-3 border-b border-white/10 bg-black/15 flex-shrink-0">
-          {(["stream", "gantt"] as const).map((key) => (
+          {(["stream", "gantt", "chat"] as const).map((key) => (
             <button
               key={key}
               type="button"
@@ -111,7 +112,7 @@ export function WorldView() {
                   : "text-white/35 border-transparent hover:text-white/60"
               }`}
             >
-              {key === "stream" ? "事件流" : "甘特图"}
+              {key === "stream" ? "事件流" : key === "gantt" ? "甘特图" : "对话"}
             </button>
           ))}
         </div>
@@ -148,6 +149,13 @@ export function WorldView() {
               onJumpToNode={view.setCurrentNode}
               onSelectCharacter={(c) => handleSelectCharacter(c.id)}
               onFollow={follow}
+            />
+          )}
+          {centerTab === "chat" && (
+            <StrangerChat
+              worldId={snapshot.world.id}
+              characters={snapshot.characters}
+              loading={loading}
             />
           )}
         </div>

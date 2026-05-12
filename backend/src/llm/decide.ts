@@ -85,11 +85,34 @@ interface LLMResponse {
 // ---------------------------------------------------------------------------
 
 export async function llmDecide(input: DecideInput): Promise<Action> {
-  if (!hasApiKey()) throw new Error("没有激活的 LLM provider");
+  console.log(`[Decide] llmDecide 开始 | 角色: ${input.character.name} | tick: ${input.tick}`);
+  decideLog.info("llmDecide 开始", { character: input.character.name, tick: input.tick });
 
-  const systemPrompt = buildDecideSystemPrompt();
-  const readTools = buildReadTools();
-  const writeTools = buildDecideWriteTools();
+  if (!hasApiKey()) {
+    decideLog.warn("llmDecide 无 API key，回退 look_around", { character: input.character.name });
+    return createFallbackAction(input);
+  }
+
+  let systemPrompt: string;
+  let readTools: ReturnType<typeof buildReadTools>;
+  let writeTools: ReturnType<typeof buildDecideWriteTools>;
+
+  try {
+    systemPrompt = buildDecideSystemPrompt();
+    readTools = buildReadTools();
+    writeTools = buildDecideWriteTools();
+    decideLog.info("llmDecide tools 构建完成", {
+      character: input.character.name,
+      readToolCount: readTools.length,
+      writeToolCount: writeTools.length,
+    });
+  } catch (err) {
+    decideLog.error("llmDecide tools 构建失败", {
+      character: input.character.name,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return createFallbackAction(input);
+  }
 
   const toolHandlerContext: ToolHandlerContext = {
     self: input.character,
@@ -106,22 +129,47 @@ export async function llmDecide(input: DecideInput): Promise<Action> {
     upcomingNotebookText: input.upcomingNotebookText,
   };
 
-  const result = await runAgentLoop({
-    systemPrompt,
-    readTools,
-    writeTools,
-    terminalToolNames: [WRITE_DECISION_TOOL],
-    readToolNames: ALL_READ_TOOLS,
-    llmEntryName: "decide",
-    maxRounds: 20,
-    toolHandlerContext,
-  });
+  let result;
+  try {
+    result = await runAgentLoop({
+      systemPrompt,
+      readTools,
+      writeTools,
+      terminalToolNames: [WRITE_DECISION_TOOL],
+      readToolNames: ALL_READ_TOOLS,
+      llmEntryName: "decide",
+      maxRounds: 20,
+      toolHandlerContext,
+    });
+    decideLog.info("llmDecide agent loop 结束", {
+      character: input.character.name,
+      kind: result.kind,
+      terminalTool: result.terminalToolName,
+    });
+  } catch (err) {
+    decideLog.error("llmDecide agent loop 异常", {
+      character: input.character.name,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack?.slice(0, 500) : undefined,
+    });
+    return createFallbackAction(input);
+  }
 
   if (result.kind === "terminal" && result.terminalToolName === WRITE_DECISION_TOOL && result.terminalArgs) {
+    decideLog.info("llmDecide 成功", {
+      character: input.character.name,
+      actionType: result.terminalArgs.action_type,
+    });
     return payloadToAction(result.terminalArgs, input);
   }
 
   // Fallback: exhausted round limit
+  decideLog.warn("llmDecide 回退 look_around", {
+    character: input.character.name,
+    reason: result.kind === "exhausted" ? "轮次耗尽" : "无有效终端工具",
+    kind: result.kind,
+    terminalTool: result.terminalToolName,
+  });
   return createFallbackAction(input);
 }
 

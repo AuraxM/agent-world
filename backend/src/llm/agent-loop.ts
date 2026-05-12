@@ -25,6 +25,9 @@ import {
   READ_HANDLERS,
   WRITE_HANDLERS,
 } from "./tool-handlers";
+import { createLogger } from "../shared/index";
+
+const agentLog = createLogger("llm-agent-loop");
 
 const PARAM_SCHEMAS: Record<string, z.ZodType> = {
   read_memories: ReadMemoriesParamsSchema,
@@ -92,6 +95,15 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
   const messages: ChatCompletionMessageParam[] = [...sharedMessages];
   let round = 0;
 
+  const agentType = llmEntryName === "decide" ? "Decide" : llmEntryName === "dialog_turn" ? "Dialog" : llmEntryName;
+  console.log(`[${agentType}] agent loop 开始 | 角色: ${ctx.self.name} | 终端工具: ${terminalToolNames.join(", ")} | 最大轮数: ${maxRounds} | 已含消息: ${sharedMessages.length}`);
+  agentLog.info(`${agentType} agent loop 开始`, {
+    character: ctx.self.name,
+    terminalTools: terminalToolNames.join(", "),
+    maxRounds,
+    sharedMsgCount: sharedMessages.length,
+  });
+
   while (round < maxRounds) {
     const extra: Record<string, unknown> = {};
     if (config.thinkingEnabled) extra.thinking = { type: "enabled" };
@@ -119,6 +131,25 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
 
     const choice = response.choices[0]?.message;
     if (!choice) throw new Error("LLM 未返回有效 choice");
+
+    // Log reasoning_content (DeepSeek think process)
+    const reasoningContent = (choice as unknown as Record<string, unknown>).reasoning_content as string | undefined;
+    const toolCallNames = (choice.tool_calls ?? []).map((tc: any) => tc.function?.name ?? "?");
+
+    const reasoningPreview = reasoningContent
+      ? (reasoningContent.length > 300 ? reasoningContent.slice(0, 300) + "…" : reasoningContent)
+      : "(无 reasoning)";
+    const textPreview = !choice.tool_calls?.length
+      ? (typeof choice.content === "string" ? choice.content.slice(0, 200) : "")
+      : "";
+
+    console.log(`[${agentType}] round ${round + 1}/${maxRounds} | 角色: ${ctx.self.name} | 工具: [${toolCallNames.join(", ")}] | reasoning: ${reasoningPreview.slice(0, 100)}${textPreview ? ` | text: ${textPreview.slice(0, 80)}` : ""}`);
+    agentLog.info(`${agentType} round ${round + 1}/${maxRounds}`, {
+      character: ctx.self.name,
+      reasoning: reasoningPreview,
+      toolCalls: toolCallNames,
+      textResponse: textPreview || undefined,
+    });
 
     // Build assistant message — preserve reasoning_content for DeepSeek
     // (must be re-passed in every subsequent request)
@@ -160,6 +191,12 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
       if (paramSchema) {
         const parsed = paramSchema.safeParse(args);
         if (!parsed.success) {
+          agentLog.warn(`${agentType} 参数校验失败`, {
+            character: ctx.self.name,
+            tool: toolName,
+            error: parsed.error.message,
+            received: JSON.stringify(args).slice(0, 300),
+          });
           messages.push({
             role: "tool",
             tool_call_id: tc.id,
@@ -176,6 +213,12 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
 
       // Check if this is a terminal tool
       if (terminalToolNames.includes(toolName)) {
+        agentLog.info(`${agentType} 终端工具调用`, {
+          character: ctx.self.name,
+          tool: toolName,
+          args: JSON.stringify(args).slice(0, 500),
+          totalRounds: round + 1,
+        });
         messages.push({
           role: "tool",
           tool_call_id: tc.id,
@@ -197,12 +240,23 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
 
       if (readHandler) {
         result = readHandler(args, ctx);
+        agentLog.info(`${agentType} read 工具执行`, {
+          character: ctx.self.name,
+          tool: toolName,
+          summary: summarizeToolResult(toolName, result),
+        });
       } else if (writeHandler) {
         result = writeHandler(args, ctx);
+        agentLog.info(`${agentType} write 工具执行`, {
+          character: ctx.self.name,
+          tool: toolName,
+          result: summarizeToolResult(toolName, result),
+        });
       } else if (customHandler) {
         result = customHandler(args, ctx);
       } else {
         result = { error: `未知工具: ${toolName}` };
+        agentLog.warn(`${agentType} 未知工具`, { character: ctx.self.name, tool: toolName });
       }
 
       messages.push({
@@ -219,5 +273,64 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<AgentLoopResu
   }
 
   // Exhausted — return without terminal
+  agentLog.warn(`${agentType} agent loop 轮次耗尽`, {
+    character: ctx.self.name,
+    totalRounds: round,
+    maxRounds,
+  });
   return { kind: "exhausted", messages };
+}
+
+/** 为日志浓缩工具返回值，避免打印完整记忆/地图文本 */
+function summarizeToolResult(toolName: string, result: unknown): string {
+  if (typeof result === "string") {
+    return result.length > 300 ? result.slice(0, 300) + "…" : result;
+  }
+  if (typeof result !== "object" || result === null) return String(result);
+  const r = result as Record<string, unknown>;
+
+  if (toolName === "read_memories") {
+    return `${r.total_matching} 条匹配，返回 ${r.returned} 条 (层: ${r.layer})`;
+  }
+  if (toolName === "read_profile") {
+    return `${r.name} — ${r.profession}，${r.personality}`;
+  }
+  if (toolName === "read_vitals") {
+    return `饥饿: ${r.hunger}，疲劳: ${r.fatigue}，卫生: ${r.hygiene}`;
+  }
+  if (toolName === "read_emotion") {
+    return `心情: ${r.mood}，压力: ${r.stress}，社交: ${r.social_satiety}`;
+  }
+  if (toolName === "read_map") {
+    return `位置: ${r.current_location}`;
+  }
+  if (toolName === "read_companions") {
+    return `${r.count} 人: ${(r.companions as Array<{name: string}> | undefined)?.map((c) => c.name).join(", ") ?? ""}`;
+  }
+  if (toolName === "read_relations") {
+    const rels = r.relations as Array<{character_name: string; relations: string[]}> | undefined;
+    return `${rels?.length ?? 0} 条关系`;
+  }
+  if (toolName === "read_events") {
+    const events = r.events as Array<{description: string}> | undefined;
+    return `${events?.length ?? 0} 条事件`;
+  }
+  if (toolName === "read_character") {
+    return `${r.name} — ${r.profession}`;
+  }
+  if (toolName === "write_memory") {
+    return r.error ? `错误: ${r.error}` : `层: ${r.layer}, ${r.created ? "新建" : "合并"} ${(r as any).id ?? ""}`;
+  }
+  if (toolName === "delete_memory") {
+    return r.error ? `错误: ${r.error}` : `已删除 ${r.deleted}，层剩余 ${r.remaining}`;
+  }
+  if (toolName === "write_decision") {
+    return `action_type: ${r.action_type ?? (r as any).action_type}`;
+  }
+  if (toolName === "write_dialog") {
+    return `content: ${String((r as any).content ?? "").slice(0, 150)}`;
+  }
+  if (r.error) return `错误: ${r.error}`;
+  if (r.success !== undefined) return r.success ? "成功" : "失败";
+  return JSON.stringify(r).slice(0, 200);
 }

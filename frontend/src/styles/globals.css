@@ -122,15 +122,15 @@
 
   --border:       #4a2e15;
   --border-soft:  #6e4a25;
-  --border-amber: #4a7c82;
+  --border-amber: #c47a8a;
 
   --text:         #3d2a16;
-  --text-muted:   #6b5040;
-  --text-faint:   #8a6e55;
+  --text-muted:   #6b4050;
+  --text-faint:   #8a6070;
 
-  --accent:       #4a7c82;
-  --accent-strong:#2d5a60;
-  --accent-hi:    #6daab0;
+  --accent:       #c47a8a;
+  --accent-strong:#9a4a5a;
+  --accent-hi:    #e0a0b0;
 
   --danger:       #c44e2a;
   --danger-hi:    #ff8a5c;

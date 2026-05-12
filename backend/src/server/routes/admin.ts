@@ -38,13 +38,9 @@ import {
 
 const ALL_ENTRY_NAMES = [
   "decide",
-  "salvage",
   "dialog_turn",
   "dialog_summarize",
-  "dialog_personal_memory",
   "accept_decision",
-  "character_placement",
-  "memory_compress",
 ];
 
 const WORLD_ID_PREFIX = "world";

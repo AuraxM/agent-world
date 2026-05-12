@@ -21,13 +21,9 @@ interface EntryConfigsResponse { entryConfigs: EntryConfig[]; defaultProvider: {
 
 const ENTRY_LABELS: Record<string, string> = {
   decide: "主决策",
-  salvage: "失败恢复",
   dialog_turn: "对话回合",
   dialog_summarize: "对话摘要",
-  dialog_personal_memory: "个人记忆",
   accept_decision: "提案接受",
-  character_placement: "角色放置",
-  memory_compress: "记忆压缩",
 };
 
 type FormMode = "add" | "edit";

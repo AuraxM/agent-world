@@ -223,6 +223,13 @@ export function migrate(dbUrl?: string) {
     { name: "epoch", ddl: "ALTER TABLE worlds ADD COLUMN epoch INTEGER NOT NULL DEFAULT 1777593600000" },
   ];
 
+  const LLM_ENTRY_CONFIGS_NEW_COLUMNS: Array<{ name: string; ddl: string }> = [
+    {
+      name: "time_budget_ms",
+      ddl: "ALTER TABLE llm_entry_configs ADD COLUMN time_budget_ms INTEGER NOT NULL DEFAULT 5000",
+    },
+  ];
+
   const tx = sqlite.transaction(() => {
     for (const stmt of STATEMENTS) sqlite.exec(stmt);
     const nodeCols = sqlite
@@ -245,6 +252,13 @@ export function migrate(dbUrl?: string) {
     const haveWorldCols = new Set(worldCols.map((c) => c.name));
     for (const col of WORLDS_NEW_COLUMNS) {
       if (!haveWorldCols.has(col.name)) sqlite.exec(col.ddl);
+    }
+    const entryCfgCols = sqlite
+      .prepare(`PRAGMA table_info(llm_entry_configs)`)
+      .all() as { name: string }[];
+    const haveEntryCfgCols = new Set(entryCfgCols.map((c) => c.name));
+    for (const col of LLM_ENTRY_CONFIGS_NEW_COLUMNS) {
+      if (!haveEntryCfgCols.has(col.name)) sqlite.exec(col.ddl);
     }
   });
   tx();

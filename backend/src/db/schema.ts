@@ -183,6 +183,7 @@ export const llmEntryConfigs = sqliteTable(
     id: text("id").primaryKey(),
     providerId: text("provider_id").references(() => llmProviders.id, { onDelete: "set null" }),
     thinkingEnabled: integer("thinking_enabled", { mode: "boolean" }).notNull().default(false),
+    timeBudgetMs: integer("time_budget_ms").notNull().default(5000),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),

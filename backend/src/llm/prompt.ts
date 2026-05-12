@@ -779,6 +779,9 @@ export function injectTimeMessage(args: {
 
   const timeStr = `${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}（${t.period}）`;
 
+  const startT = timeOfDay(tickStarted, epoch);
+  const startTimeStr = `${String(startT.hour).padStart(2, "0")}:${String(startT.minute).padStart(2, "0")}（${startT.period}）`;
+
   const totalMinutes = elapsedHours * 60 + elapsedMinutes;
 
   if (language === "zh") {
@@ -786,7 +789,7 @@ export function injectTimeMessage(args: {
       return `现在是 ${timeStr}。`;
     }
     const dur = elapsedHours > 0 ? `${elapsedHours} 小时 ${elapsedMinutes} 分钟` : `${elapsedMinutes} 分钟`;
-    return `现在是 ${timeStr}。你们从 ${timeStr} 左右开始聊，已经过了大约 ${dur}。`;
+    return `现在是 ${timeStr}。你们从 ${startTimeStr} 左右开始聊，已经过了大约 ${dur}。`;
   }
   if (language === "en") {
     if (totalMinutes === 0) {

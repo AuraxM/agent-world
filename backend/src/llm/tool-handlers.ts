@@ -1,7 +1,7 @@
 import type { Character, MapNode, Memory, WorldEvent } from "../domain";
 import { MEMORY_CAPACITY, OBJECTIVE_RELATION_KINDS } from "../domain/enums";
 // Import existing helpers from prompt.ts
-import { buildMapView } from "./prompt";
+import { buildMapView, timeOfDay } from "./prompt";
 import { tickFromCalendar } from "../systems/notebook";
 
 export interface ToolHandlerContext {
@@ -307,12 +307,22 @@ export function handleReadEvents(
 
 export function handleReadState(_args: any, ctx: ToolHandlerContext): HandlerResult {
   const c = ctx.self;
+  const t = timeOfDay(ctx.tick, ctx.epoch, c.sleepWindow ?? { start: 22, duration: 8 });
+  const hourStr = String(t.hour).padStart(2, "0");
+  const minStr = String(t.minute).padStart(2, "0");
   return {
     current_action: c.currentAction
-      ? { type: c.currentAction.type, description: c.currentAction.description, started_at: c.currentAction.startedAt, ends_at: c.currentAction.endsAt }
+      ? { type: c.currentAction.type, description: c.currentAction.description, started_at: c.currentAction.startedAt, ends_at: c.currentAction.endsAt, remaining_ticks: c.currentAction.endsAt - ctx.tick }
       : null,
     active_conversations: c.activeConversationIds,
     pending_chat_invitations: [],
+    current_time: `${hourStr}:${minStr}（${t.period}）`,
+    hour: t.hour,
+    minute: t.minute,
+    period: t.period,
+    is_sleep_hour: t.isSleepHour,
+    tick: ctx.tick,
+    day: t.day,
   };
 }
 

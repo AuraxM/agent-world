@@ -44,15 +44,13 @@ export function StrangerChat({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const mountedRef = useRef(false);
+  const messageListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      return;
+    const el = messageListRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSend = async () => {
@@ -157,7 +155,7 @@ export function StrangerChat({
       </div>
 
       {/* Message list */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
+      <div ref={messageListRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && selectedCharId && (
           <div className="text-center text-white/25 text-[12px] mt-8">
             以陌生人的身份与 {selectedCharName} 开始对话
@@ -241,7 +239,6 @@ export function StrangerChat({
           </div>
         )}
 
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input area */}

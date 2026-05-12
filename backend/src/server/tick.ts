@@ -198,6 +198,14 @@ function ensureActionsInitialized(): void {
 /** 防止同一 (worldId, tick) 被并发执行。 */
 const _activeTicks = new Set<string>();
 
+/** 检查指定 worldId 是否有正在进行中的 tick */
+export function isTickActive(worldId: string): boolean {
+  for (const key of _activeTicks) {
+    if (key.startsWith(`${worldId}:`)) return true;
+  }
+  return false;
+}
+
 export async function tick(
   worldId: string,
   options: TickOptions = {},

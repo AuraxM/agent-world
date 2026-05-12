@@ -20,7 +20,7 @@ export function WorldView() {
   const view = useViewState();
   const { followingId, follow, isFollowing } = useFollow();
   const [centerTab, setCenterTab] = useState<"stream" | "gantt" | "chat" | "map">("stream");
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [selectedCharIds, setSelectedCharIds] = useState<Set<string>>(new Set());
 

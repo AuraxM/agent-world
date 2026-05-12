@@ -94,6 +94,9 @@ export async function llmDecide(input: DecideInput): Promise<Action> {
     return createFallbackAction(input);
   }
 
+  const config = getEntryConfig("decide");
+  const timeBudgetMs = config.timeBudgetMs;
+
   let systemPrompt: string;
   let readTools: ReturnType<typeof buildReadTools>;
   let writeTools: ReturnType<typeof buildDecideWriteTools>;
@@ -165,7 +168,7 @@ export async function llmDecide(input: DecideInput): Promise<Action> {
       terminalToolNames: [WRITE_DECISION_TOOL],
       readToolNames: ALL_READ_TOOLS,
       llmEntryName: "decide",
-      maxRounds: 20,
+      timeBudgetMs,
       sharedMessages: sharedMessages as any,
       toolHandlerContext,
     });

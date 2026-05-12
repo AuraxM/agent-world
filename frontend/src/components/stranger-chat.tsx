@@ -143,7 +143,7 @@ export function StrangerChat({
         <select
           value={selectedCharId ?? ""}
           onChange={(e) => handleCharChange(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 rounded px-3 py-1.5 text-[12px] text-white/90 focus:outline-none focus:border-(--accent-strong)/50"
+          className="w-full bg-white/5 border border-white/10 rounded px-3 py-1.5 text-[12px] text-white/90 focus:outline-none focus:border-(--accent-strong)/50 appearance-none"
         >
           <option value="" disabled>
             选择角色…

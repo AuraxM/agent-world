@@ -166,6 +166,13 @@ function ensureColumns(sqlite: Database.Database) {
   for (const [tableName, ddl] of ENTRY_CONFIG_MIGRATIONS) {
     if (!haveEntryTables.has(tableName)) sqlite.exec(ddl);
   }
+  const entryCfgCols = sqlite
+    .prepare(`PRAGMA table_info(llm_entry_configs)`)
+    .all() as { name: string }[];
+  const haveEntryCfgCols = new Set(entryCfgCols.map((c) => c.name));
+  for (const [name, ddl] of LLM_ENTRY_CONFIGS_COLUMN_MIGRATIONS) {
+    if (!haveEntryCfgCols.has(name)) sqlite.exec(ddl);
+  }
   for (const [tableName, ddl] of CONVERSATIONS_TABLE_MIGRATION) {
     if (!haveEntryTables.has(tableName)) sqlite.exec(ddl);
   }
@@ -230,9 +237,15 @@ const ENTRY_CONFIG_MIGRATIONS: Array<[string, string]> = [
     id TEXT PRIMARY KEY,
     provider_id TEXT REFERENCES llm_providers(id) ON DELETE SET NULL,
     thinking_enabled INTEGER NOT NULL DEFAULT 0,
+    time_budget_ms INTEGER NOT NULL DEFAULT 5000,
     created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
   )`],
+];
+
+/** Keep in sync with migrate.ts LLM_ENTRY_CONFIGS_NEW_COLUMNS. */
+const LLM_ENTRY_CONFIGS_COLUMN_MIGRATIONS: Array<[string, string]> = [
+  ["time_budget_ms", "ALTER TABLE llm_entry_configs ADD COLUMN time_budget_ms INTEGER NOT NULL DEFAULT 5000"],
 ];
 
 const CONVERSATIONS_TABLE_MIGRATION: Array<[string, string]> = [

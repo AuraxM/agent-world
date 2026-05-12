@@ -56,6 +56,10 @@ export function handleReadProfile(_args: any, ctx: ToolHandlerContext): HandlerR
     4: "极其聪明，总能洞察事物的本质",
   };
 
+  const restNode = ctx.nodes.find((n) => n.id === c.restNodeId);
+  const activityNode = ctx.nodes.find((n) => n.id === c.activityNodeId);
+  const sleepWindow = c.sleepWindow ?? { start: 22, duration: 8 };
+
   return {
     name: c.name,
     age: c.age,
@@ -71,6 +75,14 @@ export function handleReadProfile(_args: any, ctx: ToolHandlerContext): HandlerR
     liked: c.liked,
     disliked: c.disliked,
     abilities: c.abilities.map((a) => `${a.kind}（等级${a.tier}）`),
+    sleep_window: `${sleepWindow.start}:00 — ${(sleepWindow.start + sleepWindow.duration) % 24}:00`,
+    sleep_window_start: sleepWindow.start,
+    sleep_window_duration: sleepWindow.duration,
+    rest_node: restNode ? `${restNode.name}（${restNode.id}）` : (c.restNodeId ?? "无"),
+    rest_node_id: c.restNodeId ?? null,
+    activity_node: activityNode ? `${activityNode.name}（${activityNode.id}）` : (c.activityNodeId ?? "无"),
+    activity_node_id: c.activityNodeId ?? null,
+    current_location_id: c.locationId,
   };
 }
 

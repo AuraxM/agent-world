@@ -297,7 +297,7 @@ describe("sleep / move / rest 夜间导航", () => {
       here: { ...tavernNode, id: c.locationId },
       reachable: [plazaNode, homeNode, tavernNode],
       isSleepHour: true,
-      facts: { restNodeId: "node-home", restNodeName: "我的家" },
+      facts: { restNodeId: "node-home", restNodeName: "我的家", activityNodeId: null, activityNodeName: null, hoursAtCurrentLocation: 0, todayActionCounts: {}, todayChatTargets: {} },
     });
     expect(sleepAction.check(ctx)).toBe(false);
   });
@@ -309,7 +309,7 @@ describe("sleep / move / rest 夜间导航", () => {
       here: { ...homeNode, id: c.locationId },
       reachable: [plazaNode, homeNode, tavernNode],
       isSleepHour: true,
-      facts: { restNodeId: "node-home", restNodeName: "我的家" },
+      facts: { restNodeId: "node-home", restNodeName: "我的家", activityNodeId: null, activityNodeName: null, hoursAtCurrentLocation: 0, todayActionCounts: {}, todayChatTargets: {} },
     });
     expect(sleepAction.check(ctx)).toBe(true);
   });
@@ -321,7 +321,7 @@ describe("sleep / move / rest 夜间导航", () => {
       here: { ...homeNode, id: c.locationId },
       reachable: [plazaNode, homeNode, tavernNode],
       isSleepHour: false,
-      facts: { restNodeId: "node-home", restNodeName: "我的家" },
+      facts: { restNodeId: "node-home", restNodeName: "我的家", activityNodeId: null, activityNodeName: null, hoursAtCurrentLocation: 0, todayActionCounts: {}, todayChatTargets: {} },
     });
     expect(sleepAction.check(ctx)).toBe(false);
   });
@@ -347,8 +347,9 @@ describe("sleep / move / rest 夜间导航", () => {
       },
     });
     const hints = moveAction.hint(ctx);
-    expect(hints.length).toBeGreaterThan(0);
-    const homeHint = hints.find((h) => h.targetNodeId === "node-home");
+    const hintArr = Array.isArray(hints) ? hints : [];
+    expect(hintArr.length).toBeGreaterThan(0);
+    const homeHint = hintArr.find((h: any) => h.targetNodeId === "node-home");
     expect(homeHint).toBeDefined();
     expect(homeHint!.hint).toContain("休息");
   });
@@ -373,9 +374,10 @@ describe("sleep / move / rest 夜间导航", () => {
         todayChatTargets: {},
       },
     });
-    const hints = moveAction.hint(ctx);
-    const homeHint = hints.find((h) => h.targetNodeId === "node-home");
-    expect(homeHint).toBeUndefined();
+    const hints2 = moveAction.hint(ctx);
+    const hintArr2 = Array.isArray(hints2) ? hints2 : [];
+    const homeHint2 = hintArr2.find((h: any) => h.targetNodeId === "node-home");
+    expect(homeHint2).toBeUndefined();
   });
 
   it("findPath 能从酒馆到家（通过广场）", () => {

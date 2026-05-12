@@ -709,7 +709,8 @@ async function runDecideDiagnostic(
   const { loadWorld } = await import("../src/systems/store");
   const { llmDecide } = await import("../src/llm/decide");
   const { buildActionContext, getAvailableActions } = await import("../src/systems/actions");
-  const { buildSystemPrompt, buildUserPrompt } = await import("../src/llm/prompt");
+  const { buildDecideSystemPrompt } = await import("../src/llm/system-prompts");
+  const { languageInstruction } = await import("../src/llm/prompt");
 
   // Resolve character + node
   const { character, node, companion, worldId } = await resolveCharacter(profile.profile, charId);
@@ -800,30 +801,9 @@ async function runDecideDiagnostic(
       itemDefs: new Map(),
     };
 
-    // Build prompts for report
-    const systemPrompt = buildSystemPrompt({
-      worldName: worldData.world.name,
-      nodes: worldData.nodes,
-      language: "zh" as const,
-      shops: worldData.shops || [],
-    });
-    const userPrompt = buildUserPrompt({
-      character: updatedChar,
-      here: hereNode,
-      companions,
-      perceived: [],
-      options,
-      tick: worldData.world.currentTick,
-      epoch: worldData.world.epoch,
-      facts: emptyFacts as any,
-      language: "zh" as const,
-      allCharacters: worldData.characters,
-      nodes: worldData.nodes,
-      activeEventDefs: [],
-      upcomingNotebookText: "",
-      shops: worldData.shops || [],
-      itemDefs: new Map(),
-    });
+    // Build prompts for report (agentic mode: system prompt only, context via tools)
+    const systemPrompt = buildDecideSystemPrompt();
+    const userPrompt = `(agentic — 角色通过 read_* 工具获取上下文。角色: ${updatedChar.name}，位置: ${hereNode.name})`;
 
     // Call LLM
     const startTime = Date.now();
@@ -874,113 +854,10 @@ async function runDialogDiagnostic(
     throw new Error(`Dialog entry requires dialogueHistory in profile for action="${entryProfile.action}"`);
   }
 
-  // Dynamic imports
-  const { llmDialogTurn } = await import("../src/llm/decide");
-  const { loadWorld } = await import("../src/systems/store");
-  const { actionRegistry } = await import("../src/domain/action-system");
-
-  // Resolve character + companion + node
-  const { character, node, companion, worldId } = await resolveCharacter(profile, charId);
-  if (!companion) throw new Error("Dialog entry requires a companion");
-
-  // Inject state (both characters at same location)
-  const rollback = await injectState(worldId, character.id, companion.id, node.id, profile);
-
-  try {
-    // Reload world with injected state
-    const worldData = loadWorld(worldId);
-    const updatedSelf = worldData.characters.find((c: any) => c.id === character.id);
-    const updatedPeer = worldData.characters.find((c: any) => c.id === companion.id);
-    const hereNode = worldData.nodes.find((n: any) => n.id === node.id);
-
-    if (!updatedSelf || !updatedPeer || !hereNode) {
-      throw new Error("Character or node not found after injection");
-    }
-
-    // Build transcript from dialogueHistory strings
-    // Format: "Name：message" — split on "：" (fullwidth colon) to extract speaker name and line
-    const transcript = entryProfile.dialogueHistory.map((line, _i) => {
-      const separatorIndex = line.indexOf("：");
-      const speakerName = separatorIndex > 0 ? line.slice(0, separatorIndex) : "Unknown";
-      const text = separatorIndex > 0 ? line.slice(separatorIndex + 1) : line;
-      // Map speaker name to character ID
-      const isSelf = speakerName.includes(updatedSelf.name);
-      const speakerId = isSelf ? updatedSelf.id : updatedPeer.id;
-      return {
-        speakerId,
-        kind: "say" as const,
-        line: text,
-        reasoning: undefined as string | undefined,
-      };
-    });
-
-    // Get dialogue actions
-    const dialogueActions = actionRegistry.getDialogueActions();
-
-    // Build input for llmDialogTurn
-    const input = {
-      self: updatedSelf,
-      peer: updatedPeer,
-      transcript,
-      here: hereNode,
-      language: "zh" as const,
-      dialogueActions,
-      tick: worldData.world.currentTick,
-      epoch: worldData.world.epoch,
-      nodes: worldData.nodes,
-    };
-
-    // Call LLM
-    const startTime = Date.now();
-    const result = await llmDialogTurn(input as any);
-    const elapsed = Date.now() - startTime;
-
-    // Check result
-    let chosenAction = "(no action)";
-    let matched = false;
-
-    if (result.kind === "turn" && result.proposeAction) {
-      chosenAction = result.proposeAction.actionType;
-      matched = chosenAction === entryProfile.action;
-    } else if (result.kind === "end") {
-      chosenAction = "end_conversation";
-    } else if (result.kind === "turn") {
-      chosenAction = "submit_dialog_turn";
-    }
-
-    const vitalsParsed: Record<string, number> = updatedSelf.vitals as unknown as Record<string, number>;
-    const emotionsParsed: Record<string, number> = updatedSelf.emotion as unknown as Record<string, number>;
-
-    return {
-      action: entryProfile.action,
-      entry: "dialog",
-      codePathChecks: {
-        registered: actionRegistry.has(entryProfile.action),
-        inBuildOptions: dialogueActions.some((d: any) => d.type === entryProfile.action),
-      },
-      induction: {
-        character: updatedSelf.name,
-        characterId: updatedSelf.id,
-        node: hereNode.name,
-        vitals: vitalsParsed,
-        emotions: emotionsParsed,
-        companion: updatedPeer.name,
-        dialogueLines: entryProfile.dialogueHistory,
-      },
-      llmResult: {
-        chosenAction,
-        matched,
-        elapsed,
-        rawAction: result,
-      },
-      prompts: {
-        system: "(dialog has no separate system prompt — see llmDialogTurn internals)",
-        user: "(dialog prompt built by llmDialogTurn)",
-      },
-    };
-  } finally {
-    rollback();
-  }
+  // The dialog entry is broken after the agentic refactor (llmDialogTurn was removed).
+  // newDialogTurn is not yet exported from dialog.ts and has a different signature.
+  // TODO: Rewrite runDialogDiagnostic to use runDialogPhase with a pre-built Conversation.
+  throw new Error(`Dialog entry is temporarily broken (agentic refactor — llmDialogTurn was removed). Use the pre-built Conversation integration test approach instead.`);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -991,59 +868,9 @@ async function runThinkDiagnostic(
   entryProfile: EntryProfile,
   charId?: string,
 ): Promise<DiagnosticResult> {
-  const profile = entryProfile.profile;
-  const { character, node, worldId } = await resolveCharacter(profile, charId);
-  const rollback = await injectState(worldId, character.id, undefined, node.id, profile);
-
-  try {
-    const { llmThink } = await import("../src/llm/decide");
-    const { loadWorld } = await import("../src/systems/store");
-
-    const worldData = await loadWorld(worldId);
-    const updatedSelf = worldData.characters.find((c: any) => c.id === character.id);
-    const hereNode = worldData.nodes.find((n: any) => n.id === node.id);
-
-    if (!updatedSelf || !hereNode) throw new Error("Character or node not found");
-
-    const startTime = Date.now();
-    const result = await llmThink({
-      self: updatedSelf,
-      here: hereNode,
-      transcript: [],
-      language: "zh" as const,
-      tick: worldData.world.currentTick,
-      epoch: worldData.world.epoch,
-      tickStarted: Date.now(),
-      allCharacters: worldData.characters,
-      nodes: worldData.nodes,
-    });
-    const elapsed = Date.now() - startTime;
-
-    const isThinkTurn = result.kind === "turn";
-    const isEnd = result.kind === "end";
-
-    return {
-      action: entryProfile.action,
-      entry: "think",
-      codePathChecks: { registered: true, inBuildOptions: true },
-      induction: {
-        character: updatedSelf.name,
-        characterId: updatedSelf.id,
-        node: hereNode.name,
-        vitals: (updatedSelf as any).vitals as Record<string, number>,
-        emotions: (updatedSelf as any).emotion as Record<string, number>,
-      },
-      llmResult: {
-        chosenAction: isThinkTurn ? "submit_think_turn" : isEnd ? "end_thinking" : "unknown",
-        matched: isThinkTurn || isEnd,
-        elapsed,
-        rawAction: result,
-      },
-      prompts: { system: "(think prompt built internally)", user: "" },
-    };
-  } finally {
-    rollback();
-  }
+  // The think entry is broken after the agentic refactor (llmThink was removed).
+  // TODO: Rewrite runThinkDiagnostic to use runThinkAgent from think.ts.
+  throw new Error(`Think entry is temporarily broken (agentic refactor — llmThink was replaced by runThinkAgent).`);
 }
 
 // ═══════════════════════════════════════════════════════

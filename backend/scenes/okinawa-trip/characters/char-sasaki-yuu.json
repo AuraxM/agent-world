@@ -22,17 +22,13 @@
   "relations": {
     "char-lin-haiyin": {
       "kinds": ["classmate", "friend"],
-      "affection": 3,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "海音是我见过的最亮的人。她说要带我去潜水点——我其实不知道'潜水点'是什么，但我说了好。"
+      "lastInteractionTick": 0
     },
     "char-takahashi-mao": {
       "kinds": ["classmate", "friend"],
-      "affection": 2,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "真央借了相机给我用。她说'按快门的时候眼睛要睁大'，然后我就真的睁大了。有点傻。"
+      "lastInteractionTick": 0
     }
   },
   "impressionBook": {

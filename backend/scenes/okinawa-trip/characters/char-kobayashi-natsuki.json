@@ -22,17 +22,13 @@
   "relations": {
     "char-yamada-kenta": {
       "kinds": ["classmate", "friend"],
-      "affection": 3,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "他是唯一一个我捉弄完还不生气的人。而且他真的会帮我算钱——这点是真的有用。"
+      "lastInteractionTick": 0
     },
     "char-lin-haiyin": {
       "kinds": ["classmate", "friend"],
-      "affection": 2,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "游泳很快！而且在海里游泳和在泳池完全不一样——她带我游过一次，差点把我累死。"
+      "lastInteractionTick": 0
     }
   },
   "impressionBook": {

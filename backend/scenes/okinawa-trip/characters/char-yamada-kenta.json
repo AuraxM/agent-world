@@ -22,17 +22,13 @@
   "relations": {
     "char-kobayashi-natsuki": {
       "kinds": ["classmate", "friend"],
-      "affection": 3,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "她老是抢我的东西、撕我的预算表、在我耳边讲话很大声——但她是唯一让我觉得'被看见'的人。"
+      "lastInteractionTick": 0
     },
     "char-tanaka-hiroto": {
       "kinds": ["classmate", "friend"],
-      "affection": 2,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "他数学不太好，但从来不发脾气。我教他的时候他听得很认真，这种认真很少见。"
+      "lastInteractionTick": 0
     }
   },
   "impressionBook": {

@@ -22,24 +22,18 @@
   "relations": {
     "char-tanaka-hiroto": {
       "kinds": ["classmate", "friend"],
-      "affection": 1,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "篮球队的，人挺好的，有时候觉得他看我的眼神有点怪怪的。"
+      "lastInteractionTick": 0
     },
     "char-sasaki-yuu": {
       "kinds": ["classmate", "friend"],
-      "affection": 2,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "安静的小个子女生，看海的时候眼睛亮了——我喜欢看她那个样子。"
+      "lastInteractionTick": 0
     },
     "char-takahashi-mao": {
       "kinds": ["classmate", "friend"],
-      "affection": 1,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "拍照很厉害，偶尔觉得她在观察我。"
+      "lastInteractionTick": 0
     }
   },
   "impressionBook": {

@@ -22,17 +22,13 @@
   "relations": {
     "char-takahashi-mao": {
       "kinds": ["classmate", "friend"],
-      "affection": 3,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "我知道她喜欢我，我也喜欢她。我们之间少了一种叫'时机'的东西。但也许这个夏天……"
+      "lastInteractionTick": 0
     },
     "char-tanaka-hiroto": {
       "kinds": ["classmate", "friend"],
-      "affection": 2,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "他嗓门大得烦人，但球场上他是认真的。有时候打完球我递水，他接过去的时候笑得很傻。"
+      "lastInteractionTick": 0
     }
   },
   "impressionBook": {

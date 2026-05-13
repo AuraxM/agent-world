@@ -22,24 +22,18 @@
   "relations": {
     "char-ito-ryo": {
       "kinds": ["classmate", "friend"],
-      "affection": 3,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "从小一起长大的人。他弹吉他的时候和平时完全不一样，我想拍下来但他总说'别拍'。"
+      "lastInteractionTick": 0
     },
     "char-lin-haiyin": {
       "kinds": ["classmate", "friend"],
-      "affection": 2,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "海音有一种我拍不下来的东西，很亮，但不是光线那种亮。"
+      "lastInteractionTick": 0
     },
     "char-sasaki-yuu": {
       "kinds": ["classmate", "friend"],
-      "affection": 1,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "安静的女生，教她用相机的时候她手指很轻，好像怕弄坏什么。"
+      "lastInteractionTick": 0
     }
   },
   "impressionBook": {

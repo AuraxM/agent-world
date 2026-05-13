@@ -22,24 +22,18 @@
   "relations": {
     "char-lin-haiyin": {
       "kinds": ["classmate", "friend"],
-      "affection": 4,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "每次看到她都想说什么，但每次都说成了'早上好'。我讨厌这样的自己。"
+      "lastInteractionTick": 0
     },
     "char-ito-ryo": {
       "kinds": ["classmate", "friend"],
-      "affection": 1,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "他话少，但有时候打完球递过来一瓶水——那个意思不用明说。"
+      "lastInteractionTick": 0
     },
     "char-yamada-kenta": {
       "kinds": ["classmate", "friend"],
-      "affection": 2,
       "since": 0,
-      "lastInteractionTick": 0,
-      "note": "学习委员，和我完全相反的类型。但他人不错，我数学考砸了都是他在教我。"
+      "lastInteractionTick": 0
     }
   },
   "impressionBook": {

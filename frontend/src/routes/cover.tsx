@@ -7,11 +7,12 @@ export default function CoverOverlay() {
     <div className="h-full w-full relative">
       {/* Title — center aligned at 1/3 from top */}
       <h1
-        className="absolute left-1/2 tracking-[0.25em] whitespace-nowrap text-[48px] md:text-[144px]"
+        className="absolute left-1/2 tracking-[0.15em] sm:tracking-[0.25em] whitespace-nowrap"
         style={{
           top: "33.33%",
           transform: "translate(-50%, -50%)",
           fontFamily: "var(--font-silkscreen, monospace)",
+          fontSize: "clamp(24px, 8vw, 144px)",
           color: "#fff",
           textShadow: "0 0 30px rgba(255,255,255,0.4)",
         }}
